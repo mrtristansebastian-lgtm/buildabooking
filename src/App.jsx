@@ -138,6 +138,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const [publicLoading, setPublicLoading] = useState(false);
             const [publicError, setPublicError] = useState('');
             const [activeTab, setActiveTab] = useState('overview'); 
+            const [dashboardPeriod, setDashboardPeriod] = useState('today');
             const [editorTab, setEditorTab] = useState('themes'); 
             const [themePalette, setThemePalette] = useState('all');
             const [device, setDevice] = useState('desktop'); 
@@ -371,12 +372,19 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 const tomorrowKey = getLocalDateStr(tomorrow);
                 const weekEnd = new Date(today);
                 weekEnd.setDate(weekEnd.getDate() + 6);
-                const weekEndKey = getLocalDateStr(weekEnd);
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 const monthLookup = {
                     jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
                     may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7,
                     sep: 8, sept: 8, september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11
                 };
+                const addDays = (date, amount) => {
+                    const nextDate = new Date(date);
+                    nextDate.setDate(nextDate.getDate() + amount);
+                    return nextDate;
+                };
+                const formatRangeDate = (date) => date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                 const parseBookingDate = (booking) => {
                     if (booking.dateKey) return booking.dateKey;
                     const rawDate = String(booking.date || '').trim();
@@ -394,26 +402,84 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     const parsed = new Date(rawDate);
                     return Number.isNaN(parsed.getTime()) ? null : getLocalDateStr(parsed);
                 };
+                const periodConfig = {
+                    today: {
+                        id: 'today',
+                        label: 'Today',
+                        title: 'Today at a glance',
+                        rangeLabel: today.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }),
+                        start: today,
+                        end: today,
+                        emptyTitle: 'No bookings today',
+                        emptyText: 'Today is clear. New requests will appear here as clients book.'
+                    },
+                    week: {
+                        id: 'week',
+                        label: 'Week',
+                        title: 'This week',
+                        rangeLabel: `${formatRangeDate(today)} - ${formatRangeDate(weekEnd)}`,
+                        start: today,
+                        end: weekEnd,
+                        emptyTitle: 'No bookings this week',
+                        emptyText: 'This week is open. Confirmed bookings and requests will appear here.'
+                    },
+                    month: {
+                        id: 'month',
+                        label: 'Month',
+                        title: 'This month',
+                        rangeLabel: today.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+                        start: monthStart,
+                        end: monthEnd,
+                        emptyTitle: 'No bookings this month',
+                        emptyText: 'Monthly activity will populate as real clients book.'
+                    }
+                };
+                const activePeriod = periodConfig[dashboardPeriod] || periodConfig.today;
+                const startKey = getLocalDateStr(activePeriod.start);
+                const endKey = getLocalDateStr(activePeriod.end);
+                const defaultTimes = settings.availableTimes || [];
+                const dateKeys = [];
+                for (let cursor = new Date(activePeriod.start), guard = 0; cursor <= activePeriod.end && guard < 45; cursor = addDays(cursor, 1), guard += 1) {
+                    dateKeys.push(getLocalDateStr(cursor));
+                }
+                const periodCapacity = dateKeys.reduce((total, dateKey) => {
+                    const daySchedule = settings.schedule?.[dateKey] || {};
+                    const dayAvailable = daySchedule.available ?? true;
+                    if (!dayAvailable) return total;
+                    const dayTimes = Array.isArray(daySchedule.times) ? daySchedule.times : defaultTimes;
+                    return total + dayTimes.length;
+                }, 0);
 
-                const activeBookings = visibleBookings.filter(booking => booking.status !== 'declined');
-                const bookingsWithDates = activeBookings.map(booking => ({ ...booking, dateKeyResolved: parseBookingDate(booking) }));
-                const todayBookings = bookingsWithDates.filter(booking => booking.dateKeyResolved === todayKey);
-                const tomorrowBookings = bookingsWithDates.filter(booking => booking.dateKeyResolved === tomorrowKey);
-                const weekBookings = bookingsWithDates.filter(booking => booking.dateKeyResolved && booking.dateKeyResolved >= todayKey && booking.dateKeyResolved <= weekEndKey);
-                const upcomingBookings = bookingsWithDates.filter(booking => !booking.dateKeyResolved || booking.dateKeyResolved >= todayKey);
+                const bookingsWithDates = visibleBookings.map(booking => ({ ...booking, dateKeyResolved: parseBookingDate(booking) }));
+                const activeBookings = bookingsWithDates.filter(booking => booking.status !== 'declined');
+                const periodBookings = bookingsWithDates.filter(booking => booking.dateKeyResolved && booking.dateKeyResolved >= startKey && booking.dateKeyResolved <= endKey);
+                const periodActiveBookings = periodBookings.filter(booking => booking.status !== 'declined');
+                const pending = periodActiveBookings.filter(booking => booking.status === 'pending').length;
+                const waitlist = periodActiveBookings.filter(booking => booking.status === 'waitlist').length;
+                const confirmed = periodActiveBookings.filter(booking => booking.status === 'confirmed').length;
+                const declined = periodBookings.filter(booking => booking.status === 'declined').length;
+                const reservedSlots = periodActiveBookings.filter(booking => booking.status !== 'waitlist' && booking.time !== 'Waitlist').length;
+                const openSlots = Math.max(0, periodCapacity - reservedSlots);
+                const bookingRate = periodActiveBookings.length ? Math.round((confirmed / periodActiveBookings.length) * 100) : 0;
+                const periodClientIds = new Set(periodActiveBookings.map(booking => buildClientKey(booking.clientName, booking.clientPhone)));
+                const firstTimers = Array.from(periodClientIds).filter(id => {
+                    const client = clientDirectory.find(profile => profile.id === id);
+                    return !client || client.bookingCount <= 1 || client.autoLabels?.includes('First Time');
+                }).length;
+                const periodNoShowRisk = periodActiveBookings.filter(booking => booking.noShowHistory).length;
                 const todaySchedule = settings.schedule?.[todayKey] || {};
-                const todayTimes = Array.isArray(todaySchedule.times) ? todaySchedule.times : [...(settings.availableTimes || [])];
+                const todayTimes = Array.isArray(todaySchedule.times) ? todaySchedule.times : defaultTimes;
                 const todayAvailable = todaySchedule.available ?? true;
+                const todayBookings = bookingsWithDates.filter(booking => booking.dateKeyResolved === todayKey && booking.status !== 'declined');
                 const todayReserved = todayBookings.filter(booking => booking.status !== 'waitlist' && booking.time !== 'Waitlist').length;
                 const todayOpenSlots = todayAvailable ? Math.max(0, todayTimes.length - todayReserved) : 0;
-                const confirmedActive = activeBookings.filter(booking => booking.status === 'confirmed').length;
-                const bookingRate = activeBookings.length ? Math.round((confirmedActive / activeBookings.length) * 100) : 0;
+                const upcomingBookings = activeBookings.filter(booking => !booking.dateKeyResolved || booking.dateKeyResolved >= todayKey);
                 const emailAutomations = Object.values(communications).filter(item => item?.active).length;
                 const emailAutomationTotal = Object.keys(communications).length || 1;
                 const pageReadinessItems = [
                     Boolean(settings.brandName),
                     Boolean(settings.slug),
-                    (settings.availableTimes || []).length > 0,
+                    defaultTimes.length > 0,
                     Boolean(settings.welcomeMessage),
                     communications.confirmed?.active
                 ];
@@ -421,28 +487,42 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 const clientEnrichmentRate = clientMetrics.total ? Math.round((clientMetrics.enriched / clientMetrics.total) * 100) : 0;
                 const hour = today.getHours();
                 const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+                const needsAttention = pending + waitlist;
 
                 return {
                     greeting,
-                    todayKey,
-                    todayBookings,
-                    tomorrowBookings,
-                    weekBookings,
+                    periods: Object.values(periodConfig).map(period => ({ id: period.id, label: period.label })),
+                    period: activePeriod,
+                    startKey,
+                    endKey,
+                    periodBookings,
+                    periodActiveBookings,
+                    activityList: periodActiveBookings.length ? periodActiveBookings : [],
                     upcomingBookings,
+                    todayBookings,
                     todayOpenSlots,
                     todayCapacity: todayAvailable ? todayTimes.length : 0,
                     todayAvailable,
                     bookingRate,
-                    emailAutomations,
-                    emailAutomationTotal,
+                    pending,
+                    waitlist,
+                    confirmed,
+                    declined,
+                    reservedSlots,
+                    openSlots,
+                    capacity: periodCapacity,
+                    needsAttention,
+                    firstTimers,
+                    clientCount: periodClientIds.size,
+                    noShowRisk: periodNoShowRisk,
                     pageReadiness,
                     clientEnrichmentRate,
-                    noShowRisk: activeBookings.filter(booking => booking.noShowHistory).length,
-                    needsAttention: bookingStats.attention,
-                    confirmedActive,
-                    activeBookings: activeBookings.length
+                    emailAutomations,
+                    emailAutomationTotal,
+                    activeBookings: periodActiveBookings.length,
+                    allActiveBookings: activeBookings.length
                 };
-            }, [visibleBookings, settings.schedule, settings.availableTimes, settings.brandName, settings.slug, settings.welcomeMessage, communications, clientMetrics, bookingStats.attention]);
+            }, [visibleBookings, dashboardPeriod, settings.schedule, settings.availableTimes, settings.brandName, settings.slug, settings.welcomeMessage, communications, clientMetrics, clientDirectory]);
 
             const filteredClients = useMemo(() => {
                 const query = clientSearch.trim().toLowerCase();
@@ -1579,11 +1659,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 <div className="dashboard-main relative z-10 flex-1 flex overflow-hidden pb-20 md:pb-0">
                     {activeTab === 'overview' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+                            <header className="mb-6 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Business Command Center</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Workspace Home</p>
                                     <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-black">Dashboard</h1>
-                                    <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">A clean portfolio view of bookings, clients, schedule health, team coverage, and your live booking page.</p>
+                                    <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <button onClick={() => setShowOnboarding(true)} className="h-11 px-5 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
@@ -1598,77 +1678,74 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </div>
                             </header>
 
-                            <section data-tour="dashboard-hero" className="mb-6 overflow-hidden rounded-lg bg-black text-white shadow-[0_24px_80px_-48px_rgba(0,0,0,0.9)]">
-                                <div className="grid grid-cols-1 xl:grid-cols-12">
-                                    <div className="xl:col-span-7 p-6 md:p-8 lg:p-10">
-                                        <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white/70 mb-8">
+                            <section data-tour="dashboard-hero" className="mb-6 saas-card p-5 md:p-6 lg:p-8">
+                                <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-8">
+                                    <div className="max-w-3xl">
+                                        <div className="inline-flex items-center gap-2 rounded-lg bg-neutral-50 border border-neutral-100 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-5">
                                             <span className="w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_0_4px_rgba(57,255,20,0.14)]" />
                                             Live Workspace
                                         </div>
-                                        <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-none mb-4">{dashboardPortfolio.greeting}, {settings.brandName || 'Builder'}</h2>
-                                        <p className="text-white/55 text-base md:text-lg max-w-2xl leading-relaxed">Your business is ready for the day. Review what needs approval, keep capacity visible, and move clients through the booking flow without hunting through tabs.</p>
-                                        <div className="flex flex-col sm:flex-row gap-3 mt-8">
-                                            <button onClick={() => setActiveTab('bookings')} className="h-12 px-5 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
-                                                <Bell size={15}/> Review Requests
+                                        <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-none text-black mb-3">{dashboardPortfolio.greeting}, {settings.brandName || 'Builder'}</h2>
+                                        <p className="text-neutral-500 text-base md:text-lg leading-relaxed">
+                                            {dashboardPortfolio.period.title} / {dashboardPortfolio.period.rangeLabel}. Focus on requests, confirmed work, and available capacity.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col items-stretch sm:items-end gap-3">
+                                        <div className="inline-grid grid-cols-3 gap-1 rounded-lg bg-neutral-100 p-1">
+                                            {dashboardPortfolio.periods.map(period => (
+                                                <button
+                                                    key={period.id}
+                                                    onClick={() => setDashboardPeriod(period.id)}
+                                                    className={`h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black'}`}
+                                                >
+                                                    {period.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <button onClick={() => setActiveTab('bookings')} className="h-11 px-4 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
+                                                <Bell size={15}/> Review
                                             </button>
-                                            <button onClick={() => setActiveTab('business')} className="h-12 px-5 rounded-lg bg-white/10 text-white border border-white/10 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/15 transition-colors">
-                                                <Calendar size={15}/> Manage Schedule
+                                            <button onClick={() => setActiveTab('business')} className="h-11 px-4 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
+                                                <Calendar size={15}/> Schedule
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="xl:col-span-5 grid grid-cols-2 border-t xl:border-t-0 xl:border-l border-white/10">
-                                        {[
-                                            ['Today', dashboardPortfolio.todayBookings.length, `${dashboardPortfolio.todayOpenSlots} slots open`],
-                                            ['Needs Review', dashboardPortfolio.needsAttention, `${bookingStats.pending} requests`],
-                                            ['This Week', dashboardPortfolio.weekBookings.length, 'bookings on deck'],
-                                            ['Booking Rate', `${dashboardPortfolio.bookingRate}%`, `${dashboardPortfolio.confirmedActive}/${dashboardPortfolio.activeBookings} confirmed`]
-                                        ].map((item, index) => (
-                                            <div key={item[0]} className={`p-5 md:p-6 min-h-[150px] flex flex-col justify-between ${index % 2 === 1 ? 'border-l' : ''} ${index > 1 ? 'border-t' : ''} border-white/10`}>
-                                                <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">{item[0]}</p>
-                                                <div>
-                                                    <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight">{item[1]}</p>
-                                                    <p className="text-xs font-bold uppercase tracking-widest text-[#39FF14] mt-2">{item[2]}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
                                 </div>
-                            </section>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                                {[
-                                    { label: "Today's Bookings", value: dashboardPortfolio.todayBookings.length, hint: dashboardPortfolio.todayAvailable ? `${dashboardPortfolio.todayOpenSlots} open slots` : 'Closed today', icon: CalendarCheck, tone: 'accent' },
-                                    { label: 'Needs Attention', value: dashboardPortfolio.needsAttention, hint: `${bookingStats.waitlist} waitlist`, icon: Bell, tone: 'dark' },
-                                    { label: 'Client Portfolio', value: clientMetrics.total, hint: `${clientMetrics.regulars} regulars`, icon: Users, tone: 'light' },
-                                    { label: 'Booking Rate', value: `${dashboardPortfolio.bookingRate}%`, hint: 'Confirmed share', icon: ShieldCheck, tone: 'light' }
-                                ].map(metric => {
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                                    {[
+                                        { label: 'Bookings', value: dashboardPortfolio.activeBookings, hint: `${dashboardPortfolio.confirmed} confirmed`, icon: CalendarCheck, dark: true },
+                                        { label: 'Needs Review', value: dashboardPortfolio.needsAttention, hint: `${dashboardPortfolio.pending} requests / ${dashboardPortfolio.waitlist} waitlist`, icon: Bell },
+                                        { label: 'Booking Rate', value: `${dashboardPortfolio.bookingRate}%`, hint: `${dashboardPortfolio.confirmed}/${dashboardPortfolio.activeBookings || 0} confirmed`, icon: ShieldCheck },
+                                        { label: 'Open Slots', value: dashboardPortfolio.openSlots, hint: `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity} booked`, icon: Clock }
+                                    ].map(metric => {
                                     const IconCmp = metric.icon;
-                                    const isDark = metric.tone === 'dark';
-                                    const isAccent = metric.tone === 'accent';
                                     return (
-                                        <div key={metric.label} className={`saas-card p-5 overflow-hidden ${isDark ? 'bg-black text-white border-black' : isAccent ? 'bg-[#39FF14] text-black border-[#39FF14]' : ''}`}>
-                                            <div className="flex items-start justify-between mb-8">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-white/10 text-[#39FF14]' : isAccent ? 'bg-black text-white' : 'bg-neutral-100 text-black'}`}><IconCmp size={17}/></div>
-                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${isDark ? 'bg-white/10 text-white/65' : isAccent ? 'bg-black/10 text-black/65' : 'bg-neutral-100 text-neutral-500'}`}>{metric.hint}</span>
+                                        <div key={metric.label} className={`rounded-lg border p-5 ${metric.dark ? 'bg-black text-white border-black' : 'bg-white border-neutral-100'}`}>
+                                            <div className="flex items-start justify-between mb-7">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${metric.dark ? 'bg-white/10 text-[#39FF14]' : 'bg-neutral-100 text-black'}`}><IconCmp size={17}/></div>
+                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${metric.dark ? 'bg-white/10 text-white/65' : 'bg-neutral-100 text-neutral-500'}`}>{metric.hint}</span>
                                             </div>
-                                            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 ${isDark ? 'text-white/45' : isAccent ? 'text-black/55' : 'text-neutral-400'}`}>{metric.label}</p>
-                                            <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight text-inherit">{metric.value}</p>
+                                            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 ${metric.dark ? 'text-white/45' : 'text-neutral-400'}`}>{metric.label}</p>
+                                            <p className={`metric-value text-3xl md:text-4xl font-bold tracking-tight ${metric.dark ? 'text-white' : 'text-black'}`}>{metric.value}</p>
                                         </div>
                                     );
                                 })}
-                            </div>
+                                </div>
+                            </section>
 
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                 <section className="xl:col-span-8 saas-card overflow-hidden">
                                     <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div>
-                                            <h2 className="text-lg font-bold tracking-tight">Booking Desk</h2>
-                                            <p className="text-sm text-neutral-500">{dashboardPortfolio.todayBookings.length ? "Today's bookings and requests." : 'Upcoming bookings, requests, and waitlist spots.'}</p>
+                                            <h2 className="text-lg font-bold tracking-tight">Activity</h2>
+                                            <p className="text-sm text-neutral-500">{dashboardPortfolio.period.title} bookings, requests, and waitlist spots.</p>
                                         </div>
                                         <button onClick={() => setActiveTab('bookings')} className="h-10 px-4 rounded-lg bg-neutral-50 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors">View Queue</button>
                                     </div>
                                     <div className="divide-y divide-neutral-100">
-                                        {(dashboardPortfolio.todayBookings.length ? dashboardPortfolio.todayBookings : dashboardPortfolio.upcomingBookings).slice(0, 6).map(b => {
+                                        {dashboardPortfolio.activityList.slice(0, 6).map(b => {
                                             const assignedStaff = staffList.find(staff => staff.id === b.staffId);
                                             const statusStyle = b.status === 'confirmed'
                                                 ? 'bg-[#39FF14] text-black'
@@ -1699,11 +1776,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                 </div>
                                             );
                                         })}
-                                        {!(dashboardPortfolio.todayBookings.length ? dashboardPortfolio.todayBookings : dashboardPortfolio.upcomingBookings).length && (
+                                        {!dashboardPortfolio.activityList.length && (
                                             <div className="p-12 text-center">
                                                 <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-400"><CalendarCheck size={22}/></div>
-                                                <h3 className="text-lg font-bold tracking-tight text-black mb-2">No bookings on deck</h3>
-                                                <p className="text-sm text-neutral-500">New booking activity will appear here as clients reserve time.</p>
+                                                <h3 className="text-lg font-bold tracking-tight text-black mb-2">{dashboardPortfolio.period.emptyTitle}</h3>
+                                                <p className="text-sm text-neutral-500">{dashboardPortfolio.period.emptyText}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1713,51 +1790,52 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     <section className="saas-card p-5 md:p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <div>
-                                                <h2 className="text-lg font-bold tracking-tight">Business Health</h2>
-                                                <p className="text-sm text-neutral-500">Key operating signals.</p>
+                                                <h2 className="text-lg font-bold tracking-tight">Next Actions</h2>
+                                                <p className="text-sm text-neutral-500">The work most likely to matter now.</p>
                                             </div>
-                                            <div className="w-10 h-10 rounded-lg bg-black text-[#39FF14] flex items-center justify-center"><ShieldCheck size={17}/></div>
+                                            <div className="w-10 h-10 rounded-lg bg-black text-[#39FF14] flex items-center justify-center"><Zap size={17}/></div>
                                         </div>
-                                        <div className="space-y-5">
+                                        <div className="space-y-3">
                                             {[
-                                                ['Booking rate', dashboardPortfolio.bookingRate],
-                                                ['Page readiness', dashboardPortfolio.pageReadiness],
-                                                ['Client enrichment', dashboardPortfolio.clientEnrichmentRate],
-                                                ['Email automation', Math.round((dashboardPortfolio.emailAutomations / dashboardPortfolio.emailAutomationTotal) * 100)]
-                                            ].map(row => (
-                                                <div key={row[0]}>
-                                                    <div className="flex items-center justify-between gap-4 mb-2">
-                                                        <span className="text-sm font-bold text-black">{row[0]}</span>
-                                                        <span className="metric-value text-sm font-bold text-neutral-500">{row[1]}%</span>
-                                                    </div>
-                                                    <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
-                                                        <div className="h-full rounded-full bg-[#39FF14]" style={{ width: `${Math.max(4, row[1])}%` }} />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </section>
-
-                                    <section className="saas-panel p-5 md:p-6">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div>
-                                                <h2 className="text-lg font-bold tracking-tight">Quick Actions</h2>
-                                                <p className="text-sm text-neutral-500">Jump into the work that matters.</p>
-                                            </div>
-                                            <Zap size={18} className="text-neutral-400" />
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {[
-                                                ['Review bookings', 'bookings', Bell],
-                                                ['Open client book', 'clients', Users],
-                                                ['Tune availability', 'business', Calendar],
-                                                ['Edit booking page', 'editor', Palette]
+                                                {
+                                                    title: dashboardPortfolio.needsAttention ? `Review ${dashboardPortfolio.needsAttention} booking${dashboardPortfolio.needsAttention === 1 ? '' : 's'}` : 'No requests waiting',
+                                                    detail: `${dashboardPortfolio.pending} pending / ${dashboardPortfolio.waitlist} waitlist`,
+                                                    tab: 'bookings',
+                                                    icon: Bell,
+                                                    active: dashboardPortfolio.needsAttention > 0
+                                                },
+                                                {
+                                                    title: dashboardPortfolio.openSlots ? `${dashboardPortfolio.openSlots} slots still open` : 'No open slots in this period',
+                                                    detail: `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity} capacity booked`,
+                                                    tab: 'business',
+                                                    icon: Calendar,
+                                                    active: dashboardPortfolio.openSlots > 0
+                                                },
+                                                {
+                                                    title: `${dashboardPortfolio.clientCount} client${dashboardPortfolio.clientCount === 1 ? '' : 's'} in view`,
+                                                    detail: `${dashboardPortfolio.firstTimers} first-time booker${dashboardPortfolio.firstTimers === 1 ? '' : 's'}`,
+                                                    tab: 'clients',
+                                                    icon: Users,
+                                                    active: dashboardPortfolio.clientCount > 0
+                                                },
+                                                {
+                                                    title: dashboardPortfolio.pageReadiness === 100 ? 'Booking page ready' : 'Finish booking page setup',
+                                                    detail: `${dashboardPortfolio.pageReadiness}% setup complete`,
+                                                    tab: 'editor',
+                                                    icon: Palette,
+                                                    active: dashboardPortfolio.pageReadiness < 100
+                                                }
                                             ].map(action => {
-                                                const IconCmp = action[2];
+                                                const IconCmp = action.icon;
                                                 return (
-                                                    <button key={action[0]} onClick={() => setActiveTab(action[1])} className="h-12 rounded-lg bg-white border border-neutral-200 px-4 flex items-center justify-between gap-4 text-sm font-bold text-black hover:border-black hover:shadow-lg transition-all">
-                                                        <span className="flex items-center gap-3"><IconCmp size={16}/>{action[0]}</span>
-                                                        <ChevronRight size={16} className="text-neutral-300" />
+                                                    <button key={action.title} onClick={() => setActiveTab(action.tab)} className={`w-full rounded-lg border p-4 text-left transition-all hover:shadow-lg ${action.active ? 'bg-black text-white border-black' : 'bg-white text-black border-neutral-200 hover:border-black'}`}>
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div className="min-w-0">
+                                                                <p className={`text-sm font-bold truncate ${action.active ? 'text-white' : 'text-black'}`}>{action.title}</p>
+                                                                <p className={`text-xs font-medium mt-1 ${action.active ? 'text-white/55' : 'text-neutral-500'}`}>{action.detail}</p>
+                                                            </div>
+                                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${action.active ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-400'}`}><IconCmp size={15}/></div>
+                                                        </div>
                                                     </button>
                                                 );
                                             })}
@@ -1765,28 +1843,31 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     </section>
                                 </aside>
 
-                                <section className="xl:col-span-8 saas-card overflow-hidden">
-                                    <div className="p-5 md:p-6 border-b border-neutral-100">
-                                        <h2 className="text-lg font-bold tracking-tight">Portfolio Snapshot</h2>
-                                        <p className="text-sm text-neutral-500">The core pieces of the business workspace.</p>
+                                <section className="xl:col-span-4 saas-card p-5 md:p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div>
+                                            <h2 className="text-lg font-bold tracking-tight">Period Breakdown</h2>
+                                            <p className="text-sm text-neutral-500">{dashboardPortfolio.period.rangeLabel}</p>
+                                        </div>
+                                        <Layers size={18} className="text-neutral-300" />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2">
+                                    <div className="space-y-4">
                                         {[
-                                            { title: 'Booking Page', value: `${dashboardPortfolio.pageReadiness}% ready`, desc: `/book/${settings.slug || 'studio'}`, icon: Globe },
-                                            { title: 'Schedule Capacity', value: `${dashboardPortfolio.todayOpenSlots}/${dashboardPortfolio.todayCapacity} today`, desc: `${(settings.availableTimes || []).length} default slots`, icon: Calendar },
-                                            { title: 'Client Book', value: `${clientMetrics.total} profiles`, desc: `${clientMetrics.firstTimers} first-time clients`, icon: Users },
-                                            { title: 'Team Coverage', value: `${staffList.length} member${staffList.length === 1 ? '' : 's'}`, desc: `${dashboardPortfolio.emailAutomations}/${dashboardPortfolio.emailAutomationTotal} email automations on`, icon: Briefcase }
-                                        ].map((item, index) => {
-                                            const IconCmp = item.icon;
+                                            ['Confirmed', dashboardPortfolio.confirmed, 'bg-[#39FF14]'],
+                                            ['Pending', dashboardPortfolio.pending, 'bg-black'],
+                                            ['Waitlist', dashboardPortfolio.waitlist, 'bg-amber-400'],
+                                            ['Declined', dashboardPortfolio.declined, 'bg-red-400']
+                                        ].map(row => {
+                                            const percent = dashboardPortfolio.periodBookings.length ? Math.round((row[1] / dashboardPortfolio.periodBookings.length) * 100) : 0;
                                             return (
-                                                <div key={item.title} className={`p-5 md:p-6 ${index % 2 === 1 ? 'md:border-l' : ''} ${index > 1 ? 'border-t' : ''} border-neutral-100`}>
-                                                    <div className="flex items-start justify-between gap-4 mb-8">
-                                                        <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
-                                                        <span className="w-2.5 h-2.5 rounded-full bg-[#39FF14] shadow-[0_0_0_4px_rgba(57,255,20,0.16)] mt-1" />
+                                                <div key={row[0]}>
+                                                    <div className="flex items-center justify-between gap-4 mb-2">
+                                                        <span className="text-sm font-bold text-black">{row[0]}</span>
+                                                        <span className="metric-value text-sm font-bold text-neutral-500">{row[1]}</span>
                                                     </div>
-                                                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400 mb-2">{item.title}</p>
-                                                    <h3 className="text-2xl font-bold tracking-tight text-black mb-2">{item.value}</h3>
-                                                    <p className="text-sm text-neutral-500 truncate">{item.desc}</p>
+                                                    <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
+                                                        <div className={`h-full rounded-full ${row[2]}`} style={{ width: `${percent}%` }} />
+                                                    </div>
                                                 </div>
                                             );
                                         })}
@@ -1796,16 +1877,49 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 <section className="xl:col-span-4 saas-card p-5 md:p-6">
                                     <div className="flex items-center justify-between mb-6">
                                         <div>
-                                            <h2 className="text-lg font-bold tracking-tight">Client Signals</h2>
-                                            <p className="text-sm text-neutral-500">Relationship and risk overview.</p>
+                                            <h2 className="text-lg font-bold tracking-tight">Schedule</h2>
+                                            <p className="text-sm text-neutral-500">Capacity for the selected timeframe.</p>
+                                        </div>
+                                        <Calendar size={18} className="text-neutral-300" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 mb-5">
+                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
+                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Capacity</p>
+                                            <p className="metric-value text-2xl font-bold text-black">{dashboardPortfolio.capacity}</p>
+                                        </div>
+                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
+                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Open</p>
+                                            <p className="metric-value text-2xl font-bold text-black">{dashboardPortfolio.openSlots}</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {[
+                                            ['Booked slots', `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity}`],
+                                            ['Today status', dashboardPortfolio.todayAvailable ? `${dashboardPortfolio.todayOpenSlots} open today` : 'Closed today'],
+                                            ['Default slots', `${(settings.availableTimes || []).length} times`]
+                                        ].map(row => (
+                                            <div key={row[0]} className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
+                                                <span className="text-sm text-neutral-500">{row[0]}</span>
+                                                <span className="text-sm font-bold text-black text-right">{row[1]}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button onClick={() => setActiveTab('business')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Tune Schedule</button>
+                                </section>
+
+                                <section className="xl:col-span-4 saas-card p-5 md:p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div>
+                                            <h2 className="text-lg font-bold tracking-tight">Clients</h2>
+                                            <p className="text-sm text-neutral-500">People connected to this timeframe.</p>
                                         </div>
                                         <Star size={18} className="text-neutral-300" />
                                     </div>
                                     <div className="space-y-4">
                                         {[
-                                            ['Regulars / VIP', clientMetrics.regulars],
-                                            ['First-time bookers', clientMetrics.firstTimers],
-                                            ['Waitlist clients', bookingStats.waitlist],
+                                            ['Clients in period', dashboardPortfolio.clientCount],
+                                            ['First-time bookers', dashboardPortfolio.firstTimers],
+                                            ['All saved profiles', clientMetrics.total],
                                             ['No-show risk flags', dashboardPortfolio.noShowRisk]
                                         ].map(row => (
                                             <div key={row[0]} className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0">
