@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, X, XCircle } from 'lucide-react';
+import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, ShieldCheck, X, XCircle } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
