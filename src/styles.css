@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { 
+            -webkit-font-smoothing: antialiased; 
+            -moz-osx-font-smoothing: grayscale; 
+        }
+        
+        /* NUCLEAR SCROLLBAR WIPE */
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            -webkit-appearance: none !important;
+        }
+        * {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+
+        button, a, div {
+            -webkit-tap-highlight-color: transparent;
+            outline: none !important;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .saas-card {
+            background: #ffffff;
+            border: 1px solid #E8EAEE;
+            border-radius: 8px;
+            box-shadow: 0 18px 48px -32px rgba(15, 23, 42, 0.35);
+        }
+
+        .saas-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,248,250,0.96));
+            border: 1px solid #E4E7EC;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-feature-settings: "tnum" on, "lnum" on;
+        }
+
+        .backend-skin {
+            background: var(--skin-bg) !important;
+            color: var(--skin-text) !important;
+            font-family: var(--skin-font-body) !important;
+        }
+
+        .backend-skin h1,
+        .backend-skin h2,
+        .backend-skin h3,
+        .backend-skin h4,
+        .backend-skin .font-serif,
+        .backend-skin .font-display {
+            font-family: var(--skin-font-heading) !important;
+        }
+
+        .backend-skin .dashboard-main > div,
+        .backend-skin .mobile-editor-shell {
+            background: var(--skin-bg) !important;
+        }
+
+        .backend-skin .dashboard-sidebar,
+        .backend-skin .mobile-editor-panel,
+        .backend-skin .mobile-bottom-nav {
+            background: var(--skin-surface) !important;
+            border-color: var(--skin-border) !important;
+            color: var(--skin-text) !important;
+        }
+
+        .backend-skin .saas-card,
+        .backend-skin .saas-panel {
+            background: var(--skin-surface) !important;
+            border-color: var(--skin-border) !important;
+            color: var(--skin-text) !important;
+            box-shadow: 0 28px 70px -44px var(--skin-shadow) !important;
+        }
+
+        .backend-skin .bg-white {
+            background-color: var(--skin-surface) !important;
+            border-color: var(--skin-border) !important;
+            color: var(--skin-text) !important;
+        }
+
+        .backend-skin .saas-card,
+        .backend-skin .saas-panel,
+        .backend-skin button.rounded-lg,
+        .backend-skin input.rounded-lg,
+        .backend-skin textarea.rounded-lg,
+        .backend-skin select.rounded-lg {
+            border-radius: var(--skin-radius) !important;
+        }
+
+        .backend-skin .saas-panel,
+        .backend-skin .bg-neutral-50,
+        .backend-skin .bg-neutral-100 {
+            background-color: var(--skin-panel) !important;
+        }
+
+        .backend-skin .bg-black {
+            background-color: var(--skin-heading) !important;
+            border-color: var(--skin-heading) !important;
+            color: var(--skin-on-heading) !important;
+        }
+
+        .backend-skin .text-black,
+        .backend-skin .text-neutral-900,
+        .backend-skin .text-neutral-800,
+        .backend-skin .text-neutral-700 {
+            color: var(--skin-text) !important;
+        }
+
+        .backend-skin .text-white {
+            color: var(--skin-on-heading) !important;
+        }
+
+        .backend-skin .text-neutral-600,
+        .backend-skin .text-neutral-500,
+        .backend-skin .text-neutral-400,
+        .backend-skin .text-neutral-300 {
+            color: var(--skin-muted) !important;
+        }
+
+        .backend-skin .border-neutral-50,
+        .backend-skin .border-neutral-100,
+        .backend-skin .border-neutral-200,
+        .backend-skin .border-black\/5,
+        .backend-skin .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+            border-color: var(--skin-border) !important;
+        }
+
+        .backend-skin .bg-\[\#39FF14\] {
+            background-color: var(--skin-primary) !important;
+            color: var(--skin-on-primary) !important;
+        }
+
+        .backend-skin .text-\[\#39FF14\] {
+            color: var(--skin-primary) !important;
+        }
+
+        .backend-skin .border-\[\#39FF14\] {
+            border-color: var(--skin-primary) !important;
+        }
+
+        .backend-skin [class*="bg-white/"] {
+            background-color: var(--skin-heading-soft) !important;
+        }
+
+        .backend-skin [class*="text-white/"] {
+            color: var(--skin-on-heading-muted) !important;
+        }
+
+        .backend-skin [class*="border-white/"] {
+            border-color: var(--skin-on-heading-border) !important;
+        }
+
+        .backend-skin input,
+        .backend-skin textarea,
+        .backend-skin select {
+            background-color: var(--skin-input) !important;
+            border-color: var(--skin-border) !important;
+            color: var(--skin-text) !important;
+            font-family: var(--skin-font-body) !important;
+        }
+
+        .backend-skin input::placeholder,
+        .backend-skin textarea::placeholder {
+            color: var(--skin-muted) !important;
+            opacity: 0.45;
+        }
+
+        .backend-skin button {
+            font-family: var(--skin-font-button) !important;
+        }
+
+        .backend-skin .backend-skin-ambient {
+            background:
+                radial-gradient(circle at 10% 0%, var(--skin-primary-soft), transparent 32%),
+                radial-gradient(circle at 85% 10%, var(--skin-heading-soft), transparent 34%),
+                linear-gradient(135deg, var(--skin-bg), var(--skin-panel));
+        }
+
+        .backend-skin-soft .backend-skin-ambient {
+            opacity: 0.62;
+        }
+
+        .mobile-editor-rotate-prompt {
+            display: none;
+        }
+
+        @media (max-width: 767px) and (orientation: portrait) {
+            .mobile-editor-rotate-prompt {
+                display: flex;
+            }
+            .mobile-editor-preview {
+                display: none !important;
+            }
+            .mobile-editor-panel {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 767px) and (orientation: landscape) {
+            .mobile-editor-shell {
+                flex-direction: row;
+            }
+            .mobile-editor-panel {
+                width: 46vw !important;
+                min-width: 320px;
+            }
+            .mobile-editor-preview {
+                display: flex !important;
+            }
+        }
+
+        @media (max-height: 520px) and (max-width: 950px) {
+            .dashboard-sidebar,
+            .desktop-sidebar-toggle {
+                display: none !important;
+            }
+            .dashboard-main {
+                padding-bottom: 76px !important;
+            }
+            .mobile-bottom-nav {
+                display: block !important;
+            }
+            .mobile-editor-shell {
+                flex-direction: row;
+            }
+            .mobile-editor-panel {
+                width: 46vw !important;
+                min-width: 320px;
+            }
+            .mobile-editor-preview {
+                display: flex !important;
+            }
+            .mobile-editor-rotate-prompt {
+                display: none !important;
+            }
+        }
+
+        /* Loading Pulse Animation */
+        @keyframes subtle-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.95); }
+        }
+        .animate-subtle-pulse { animation: subtle-pulse 1.5s ease-in-out infinite; }
