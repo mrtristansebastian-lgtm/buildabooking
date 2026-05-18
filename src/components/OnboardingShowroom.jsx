@@ -1,5 +1,27 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, Briefcase, Calendar, Check, CheckCircle2, Globe, Layers, Mail, Palette, PanelRightOpen, Search, ShieldCheck, SkipForward, Sparkles, Star, Users, Zap } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Briefcase,
+  Calendar,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  Eye,
+  Globe,
+  Layers,
+  Mail,
+  MousePointerClick,
+  Palette,
+  PanelRightOpen,
+  Search,
+  ShieldCheck,
+  SkipForward,
+  Sparkles,
+  Star,
+  Users,
+  Zap
+} from 'lucide-react';
 
 const industries = [
   'Beauty Studio',
@@ -62,7 +84,7 @@ export const prepareOnboardingSettings = (settings, draft, metadata = {}) => {
     },
     onboarding: {
       ...(settings.onboarding || {}),
-      version: 1,
+      version: 2,
       industry,
       completedAt: metadata.completedAt || Date.now(),
       skippedAt: metadata.skippedAt || null
@@ -70,16 +92,118 @@ export const prepareOnboardingSettings = (settings, draft, metadata = {}) => {
   };
 };
 
-const toolStops = [
-  { title: 'Dashboard', label: 'Portfolio view', icon: PanelRightOpen, text: 'See today, requests, clients, schedule health, page readiness, and business signals in one clean command center.', tab: 'overview' },
-  { title: 'Bookings', label: 'Request desk', icon: Layers, text: 'Approve requests, move people to waitlist, assign staff, and send quick client updates from the queue.', tab: 'bookings' },
-  { title: 'Schedule', label: 'Availability studio', icon: Calendar, text: 'Tune default slots, close days, add custom times, and read day, week, and month booking-rate stats.', tab: 'business' },
-  { title: 'Email Studio', label: 'Client messaging', icon: Mail, text: 'Customize confirmations, waitlist notes, running-late messages, and review requests with your logo and brand info.', tab: 'communications' },
-  { title: 'Editor', label: 'Design system', icon: Palette, text: 'Try themes, fonts, logos, banners, copy, features, social links, and backend skin settings with live preview.', tab: 'editor' },
-  { title: 'My Clients', label: 'Client book', icon: Star, text: 'Track profiles, notes, photos, booking history, first timers, regulars, VIP labels, and follow-up signals.', tab: 'clients' },
-  { title: 'Team', label: 'Staff access', icon: Users, text: 'Invite staff by email, detect their Google accounts, assign roles, and keep bookings tied to the right person.', tab: 'staff' },
-  { title: 'Profile', label: 'Business hub', icon: Briefcase, text: 'Manage your logo, banner, business info, social handles, account details, and affiliate link.', tab: 'profile' }
+const scenes = [
+  { id: 'intro', type: 'cinema' },
+  { id: 'name', type: 'setup', field: 'businessName' },
+  { id: 'industry', type: 'setup', field: 'industry' },
+  { id: 'instagram', type: 'setup', field: 'instagram' },
+  { id: 'socials', type: 'setup', field: 'socials' },
+  { id: 'link', type: 'link' },
+  {
+    id: 'dashboard',
+    type: 'platform',
+    tab: 'overview',
+    target: 'dashboard-hero',
+    kicker: 'Command center',
+    title: 'Start every day with the whole business in focus.',
+    text: 'Today, requests, booking rate, clients, schedule health, and page readiness are all surfaced before the owner starts clicking around.'
+  },
+  {
+    id: 'bookings',
+    type: 'platform',
+    tab: 'bookings',
+    target: 'bookings-queue',
+    kicker: 'Booking desk',
+    title: 'This is where requests become real appointments.',
+    text: 'Approve new clients, move people to the waitlist, assign staff, send review requests, and keep the queue tidy.'
+  },
+  {
+    id: 'schedule',
+    type: 'platform',
+    tab: 'business',
+    target: 'schedule-calendar',
+    kicker: 'Availability studio',
+    title: 'Availability is edited visually, not buried in settings.',
+    text: 'Owners can close days, add custom slots, see day/week/month booking stats, and keep the booking page accurate.'
+  },
+  {
+    id: 'editor',
+    type: 'platform',
+    tab: 'editor',
+    target: 'editor-theme-library',
+    kicker: 'Live page editor',
+    title: 'The booking page becomes the business brand.',
+    text: 'Themes, fonts, logo, banner, copy, colors, features, and backend skin are all adjusted in a live design workspace.'
+  },
+  {
+    id: 'clients',
+    type: 'platform',
+    tab: 'clients',
+    target: 'clients-directory',
+    kicker: 'Client book',
+    title: 'Every booking quietly builds a client profile.',
+    text: 'First timers, regulars, notes, labels, photos, and booking history turn this into a lightweight client CRM.'
+  },
+  {
+    id: 'email',
+    type: 'platform',
+    tab: 'communications',
+    target: 'email-delivery',
+    kicker: 'Email studio',
+    title: 'Client communication stays branded and consistent.',
+    text: 'Confirmation, waitlist, running-late, and review emails can carry the business logo, banner, and custom message.'
+  },
+  {
+    id: 'team',
+    type: 'platform',
+    tab: 'staff',
+    target: 'team-roster',
+    kicker: 'Team access',
+    title: 'Staff can work inside the same business without chaos.',
+    text: 'Owners can add staff by email, detect accounts, assign access, and keep each booking tied to the right person.'
+  },
+  {
+    id: 'profile',
+    type: 'platform',
+    tab: 'profile',
+    target: 'profile-business-info',
+    kicker: 'Business profile',
+    title: 'The business identity lives in one polished place.',
+    text: 'Logo, banner, social links, location, affiliate link, and account details stay together for easy setup.'
+  },
+  { id: 'launch', type: 'launch' }
 ];
+
+const setupCopy = {
+  businessName: {
+    eyebrow: 'Identity 01',
+    title: 'What name should clients remember?',
+    helper: 'This becomes the headline of the booking page and the name used around the workspace.',
+    label: 'Business name',
+    placeholder: 'Studio Noir'
+  },
+  industry: {
+    eyebrow: 'Identity 02',
+    title: 'What kind of business is this?',
+    helper: 'The industry shapes the tone of the page and helps the dashboard feel more personal.',
+    label: 'Industry',
+    placeholder: 'Beauty Studio'
+  },
+  instagram: {
+    eyebrow: 'Identity 03',
+    title: 'Add the handle clients already know.',
+    helper: 'If you add Instagram, Build A Booking can use it to create a cleaner booking link.',
+    label: 'Instagram',
+    placeholder: '@yourstudio'
+  },
+  socials: {
+    eyebrow: 'Identity 04',
+    title: 'Connect the rest of the public footprint.',
+    helper: 'Optional, but useful. These links appear on the public booking page so clients can trust what they see.'
+  }
+};
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export function OnboardingShowroom({
   open,
@@ -90,7 +214,8 @@ export function OnboardingShowroom({
   onComplete,
   onNavigate
 }) {
-  const [step, setStep] = useState(0);
+  const [sceneIndex, setSceneIndex] = useState(0);
+  const [spotlight, setSpotlight] = useState(null);
   const [draft, setDraft] = useState({
     businessName: '',
     industry: '',
@@ -100,9 +225,14 @@ export function OnboardingShowroom({
     website: ''
   });
 
+  const scene = scenes[sceneIndex] || scenes[0];
+  const generatedSlug = buildBookingSlug(draft.businessName, draft.instagram);
+  const generatedLink = `${bookingOrigin}/book/${generatedSlug}`;
+  const progress = Math.round(((sceneIndex + 1) / scenes.length) * 100);
+
   useEffect(() => {
     if (!open) return;
-    setStep(0);
+    setSceneIndex(0);
     setDraft({
       businessName: settings.brandName || '',
       industry: settings.onboarding?.industry || settings.tagline || '',
@@ -113,249 +243,467 @@ export function OnboardingShowroom({
     });
   }, [open, settings.brandName, settings.onboarding?.industry, settings.tagline, settings.socials?.instagram, settings.socials?.tiktok, settings.socials?.facebook, settings.socials?.website]);
 
+  useEffect(() => {
+    if (!open || scene.type !== 'platform') return;
+    onNavigate?.(scene.tab);
+  }, [open, scene.id, scene.tab, scene.type, onNavigate]);
+
+  useEffect(() => {
+    if (!open || scene.type !== 'platform') {
+      setSpotlight(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer = null;
+    const padding = window.innerWidth < 640 ? 10 : 16;
+
+    const updateSpotlight = () => {
+      if (cancelled) return;
+      const target = document.querySelector(`[data-tour="${scene.target}"]`);
+      if (!target) {
+        setSpotlight(null);
+        return;
+      }
+
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+
+      window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        const rect = target.getBoundingClientRect();
+        setSpotlight({
+          top: Math.max(12, rect.top - padding),
+          left: Math.max(12, rect.left - padding),
+          width: Math.min(window.innerWidth - 24, rect.width + padding * 2),
+          height: Math.min(window.innerHeight - 24, rect.height + padding * 2)
+        });
+      });
+    };
+
+    updateSpotlight();
+    timer = window.setTimeout(updateSpotlight, 420);
+    window.addEventListener('resize', updateSpotlight);
+    window.addEventListener('scroll', updateSpotlight, true);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      window.removeEventListener('resize', updateSpotlight);
+      window.removeEventListener('scroll', updateSpotlight, true);
+    };
+  }, [open, scene.id, scene.target, scene.type]);
+
+  const next = () => setSceneIndex(index => Math.min(index + 1, scenes.length - 1));
+  const back = () => setSceneIndex(index => Math.max(index - 1, 0));
+  const updateDraft = (key, value) => setDraft(prev => ({ ...prev, [key]: value }));
+  const complete = (destination = 'editor') => onComplete(draft, { destination });
+
+  const popoverStyle = useMemo(() => {
+    if (!spotlight) return {};
+    const isMobile = window.innerWidth < 640;
+    const width = isMobile ? window.innerWidth - 32 : 360;
+    const height = isMobile ? 360 : 300;
+    const enoughRight = spotlight.left + spotlight.width + width + 28 < window.innerWidth;
+    const enoughLeft = spotlight.left - width - 28 > 0;
+    const left = isMobile
+      ? 16
+      : enoughRight
+        ? spotlight.left + spotlight.width + 24
+        : enoughLeft
+          ? spotlight.left - width - 24
+          : spotlight.left > window.innerWidth / 2
+            ? 24
+            : window.innerWidth - width - 24;
+    const below = spotlight.top + spotlight.height + 18;
+    const top = isMobile
+      ? clamp(below, 16, window.innerHeight - height - 16)
+      : clamp(spotlight.top, 20, window.innerHeight - height - 20);
+
+    return { left, top, width, maxHeight: isMobile ? 'calc(100vh - 32px)' : undefined };
+  }, [spotlight]);
+
   if (!open) return null;
 
-  const generatedSlug = buildBookingSlug(draft.businessName, draft.instagram);
-  const generatedLink = `${bookingOrigin}/book/${generatedSlug}`;
-  const progress = Math.round(((step + 1) / 4) * 100);
-
-  const updateDraft = (key, value) => setDraft(prev => ({ ...prev, [key]: value }));
-  const complete = (destination = 'overview') => {
-    onComplete(draft, { destination });
-  };
+  const stageBackground = scene.type === 'platform' ? 'pointer-events-auto' : 'bg-[#050505] pointer-events-auto';
 
   return (
-    <div className="fixed inset-0 z-[9998] bg-[#050505] text-white overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.08] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:64px_64px]" />
-      <div className="absolute inset-x-0 top-0 h-1 bg-white/10">
-        <div className="h-full bg-[#39FF14] transition-all duration-700" style={{ width: `${progress}%` }} />
-      </div>
+    <div className={`fixed inset-0 z-[9998] text-white overflow-hidden ${stageBackground}`}>
+      <TopProgress progress={progress} />
+      <SkipButton onSkip={onSkip} />
 
-      <button
-        onClick={onSkip}
-        className="absolute right-4 top-4 md:right-8 md:top-8 z-20 h-11 px-4 rounded-lg bg-white/10 border border-white/10 text-white/70 hover:text-white hover:bg-white/15 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
-      >
-        <SkipForward size={14} /> Skip Tour
-      </button>
+      {scene.type !== 'platform' && (
+        <div className="absolute inset-0 opacity-[0.06] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:72px_72px]" />
+      )}
 
-      <div className="relative z-10 h-full grid grid-cols-1 xl:grid-cols-12">
-        <aside className="hidden xl:flex xl:col-span-3 border-r border-white/10 p-8 flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-12">
-              <img src="/logoblackonwhite.png" alt="Build A Booking" className="w-11 h-11 rounded-lg bg-white object-contain" />
+      {scene.type === 'cinema' && (
+        <CinemaScene
+          generatedLink={generatedLink}
+          onNext={next}
+          onJump={() => setSceneIndex(6)}
+        />
+      )}
+
+      {scene.type === 'setup' && (
+        <SetupScene
+          field={scene.field}
+          draft={draft}
+          generatedLink={generatedLink}
+          updateDraft={updateDraft}
+          onBack={back}
+          onNext={next}
+        />
+      )}
+
+      {scene.type === 'link' && (
+        <LinkScene
+          draft={draft}
+          generatedLink={generatedLink}
+          onBack={back}
+          onNext={next}
+        />
+      )}
+
+      {scene.type === 'platform' && (
+        <PlatformScene
+          scene={scene}
+          sceneIndex={sceneIndex}
+          spotlight={spotlight}
+          popoverStyle={popoverStyle}
+          progress={progress}
+          onBack={back}
+          onNext={next}
+          onNavigate={onNavigate}
+        />
+      )}
+
+      {scene.type === 'launch' && (
+        <LaunchScene
+          generatedLink={generatedLink}
+          canApply={canApply}
+          onBack={back}
+          onFinish={complete}
+        />
+      )}
+    </div>
+  );
+}
+
+function TopProgress({ progress }) {
+  return (
+    <div className="absolute inset-x-0 top-0 z-50 h-1 bg-white/10">
+      <div className="h-full bg-white transition-all duration-700" style={{ width: `${progress}%` }} />
+    </div>
+  );
+}
+
+function SkipButton({ onSkip }) {
+  return (
+    <button
+      onClick={onSkip}
+      className="absolute right-4 top-4 md:right-8 md:top-8 z-50 h-11 px-4 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-2xl backdrop-blur-xl"
+    >
+      <SkipForward size={14} /> Skip Tour
+    </button>
+  );
+}
+
+function CinemaScene({ generatedLink, onNext, onJump }) {
+  return (
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-10 items-center">
+        <div className="xl:col-span-7">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/55 mb-8">
+            <Sparkles size={14} /> Build A Booking Intro
+          </div>
+          <h1 className="text-5xl md:text-7xl xl:text-[104px] font-bold tracking-tight leading-[0.88] mb-8">
+            Your booking system, introduced properly.
+          </h1>
+          <p className="text-lg md:text-2xl text-white/55 max-w-3xl leading-relaxed mb-10">
+            A short cinematic setup that walks through the real platform, highlights the important tools, and creates your first booking identity step by step.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button onClick={onNext} className="h-14 px-7 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
+              Begin Setup <ArrowRight size={15} />
+            </button>
+            <button onClick={onJump} className="h-14 px-7 rounded-full bg-white/10 border border-white/15 text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/15 transition-colors">
+              Watch Platform Tour <Eye size={15} />
+            </button>
+          </div>
+        </div>
+
+        <div className="xl:col-span-5">
+          <div className="relative rounded-[2rem] border border-white/15 bg-white/[0.03] p-5 shadow-[0_40px_120px_-70px_rgba(255,255,255,0.55)]">
+            <div className="aspect-[4/5] rounded-[1.5rem] bg-white text-black p-6 md:p-8 flex flex-col justify-between overflow-hidden">
               <div>
-                <p className="text-sm font-bold tracking-tight">Build A Booking</p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35">Showroom Intro</p>
+                <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-12">
+                  <MousePointerClick size={22} />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Experience Mode</p>
+                <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-none mb-5">Guided, focused, cinematic.</h2>
+                <p className="text-neutral-500 leading-relaxed">No cold form. No guessing. The app explains itself while the business setup takes shape.</p>
+              </div>
+              <div className="rounded-2xl bg-black text-white p-4">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Preview link</p>
+                <p className="text-sm font-bold break-all">{generatedLink}</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }) {
+  const copy = setupCopy[field];
+  const normalizedInstagram = normalizeHandle(draft.instagram);
+  const inputValue = draft[field] || '';
+
+  return (
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
+        <div className="xl:col-span-7 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-8 xl:p-10 shadow-[0_40px_120px_-80px_rgba(255,255,255,0.5)]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/35 mb-5">{copy.eyebrow}</p>
+          <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-none mb-5">{copy.title}</h2>
+          <p className="text-white/50 text-lg leading-relaxed max-w-2xl mb-10">{copy.helper}</p>
+
+          {field !== 'socials' ? (
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/35 block mb-4">{copy.label}</label>
+              <input
+                value={inputValue}
+                onChange={(event) => updateDraft(field, event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') onNext();
+                }}
+                list={field === 'industry' ? 'industry-options' : undefined}
+                placeholder={copy.placeholder}
+                autoFocus
+                className="w-full bg-transparent border-0 border-b border-white/25 focus:border-white text-4xl md:text-6xl font-bold tracking-tight outline-none py-5 text-white placeholder:text-white/20"
+              />
+              {field === 'industry' && (
+                <datalist id="industry-options">
+                  {industries.map(industry => <option key={industry} value={industry} />)}
+                </datalist>
+              )}
+              {field === 'industry' && (
+                <div className="flex flex-wrap gap-2 mt-6">
+                  {industries.slice(0, 6).map(industry => (
+                    <button
+                      key={industry}
+                      type="button"
+                      onClick={() => updateDraft('industry', industry)}
+                      className="h-10 px-4 rounded-full bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/65 hover:bg-white hover:text-black transition-colors"
+                    >
+                      {industry}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                ['tiktok', 'TikTok', '@yourstudio'],
+                ['facebook', 'Facebook', 'yourstudio'],
+                ['website', 'Website', 'yourstudio.com']
+              ].map(([key, label, placeholder]) => (
+                <label key={key} className="rounded-2xl bg-white text-black p-4">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-3">{label}</span>
+                  <input
+                    value={draft[key]}
+                    onChange={(event) => updateDraft(key, event.target.value)}
+                    placeholder={placeholder}
+                    className="w-full bg-transparent outline-none text-lg font-bold placeholder:text-neutral-300"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 mt-12">
+            <button onClick={onNext} className="h-14 px-7 py-4 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
+              Continue <ArrowRight size={15} />
+            </button>
+            <button onClick={onBack} className="h-14 px-7 py-4 rounded-full bg-white/10 border border-white/15 text-white/70 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-white transition-colors">
+              <ChevronLeft size={15} /> Back
+            </button>
+          </div>
+        </div>
+
+        <aside className="xl:col-span-5 rounded-[2rem] bg-white text-black p-6 md:p-8 flex flex-col justify-between">
+          <div>
+            <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center mb-10">
+              <Globe size={18} />
+            </div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3">Live Identity Preview</p>
+            <h3 className="text-4xl font-bold tracking-tight leading-none mb-4">{draft.businessName || 'Your Business'}</h3>
+            <p className="text-neutral-500 font-medium mb-8">{draft.industry || 'Choose an industry'}</p>
+            <div className="rounded-2xl bg-neutral-100 p-4 mb-5">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Booking link</p>
+              <p className="text-sm font-bold break-all">{generatedLink}</p>
+            </div>
             <div className="space-y-3">
-              {['Welcome', 'Business setup', 'Tool tour', 'Launch'].map((label, index) => (
-                <button
-                  key={label}
-                  onClick={() => setStep(index)}
-                  className={`w-full text-left rounded-lg border p-4 transition-all ${step === index ? 'bg-white text-black border-white' : 'bg-white/5 border-white/10 text-white/55 hover:text-white hover:bg-white/10'}`}
-                >
-                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-45">0{index + 1}</span>
-                  <p className="text-sm font-bold mt-1">{label}</p>
-                </button>
+              {[
+                ['Instagram', normalizedInstagram ? `@${normalizedInstagram}` : 'Not added yet'],
+                ['TikTok', normalizeHandle(draft.tiktok) ? `@${normalizeHandle(draft.tiktok)}` : 'Optional'],
+                ['Website', draft.website || 'Optional']
+              ].map(row => (
+                <div key={row[0]} className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-3 last:border-0">
+                  <span className="text-sm text-neutral-500">{row[0]}</span>
+                  <span className="text-sm font-bold text-right">{row[1]}</span>
+                </div>
               ))}
             </div>
           </div>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Your Booking Link</p>
-            <p className="text-sm font-bold text-[#39FF14] break-all">{generatedLink}</p>
-          </div>
         </aside>
-
-        <main className="xl:col-span-9 h-full overflow-y-auto">
-          {step === 0 && (
-            <section className="min-h-full flex items-center px-5 md:px-10 xl:px-16 py-24">
-              <div className="max-w-5xl">
-                <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/55 mb-8">
-                  <Sparkles size={14} className="text-[#39FF14]" /> Welcome Showroom
-                </div>
-                <h1 className="text-5xl md:text-7xl xl:text-8xl font-bold tracking-tight leading-[0.92] mb-8">
-                  Welcome to the place your bookings start feeling premium.
-                </h1>
-                <p className="text-lg md:text-2xl text-white/55 max-w-3xl leading-relaxed mb-10">
-                  We will set up your business identity, create your booking link, and walk you through every tool inside Build A Booking.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button onClick={() => setStep(1)} className="h-14 px-7 rounded-lg bg-[#39FF14] text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95">
-                    Start Setup <ArrowRight size={15} />
-                  </button>
-                  <button onClick={() => setStep(2)} className="h-14 px-7 rounded-lg bg-white/10 border border-white/10 text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/15">
-                    Tour Tools <Search size={15} />
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {step === 1 && (
-            <section className="min-h-full px-5 md:px-10 xl:px-16 py-24">
-              <div className="max-w-6xl">
-                <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-[#39FF14] mb-4">Business Setup</p>
-                <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-5">Create the first version of your booking brand.</h2>
-                <p className="text-white/50 text-lg max-w-2xl mb-10">This gives your page a name, a category, social links, and a clean link clients can remember.</p>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  <div className="lg:col-span-7 rounded-lg border border-white/10 bg-white/[0.04] p-5 md:p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="md:col-span-2">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/35 block mb-2">Business Name</span>
-                        <input value={draft.businessName} onChange={(e) => updateDraft('businessName', e.target.value)} placeholder="Studio Noir" className="w-full h-14 rounded-lg bg-white text-black px-4 text-base font-bold outline-none" />
-                      </label>
-                      <label>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/35 block mb-2">Industry</span>
-                        <input value={draft.industry} onChange={(e) => updateDraft('industry', e.target.value)} list="industry-options" placeholder="Beauty Studio" className="w-full h-14 rounded-lg bg-white text-black px-4 text-sm font-bold outline-none" />
-                        <datalist id="industry-options">
-                          {industries.map(industry => <option key={industry} value={industry} />)}
-                        </datalist>
-                      </label>
-                      <label>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/35 block mb-2">Instagram</span>
-                        <input value={draft.instagram} onChange={(e) => updateDraft('instagram', e.target.value)} placeholder="@yourstudio" className="w-full h-14 rounded-lg bg-white text-black px-4 text-sm font-bold outline-none" />
-                      </label>
-                      <label>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/35 block mb-2">TikTok</span>
-                        <input value={draft.tiktok} onChange={(e) => updateDraft('tiktok', e.target.value)} placeholder="@yourstudio" className="w-full h-14 rounded-lg bg-white text-black px-4 text-sm font-bold outline-none" />
-                      </label>
-                      <label>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/35 block mb-2">Facebook</span>
-                        <input value={draft.facebook} onChange={(e) => updateDraft('facebook', e.target.value)} placeholder="yourstudio" className="w-full h-14 rounded-lg bg-white text-black px-4 text-sm font-bold outline-none" />
-                      </label>
-                      <label className="md:col-span-2">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/35 block mb-2">Website</span>
-                        <input value={draft.website} onChange={(e) => updateDraft('website', e.target.value)} placeholder="yourstudio.com" className="w-full h-14 rounded-lg bg-white text-black px-4 text-sm font-bold outline-none" />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-5 rounded-lg bg-white text-black p-5 md:p-6 flex flex-col justify-between">
-                    <div>
-                      <div className="w-12 h-12 rounded-lg bg-black text-[#39FF14] flex items-center justify-center mb-8">
-                        <Globe size={18} />
-                      </div>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Auto-created link</p>
-                      <p className="text-lg md:text-xl font-bold break-all mb-6">{generatedLink}</p>
-                      <div className="space-y-3">
-                        {[
-                          ['Business page', draft.businessName || settings.brandName || 'Your Business'],
-                          ['Category signal', draft.industry || settings.tagline || 'Private Studio'],
-                          ['Primary handle', normalizeHandle(draft.instagram) ? `@${normalizeHandle(draft.instagram)}` : 'Add Instagram to shape the link']
-                        ].map(row => (
-                          <div key={row[0]} className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-3 last:border-0">
-                            <span className="text-sm text-neutral-500">{row[0]}</span>
-                            <span className="text-sm font-bold text-right">{row[1]}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
-                      <button onClick={() => complete('editor')} disabled={!canApply} className="h-12 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40">
-                        <Check size={15} /> Apply Setup
-                      </button>
-                      <button onClick={() => setStep(2)} className="h-12 rounded-lg border border-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50">
-                        Continue Tour
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {step === 2 && (
-            <section className="min-h-full px-5 md:px-10 xl:px-16 py-24">
-              <div className="max-w-6xl">
-                <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-[#39FF14] mb-4">Tool Tour</p>
-                <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-5">A complete business cockpit, room by room.</h2>
-                <p className="text-white/50 text-lg max-w-2xl mb-10">Every section is built for a business owner who needs the work to feel simple, polished, and connected.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  {toolStops.map(tool => {
-                    const Icon = tool.icon;
-                    return (
-                      <button key={tool.title} onClick={() => onNavigate(tool.tab)} className="group min-h-[220px] rounded-lg border border-white/10 bg-white/[0.04] p-5 text-left hover:bg-white hover:text-black transition-all">
-                        <div className="w-11 h-11 rounded-lg bg-white/10 group-hover:bg-black group-hover:text-[#39FF14] flex items-center justify-center mb-8 transition-colors">
-                          <Icon size={18} />
-                        </div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-[#39FF14] group-hover:text-neutral-500 mb-2">{tool.label}</p>
-                        <h3 className="text-xl font-bold tracking-tight mb-3">{tool.title}</h3>
-                        <p className="text-sm leading-relaxed text-white/50 group-hover:text-neutral-500">{tool.text}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-end mt-8">
-                  <button onClick={() => setStep(3)} className="h-12 px-6 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                    Final Step <ArrowRight size={15} />
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {step === 3 && (
-            <section className="min-h-full flex items-center px-5 md:px-10 xl:px-16 py-24">
-              <div className="max-w-6xl w-full">
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
-                  <div className="xl:col-span-7 rounded-lg bg-white text-black p-6 md:p-10">
-                    <div className="w-14 h-14 rounded-lg bg-black text-[#39FF14] flex items-center justify-center mb-10">
-                      <Zap size={22} />
-                    </div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-400 mb-4">Ready</p>
-                    <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-none mb-6">Your workspace is ready for its first client.</h2>
-                    <p className="text-neutral-500 text-lg leading-relaxed mb-8">Apply the setup, publish your page, then refine theme, schedule, team, clients, and email studio at your own pace.</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {[
-                        ['Setup', 'Brand and link'],
-                        ['Tour', 'All tools'],
-                        ['Publish', 'Booking page']
-                      ].map(item => (
-                        <div key={item[0]} className="rounded-lg border border-neutral-100 bg-neutral-50 p-4">
-                          <CheckCircle2 size={17} className="text-emerald-500 mb-4" />
-                          <p className="text-sm font-bold">{item[0]}</p>
-                          <p className="text-xs text-neutral-500 mt-1">{item[1]}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="xl:col-span-5 rounded-lg border border-white/10 bg-white/[0.04] p-6 md:p-8 flex flex-col justify-between">
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Suggested Next Move</p>
-                      <h3 className="text-3xl font-bold tracking-tight mb-4">Open the Editor and make it yours.</h3>
-                      <p className="text-white/50 leading-relaxed mb-6">Start with identity, then themes, then schedule. The booking page preview will show every change live.</p>
-                      <div className="space-y-3">
-                        {[
-                          [Palette, 'Choose a theme'],
-                          [Calendar, 'Tune availability'],
-                          [Mail, 'Connect emails'],
-                          [ShieldCheck, 'Invite staff']
-                        ].map(([Icon, label]) => (
-                          <div key={label} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
-                            <Icon size={15} className="text-[#39FF14]" />
-                            <span className="text-sm font-bold">{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
-                      <button onClick={() => complete('editor')} disabled={!canApply} className="h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40">
-                        Finish In Editor <ArrowRight size={15} />
-                      </button>
-                      <button onClick={() => complete('overview')} disabled={!canApply} className="h-12 rounded-lg bg-white/10 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/15 disabled:opacity-40">
-                        Finish
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-        </main>
       </div>
-    </div>
+    </section>
+  );
+}
+
+function LinkScene({ draft, generatedLink, onBack, onNext }) {
+  return (
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+      <div className="max-w-5xl mx-auto text-center">
+        <div className="w-16 h-16 rounded-2xl bg-white text-black flex items-center justify-center mx-auto mb-10">
+          <Check size={24} />
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/35 mb-5">Identity locked</p>
+        <h2 className="text-5xl md:text-7xl xl:text-8xl font-bold tracking-tight leading-[0.9] mb-8">
+          {draft.businessName || 'Your business'} now has a booking link.
+        </h2>
+        <div className="rounded-[2rem] bg-white text-black p-6 md:p-8 mb-10 text-left">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3">Client-facing link</p>
+          <p className="text-xl md:text-3xl font-bold break-all">{generatedLink}</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button onClick={onNext} className="h-14 px-7 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
+            Walk The Platform <Search size={15} />
+          </button>
+          <button onClick={onBack} className="h-14 px-7 rounded-full bg-white/10 border border-white/15 text-white/70 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-white transition-colors">
+            <ChevronLeft size={15} /> Back
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PlatformScene({ scene, sceneIndex, spotlight, popoverStyle, onBack, onNext, onNavigate }) {
+  return (
+    <>
+      <SpotlightPanels spotlight={spotlight} />
+      {spotlight && (
+        <div
+          className="fixed z-[10001] rounded-[1.35rem] border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4),0_0_55px_rgba(255,255,255,0.35)] pointer-events-none"
+          style={spotlight}
+        >
+          <div className="absolute -right-3 -top-3 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center shadow-xl">
+            <MousePointerClick size={14} />
+          </div>
+        </div>
+      )}
+
+      <div
+        className="fixed z-[10002] overflow-y-auto rounded-[1.5rem] bg-white text-black p-4 md:p-6 shadow-[0_30px_100px_-30px_rgba(0,0,0,0.75)] border border-black/10"
+        style={popoverStyle}
+      >
+        <div className="flex items-start justify-between gap-4 mb-5 md:mb-8">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">{scene.kicker}</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{scene.title}</h2>
+          </div>
+          <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center shrink-0">
+            <ArrowUpRight size={17} />
+          </div>
+        </div>
+        <p className="text-sm md:text-base text-neutral-500 leading-relaxed mb-6">{scene.text}</p>
+        <div className="flex items-center justify-between gap-3">
+          <button onClick={onBack} className="h-11 px-4 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:text-black">
+            <ChevronLeft size={14} /> Back
+          </button>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">{sceneIndex - 5} / 8</div>
+          <button onClick={onNext} className="h-11 px-5 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-neutral-800">
+            Next <ArrowRight size={14} />
+          </button>
+        </div>
+        <button
+          onClick={() => onNavigate?.(scene.tab)}
+          className="mt-3 w-full h-10 rounded-full border border-neutral-200 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-black hover:bg-neutral-50 flex items-center justify-center gap-2"
+        >
+          <MousePointerClick size={14} /> Show This Area
+        </button>
+      </div>
+    </>
+  );
+}
+
+function SpotlightPanels({ spotlight }) {
+  if (!spotlight) {
+    return <div className="fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm" />;
+  }
+
+  const right = window.innerWidth - spotlight.left - spotlight.width;
+  const bottom = window.innerHeight - spotlight.top - spotlight.height;
+  const panelClass = 'fixed z-[10000] bg-black/72 backdrop-blur-[2px]';
+
+  return (
+    <>
+      <div className={panelClass} style={{ left: 0, top: 0, width: '100%', height: spotlight.top }} />
+      <div className={panelClass} style={{ left: 0, top: spotlight.top, width: spotlight.left, height: spotlight.height }} />
+      <div className={panelClass} style={{ right: 0, top: spotlight.top, width: Math.max(0, right), height: spotlight.height }} />
+      <div className={panelClass} style={{ left: 0, bottom: 0, width: '100%', height: Math.max(0, bottom) }} />
+    </>
+  );
+}
+
+function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
+  return (
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
+        <div className="xl:col-span-7 rounded-[2rem] bg-white text-black p-6 md:p-10">
+          <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-10">
+            <Zap size={22} />
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-400 mb-4">Launch ready</p>
+          <h2 className="text-5xl md:text-7xl font-bold tracking-tight leading-[0.9] mb-6">You have seen the whole machine.</h2>
+          <p className="text-neutral-500 text-lg leading-relaxed mb-8">Now we apply the setup, open the editor, and let you tune the final look before publishing.</p>
+          <div className="rounded-2xl bg-neutral-100 p-4">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Your booking link</p>
+            <p className="text-sm font-bold break-all">{generatedLink}</p>
+          </div>
+        </div>
+
+        <div className="xl:col-span-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 md:p-8 flex flex-col justify-between">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Next best actions</p>
+            <h3 className="text-3xl font-bold tracking-tight mb-4">Make it unmistakably yours.</h3>
+            <p className="text-white/50 leading-relaxed mb-6">Start with identity, theme, schedule, and email. The workspace is ready to guide the rest.</p>
+            <div className="space-y-3">
+              {[
+                [Palette, 'Choose a theme'],
+                [Calendar, 'Tune availability'],
+                [Mail, 'Connect emails'],
+                [ShieldCheck, 'Invite staff']
+              ].map(([Icon, label]) => (
+                <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <Icon size={15} />
+                  <span className="text-sm font-bold">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
+            <button onClick={() => onFinish('editor')} disabled={!canApply} className="h-12 rounded-full bg-white text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-neutral-200">
+              Finish In Editor <ArrowRight size={15} />
+            </button>
+            <button onClick={onBack} className="h-12 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/15 flex items-center justify-center gap-2">
+              <ChevronLeft size={15} /> Back
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

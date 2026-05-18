@@ -708,8 +708,6 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             };
 
             const handleOnboardingNavigate = (tab) => {
-                markOnboardingHandled();
-                setShowOnboarding(false);
                 setView('dashboard');
                 setActiveTab(tab);
             };
@@ -1416,7 +1414,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                         {navItems.map(item => {
                             const IconCmp = item.icon;
                             return (
-                                <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-lg text-[11px] font-bold transition-all duration-700 ${activeTab === item.id ? 'bg-black text-white shadow-xl scale-[1.02]' : 'text-neutral-400 hover:bg-neutral-50 hover:text-black'}`}>
+                                <button key={item.id} data-tour={`nav-${item.id}`} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-lg text-[11px] font-bold transition-all duration-700 ${activeTab === item.id ? 'bg-black text-white shadow-xl scale-[1.02]' : 'text-neutral-400 hover:bg-neutral-50 hover:text-black'}`}>
                                 <IconCmp size={18} strokeWidth={2.5} /> {item.label.toUpperCase()}
                                 {item.badge && <div className="ml-auto w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />}
                                 </button>
@@ -1458,6 +1456,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             return (
                                 <button
                                     key={item.id}
+                                    data-tour={`mobile-nav-${item.id}`}
                                     onClick={() => setActiveTab(item.id)}
                                     className={`relative min-w-[72px] h-14 rounded-lg flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-black text-white shadow-lg' : 'text-neutral-400 bg-neutral-50'}`}
                                 >
@@ -1486,13 +1485,13 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     <button onClick={() => setActiveTab('editor')} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors">
                                         <Palette size={15}/> Edit Page
                                     </button>
-                                    <button onClick={saveSettings} className="h-11 px-5 rounded-lg bg-[#39FF14] text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
+                                    <button data-tour="publish-button" onClick={saveSettings} className="h-11 px-5 rounded-lg bg-[#39FF14] text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
                                         <Check size={15}/> Publish
                                     </button>
                                 </div>
                             </header>
 
-                            <section className="mb-6 overflow-hidden rounded-lg bg-black text-white shadow-[0_24px_80px_-48px_rgba(0,0,0,0.9)]">
+                            <section data-tour="dashboard-hero" className="mb-6 overflow-hidden rounded-lg bg-black text-white shadow-[0_24px_80px_-48px_rgba(0,0,0,0.9)]">
                                 <div className="grid grid-cols-1 xl:grid-cols-12">
                                     <div className="xl:col-span-7 p-6 md:p-8 lg:p-10">
                                         <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white/70 mb-8">
@@ -1768,7 +1767,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm">
+                                <div data-tour="profile-business-info" className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm">
                                     <h3 className="text-xl font-bold tracking-tight mb-8 text-black">Business Information</h3>
                                     <div className="space-y-10">
                                         <div>
@@ -1879,7 +1878,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter mb-4 text-black">Email Studio</h2>
                                 <p className="text-neutral-400 font-medium text-lg">Write the emails your clients receive before and after a booking.</p>
                             </header>
-                            <section className="max-w-6xl bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm mb-8">
+                            <section data-tour="email-delivery" className="max-w-6xl bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm mb-8">
                                 <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-8 mb-8">
                                     <div className="max-w-2xl">
                                         <div className={`w-11 h-11 rounded-lg flex items-center justify-center mb-5 ${isEmailConfigured(communications) ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-400'}`}>
@@ -2001,7 +2000,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                 <section className="xl:col-span-5 space-y-6">
-                                    <div className="saas-card overflow-hidden">
+                                    <div data-tour="clients-directory" className="saas-card overflow-hidden">
                                         <div className="p-5 md:p-6 border-b border-neutral-100">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                                                 <div>
@@ -2292,7 +2291,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             </div>
 
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                                <section className="xl:col-span-8 saas-card overflow-hidden">
+                                <section data-tour="team-roster" className="xl:col-span-8 saas-card overflow-hidden">
                                     <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div>
                                             <h3 className="text-lg font-bold tracking-tight text-black">Roster</h3>
@@ -2601,7 +2600,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 )}
 
                                 {editorTab === 'themes' && (
-                                <div className="space-y-12 animate-in fade-in duration-700">
+                                <div data-tour="editor-theme-library" className="space-y-12 animate-in fade-in duration-700">
                                     <div>
                                         <div className="flex items-center justify-between gap-4 mb-6">
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Designer Theme Library</label>
@@ -2938,7 +2937,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             </div>
                         )}
 
-                        <section className="saas-card overflow-hidden">
+                            <section data-tour="bookings-queue" className="saas-card overflow-hidden">
                             <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
                                 <div>
                                     <h2 className="text-lg font-bold tracking-tight text-black">Booking Queue</h2>

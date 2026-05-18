@@ -324,7 +324,7 @@ import { getLocalDateStr } from '../utils/dates';
                     </section>
 
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                        <section className="xl:col-span-8 saas-card overflow-hidden">
+                        <section data-tour="schedule-calendar" className="xl:col-span-8 saas-card overflow-hidden">
                             <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <h3 className="text-lg font-bold tracking-tight text-black">Monthly Calendar</h3>
