@@ -213,14 +213,35 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
             }, [settings.brandName, user, workspaceAccess]);
 
-            const demoBookings = useMemo(() => ([
-                { id: 'demo-1', clientName: 'Ari Carter', clientPhone: '+27 82 555 0184', clientBirthday: '08/14', date: 'Today', time: '10:30', status: 'pending', timestamp: Date.now() - 120000, noShowHistory: false },
-                { id: 'demo-2', clientName: 'Mika Stone', clientPhone: '+27 72 555 0931', clientBirthday: '', date: 'Today', time: '14:30', status: 'confirmed', timestamp: Date.now() - 3600000, noShowHistory: false, staffId: 'owner' },
-                { id: 'demo-3', clientName: 'Noah Wilde', clientPhone: '+27 79 555 4410', clientBirthday: '11/03', date: 'Tomorrow', time: 'Waitlist', status: 'waitlist', timestamp: Date.now() - 7200000, noShowHistory: true },
-                { id: 'demo-4', clientName: 'Lena Vale', clientPhone: '+27 83 555 7702', clientBirthday: '', date: 'Fri, 22 May', time: '16:00', status: 'confirmed', timestamp: Date.now() - 10800000, noShowHistory: false, staffId: 'owner' }
-            ]), []);
-
-            const visibleBookings = bookings.length ? bookings : demoBookings;
+            const visibleBookings = bookings;
+            const exampleBooking = useMemo(() => ({
+                id: 'example-booking',
+                clientName: 'Example Client',
+                clientPhone: '+27 82 000 0000',
+                clientBirthday: '',
+                date: 'Example date',
+                time: '10:30',
+                status: 'pending',
+                timestamp: 0,
+                noShowHistory: false,
+                isExample: true
+            }), []);
+            const exampleClient = useMemo(() => ({
+                id: 'example-client',
+                name: 'Example Client',
+                phone: '+27 82 000 0000',
+                email: 'client@example.com',
+                birthday: '',
+                notes: 'Example only. Real notes, labels, photos, and booking history will appear here once clients book or are added manually.',
+                avatar: '',
+                labels: ['Example'],
+                autoLabels: ['First Time'],
+                bookings: [{ ...exampleBooking, id: 'example-client-history', status: 'confirmed' }],
+                bookingCount: 1,
+                lastBooking: { ...exampleBooking, status: 'confirmed' },
+                source: 'example',
+                isExample: true
+            }), [exampleBooking]);
             const workspaceMetrics = useMemo(() => {
                 const confirmed = visibleBookings.filter(b => b.status === 'confirmed').length;
                 const pending = visibleBookings.filter(b => b.status === 'pending' || b.status === 'waitlist').length;
@@ -253,6 +274,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     ? visibleBookings
                     : visibleBookings.filter(b => b.status === bookingFilter)
             ), [bookingFilter, visibleBookings]);
+            const showBookingExample = visibleBookings.length === 0 && bookingFilter === 'all';
+            const bookingRows = showBookingExample ? [exampleBooking] : filteredBookings;
 
             const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers WhatsApp', 'High Value', 'No-show Risk'];
             const buildClientKey = (name, phone) => {
@@ -438,6 +461,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const selectedClient = useMemo(() => (
                 clientDirectory.find(client => client.id === selectedClientId) || clientDirectory[0] || null
             ), [clientDirectory, selectedClientId]);
+            const showClientExample = clientDirectory.length === 0 && !clientSearch.trim();
+            const displayClients = showClientExample ? [exampleClient] : filteredClients;
+            const activeClient = showClientExample ? exampleClient : selectedClient;
 
             useEffect(() => {
                 if (!clientDirectory.length) {
@@ -1139,11 +1165,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     time,
                     status,
                     timestamp: Date.now(),
-                    noShowHistory: Math.random() > 0.8 // Mocking no-show flag for demo
+                    noShowHistory: false
                 };
 
                 if (!isFirebaseConfigured) {
-                    setBookings(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...(prev.length ? prev : demoBookings)]);
+                    setBookings(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...prev]);
                     return;
                 }
                 if (!user) return;
@@ -1205,7 +1231,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             const updateBooking = async (bookingId, updates) => {
                 if (!isFirebaseConfigured) {
-                    setBookings(prev => (prev.length ? prev : demoBookings).map(b => b.id === bookingId ? { ...b, ...updates } : b));
+                    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
                     return;
                 }
                 if (!user) return;
@@ -1215,7 +1241,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             const deleteBooking = async (bookingId) => {
                 if (!isFirebaseConfigured) {
-                    setBookings(prev => (prev.length ? prev : demoBookings).filter(b => b.id !== bookingId));
+                    setBookings(prev => prev.filter(b => b.id !== bookingId));
                     return;
                 }
                 if (!user) return;
@@ -2030,7 +2056,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
                                 {[
-                                    { label: 'Client Profiles', value: clientMetrics.total, hint: bookings.length ? 'Live records' : 'Sample data', icon: Users },
+                                    { label: 'Client Profiles', value: clientMetrics.total, hint: clientMetrics.total ? 'Live records' : 'Ready for data', icon: Users },
                                     { label: 'Regulars', value: clientMetrics.regulars, hint: 'Auto + VIP', icon: Star },
                                     { label: 'First Timers', value: clientMetrics.firstTimers, hint: 'Auto detected', icon: Sparkles },
                                     { label: 'Enriched', value: clientMetrics.enriched, hint: 'Notes / labels / photos', icon: Tag }
@@ -2056,7 +2082,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                                                 <div>
                                                     <h3 className="text-lg font-bold tracking-tight text-black">Client Directory</h3>
-                                                    <p className="text-sm text-neutral-500">{filteredClients.length} shown from {clientDirectory.length} profiles.</p>
+                                                    <p className="text-sm text-neutral-500">
+                                                        {showClientExample
+                                                            ? '0 real profiles. Example shown for layout only.'
+                                                            : `${filteredClients.length} shown from ${clientDirectory.length} profiles.`}
+                                                    </p>
                                                 </div>
                                                 <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-md">Auto Synced</span>
                                             </div>
@@ -2071,19 +2101,19 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                             </div>
                                         </div>
                                         <div className="max-h-[640px] overflow-y-auto divide-y divide-neutral-100">
-                                            {filteredClients.length === 0 ? (
+                                            {displayClients.length === 0 ? (
                                                 <div className="p-12 text-center">
                                                     <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-400"><Users size={22}/></div>
                                                     <h3 className="text-lg font-bold tracking-tight text-black mb-2">No clients found</h3>
                                                     <p className="text-sm text-neutral-500">Try another search or add someone manually.</p>
                                                 </div>
-                                            ) : filteredClients.map(client => {
+                                            ) : displayClients.map(client => {
                                                 const allLabels = Array.from(new Set([...(client.autoLabels || []), ...(client.labels || [])])).slice(0, 3);
-                                                const isActive = selectedClient?.id === client.id;
+                                                const isActive = activeClient?.id === client.id;
                                                 return (
                                                     <button
                                                         key={client.id}
-                                                        onClick={() => setSelectedClientId(client.id)}
+                                                        onClick={() => { if (!client.isExample) setSelectedClientId(client.id); }}
                                                         className={`w-full text-left p-5 transition-all ${isActive ? 'bg-black text-white' : 'hover:bg-neutral-50 text-black'}`}
                                                     >
                                                         <div className="flex items-start gap-4">
@@ -2093,9 +2123,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="flex items-start justify-between gap-3 mb-1">
                                                                     <h4 className="text-lg font-bold tracking-tight truncate">{client.name}</h4>
-                                                                    <span className={`metric-value text-sm font-bold shrink-0 ${isActive ? 'text-[#39FF14]' : 'text-black'}`}>{client.bookingCount}</span>
+                                                                    <span className={`metric-value text-sm font-bold shrink-0 ${isActive ? 'text-[#39FF14]' : 'text-black'}`}>{client.isExample ? 'Example' : client.bookingCount}</span>
                                                                 </div>
-                                                                <p className={`text-sm truncate mb-3 ${isActive ? 'text-white/55' : 'text-neutral-500'}`}>{client.phone || client.email || 'Manual profile'}</p>
+                                                                <p className={`text-sm truncate mb-3 ${isActive ? 'text-white/55' : 'text-neutral-500'}`}>{client.isExample ? 'Preview only - not saved or counted' : client.phone || client.email || 'Manual profile'}</p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {allLabels.map(label => (
                                                                         <span key={label} className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${isActive ? 'bg-white/10 text-white' : label === 'Regular' || label === 'VIP' ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-500'}`}>{label}</span>
@@ -2120,7 +2150,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                         <form onSubmit={handleManualClientSubmit} className="space-y-4">
                                             <div>
                                                 <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-2">Name</label>
-                                                <input name="clientName" type="text" placeholder="Lena Vale" required className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors" />
+                                                <input name="clientName" type="text" placeholder="Client name" required className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors" />
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 <div>
@@ -2151,8 +2181,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </section>
 
                                 <section className="xl:col-span-7 space-y-6">
-                                    {selectedClient ? (() => {
-                                        const allLabels = Array.from(new Set([...(selectedClient.autoLabels || []), ...(selectedClient.labels || [])]));
+                                    {activeClient ? (() => {
+                                        const allLabels = Array.from(new Set([...(activeClient.autoLabels || []), ...(activeClient.labels || [])]));
+                                        const isExampleClient = Boolean(activeClient.isExample);
                                         return (
                                             <>
                                                 <div className="saas-card p-5 md:p-6 overflow-hidden relative">
@@ -2161,22 +2192,25 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                         <div className="flex items-start gap-5 min-w-0">
                                                             <div className="relative shrink-0">
                                                                 <div className="w-24 h-24 rounded-lg bg-black text-[#39FF14] overflow-hidden flex items-center justify-center text-4xl font-bold shadow-inner">
-                                                                    {selectedClient.avatar ? <img src={selectedClient.avatar} className="w-full h-full object-cover" /> : selectedClient.name.charAt(0)}
+                                                                    {activeClient.avatar ? <img src={activeClient.avatar} className="w-full h-full object-cover" /> : activeClient.name.charAt(0)}
                                                                 </div>
-                                                                <label className="absolute -right-2 -bottom-2 w-10 h-10 rounded-lg bg-white border border-neutral-200 shadow-xl flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors" title="Upload profile picture">
-                                                                    <Camera size={16} />
-                                                                    <input type="file" accept="image/*" className="hidden" onChange={(event) => {
-                                                                        handleClientAvatarUpload(selectedClient.id, event.target.files[0]);
-                                                                        event.target.value = '';
-                                                                    }} />
-                                                                </label>
+                                                                {!isExampleClient && (
+                                                                    <label className="absolute -right-2 -bottom-2 w-10 h-10 rounded-lg bg-white border border-neutral-200 shadow-xl flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors" title="Upload profile picture">
+                                                                        <Camera size={16} />
+                                                                        <input type="file" accept="image/*" className="hidden" onChange={(event) => {
+                                                                            handleClientAvatarUpload(activeClient.id, event.target.files[0]);
+                                                                            event.target.value = '';
+                                                                        }} />
+                                                                    </label>
+                                                                )}
                                                             </div>
                                                             <div className="min-w-0 pt-1">
                                                                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                                    <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-black truncate">{selectedClient.name}</h3>
-                                                                    {selectedClient.autoLabels?.includes('Regular') && <span className="px-2.5 py-1 rounded-md bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest">Regular</span>}
+                                                                    <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-black truncate">{activeClient.name}</h3>
+                                                                    {isExampleClient && <span className="px-2.5 py-1 rounded-md bg-black text-white text-[9px] font-bold uppercase tracking-widest">Example Only</span>}
+                                                                    {activeClient.autoLabels?.includes('Regular') && <span className="px-2.5 py-1 rounded-md bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest">Regular</span>}
                                                                 </div>
-                                                                <p className="text-sm text-neutral-500 mb-4">{selectedClient.bookingCount ? `${selectedClient.bookingCount} booking${selectedClient.bookingCount === 1 ? '' : 's'} on file` : 'Manual client profile'}</p>
+                                                                <p className="text-sm text-neutral-500 mb-4">{isExampleClient ? 'Visual example only - not saved, synced, or counted in stats' : activeClient.bookingCount ? `${activeClient.bookingCount} booking${activeClient.bookingCount === 1 ? '' : 's'} on file` : 'Manual client profile'}</p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {allLabels.map(label => (
                                                                         <span key={label} className={`px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest ${label === 'Regular' || label === 'VIP' ? 'bg-[#39FF14] text-black' : label === 'No-show Risk' ? 'bg-red-50 text-red-600' : 'bg-neutral-100 text-neutral-500'}`}>{label}</span>
@@ -2192,15 +2226,15 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                         <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 min-w-0">
                                                             <div className="flex items-center gap-2 text-neutral-400 mb-2"><Phone size={14}/><span className="text-[9px] font-bold uppercase tracking-widest">Phone</span></div>
-                                                            <p className="text-sm font-bold text-black truncate">{selectedClient.phone || 'Not added'}</p>
+                                                            <p className="text-sm font-bold text-black truncate">{activeClient.phone || 'Not added'}</p>
                                                         </div>
                                                         <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 min-w-0">
                                                             <div className="flex items-center gap-2 text-neutral-400 mb-2"><Mail size={14}/><span className="text-[9px] font-bold uppercase tracking-widest">Email</span></div>
-                                                            <p className="text-sm font-bold text-black truncate">{selectedClient.email || 'Not added'}</p>
+                                                            <p className="text-sm font-bold text-black truncate">{activeClient.email || 'Not added'}</p>
                                                         </div>
                                                         <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 min-w-0">
                                                             <div className="flex items-center gap-2 text-neutral-400 mb-2"><Calendar size={14}/><span className="text-[9px] font-bold uppercase tracking-widest">Last Visit</span></div>
-                                                            <p className="text-sm font-bold text-black truncate">{selectedClient.lastBooking ? `${selectedClient.lastBooking.date} / ${selectedClient.lastBooking.time}` : 'No booking yet'}</p>
+                                                            <p className="text-sm font-bold text-black truncate">{isExampleClient ? 'Example only' : activeClient.lastBooking ? `${activeClient.lastBooking.date} / ${activeClient.lastBooking.time}` : 'No booking yet'}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -2215,13 +2249,14 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                             <MessageSquare size={18} className="text-neutral-300" />
                                                         </div>
                                                         <textarea
-                                                            value={clientNoteDraft}
+                                                            value={isExampleClient ? activeClient.notes : clientNoteDraft}
                                                             onChange={(event) => setClientNoteDraft(event.target.value)}
                                                             placeholder="Example: prefers morning slots, likes WhatsApp reminders, allergic to latex..."
-                                                            className="w-full min-h-[190px] bg-neutral-50 border border-neutral-100 rounded-lg p-4 text-sm font-medium outline-none resize-none focus:bg-white focus:border-black transition-colors"
+                                                            disabled={isExampleClient}
+                                                            className="w-full min-h-[190px] bg-neutral-50 border border-neutral-100 rounded-lg p-4 text-sm font-medium outline-none resize-none focus:bg-white focus:border-black transition-colors disabled:text-neutral-500"
                                                         />
-                                                        <button onClick={() => { upsertClientRecord(selectedClient.id, { notes: clientNoteDraft }); showToast("Client notes saved"); }} className="mt-4 w-full h-11 rounded-lg bg-black text-white flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
-                                                            <Check size={15}/> Save Notes
+                                                        <button disabled={isExampleClient} onClick={() => { upsertClientRecord(activeClient.id, { notes: clientNoteDraft }); showToast("Client notes saved"); }} className="mt-4 w-full h-11 rounded-lg bg-black text-white flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                                            <Check size={15}/> {isExampleClient ? 'Example Only' : 'Save Notes'}
                                                         </button>
                                                     </section>
 
@@ -2235,12 +2270,13 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                         </div>
                                                         <div className="space-y-3">
                                                             {clientLabelOptions.map(label => {
-                                                                const active = selectedClient.labels?.includes(label);
+                                                                const active = activeClient.labels?.includes(label);
                                                                 return (
                                                                     <button
                                                                         key={label}
-                                                                        onClick={() => toggleClientLabel(selectedClient, label)}
-                                                                        className={`w-full h-12 rounded-lg px-4 flex items-center justify-between gap-4 text-sm font-bold transition-colors ${active ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-white border border-neutral-200 text-neutral-600 hover:text-black hover:border-black'}`}
+                                                                        disabled={isExampleClient}
+                                                                        onClick={() => toggleClientLabel(activeClient, label)}
+                                                                        className={`w-full h-12 rounded-lg px-4 flex items-center justify-between gap-4 text-sm font-bold transition-colors disabled:opacity-45 disabled:cursor-not-allowed ${active ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-white border border-neutral-200 text-neutral-600 hover:text-black hover:border-black'}`}
                                                                     >
                                                                         <span>{label}</span>
                                                                         {active ? <Check size={15} className="text-[#39FF14]" /> : <Plus size={15} className="text-neutral-300" />}
@@ -2257,10 +2293,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                             <h3 className="text-lg font-bold tracking-tight text-black">Booking History</h3>
                                                             <p className="text-sm text-neutral-500">Past and upcoming records linked to this client.</p>
                                                         </div>
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-md">{selectedClient.bookingCount} Records</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-md">{isExampleClient ? 'Example' : `${activeClient.bookingCount} Records`}</span>
                                                     </div>
                                                     <div className="divide-y divide-neutral-100">
-                                                        {selectedClient.bookings.length ? selectedClient.bookings.map(booking => {
+                                                        {activeClient.bookings.length ? activeClient.bookings.map(booking => {
                                                             const assignedStaff = staffList.find(staff => staff.id === booking.staffId);
                                                             const statusStyle = booking.status === 'confirmed'
                                                                 ? 'bg-[#39FF14] text-black'
@@ -2423,7 +2459,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                             )}
                                             <div>
                                                 <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-2">Name</label>
-                                                <input name="name" type="text" placeholder="Ari Carter" required disabled={!canManageTeam && isFirebaseConfigured} className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors disabled:opacity-50" />
+                                                <input name="name" type="text" placeholder="Staff member" required disabled={!canManageTeam && isFirebaseConfigured} className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors disabled:opacity-50" />
                                             </div>
                                             <div>
                                                 <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-2">Email</label>
@@ -2966,7 +3002,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 { label: 'Needs Review', value: bookingStats.attention, hint: 'Pending + waitlist', icon: Bell },
                                 { label: 'Confirmed', value: bookingStats.confirmed, hint: 'Approved visits', icon: CheckCircle2 },
                                 { label: 'Waitlist', value: bookingStats.waitlist, hint: 'Standby clients', icon: Clock },
-                                { label: 'Total Records', value: bookingStats.all, hint: bookings.length ? 'Live data' : 'Sample data', icon: Layers }
+                                { label: 'Total Records', value: bookingStats.all, hint: bookingStats.all ? 'Live data' : 'Ready for data', icon: Layers }
                             ].map(metric => {
                                 const IconCmp = metric.icon;
                                 return (
@@ -2982,18 +3018,15 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             })}
                         </div>
 
-                        {!bookings.length && (
-                            <div className="mb-6 saas-panel p-4 text-sm font-medium text-neutral-600 flex items-center gap-3">
-                                <Sparkles size={16} className="text-black" />
-                                Showing sample bookings until live bookings arrive.
-                            </div>
-                        )}
-
                             <section data-tour="bookings-queue" className="saas-card overflow-hidden">
                             <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
                                 <div>
                                     <h2 className="text-lg font-bold tracking-tight text-black">Booking Queue</h2>
-                                    <p className="text-sm text-neutral-500">{filteredBookings.length} shown from {visibleBookings.length} total records.</p>
+                                    <p className="text-sm text-neutral-500">
+                                        {showBookingExample
+                                            ? '0 real records. Example shown for layout only.'
+                                            : `${filteredBookings.length} shown from ${visibleBookings.length} total records.`}
+                                    </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     {[
@@ -3015,14 +3048,15 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             </div>
 
                             <div className="divide-y divide-neutral-100">
-                                {filteredBookings.length === 0 ? (
+                                {bookingRows.length === 0 ? (
                                     <div className="p-16 md:p-24 text-center">
                                         <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-400"><Layers size={22}/></div>
                                         <h3 className="text-xl font-bold tracking-tight text-black mb-2">No bookings here</h3>
                                         <p className="text-sm text-neutral-500">Try another filter or wait for new booking requests.</p>
                                     </div>
-                                ) : filteredBookings.map(b => {
+                                ) : bookingRows.map(b => {
                                     const assignedStaff = staffList.find(s => s.id === b.staffId);
+                                    const isExampleBooking = Boolean(b.isExample);
                                     const statusStyle = b.status === 'confirmed'
                                         ? 'bg-[#39FF14] text-black'
                                         : b.status === 'waitlist'
@@ -3043,9 +3077,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-3 mb-1">
                                                             <h3 className="text-lg md:text-xl font-bold tracking-tight text-black truncate">{b.clientName}</h3>
+                                                            {isExampleBooking && <span className="shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Example Only</span>}
                                                             <span className={`shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${statusStyle}`}>{b.status === 'waitlist' ? 'Standby' : b.status}</span>
                                                         </div>
-                                                        <p className="text-sm text-neutral-500 truncate">{b.clientPhone}{b.clientBirthday ? ` / Bday: ${b.clientBirthday}` : ''}</p>
+                                                        <p className="text-sm text-neutral-500 truncate">{isExampleBooking ? 'Preview only - not saved, synced, or counted in stats' : `${b.clientPhone}${b.clientBirthday ? ` / Bday: ${b.clientBirthday}` : ''}`}</p>
                                                     </div>
                                                 </div>
 
@@ -3055,52 +3090,66 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                 </div>
 
                                                 <div className="xl:col-span-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 hidden md:inline">Assigned</span>
-                                                        <select
-                                                            value={b.staffId || ''}
-                                                            onChange={(e) => updateBooking(b.id, { staffId: e.target.value })}
-                                                            className="h-10 min-w-[160px] bg-white text-sm font-bold px-3 rounded-lg outline-none border border-neutral-200 focus:border-black transition-colors"
-                                                        >
-                                                            <option value="" disabled>Assign staff</option>
-                                                            {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                        </select>
-                                                        {assignedStaff && <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: assignedStaff.color }} />}
-                                                    </div>
+                                                    {isExampleBooking ? (
+                                                        <div className="inline-flex h-10 items-center px-3 rounded-lg bg-neutral-50 border border-neutral-100 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                                                            Example preview
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 hidden md:inline">Assigned</span>
+                                                            <select
+                                                                value={b.staffId || ''}
+                                                                onChange={(e) => updateBooking(b.id, { staffId: e.target.value })}
+                                                                className="h-10 min-w-[160px] bg-white text-sm font-bold px-3 rounded-lg outline-none border border-neutral-200 focus:border-black transition-colors"
+                                                            >
+                                                                <option value="" disabled>Assign staff</option>
+                                                                {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                            </select>
+                                                            {assignedStaff && <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: assignedStaff.color }} />}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="xl:col-span-2 flex flex-wrap items-center justify-start xl:justify-end gap-2">
-                                                    <button
-                                                        onClick={() => sendRunningLateToBooking(b)}
-                                                        className="h-10 px-3 rounded-lg bg-black text-white flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all"
-                                                    >
-                                                        <Clock size={14} /> Late
-                                                    </button>
-                                                    <button
-                                                        onClick={() => sendReviewToBooking(b)}
-                                                        className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"
-                                                    >
-                                                        <Mail size={14} /> Review
-                                                    </button>
-                                                    <button
-                                                        onClick={() => sendWaitlistToBooking(b)}
-                                                        className={`h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${b.status === 'waitlist' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-amber-50 hover:text-amber-700'}`}
-                                                    >
-                                                        <Bell size={14} /> {b.status === 'waitlist' ? 'Notify' : 'Waitlist'}
-                                                    </button>
-                                                    {(b.status === 'pending' || b.status === 'waitlist') && (
+                                                    {isExampleBooking ? (
+                                                        <span className="h-10 px-3 rounded-lg bg-neutral-100 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                                                            Not counted
+                                                        </span>
+                                                    ) : (
                                                         <>
-                                                            <button onClick={() => approveBooking(b)} className="h-10 px-3 rounded-lg bg-[#39FF14] text-black flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:brightness-95 transition-all">
-                                                                <Check size={15} strokeWidth={3} /> Approve
+                                                            <button
+                                                                onClick={() => sendRunningLateToBooking(b)}
+                                                                className="h-10 px-3 rounded-lg bg-black text-white flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all"
+                                                            >
+                                                                <Clock size={14} /> Late
                                                             </button>
-                                                            <button onClick={() => updateBooking(b.id, { status: 'declined' })} className="h-10 w-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-red-500 hover:bg-red-50 transition-all">
-                                                                <X size={16} strokeWidth={3} />
+                                                            <button
+                                                                onClick={() => sendReviewToBooking(b)}
+                                                                className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"
+                                                            >
+                                                                <Mail size={14} /> Review
+                                                            </button>
+                                                            <button
+                                                                onClick={() => sendWaitlistToBooking(b)}
+                                                                className={`h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${b.status === 'waitlist' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-amber-50 hover:text-amber-700'}`}
+                                                            >
+                                                                <Bell size={14} /> {b.status === 'waitlist' ? 'Notify' : 'Waitlist'}
+                                                            </button>
+                                                            {(b.status === 'pending' || b.status === 'waitlist') && (
+                                                                <>
+                                                                    <button onClick={() => approveBooking(b)} className="h-10 px-3 rounded-lg bg-[#39FF14] text-black flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:brightness-95 transition-all">
+                                                                        <Check size={15} strokeWidth={3} /> Approve
+                                                                    </button>
+                                                                    <button onClick={() => updateBooking(b.id, { status: 'declined' })} className="h-10 w-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-red-500 hover:bg-red-50 transition-all">
+                                                                        <X size={16} strokeWidth={3} />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            <button onClick={() => { if(confirm("Permanently remove this booking record?")) deleteBooking(b.id); }} className="h-10 w-10 rounded-lg flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </>
                                                     )}
-                                                    <button onClick={() => { if(confirm("Permanently remove this booking record?")) deleteBooking(b.id); }} className="h-10 w-10 rounded-lg flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
