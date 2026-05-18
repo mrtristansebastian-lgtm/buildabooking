@@ -30,7 +30,6 @@ export const hexToHsl = (hex) => {
 
         export const THEME_PALETTE_FILTERS = [
             { id: 'all', name: 'All', hint: 'Full Library', swatches: ['#050505', '#FFFFFF', '#39FF14'], match: () => true },
-            { id: 'light', name: 'Light', hint: 'Clean & Airy', swatches: ['#FFFFFF', '#F8FAFC', '#E5E7EB'], match: (theme) => themeBackground(theme).l >= 92 },
             { id: 'dark', name: 'Dark', hint: 'Noir & Night', swatches: ['#030712', '#111827', '#39FF14'], match: (theme) => themeBackground(theme).l < 18 },
             { id: 'blue', name: 'Blue', hint: 'Calm & Trust', swatches: ['#DBEAFE', '#2563EB', '#082F49'], match: (theme) => hueBetween(themePrimary(theme).h, 190, 255) && !isNeutralTheme(theme) },
             { id: 'green', name: 'Green', hint: 'Fresh & Natural', swatches: ['#D1FAE5', '#10B981', '#064E3B'], match: (theme) => hueBetween(themePrimary(theme).h, 95, 170) && !isNeutralTheme(theme) },
