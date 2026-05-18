@@ -22,9 +22,29 @@ const getPublicBookingSlug = () => {
   return '';
 };
 
+const normalizeEmail = (email = '') => email.trim().toLowerCase();
+
+const buildStaffId = (email = '') => {
+  const emailKey = normalizeEmail(email);
+  return `staff-${emailKey.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
+};
+
+const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
+  id: 'owner',
+  uid: signedInUser?.uid || '',
+  name: signedInUser?.displayName || 'Workspace Owner',
+  email: signedInUser?.email || '',
+  role: 'owner',
+  status: 'connected',
+  color
+});
+
 // --- Main App Component ---
         export default function App() {
             const [user, setUser] = useState(null);
+            const [workspaceAccess, setWorkspaceAccess] = useState([]);
+            const [activeWorkspaceOwnerId, setActiveWorkspaceOwnerId] = useState('');
+            const [accessLoading, setAccessLoading] = useState(false);
             const [view, setView] = useState('landing');
             const [loading, setLoading] = useState(true);
             const [authMode, setAuthMode] = useState('signin');
@@ -85,6 +105,24 @@ const getPublicBookingSlug = () => {
             const emailConfig = useMemo(() => getEmailConfig(communications), [communications]);
             const bookingPageUrl = useMemo(() => `${window.location.origin}/book/${settings.slug || 'studio'}`, [settings.slug]);
             const referralUrl = useMemo(() => `${window.location.origin}/ref/${user?.uid?.substring(0,6) || '10X'}`, [user?.uid]);
+            const workspaceOwnerId = activeWorkspaceOwnerId || user?.uid || '';
+            const activeWorkspaceGrant = useMemo(
+                () => workspaceAccess.find(grant => grant.ownerId === workspaceOwnerId),
+                [workspaceAccess, workspaceOwnerId]
+            );
+            const workspaceRole = user
+                ? (workspaceOwnerId === user.uid ? 'owner' : activeWorkspaceGrant?.role || 'staff')
+                : 'demo';
+            const isWorkspaceOwner = Boolean(user && workspaceOwnerId === user.uid);
+            const canManageWorkspace = workspaceRole === 'owner' || workspaceRole === 'admin';
+            const canManageTeam = canManageWorkspace;
+            const workspaceChoices = useMemo(() => {
+                if (!user) return [];
+                return [
+                    { ownerId: user.uid, workspaceName: settings.brandName || 'My Workspace', role: 'owner', ownerEmail: user.email || '' },
+                    ...workspaceAccess
+                ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
+            }, [settings.brandName, user, workspaceAccess]);
 
             const demoBookings = useMemo(() => ([
                 { id: 'demo-1', clientName: 'Ari Carter', clientPhone: '+27 82 555 0184', clientBirthday: '08/14', date: 'Today', time: '10:30', status: 'pending', timestamp: Date.now() - 120000, noShowHistory: false },
@@ -446,6 +484,54 @@ const getPublicBookingSlug = () => {
                 }
             }, [settings.features?.favicon]);
 
+            const syncCurrentAccount = async (signedInUser) => {
+                if (!isFirebaseConfigured || !signedInUser?.email) return;
+                const emailKey = normalizeEmail(signedInUser.email);
+                const profile = {
+                    uid: signedInUser.uid,
+                    email: emailKey,
+                    displayName: signedInUser.displayName || emailKey.split('@')[0],
+                    photoURL: signedInUser.photoURL || '',
+                    providerIds: signedInUser.providerData?.map(provider => provider.providerId) || [],
+                    updatedAt: Date.now()
+                };
+                await Promise.all([
+                    FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accounts', signedInUser.uid), profile, { merge: true }),
+                    FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accountLookup', emailKey), profile, { merge: true })
+                ]);
+            };
+
+            const loadWorkspaceAccess = async (signedInUser) => {
+                if (!isFirebaseConfigured || !signedInUser?.email) {
+                    setWorkspaceAccess([]);
+                    setActiveWorkspaceOwnerId(signedInUser?.uid || '');
+                    return;
+                }
+
+                setAccessLoading(true);
+                try {
+                    const emailKey = normalizeEmail(signedInUser.email);
+                    const grantsRef = FirebaseSDK.collection(db, 'artifacts', appId, 'staffAccess', emailKey, 'workspaces');
+                    const grantsSnap = await FirebaseSDK.getDocs(grantsRef);
+                    const grants = grantsSnap.docs
+                        .map(grantDoc => ({ id: grantDoc.id, ...grantDoc.data() }))
+                        .filter(grant => grant.status !== 'revoked');
+                    const savedOwnerId = localStorage.getItem('build-a-booking-active-workspace');
+                    const hasSavedWorkspace = savedOwnerId && (savedOwnerId === signedInUser.uid || grants.some(grant => grant.ownerId === savedOwnerId));
+                    const nextOwnerId = hasSavedWorkspace ? savedOwnerId : (grants[0]?.ownerId || signedInUser.uid);
+                    setWorkspaceAccess(grants);
+                    setActiveWorkspaceOwnerId(nextOwnerId);
+                    localStorage.setItem('build-a-booking-active-workspace', nextOwnerId);
+                } catch (error) {
+                    console.error(error);
+                    setWorkspaceAccess([]);
+                    setActiveWorkspaceOwnerId(signedInUser.uid);
+                    setAuthError('Signed in, but staff workspace access could not be checked yet.');
+                } finally {
+                    setAccessLoading(false);
+                }
+            };
+
             useEffect(() => {
                 const initAuth = async () => {
                     try {
@@ -465,7 +551,21 @@ const getPublicBookingSlug = () => {
                     }
                 };
                 initAuth();
-                if (isFirebaseConfigured) return FirebaseSDK.onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+                if (isFirebaseConfigured) {
+                    return FirebaseSDK.onAuthStateChanged(auth, (u) => {
+                        setUser(u);
+                        setLoading(false);
+                        if (!u) {
+                            setWorkspaceAccess([]);
+                            setActiveWorkspaceOwnerId('');
+                            return;
+                        }
+                        if (!publicSlug) {
+                            syncCurrentAccount(u).catch(console.error);
+                            loadWorkspaceAccess(u);
+                        }
+                    });
+                }
             }, [publicSlug]);
 
             useEffect(() => {
@@ -502,10 +602,11 @@ const getPublicBookingSlug = () => {
             }, [publicSlug]);
 
             useEffect(() => {
-                if (!user && isFirebaseConfigured) return;
+                if (publicSlug) return;
+                if ((!user || !workspaceOwnerId) && isFirebaseConfigured) return;
                 if (!isFirebaseConfigured) return;
 
-                const settingsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'settings');
+                const settingsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings');
                 const unsubSettings = FirebaseSDK.onSnapshot(settingsRef, (docSnap) => { 
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -517,51 +618,150 @@ const getPublicBookingSlug = () => {
                     }
                 });
                 
-                const staffRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'staff');
+                const staffRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff');
                 const unsubStaff = FirebaseSDK.onSnapshot(staffRef, (docSnap) => { 
-                    if (docSnap.exists()) setStaffList(docSnap.data().list || []);
+                    if (docSnap.exists()) {
+                        setStaffList(docSnap.data().list || []);
+                    } else if (isWorkspaceOwner) {
+                        setStaffList([createOwnerStaffProfile(user)]);
+                    }
                 });
 
-                const commsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'communications');
+                const commsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications');
                 const unsubComms = FirebaseSDK.onSnapshot(commsRef, (docSnap) => { 
                     if (docSnap.exists()) setCommunications(docSnap.data());
                 });
 
-                const clientsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'clients');
+                const clientsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients');
                 const unsubClients = FirebaseSDK.onSnapshot(clientsRef, (docSnap) => { 
                     if (docSnap.exists()) setClientRecords(docSnap.data().list || []);
                 });
 
-                const bookingsCol = FirebaseSDK.collection(db, 'artifacts', appId, 'users', user.uid, 'bookings');
+                const bookingsCol = FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings');
                 const unsubBookings = FirebaseSDK.onSnapshot(bookingsCol, (snap) => {
                     setBookings(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => b.timestamp - a.timestamp));
                 });
                 return () => { unsubSettings(); unsubStaff(); unsubComms(); unsubClients(); unsubBookings(); };
-            }, [user]);
+            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug]);
 
             const saveSettings = async () => {
-                if (!user || !isFirebaseConfigured) {
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
                     showToast("Add Firebase config to publish live.");
+                    return;
+                }
+                if (!canManageWorkspace) {
+                    showToast("Only owners and admins can publish workspace settings.");
                     return;
                 }
                 showToast("Publishing updates...");
                 try {
-                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'settings'), settings);
-                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', settings.slug), { ...settings, ownerId: user.uid, updatedAt: Date.now() });
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'), settings);
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', settings.slug), { ...settings, ownerId: workspaceOwnerId, updatedAt: Date.now() });
                     showToast("Booking page published!");
                 } catch (err) { console.error(err); showToast("Failed to publish."); }
             };
 
-            const saveStaff = async (newList) => {
-                setStaffList(newList);
-                if (!user || !isFirebaseConfigured) return;
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'staff'), { list: newList });
+            const writeStaffAccessGrant = async (staff) => {
+                const emailKey = normalizeEmail(staff.email);
+                if (!emailKey || !workspaceOwnerId) return;
+                await FirebaseSDK.setDoc(
+                    FirebaseSDK.doc(db, 'artifacts', appId, 'staffAccess', emailKey, 'workspaces', workspaceOwnerId),
+                    {
+                        ownerId: workspaceOwnerId,
+                        ownerEmail: user?.email || '',
+                        workspaceName: settings.brandName || 'Build A Booking Workspace',
+                        email: emailKey,
+                        staffId: staff.id,
+                        staffName: staff.name,
+                        role: staff.role || 'staff',
+                        color: staff.color || '#39FF14',
+                        status: staff.accessEnabled === false ? 'revoked' : 'active',
+                        updatedAt: Date.now()
+                    },
+                    { merge: true }
+                );
+            };
+
+            const removeStaffAccessGrant = async (staff) => {
+                const emailKey = normalizeEmail(staff.email);
+                if (!emailKey || !workspaceOwnerId) return;
+                await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'staffAccess', emailKey, 'workspaces', workspaceOwnerId));
+            };
+
+            const saveStaff = async (newList, previousList = staffList) => {
+                const normalizedList = newList.map((staff, index) => {
+                    if (staff.id === 'owner') {
+                        return { ...staff, ...createOwnerStaffProfile(user, staff.color || '#39FF14'), color: staff.color || '#39FF14', role: 'owner', status: 'connected' };
+                    }
+                    const emailKey = normalizeEmail(staff.email);
+                    return {
+                        ...staff,
+                        id: staff.id || buildStaffId(emailKey),
+                        email: emailKey,
+                        role: staff.role || 'staff',
+                        status: staff.status || 'access-ready',
+                        accessEnabled: staff.accessEnabled !== false,
+                        sortOrder: index
+                    };
+                });
+                setStaffList(normalizedList);
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
+                if (!canManageTeam) {
+                    showToast("Only owners and admins can manage team access.");
+                    return;
+                }
+
+                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff'), { list: normalizedList, updatedAt: Date.now() });
+
+                const activeStaff = normalizedList.filter(staff => staff.id !== 'owner' && staff.accessEnabled !== false && normalizeEmail(staff.email));
+                const previousStaff = previousList.filter(staff => staff.id !== 'owner' && normalizeEmail(staff.email));
+                const activeEmails = new Set(activeStaff.map(staff => normalizeEmail(staff.email)));
+                await Promise.all(activeStaff.map(writeStaffAccessGrant));
+                await Promise.all(previousStaff.filter(staff => !activeEmails.has(normalizeEmail(staff.email))).map(removeStaffAccessGrant));
+            };
+
+            const createStaffMember = async ({ name, email, color, role }) => {
+                const emailKey = normalizeEmail(email);
+                if (!emailKey) return;
+                if (!canManageTeam && isFirebaseConfigured) {
+                    showToast("Only owners and admins can add staff.");
+                    return;
+                }
+
+                let detectedAccount = null;
+                if (isFirebaseConfigured) {
+                    try {
+                        const lookupSnap = await FirebaseSDK.getDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accountLookup', emailKey));
+                        if (lookupSnap.exists()) detectedAccount = lookupSnap.data();
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }
+
+                const nextStaff = {
+                    id: buildStaffId(emailKey),
+                    uid: detectedAccount?.uid || '',
+                    name: name || detectedAccount?.displayName || emailKey.split('@')[0],
+                    email: emailKey,
+                    photoURL: detectedAccount?.photoURL || '',
+                    color,
+                    role,
+                    status: detectedAccount ? 'connected' : 'access-ready',
+                    accessEnabled: true,
+                    updatedAt: Date.now()
+                };
+                const nextList = [
+                    ...staffList.filter(staff => normalizeEmail(staff.email) !== emailKey),
+                    nextStaff
+                ];
+                await saveStaff(nextList, staffList);
+                showToast(detectedAccount ? "Google account detected and access granted." : "Access will activate when they sign in with this email.");
             };
 
             const saveClients = async (newList) => {
                 setClientRecords(newList);
-                if (!user || !isFirebaseConfigured) return;
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'clients'), { list: newList });
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
+                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients'), { list: newList, updatedAt: Date.now() });
             };
 
             const upsertClientRecord = (clientId, updates) => {
@@ -629,8 +829,12 @@ const getPublicBookingSlug = () => {
 
             const saveComms = async (newComms) => {
                 setCommunications(newComms);
-                if (!user || !isFirebaseConfigured) return;
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'communications'), newComms);
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
+                if (!canManageWorkspace) {
+                    showToast("Only owners and admins can manage email delivery.");
+                    return;
+                }
+                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications'), newComms);
             };
 
             const applyTheme = (themeId) => {
@@ -702,7 +906,7 @@ const getPublicBookingSlug = () => {
                 if (!file) return '';
                 if (!isFirebaseConfigured || !user || !storage) return readFileAsDataUrl(file);
                 const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-|-$/g, '');
-                const assetRef = FirebaseSDK.ref(storage, `artifacts/${appId}/users/${user.uid}/${folder}/${Date.now()}-${safeName || 'asset'}`);
+                const assetRef = FirebaseSDK.ref(storage, `artifacts/${appId}/users/${workspaceOwnerId || user.uid}/${folder}/${Date.now()}-${safeName || 'asset'}`);
                 await FirebaseSDK.uploadBytes(assetRef, file);
                 return FirebaseSDK.getDownloadURL(assetRef);
             };
@@ -748,10 +952,35 @@ const getPublicBookingSlug = () => {
                     setAuthError(error.message || 'Could not sign in.');
                 }
             };
+            const handleGoogleAuth = async () => {
+                if (!isFirebaseConfigured) {
+                    setView('dashboard');
+                    return;
+                }
+                setAuthError('');
+                try {
+                    const provider = new FirebaseSDK.GoogleAuthProvider();
+                    provider.setCustomParameters({ prompt: 'select_account' });
+                    await FirebaseSDK.signInWithPopup(auth, provider);
+                    setAuthPanelOpen(false);
+                    setView('dashboard');
+                    showToast('Signed in with Google');
+                } catch (error) {
+                    console.error(error);
+                    const message = error?.code === 'auth/operation-not-allowed'
+                        ? 'Google sign-in is not enabled yet. Enable Google under Firebase Authentication > Sign-in method.'
+                        : error?.code === 'auth/popup-closed-by-user'
+                            ? 'Google sign-in was closed before it finished.'
+                            : error.message || 'Could not sign in with Google.';
+                    setAuthError(message);
+                }
+            };
             const handleSignOut = async () => {
                 if (isFirebaseConfigured && user) {
                     await FirebaseSDK.signOut(auth);
                 }
+                setWorkspaceAccess([]);
+                setActiveWorkspaceOwnerId('');
                 setView('landing');
             };
 
@@ -775,7 +1004,7 @@ const getPublicBookingSlug = () => {
                 }
                 if (!user) return;
                 try {
-                    await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', user.uid, 'bookings'), {
+                    await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
                         ...bookingRecord
                     });
                 } catch (err) { console.error(err); }
@@ -836,7 +1065,7 @@ const getPublicBookingSlug = () => {
                     return;
                 }
                 if (!user) return;
-                try { await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'bookings', bookingId), updates); } 
+                try { await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates); } 
                 catch (err) { console.error(err); }
             };
 
@@ -846,7 +1075,7 @@ const getPublicBookingSlug = () => {
                     return;
                 }
                 if (!user) return;
-                try { await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', user.uid, 'bookings', bookingId)); } 
+                try { await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId)); } 
                 catch (err) { console.error(err); }
             };
 
@@ -919,10 +1148,19 @@ const getPublicBookingSlug = () => {
                         <form onSubmit={handleAuthSubmit} className="w-full max-w-md bg-white rounded-lg border border-neutral-100 shadow-2xl p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300">
                             <div className="flex items-start justify-between gap-4 mb-8">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Owner Access</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Workspace Access</p>
                                     <h2 className="text-3xl font-bold tracking-tight text-black">{authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
+                                    <p className="text-sm text-neutral-500 mt-2">Owners and invited staff can use the same secure sign-in.</p>
                                 </div>
                                 <button type="button" onClick={() => { setAuthPanelOpen(false); setAuthError(''); }} className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center hover:text-black transition-colors"><X size={16}/></button>
+                            </div>
+                            <button type="button" onClick={handleGoogleAuth} className="w-full h-12 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex items-center justify-center gap-3 shadow-sm">
+                                <Globe size={16}/> Continue With Google
+                            </button>
+                            <div className="flex items-center gap-4 my-5">
+                                <div className="h-px bg-neutral-100 flex-1" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">or email</span>
+                                <div className="h-px bg-neutral-100 flex-1" />
                             </div>
                             <div className="space-y-4">
                                 <input type="email" value={authForm.email} onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))} required placeholder="Email address" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
@@ -1071,10 +1309,35 @@ const getPublicBookingSlug = () => {
                 <div className={`dashboard-sidebar hidden md:flex transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex-col relative z-50 shadow-sm ${sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 p-8'}`}>
                     {!sidebarCollapsed && (
                     <>
-                        <div className="flex items-center gap-4 mb-16 md:mb-24 px-2 cursor-pointer group" onClick={() => setView('landing')}>
+                        <div className="flex items-center gap-4 mb-8 px-2 cursor-pointer group" onClick={() => setView('landing')}>
                             <img src="logoblackonwhite.png" alt="Build A Booking logo" className="w-11 h-11 rounded-lg object-contain bg-white shadow-xl group-hover:scale-105 transition-all duration-300" />
                             <span className="font-display font-semibold text-[18px] tracking-tight leading-none">Build A Booking</span>
                         </div>
+                        {user && (
+                            <div className="mb-6 rounded-lg border border-neutral-100 bg-neutral-50 p-3">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Workspace</span>
+                                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md ${workspaceRole === 'owner' ? 'bg-[#39FF14] text-black' : workspaceRole === 'admin' ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}>
+                                        {workspaceRole}
+                                    </span>
+                                </div>
+                                <select
+                                    value={workspaceOwnerId}
+                                    onChange={(event) => {
+                                        setActiveWorkspaceOwnerId(event.target.value);
+                                        localStorage.setItem('build-a-booking-active-workspace', event.target.value);
+                                    }}
+                                    className="w-full h-10 rounded-lg bg-white border border-neutral-100 px-3 text-xs font-bold text-black outline-none focus:border-black"
+                                >
+                                    {workspaceChoices.map(workspace => (
+                                        <option key={workspace.ownerId} value={workspace.ownerId}>
+                                            {workspace.workspaceName || workspace.ownerEmail || 'Workspace'}
+                                        </option>
+                                    ))}
+                                </select>
+                                {accessLoading && <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-2">Checking access...</p>}
+                            </div>
+                        )}
                         <nav className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-10">
                         {navItems.map(item => {
                             const IconCmp = item.icon;
@@ -1385,6 +1648,16 @@ const getPublicBookingSlug = () => {
                                 <div className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm">
                                     <h3 className="text-xl font-bold tracking-tight mb-8 text-black">Account Details</h3>
                                     <div className="space-y-6">
+                                        <div className="flex items-center gap-4 rounded-lg bg-neutral-50 border border-neutral-100 p-4">
+                                            <div className="w-14 h-14 rounded-lg bg-black text-white flex items-center justify-center overflow-hidden font-bold">
+                                                {user?.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || 'A')}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Signed In As</p>
+                                                <p className="text-base font-bold text-black truncate">{user?.displayName || user?.email || 'Admin User'}</p>
+                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mt-1">{workspaceRole} access</p>
+                                            </div>
+                                        </div>
                                         <div>
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block text-black">Account Email</label>
                                             <input type="text" readOnly value={user?.email || 'Admin User'} className="w-full bg-neutral-50 border-none rounded-lg px-6 py-4 text-sm font-bold outline-none text-neutral-400" />
@@ -1912,10 +2185,11 @@ const getPublicBookingSlug = () => {
                                 </button>
                             </header>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                                 {[
                                     { label: 'Team Members', value: staffList.length, hint: 'Active roster', icon: Users },
-                                    { label: 'Owners', value: staffList.filter(staff => staff.id === 'owner').length, hint: 'Admin access', icon: ShieldCheck },
+                                    { label: 'Admins', value: staffList.filter(staff => staff.role === 'owner' || staff.role === 'admin').length, hint: 'Full access', icon: ShieldCheck },
+                                    { label: 'Connected', value: staffList.filter(staff => staff.status === 'connected').length, hint: 'Detected accounts', icon: Wifi },
                                     { label: 'Assignable', value: staffList.filter(staff => staff.id !== 'owner').length, hint: 'Booking staff', icon: Briefcase }
                                 ].map(metric => {
                                     const IconCmp = metric.icon;
@@ -1945,29 +2219,36 @@ const getPublicBookingSlug = () => {
                                         {staffList.map((staff, index) => {
                                             const initials = (staff.name || 'Team Member').split(' ').map(part => part.charAt(0)).join('').slice(0, 2).toUpperCase();
                                             const assignedBookings = visibleBookings.filter(b => b.staffId === staff.id).length;
+                                            const roleLabel = staff.role === 'admin' ? 'Admin' : staff.role === 'owner' || staff.id === 'owner' ? 'Owner' : 'Staff';
+                                            const statusLabel = staff.status === 'connected' ? 'Google detected' : staff.accessEnabled === false ? 'Access off' : 'Access ready';
                                             return (
                                                 <div key={staff.id} className="group relative overflow-hidden rounded-lg border border-neutral-100 bg-neutral-50/70 p-5 transition-all hover:bg-white hover:border-neutral-200 hover:shadow-xl">
                                                     <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: staff.color || '#000000' }} />
                                                     <div className="flex items-start justify-between gap-4 mb-6">
                                                         <div className="flex items-center gap-4 min-w-0">
-                                                            <div className="w-14 h-14 rounded-lg shadow-inner flex items-center justify-center font-bold text-white text-lg shrink-0" style={{ backgroundColor: staff.color || '#000000' }}>{initials}</div>
+                                                            <div className="w-14 h-14 rounded-lg shadow-inner flex items-center justify-center font-bold text-white text-lg shrink-0 overflow-hidden" style={{ backgroundColor: staff.color || '#000000' }}>
+                                                                {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
+                                                            </div>
                                                             <div className="min-w-0">
                                                                 <h4 className="font-bold text-lg text-black truncate">{staff.name}</h4>
                                                                 <p className="text-sm text-neutral-500 truncate">{staff.id === 'owner' ? 'Workspace owner' : staff.email}</p>
+                                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-1">{statusLabel}</p>
                                                             </div>
                                                         </div>
-                                                        {staff.id !== 'owner' ? (
+                                                        {staff.id === 'owner' ? (
+                                                            <div className="w-9 h-9 rounded-lg bg-[#39FF14] text-black flex items-center justify-center shrink-0"><ShieldCheck size={16}/></div>
+                                                        ) : canManageTeam ? (
                                                             <button onClick={() => saveStaff(staffList.filter(s => s.id !== staff.id))} className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
                                                                 <Trash2 size={16} />
                                                             </button>
                                                         ) : (
-                                                            <div className="w-9 h-9 rounded-lg bg-[#39FF14] text-black flex items-center justify-center shrink-0"><ShieldCheck size={16}/></div>
+                                                            <div className="w-9 h-9 rounded-lg bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0"><ShieldCheck size={16}/></div>
                                                         )}
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <div className="rounded-lg bg-white border border-neutral-100 p-3">
                                                             <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Role</p>
-                                                            <p className="text-sm font-bold text-black">{staff.id === 'owner' ? 'Admin' : 'Staff'}</p>
+                                                            <p className="text-sm font-bold text-black">{roleLabel}</p>
                                                         </div>
                                                         <div className="rounded-lg bg-white border border-neutral-100 p-3">
                                                             <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Bookings</p>
@@ -1985,37 +2266,49 @@ const getPublicBookingSlug = () => {
                                         <div className="flex items-start justify-between gap-4 mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold tracking-tight text-black">Add Teammate</h3>
-                                                <p className="text-sm text-neutral-500">Create a roster profile for booking assignment.</p>
+                                                <p className="text-sm text-neutral-500">Grant workspace access by email. Existing Google accounts are detected automatically.</p>
                                             </div>
                                             <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center shrink-0"><Plus size={16}/></div>
                                         </div>
-                                        <form onSubmit={(e) => {
+                                        <form onSubmit={async (e) => {
                                             e.preventDefault();
                                             const name = e.target.name.value.trim();
                                             const email = e.target.email.value.trim();
                                             const color = e.target.color.value;
+                                            const role = e.target.role.value;
                                             if(name && email) {
-                                                saveStaff([...staffList, { id: Date.now().toString(), name, email, color }]);
+                                                await createStaffMember({ name, email, color, role });
                                                 e.target.reset();
-                                                showToast("Staff Added");
                                             }
                                         }} className="space-y-4">
+                                            {!canManageTeam && isFirebaseConfigured && (
+                                                <div className="rounded-lg bg-amber-50 border border-amber-100 p-4 text-xs font-bold text-amber-800 leading-relaxed">
+                                                    Your staff role can assign bookings and manage clients, but only owners/admins can grant team access.
+                                                </div>
+                                            )}
                                             <div>
                                                 <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-2">Name</label>
-                                                <input name="name" type="text" placeholder="Ari Carter" required className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors" />
+                                                <input name="name" type="text" placeholder="Ari Carter" required disabled={!canManageTeam && isFirebaseConfigured} className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors disabled:opacity-50" />
                                             </div>
                                             <div>
                                                 <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-2">Email</label>
-                                                <input name="email" type="email" placeholder="ari@studio.com" required className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors" />
+                                                <input name="email" type="email" placeholder="ari@studio.com" required disabled={!canManageTeam && isFirebaseConfigured} className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors disabled:opacity-50" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-2">Access Role</label>
+                                                <select name="role" defaultValue="staff" disabled={!canManageTeam && isFirebaseConfigured} className="w-full h-12 bg-white border border-neutral-200 rounded-lg px-4 text-sm font-bold outline-none text-black focus:border-black transition-colors disabled:opacity-50">
+                                                    <option value="staff">Staff - bookings and clients</option>
+                                                    <option value="admin">Admin - settings and team</option>
+                                                </select>
                                             </div>
                                             <div className="flex items-center justify-between gap-4 rounded-lg bg-white border border-neutral-200 p-3">
                                                 <div>
                                                     <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-1">Profile Color</label>
                                                     <p className="text-sm font-bold text-black">Used on booking cards</p>
                                                 </div>
-                                                <input name="color" type="color" defaultValue="#39FF14" className="w-12 h-12 rounded-lg cursor-pointer bg-transparent border-none p-0 outline-none" />
+                                                <input name="color" type="color" defaultValue="#39FF14" disabled={!canManageTeam && isFirebaseConfigured} className="w-12 h-12 rounded-lg cursor-pointer bg-transparent border-none p-0 outline-none disabled:opacity-50" />
                                             </div>
-                                            <button type="submit" className="w-full h-12 bg-black text-white rounded-lg flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10">
+                                            <button type="submit" disabled={!canManageTeam && isFirebaseConfigured} className="w-full h-12 bg-black text-white rounded-lg flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 disabled:opacity-40 disabled:cursor-not-allowed">
                                                 <Plus size={15} /> Add Member
                                             </button>
                                         </form>
@@ -2030,7 +2323,8 @@ const getPublicBookingSlug = () => {
                                             {[
                                                 ['Owner profile', staffList.some(staff => staff.id === 'owner') ? 'Ready' : 'Missing'],
                                                 ['Booking dropdown', staffList.length ? 'Connected' : 'Empty'],
-                                                ['Team colors', staffList.filter(staff => staff.color).length ? 'Configured' : 'Needs setup']
+                                                ['Google detection', staffList.some(staff => staff.status === 'connected') ? 'Active' : 'Ready'],
+                                                ['Staff access rules', isFirebaseConfigured ? 'Live' : 'Demo']
                                             ].map(row => (
                                                 <div key={row[0]} className="flex items-center justify-between gap-4 text-sm">
                                                     <span className="text-neutral-500">{row[0]}</span>

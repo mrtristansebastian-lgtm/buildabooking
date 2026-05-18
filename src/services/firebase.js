@@ -1,9 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, getDoc, getFirestore, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
-export { addDoc, collection, createUserWithEmailAndPassword, deleteDoc, doc, getDoc, getDownloadURL, onAuthStateChanged, onSnapshot, ref, serverTimestamp, setDoc, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signOut, updateDoc, uploadBytes };
+export { addDoc, collection, createUserWithEmailAndPassword, deleteDoc, doc, getDoc, getDocs, getDownloadURL, GoogleAuthProvider, onAuthStateChanged, onSnapshot, ref, serverTimestamp, setDoc, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signOut, updateDoc, uploadBytes };
 
 const runtimeFirebaseConfig = globalThis.__firebase_config;
 const runtimeAppId = globalThis.__app_id;
