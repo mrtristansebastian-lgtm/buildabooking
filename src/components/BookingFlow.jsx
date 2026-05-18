@@ -75,6 +75,19 @@ import { getLocalDateStr } from '../utils/dates';
             };
 
             const inspectClass = isPreview ? "cursor-pointer hover:ring-1 hover:ring-[#39FF14] hover:ring-offset-4 rounded transition-all duration-300 group/inspect relative" : "";
+            const logoDisplay = useMemo(() => {
+                const display = settings.logoDisplay || {};
+                const size = Number(display.size);
+                const alignment = ['left', 'center', 'right'].includes(display.alignment) ? display.alignment : 'left';
+                return {
+                    visible: display.visible !== false,
+                    alignment,
+                    size: Number.isFinite(size) ? Math.min(176, Math.max(48, size)) : 96
+                };
+            }, [settings.logoDisplay]);
+            const logoAlignmentStyle = {
+                justifyContent: logoDisplay.alignment === 'center' ? 'center' : logoDisplay.alignment === 'right' ? 'flex-end' : 'flex-start'
+            };
 
             const handleAction = () => {
                 if (isPreview) { onInspect('copy'); return; }
@@ -141,8 +154,16 @@ import { getLocalDateStr } from '../utils/dates';
                             />
                         )}
                         
-                        {settings.logo && (
-                            <img src={settings.logo} className={`w-20 h-20 md:w-24 md:h-24 rounded-lg object-cover shadow-sm mb-6 border border-neutral-100/10 ${inspectClass}`} alt="Brand Logo" onClick={() => isPreview && onInspect('identity')} />
+                        {settings.logo && logoDisplay.visible && (
+                            <div className="flex mb-6" style={logoAlignmentStyle}>
+                                <img
+                                    src={settings.logo}
+                                    className={`rounded-lg object-contain shadow-sm border border-neutral-100/10 ${inspectClass}`}
+                                    style={{ width: logoDisplay.size, height: logoDisplay.size, maxWidth: '45vw', maxHeight: '45vw' }}
+                                    alt="Brand Logo"
+                                    onClick={() => isPreview && onInspect('identity')}
+                                />
+                            </div>
                         )}
 
                         <h1 className={`text-5xl md:text-8xl font-bold tracking-tighter mb-4 leading-[0.85] ${inspectClass}`} style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }} onClick={() => isPreview && onInspect('identity')}>

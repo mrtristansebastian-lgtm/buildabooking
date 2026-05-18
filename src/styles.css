@@ -51,7 +51,7 @@ body {
 
         .backend-skin {
             background: var(--skin-bg) !important;
-            color: var(--skin-text) !important;
+            color: var(--skin-bg-text) !important;
             font-family: var(--skin-font-body) !important;
         }
 
@@ -67,6 +67,7 @@ body {
         .backend-skin .dashboard-main > div,
         .backend-skin .mobile-editor-shell {
             background: var(--skin-bg) !important;
+            color: var(--skin-bg-text) !important;
         }
 
         .backend-skin .dashboard-sidebar,
@@ -102,8 +103,11 @@ body {
 
         .backend-skin .saas-panel,
         .backend-skin .bg-neutral-50,
-        .backend-skin .bg-neutral-100 {
+        .backend-skin .bg-neutral-100,
+        .backend-skin .bg-neutral-200,
+        .backend-skin .bg-neutral-300 {
             background-color: var(--skin-panel) !important;
+            color: var(--skin-panel-text) !important;
         }
 
         .backend-skin .bg-black {
@@ -117,6 +121,10 @@ body {
         .backend-skin .text-neutral-800,
         .backend-skin .text-neutral-700 {
             color: var(--skin-text) !important;
+        }
+
+        .backend-skin [class*="text-black/"] {
+            color: var(--skin-muted) !important;
         }
 
         .backend-skin .text-white {
@@ -143,8 +151,27 @@ body {
             color: var(--skin-on-primary) !important;
         }
 
+        .backend-skin .bg-\[\#39FF14\] .text-black,
+        .backend-skin .bg-\[\#39FF14\] [class*="text-black/"],
+        .backend-skin .bg-\[\#39FF14\] .text-white,
+        .backend-skin .bg-\[\#39FF14\] [class*="text-white/"] {
+            color: var(--skin-on-primary-muted) !important;
+        }
+
+        .backend-skin .bg-\[\#39FF14\] h1,
+        .backend-skin .bg-\[\#39FF14\] h2,
+        .backend-skin .bg-\[\#39FF14\] h3,
+        .backend-skin .bg-\[\#39FF14\] h4,
+        .backend-skin .bg-\[\#39FF14\] .metric-value {
+            color: var(--skin-on-primary) !important;
+        }
+
         .backend-skin .text-\[\#39FF14\] {
-            color: var(--skin-primary) !important;
+            color: var(--skin-primary-text) !important;
+        }
+
+        .backend-skin .bg-black .text-\[\#39FF14\] {
+            color: var(--skin-on-heading) !important;
         }
 
         .backend-skin .border-\[\#39FF14\] {
@@ -155,8 +182,18 @@ body {
             background-color: var(--skin-heading-soft) !important;
         }
 
+        .backend-skin [class*="bg-black/"] {
+            background-color: var(--skin-text-soft) !important;
+        }
+
         .backend-skin [class*="text-white/"] {
             color: var(--skin-on-heading-muted) !important;
+        }
+
+        .backend-skin .bg-white [class*="text-white/"],
+        .backend-skin .saas-card [class*="text-white/"],
+        .backend-skin .saas-panel [class*="text-white/"] {
+            color: var(--skin-muted) !important;
         }
 
         .backend-skin [class*="border-white/"] {

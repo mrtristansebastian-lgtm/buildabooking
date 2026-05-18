@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowRight, Battery, Bell, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, MessageSquare, Monitor, MousePointerClick, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, MessageSquare, Monitor, MousePointerClick, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BusinessCalendar } from './components/BusinessCalendar';
 import { BookingFlow } from './components/BookingFlow';
@@ -12,7 +12,7 @@ import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, getEmailConfig, isEmailConfigured, sendClientEmail } from './services/email';
 import { getLocalDateStr } from './utils/dates';
-import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_PALETTE_FILTERS } from './utils/theme';
+import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_PALETTE_FILTERS, ensureReadableTextColor } from './utils/theme';
 
 const getPublicBookingSlug = () => {
   const url = new URL(window.location.href);
@@ -22,6 +22,87 @@ const getPublicBookingSlug = () => {
   if (section === 'book' && slug) return slug.trim().toLowerCase();
   return '';
 };
+
+const logoAlignmentOptions = [
+  { id: 'left', label: 'Left', icon: AlignLeft },
+  { id: 'center', label: 'Center', icon: AlignCenter },
+  { id: 'right', label: 'Right', icon: AlignRight }
+];
+
+const getLogoDisplay = (settings = {}) => {
+  const logoDisplay = settings.logoDisplay || {};
+  const size = Number(logoDisplay.size);
+  return {
+    visible: logoDisplay.visible !== false,
+    alignment: logoAlignmentOptions.some(option => option.id === logoDisplay.alignment) ? logoDisplay.alignment : 'left',
+    size: Number.isFinite(size) ? Math.min(176, Math.max(48, size)) : 96
+  };
+};
+
+function LogoDisplayControls({ settings, onChange, className = '' }) {
+  const logoDisplay = getLogoDisplay(settings);
+  return (
+    <div className={`space-y-5 ${className}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+        <div>
+          <p className="text-sm font-bold text-black">Booking page logo</p>
+          <p className="text-xs text-neutral-400 leading-relaxed">Choose if, where, and how large the logo appears above the page heading.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange('visible', !logoDisplay.visible)}
+          className={`h-10 px-4 rounded-lg border text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${logoDisplay.visible ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}
+        >
+          {logoDisplay.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+          {logoDisplay.visible ? 'Shown' : 'Hidden'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-2">Position</p>
+          <div className="grid grid-cols-3 gap-2">
+            {logoAlignmentOptions.map(option => {
+              const IconCmp = option.icon;
+              const isActive = logoDisplay.alignment === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onChange('alignment', option.id)}
+                  className={`h-11 rounded-lg border flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-black text-white border-black shadow-lg' : 'bg-neutral-50 text-neutral-400 border-transparent hover:text-black hover:border-neutral-200'}`}
+                >
+                  <IconCmp size={14} />
+                  <span className="hidden lg:inline">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">Size</p>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-2 py-1 rounded-md">{logoDisplay.size}px</span>
+          </div>
+          <input
+            type="range"
+            min="48"
+            max="176"
+            step="4"
+            value={logoDisplay.size}
+            onChange={(event) => onChange('size', Number(event.target.value))}
+            className="w-full accent-black"
+          />
+          <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-neutral-300 mt-1">
+            <span>Small</span>
+            <span>Large</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
 
@@ -93,6 +174,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, favicon: '', location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
+                logoDisplay: { visible: true, alignment: 'left', size: 96 },
                 logo: '', bannerImage: '', address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
             });
 
@@ -434,7 +516,13 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     : mixHexColors(background, surface, 0.42);
                 const input = mixHexColors(surface, background, 0.55);
                 const onHeading = readableTextFor(heading);
-                const onPrimary = normalizeHexColor(settings.buttonTextColor, readableTextFor(primary));
+                const onPrimary = ensureReadableTextColor(settings.buttonTextColor, primary, readableTextFor(primary), 4.5);
+                const skinText = ensureReadableTextColor(heading, surface, readableTextFor(surface), 4.5);
+                const skinBgText = ensureReadableTextColor(heading, background, readableTextFor(background), 4.5);
+                const skinPanelText = ensureReadableTextColor(heading, panel, readableTextFor(panel), 4.5);
+                const skinMuted = ensureReadableTextColor(body, surface, skinText, 3.2);
+                const skinBgMuted = ensureReadableTextColor(body, background, skinBgText, 3.2);
+                const primaryText = ensureReadableTextColor(primary, surface, skinText, 3.2);
 
                 return {
                     '--skin-bg': background,
@@ -442,15 +530,21 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     '--skin-panel': panel,
                     '--skin-input': input,
                     '--skin-heading': heading,
-                    '--skin-text': heading,
-                    '--skin-muted': body,
+                    '--skin-text': skinText,
+                    '--skin-bg-text': skinBgText,
+                    '--skin-panel-text': skinPanelText,
+                    '--skin-muted': skinMuted,
+                    '--skin-bg-muted': skinBgMuted,
                     '--skin-primary': primary,
+                    '--skin-primary-text': primaryText,
                     '--skin-on-primary': onPrimary,
+                    '--skin-on-primary-muted': rgbaFromHex(onPrimary, 0.68),
                     '--skin-on-heading': onHeading,
                     '--skin-border': rgbaFromHex(heading, 0.13),
                     '--skin-shadow': rgbaFromHex(heading, isDarkBackground ? 0.5 : 0.24),
                     '--skin-primary-soft': rgbaFromHex(primary, 0.22),
                     '--skin-heading-soft': rgbaFromHex(heading, 0.09),
+                    '--skin-text-soft': rgbaFromHex(skinText, 0.09),
                     '--skin-on-heading-muted': rgbaFromHex(onHeading, 0.64),
                     '--skin-on-heading-border': rgbaFromHex(onHeading, 0.16),
                     '--skin-font-body': getFontFamily(settings.bodyFontFamily || settings.fontFamily),
@@ -913,6 +1007,18 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             const handleInspect = (tab) => { if (activeTab !== 'editor') setActiveTab('editor'); setEditorCollapsed(false); setEditorTab(tab); };
             const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
+            const handleLogoDisplayChange = (key, value) => {
+                setSettings(prev => ({
+                    ...prev,
+                    logoDisplay: {
+                        visible: true,
+                        alignment: 'left',
+                        size: 96,
+                        ...(prev.logoDisplay || {}),
+                        [key]: value
+                    }
+                }));
+            };
             const handleFeatureChange = (key, value) => { setSettings(prev => ({ ...prev, features: { ...prev.features, [key]: value } })); };
             const handleEmailProviderChange = (key, value) => {
                 setCommunications(prev => ({
@@ -1429,7 +1535,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     )}
                                     <div className="p-4 flex items-center gap-3">
                                         <div className="w-11 h-11 rounded-lg overflow-hidden shrink-0 flex items-center justify-center font-bold shadow-sm" style={{ backgroundColor: settings.headingColor, color: readableTextFor(settings.headingColor) }}>
-                                            {settings.logo ? <img src={settings.logo} className="w-full h-full object-cover" /> : (settings.brandName?.charAt(0) || 'B')}
+                                            {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : (settings.brandName?.charAt(0) || 'B')}
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Workspace Skin</p>
@@ -1774,7 +1880,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-4 block text-black">Brand Logo</label>
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-8">
                                                 <div className="w-28 h-28 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center overflow-hidden shadow-inner shrink-0">
-                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-cover" /> : <div className="font-bold text-4xl text-neutral-300">{settings.brandName?.charAt(0) || 'B'}</div>}
+                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <div className="font-bold text-4xl text-neutral-300">{settings.brandName?.charAt(0) || 'B'}</div>}
                                                 </div>
                                                 <div>
                                                     <label className="inline-flex px-6 py-3 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full cursor-pointer hover:bg-neutral-800 transition-colors mb-3">
@@ -1789,6 +1895,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                     {settings.logo && <button onClick={() => handleSettingChange('logo', '')} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline mt-2">Remove Image</button>}
                                                 </div>
                                             </div>
+                                            <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} className="mt-6 pt-6 border-t border-neutral-50" />
                                         </div>
 
                                         <div className="pt-6 border-t border-neutral-50">
@@ -2452,7 +2559,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                         <div className="bg-neutral-50 rounded-lg border border-neutral-100/70 p-4 md:p-5">
                                             <div className="flex items-center gap-4 mb-5">
                                                 <div className="w-16 h-16 rounded-lg bg-white border border-neutral-100 shadow-inner flex items-center justify-center overflow-hidden shrink-0">
-                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-cover" /> : <User size={20} className="text-neutral-300" />}
+                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <User size={20} className="text-neutral-300" />}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-bold text-black">Business Logo</p>
@@ -2470,6 +2577,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                 </label>
                                                 {settings.logo && <button onClick={() => handleSettingChange('logo', '')} className="h-10 px-4 rounded-lg bg-white border border-neutral-200 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors">Remove</button>}
                                             </div>
+                                            <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} className="mt-5 pt-5 border-t border-neutral-100" />
                                         </div>
                                         <div className="bg-neutral-50 rounded-lg border border-neutral-100/70 p-4 md:p-5">
                                             <div className="w-full aspect-[16/7] rounded-lg bg-white border border-neutral-100 shadow-inner flex items-center justify-center overflow-hidden mb-5">
@@ -2541,7 +2649,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                     className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center font-bold text-xl shrink-0 shadow-xl"
                                                     style={{ backgroundColor: settings.headingColor || '#000000', color: readableTextFor(settings.headingColor || '#000000') }}
                                                 >
-                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-cover" /> : (settings.brandName?.charAt(0) || 'B')}
+                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : (settings.brandName?.charAt(0) || 'B')}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] opacity-50 mb-1">Workspace Preview</p>
