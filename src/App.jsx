@@ -10,7 +10,7 @@ import { FONT_OPTIONS, getFontFamily } from './data/fonts';
 import { PRESET_THEMES } from './data/themes';
 import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
-import { createDefaultEmailConfig, getEmailConfig, isEmailConfigured, sendClientEmail } from './services/email';
+import { createDefaultEmailConfig, sendClientEmail } from './services/email';
 import { getLocalDateStr } from './utils/dates';
 import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_PALETTE_FILTERS, ensureReadableTextColor } from './utils/theme';
 
@@ -187,7 +187,6 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 runningLate: { active: true, text: "Running 10-15 mins behind. See you soon!" },
                 emailProvider: createDefaultEmailConfig()
             });
-            const emailConfig = useMemo(() => getEmailConfig(communications), [communications]);
             const bookingPageUrl = useMemo(() => `${window.location.origin}/book/${settings.slug || 'studio'}`, [settings.slug]);
             const referralUrl = useMemo(() => `${window.location.origin}/ref/${user?.uid?.substring(0,6) || '10X'}`, [user?.uid]);
             const workspaceOwnerId = activeWorkspaceOwnerId || user?.uid || '';
@@ -1020,30 +1019,6 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 }));
             };
             const handleFeatureChange = (key, value) => { setSettings(prev => ({ ...prev, features: { ...prev.features, [key]: value } })); };
-            const handleEmailProviderChange = (key, value) => {
-                setCommunications(prev => ({
-                    ...prev,
-                    emailProvider: {
-                        ...getEmailConfig(prev),
-                        [key]: value
-                    }
-                }));
-            };
-            const handleEmailTemplateChange = (key, value) => {
-                setCommunications(prev => {
-                    const currentConfig = getEmailConfig(prev);
-                    return {
-                        ...prev,
-                        emailProvider: {
-                            ...currentConfig,
-                            templates: {
-                                ...currentConfig.templates,
-                                [key]: value
-                            }
-                        }
-                    };
-                });
-            };
             const handleBackendSkinChange = (key, value) => {
                 setSettings(prev => ({
                     ...prev,
@@ -1223,7 +1198,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     return true;
                 } catch (error) {
                     console.error(error);
-                    showToast('Email failed. Check EmailJS settings.');
+                    showToast('Email delivery is not connected yet.');
                     return false;
                 }
             };
@@ -1986,47 +1961,27 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 <p className="text-neutral-400 font-medium text-lg">Write the emails your clients receive before and after a booking.</p>
                             </header>
                             <section data-tour="email-delivery" className="max-w-6xl bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm mb-8">
-                                <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-8 mb-8">
-                                    <div className="max-w-2xl">
-                                        <div className={`w-11 h-11 rounded-lg flex items-center justify-center mb-5 ${isEmailConfigured(communications) ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-400'}`}>
+                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
+                                    <div className="xl:col-span-7">
+                                        <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-5 bg-[#39FF14] text-black shadow-xl shadow-[#39FF14]/20">
                                             <Mail size={18} />
                                         </div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Delivery Setup</p>
-                                        <h3 className="text-2xl font-bold tracking-tight text-black mb-3">EmailJS Connection</h3>
-                                        <p className="text-sm text-neutral-500 leading-relaxed">Use one universal EmailJS template for the free plan, or add separate template IDs per email type later. Business name, logo, banner, booking details, and your custom message are passed into every email.</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Managed Delivery</p>
+                                        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black mb-3">No email keys for business owners.</h3>
+                                        <p className="text-sm text-neutral-500 leading-relaxed max-w-2xl">Build A Booking will handle delivery behind the scenes. Owners only choose which messages are active and what each message says.</p>
                                     </div>
-                                    <div className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest ${isEmailConfigured(communications) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                                        {isEmailConfigured(communications) ? 'Ready To Send' : 'Needs Keys'}
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-2 ml-2">Public Key</label>
-                                        <input value={emailConfig.publicKey} onChange={(e) => handleEmailProviderChange('publicKey', e.target.value)} placeholder="EmailJS public key" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-4 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-2 ml-2">Service ID</label>
-                                        <input value={emailConfig.serviceId} onChange={(e) => handleEmailProviderChange('serviceId', e.target.value)} placeholder="service_xxxxx" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-4 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-2 ml-2">Universal Template ID</label>
-                                        <input value={emailConfig.universalTemplateId} onChange={(e) => handleEmailProviderChange('universalTemplateId', e.target.value)} placeholder="template_xxxxx" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-4 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-2 ml-2">Test Email</label>
-                                        <input type="email" value={emailConfig.testEmail || ''} onChange={(e) => handleEmailProviderChange('testEmail', e.target.value)} placeholder="you@email.com" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-4 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                                    </div>
-                                </div>
-                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
-                                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3">Template Variables</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['to_email', 'to_name', 'subject', 'message', 'business_name', 'business_logo', 'business_banner', 'booking_date', 'booking_time', 'running_late_minutes'].map(variable => (
-                                            <span key={variable} className="px-3 py-1.5 rounded-md bg-white border border-neutral-100 text-[10px] font-bold text-neutral-500">{`{{${variable}}}`}</span>
+                                    <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-3">
+                                        {[
+                                            ['No client setup', 'Keys stay out of the workspace'],
+                                            ['Brand ready', 'Logo and booking details can be included'],
+                                            ['4 messages', 'Confirmations, waitlist, late notes, reviews']
+                                        ].map(item => (
+                                            <div key={item[0]} className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
+                                                <p className="text-sm font-bold text-black mb-1">{item[0]}</p>
+                                                <p className="text-xs font-medium text-neutral-400 leading-relaxed">{item[1]}</p>
+                                            </div>
                                         ))}
                                     </div>
-                                </div>
-                                <div className="mt-6 flex justify-end">
-                                    <button onClick={() => { saveComms(communications); showToast('Email delivery settings saved'); }} className="h-11 px-5 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Save Delivery Setup</button>
                                 </div>
                             </section>
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl">
@@ -2051,19 +2006,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                             onChange={(e) => setCommunications({...communications, [item.key]: {...communications[item.key], text: e.target.value}})}
                                             className="w-full bg-neutral-50 border-none rounded-lg p-6 text-sm font-medium focus:bg-white transition-all outline-none min-h-[120px] resize-none"
                                         />
-                                        <div className="mt-5">
-                                            <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-2 ml-2">Optional Specific Template ID</label>
-                                            <input value={emailConfig.templates?.[item.key] || ''} onChange={(e) => handleEmailTemplateChange(item.key, e.target.value)} placeholder="Leave blank to use universal template" className="w-full h-11 bg-neutral-50 border border-neutral-100 rounded-lg px-4 text-xs font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                                        </div>
                                         <div className="mt-6 flex flex-wrap justify-end gap-3">
-                                            <button onClick={() => sendBookingEmail({
-                                                clientName: 'Test Client',
-                                                clientEmail: emailConfig.testEmail || '',
-                                                clientPhone: '+27 00 000 0000',
-                                                date: 'Today',
-                                                time: '10:30'
-                                            }, item.key)} className="px-6 py-2 bg-neutral-100 text-neutral-500 text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-neutral-200">Send Test</button>
-                                            <button onClick={() => {saveComms(communications); showToast("Template Saved");}} className="px-6 py-2 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-neutral-800">Save</button>
+                                            <button onClick={() => {saveComms(communications); showToast("Message saved");}} className="px-6 py-2 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-neutral-800">Save Message</button>
                                         </div>
                                     </div>
                                 ))}

@@ -82,7 +82,7 @@ export const sendClientEmail = async ({ communications, settings, booking, templ
   }
 
   if (!config.serviceId || !config.publicKey || !templateId) {
-    return { ok: false, skipped: true, reason: 'EmailJS is not configured' };
+    return { ok: false, skipped: true, reason: 'Email delivery is not connected yet' };
   }
 
   const params = buildEmailParams({ settings, communications, booking, templateKey, extra });

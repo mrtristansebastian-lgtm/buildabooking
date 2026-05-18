@@ -105,8 +105,8 @@ const scenes = [
     tab: 'overview',
     target: 'dashboard-hero',
     kicker: 'Command center',
-    title: 'Start every day with the whole business in focus.',
-    text: 'Today, requests, booking rate, clients, schedule health, and page readiness are all surfaced before the owner starts clicking around.'
+    title: 'Start here each day.',
+    text: 'See today, new requests, booking rate, clients, and schedule health in one view.'
   },
   {
     id: 'bookings',
@@ -114,8 +114,8 @@ const scenes = [
     tab: 'bookings',
     target: 'bookings-queue',
     kicker: 'Booking desk',
-    title: 'This is where requests become real appointments.',
-    text: 'Approve new clients, move people to the waitlist, assign staff, send review requests, and keep the queue tidy.'
+    title: 'Turn requests into bookings.',
+    text: 'Approve, decline, waitlist, assign staff, and keep every booking moving.'
   },
   {
     id: 'schedule',
@@ -123,8 +123,8 @@ const scenes = [
     tab: 'business',
     target: 'schedule-calendar',
     kicker: 'Availability studio',
-    title: 'Availability is edited visually, not buried in settings.',
-    text: 'Owners can close days, add custom slots, see day/week/month booking stats, and keep the booking page accurate.'
+    title: 'Control availability visually.',
+    text: 'Open days, close days, add custom slots, and track booking rate by day, week, or month.'
   },
   {
     id: 'editor',
@@ -132,8 +132,8 @@ const scenes = [
     tab: 'editor',
     target: 'editor-theme-library',
     kicker: 'Live page editor',
-    title: 'The booking page becomes the business brand.',
-    text: 'Themes, fonts, logo, banner, copy, colors, features, and backend skin are all adjusted in a live design workspace.'
+    title: 'Make the page feel branded.',
+    text: 'Choose themes, fonts, colors, logo, banner, features, and backend skin from one live editor.'
   },
   {
     id: 'clients',
@@ -141,8 +141,8 @@ const scenes = [
     tab: 'clients',
     target: 'clients-directory',
     kicker: 'Client book',
-    title: 'Every booking quietly builds a client profile.',
-    text: 'First timers, regulars, notes, labels, photos, and booking history turn this into a lightweight client CRM.'
+    title: 'Know every client.',
+    text: 'Profiles, notes, labels, photos, regulars, first-timers, and booking history stay together.'
   },
   {
     id: 'email',
@@ -150,8 +150,8 @@ const scenes = [
     tab: 'communications',
     target: 'email-delivery',
     kicker: 'Email studio',
-    title: 'Client communication stays branded and consistent.',
-    text: 'Confirmation, waitlist, running-late, and review emails can carry the business logo, banner, and custom message.'
+    title: 'Write the messages once.',
+    text: 'Confirmations, waitlist alerts, running-late notes, and review follow-ups stay ready to send.'
   },
   {
     id: 'team',
@@ -159,8 +159,8 @@ const scenes = [
     tab: 'staff',
     target: 'team-roster',
     kicker: 'Team access',
-    title: 'Staff can work inside the same business without chaos.',
-    text: 'Owners can add staff by email, detect accounts, assign access, and keep each booking tied to the right person.'
+    title: 'Bring the team in cleanly.',
+    text: 'Invite staff, set roles, detect accounts, and keep bookings tied to the right person.'
   },
   {
     id: 'profile',
@@ -168,8 +168,8 @@ const scenes = [
     tab: 'profile',
     target: 'profile-business-info',
     kicker: 'Business profile',
-    title: 'The business identity lives in one polished place.',
-    text: 'Logo, banner, social links, location, affiliate link, and account details stay together for easy setup.'
+    title: 'Keep identity in one place.',
+    text: 'Logo, banner, social links, location, affiliate link, and account details stay organized.'
   },
   { id: 'launch', type: 'launch' }
 ];
@@ -596,30 +596,31 @@ function PlatformScene({ scene, sceneIndex, spotlight, popoverStyle, onBack, onN
       <SpotlightPanels spotlight={spotlight} />
       {spotlight && (
         <div
-          className="fixed z-[10001] rounded-[1.35rem] border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4),0_0_55px_rgba(255,255,255,0.35)] pointer-events-none"
+          className="tour-spotlight-ring fixed z-[10001] rounded-[1.35rem] border-2 pointer-events-none"
           style={spotlight}
         >
-          <div className="absolute -right-3 -top-3 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center shadow-xl">
+          <div className="absolute -right-3 -top-3 h-7 w-7 rounded-full bg-[#39FF14] text-black flex items-center justify-center shadow-xl shadow-[#39FF14]/50">
             <MousePointerClick size={14} />
           </div>
         </div>
       )}
 
       <div
-        className="fixed z-[10002] overflow-y-auto rounded-[1.5rem] bg-white text-black p-4 md:p-6 shadow-[0_30px_100px_-30px_rgba(0,0,0,0.75)] border border-black/10"
+        key={scene.id}
+        className="tour-popover fixed z-[10002] overflow-y-auto rounded-[1.5rem] bg-white text-black p-4 md:p-6 shadow-[0_30px_100px_-30px_rgba(0,0,0,0.75)] border border-black/10"
         style={popoverStyle}
       >
         <div className="flex items-start justify-between gap-4 mb-5 md:mb-8">
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">{scene.kicker}</p>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{scene.title}</h2>
+          <div className="tour-popover-copy">
+            <p className="tour-copy-line text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">{scene.kicker}</p>
+            <h2 className="tour-copy-line text-2xl md:text-3xl font-bold tracking-tight leading-none" style={{ animationDelay: '70ms' }}>{scene.title}</h2>
           </div>
           <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center shrink-0">
             <ArrowUpRight size={17} />
           </div>
         </div>
-        <p className="text-sm md:text-base text-neutral-500 leading-relaxed mb-6">{scene.text}</p>
-        <div className="flex items-center justify-between gap-3">
+        <p className="tour-copy-line text-sm md:text-base text-neutral-500 leading-relaxed mb-6" style={{ animationDelay: '140ms' }}>{scene.text}</p>
+        <div className="tour-copy-line flex items-center justify-between gap-3" style={{ animationDelay: '210ms' }}>
           <button onClick={onBack} className="h-11 px-4 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:text-black">
             <ChevronLeft size={14} /> Back
           </button>
