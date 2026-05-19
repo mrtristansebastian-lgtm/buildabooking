@@ -135,7 +135,7 @@ const scenes = [
     target: 'editor-theme-library',
     kicker: 'Live page editor',
     title: 'Make the page feel branded.',
-    text: 'Choose themes, fonts, colors, logo, banner, features, and backend skin from one live editor.'
+    text: 'Choose the page theme, then tune the logo, banner, colors, features, and backend skin from one live editor.'
   },
   {
     id: 'clients',
@@ -150,10 +150,10 @@ const scenes = [
     id: 'email',
     type: 'platform',
     tab: 'communications',
-    target: 'email-delivery',
+    target: 'email-messages',
     kicker: 'Email studio',
     title: 'Write the messages once.',
-    text: 'Confirmations, waitlist alerts, running-late notes, and review follow-ups stay ready to send.'
+    text: 'Confirmations, waitlist alerts, running-late notes, and review follow-ups stay ready to customize.'
   },
   {
     id: 'team',
@@ -489,7 +489,7 @@ export function OnboardingShowroom({
 
   if (!open) return null;
 
-  const stageBackground = scene.type === 'platform' ? 'pointer-events-auto' : 'bg-[#050505] pointer-events-auto';
+  const stageBackground = scene.type === 'platform' ? 'pointer-events-none' : 'bg-[#050505] pointer-events-auto';
 
   return (
     <div className={`fixed inset-0 z-[9998] text-white overflow-hidden ${stageBackground}`}>
@@ -570,7 +570,7 @@ function TopProgress({ progress }) {
 function SkipButton({ onSkip, soundEnabled, onToggleSound }) {
   const SoundIcon = soundEnabled ? Volume2 : VolumeX;
   return (
-    <div className="absolute right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2">
+    <div className="absolute right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2 pointer-events-auto">
       <button
         onClick={onToggleSound}
         className="h-11 w-11 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 flex items-center justify-center shadow-2xl backdrop-blur-xl"
@@ -596,11 +596,11 @@ function CinemaScene({ generatedLink, onNext, onJump }) {
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/55 mb-8">
             <Sparkles size={14} /> Build A Booking Intro
           </div>
-          <h1 className="text-5xl md:text-7xl xl:text-[104px] font-bold tracking-tight leading-[0.88] mb-8">
-            Your booking system, introduced properly.
+          <h1 className="text-5xl md:text-7xl xl:text-[92px] font-bold tracking-tight leading-[0.9] mb-8">
+            Welcome to Build A Booking. Let's get you set up and take the tour.
           </h1>
           <p className="text-lg md:text-2xl text-white/55 max-w-3xl leading-relaxed mb-10">
-            A short cinematic setup that walks through the real platform, highlights the important tools, and creates your first booking identity step by step.
+            A quick cinematic setup that shows the real platform, highlights the tools that matter, and builds your first booking identity step by step.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={onNext} className="h-14 px-7 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
@@ -620,8 +620,8 @@ function CinemaScene({ generatedLink, onNext, onJump }) {
                   <MousePointerClick size={22} />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Experience Mode</p>
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-none mb-5">Guided, focused, cinematic.</h2>
-                <p className="text-neutral-500 leading-relaxed">No cold form. No guessing. The app explains itself while the business setup takes shape.</p>
+                <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-none mb-5">Meet your new best friend for bookings.</h2>
+                <p className="text-neutral-500 leading-relaxed">Set up the basics, see where everything lives, and get comfortable before your first client books.</p>
               </div>
               <div className="rounded-2xl bg-black text-white p-4">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Preview link</p>
@@ -808,7 +808,7 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNav
       {showPopover && (
         <div
           key={scene.id}
-          className="tour-popover fixed z-[10002] overflow-y-auto rounded-[1.5rem] bg-white text-black p-4 md:p-6 shadow-[0_30px_100px_-30px_rgba(0,0,0,0.75)] border border-black/10"
+          className="tour-popover fixed z-[10002] pointer-events-auto overflow-y-auto rounded-[1.5rem] bg-white text-black p-4 md:p-6 shadow-[0_30px_100px_-30px_rgba(0,0,0,0.75)] border border-black/10"
           style={popoverStyle}
         >
           <div className="flex items-start justify-between gap-4 mb-5 md:mb-8">
@@ -907,12 +907,12 @@ function NavigationClickCue({ cue }) {
 
 function SpotlightPanels({ spotlight }) {
   if (!spotlight) {
-    return <div className="fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm" />;
+    return <div className="fixed inset-0 z-[10000] pointer-events-auto bg-black/70 backdrop-blur-sm" />;
   }
 
   const right = window.innerWidth - spotlight.left - spotlight.width;
   const bottom = window.innerHeight - spotlight.top - spotlight.height;
-  const panelClass = 'fixed z-[10000] bg-black/72 backdrop-blur-[2px]';
+  const panelClass = 'fixed z-[10000] pointer-events-auto bg-black/72 backdrop-blur-[2px]';
 
   return (
     <>

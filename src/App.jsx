@@ -1092,6 +1092,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const handleOnboardingNavigate = (tab) => {
                 setView('dashboard');
                 setActiveTab(tab);
+                if (tab === 'editor') setEditorTab('themes');
             };
 
             const handleOnboardingComplete = async (draft, options = {}) => {
@@ -2307,7 +2308,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     </div>
                                 </div>
                             </section>
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl">
+                            <div data-tour="email-messages" className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl">
                                 {[
                                     { key: 'confirmed', title: 'Request Confirmed', desc: 'Sent when you approve a booking request.' },
                                     { key: 'review', title: 'Thank You Follow-up', desc: 'Sent manually from a booking record after the appointment.' },
@@ -2996,8 +2997,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 )}
 
                                 {editorTab === 'themes' && (
-                                <div data-tour="editor-theme-library" className="space-y-12 animate-in fade-in duration-700">
-                                    <div>
+                                <div className="space-y-12 animate-in fade-in duration-700">
+                                    <div data-tour="editor-theme-library">
                                         <div className="flex items-center justify-between gap-4 mb-6">
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Designer Theme Library</label>
                                             <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">{visibleThemes.length} / {PRESET_THEMES.length}</span>
