@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Globe, Instagram, MapPin } from 'lucide-react';
+import { ArrowRight, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Globe, Instagram, MapPin, MessageCircle } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
 
@@ -30,7 +30,7 @@ const normalizeWebsite = (value = '') => {
             const [step, setStep] = useState(1);
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
-            const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '' });
+            const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', whatsappOptIn: false });
             const [isInitialLoading, setIsInitialLoading] = useState(settings.features?.loadingScreen);
             const [openFaq, setOpenFaq] = useState(null);
 
@@ -164,7 +164,13 @@ const normalizeWebsite = (value = '') => {
             const handleAction = () => {
                 if (isPreview) { onInspect('copy'); return; }
                 if ((selectedTime || isWaitlistMode) && formData.name && formData.phone && formData.email) {
-                    onComplete(formData, activeDate.full, isWaitlistMode ? 'Waitlist' : selectedTime, isWaitlistMode ? 'waitlist' : 'pending', activeDate.localDateStr);
+                    onComplete(
+                        { ...formData, whatsappOptIn: Boolean(settings.features?.whatsappUpdates && formData.whatsappOptIn) },
+                        activeDate.full,
+                        isWaitlistMode ? 'Waitlist' : selectedTime,
+                        isWaitlistMode ? 'waitlist' : 'pending',
+                        activeDate.localDateStr
+                    );
                     setStep(2);
                 }
             };
@@ -488,6 +494,46 @@ const normalizeWebsite = (value = '') => {
                         </section>
 
                         <div className="pt-16 pb-12 mt-auto text-center">
+                            {settings.features?.whatsappUpdates && (
+                                <label
+                                    className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${inspectClass}`}
+                                    style={{
+                                        borderColor: `${settings.headingColor || '#000000'}18`,
+                                        backgroundColor: `${settings.headingColor || '#000000'}08`
+                                    }}
+                                    onClick={(event) => {
+                                        if (isPreview) {
+                                            event.preventDefault();
+                                            onInspect('features');
+                                        }
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(formData.whatsappOptIn)}
+                                        onChange={(e) => setFormData({ ...formData, whatsappOptIn: e.target.checked })}
+                                        className="sr-only"
+                                    />
+                                    <span
+                                        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all"
+                                        style={{
+                                            backgroundColor: formData.whatsappOptIn ? (settings.primaryColor || '#39FF14') : 'transparent',
+                                            borderColor: formData.whatsappOptIn ? (settings.primaryColor || '#39FF14') : `${settings.headingColor || '#000000'}35`,
+                                            color: settings.buttonTextColor || '#000000'
+                                        }}
+                                    >
+                                        {formData.whatsappOptIn && <Check size={14} strokeWidth={4} />}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>
+                                            <MessageCircle size={13} /> WhatsApp updates
+                                        </span>
+                                        <span className="mt-1 block text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
+                                            Send booking updates to the mobile number entered above.
+                                        </span>
+                                    </span>
+                                </label>
+                            )}
                             <button onClick={handleAction} disabled={(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out"></div>
                                 <span className="relative z-10">{isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span> 

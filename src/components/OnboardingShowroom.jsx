@@ -151,9 +151,9 @@ const scenes = [
     type: 'platform',
     tab: 'communications',
     target: 'email-messages',
-    kicker: 'Email studio',
-    title: 'Write the messages once.',
-    text: 'Confirmations, waitlist alerts, running-late notes, and review follow-ups stay ready to customize.'
+    kicker: 'Communication studio',
+    title: 'Keep every message ready.',
+    text: 'Email templates and WhatsApp setup live together so client updates stay consistent.'
   },
   {
     id: 'team',
@@ -1154,12 +1154,12 @@ function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Next best actions</p>
             <h3 className="text-3xl font-bold tracking-tight mb-4">Make it unmistakably yours.</h3>
-            <p className="text-white/50 leading-relaxed mb-6">Start with identity, theme, schedule, and email. The workspace is ready to guide the rest.</p>
+            <p className="text-white/50 leading-relaxed mb-6">Start with identity, theme, schedule, and communication. The workspace is ready to guide the rest.</p>
             <div className="space-y-3">
               {[
                 [Palette, 'Choose a theme'],
                 [Calendar, 'Tune availability'],
-                [Mail, 'Connect emails'],
+                [Mail, 'Set up messages'],
                 [ShieldCheck, 'Invite staff']
               ].map(([Icon, label]) => (
                 <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">

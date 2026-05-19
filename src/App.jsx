@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BusinessCalendar } from './components/BusinessCalendar';
 import { BookingFlow } from './components/BookingFlow';
@@ -39,6 +39,60 @@ const defaultFaqItems = [
   { q: 'How do I know my booking is confirmed?', a: 'You will see a confirmation on this page and receive a message when the business approves your request.' },
   { q: 'Can I join a waitlist if the day is full?', a: 'Yes. If waitlist is enabled, you can leave your details and the business can contact you when a slot opens.' }
 ];
+
+const emailMessageKeys = ['confirmed', 'review', 'waitlist', 'runningLate'];
+
+const createDefaultWhatsAppConfig = () => ({
+  enabled: false,
+  clientMessages: false,
+  notifyOwner: true,
+  notifyStaff: false,
+  ownerNumber: '',
+  businessPhoneNumber: '',
+  phoneNumberId: '',
+  businessAccountId: '',
+  templateLanguage: 'en_US',
+  bookingRequestTemplate: 'booking_request_alert',
+  clientConfirmationTemplate: 'booking_confirmation',
+  clientWaitlistTemplate: 'booking_waitlist_update',
+  staffRecipients: []
+});
+
+const createDefaultCommunications = () => ({
+  confirmed: { active: true, text: "Your booking request is confirmed! We look forward to seeing you." },
+  review: { active: true, text: "Hey! Thanks for coming in today. We'd love it if you could leave a quick review." },
+  waitlist: { active: true, text: "A spot just opened up for you! Tap here to claim it." },
+  runningLate: { active: true, text: "Running 10-15 mins behind. See you soon!" },
+  emailProvider: createDefaultEmailConfig(),
+  whatsapp: createDefaultWhatsAppConfig()
+});
+
+const normalizeCommunications = (communications = {}) => {
+  const defaults = createDefaultCommunications();
+  return {
+    ...defaults,
+    ...communications,
+    confirmed: { ...defaults.confirmed, ...(communications.confirmed || {}) },
+    review: { ...defaults.review, ...(communications.review || {}) },
+    waitlist: { ...defaults.waitlist, ...(communications.waitlist || {}) },
+    runningLate: { ...defaults.runningLate, ...(communications.runningLate || {}) },
+    emailProvider: {
+      ...defaults.emailProvider,
+      ...(communications.emailProvider || {}),
+      templates: {
+        ...(defaults.emailProvider?.templates || {}),
+        ...(communications.emailProvider?.templates || {})
+      }
+    },
+    whatsapp: {
+      ...defaults.whatsapp,
+      ...(communications.whatsapp || {}),
+      staffRecipients: Array.isArray(communications.whatsapp?.staffRecipients)
+        ? communications.whatsapp.staffRecipients
+        : []
+    }
+  };
+};
 
 const clampNumber = (value, min, max, fallback) => {
   const parsed = Number(value);
@@ -458,7 +512,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
                 availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
                 schedule: {},
-                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
+                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, faqEnabled: false, socialLinks: false, whatsappUpdates: false, location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
@@ -467,13 +521,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             const [bookings, setBookings] = useState([]);
             const [staffList, setStaffList] = useState([{id: 'owner', name: 'Admin', color: '#39FF14'}]);
-            const [communications, setCommunications] = useState({
-                confirmed: { active: true, text: "Your booking request is confirmed! We look forward to seeing you." },
-                review: { active: true, text: "Hey! Thanks for coming in today. We'd love it if you could leave a quick review." },
-                waitlist: { active: true, text: "A spot just opened up for you! Tap here to claim it." },
-                runningLate: { active: true, text: "Running 10-15 mins behind. See you soon!" },
-                emailProvider: createDefaultEmailConfig()
-            });
+            const [communications, setCommunications] = useState(createDefaultCommunications);
             const bookingPageUrl = useMemo(() => `${window.location.origin}/book/${settings.slug || 'studio'}`, [settings.slug]);
             const referralUrl = useMemo(() => `${window.location.origin}/ref/${user?.uid?.substring(0,6) || '10X'}`, [user?.uid]);
             const workspaceOwnerId = activeWorkspaceOwnerId || user?.uid || '';
@@ -760,8 +808,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 const todayReserved = todayBookings.filter(booking => booking.status !== 'waitlist' && booking.time !== 'Waitlist').length;
                 const todayOpenSlots = todayAvailable ? Math.max(0, todayTimes.length - todayReserved) : 0;
                 const upcomingBookings = activeBookings.filter(booking => !booking.dateKeyResolved || booking.dateKeyResolved >= todayKey);
-                const emailAutomations = Object.values(communications).filter(item => item?.active).length;
-                const emailAutomationTotal = Object.keys(communications).length || 1;
+                const emailAutomations = emailMessageKeys.filter(key => communications[key]?.active).length;
+                const emailAutomationTotal = emailMessageKeys.length;
                 const pageReadinessItems = [
                     Boolean(settings.brandName),
                     Boolean(settings.slug),
@@ -868,12 +916,14 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 { id: 'overview', icon: Layout, label: 'Dashboard' },
                 { id: 'bookings', icon: BookOpen, label: 'My Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
                 { id: 'business', icon: Calendar, label: 'Schedule' },
-                { id: 'communications', icon: MessageSquare, label: 'Email Studio' },
+                { id: 'communications', icon: MessageSquare, label: 'Communication Studio' },
                 { id: 'editor', icon: Paintbrush, label: 'Editor' },
                 { id: 'clients', icon: Star, label: 'My Clients', mobileLabel: 'Clients', badge: clientMetrics.firstTimers > 0 },
                 { id: 'staff', icon: Users, label: 'Team' },
                 { id: 'profile', icon: User, label: 'Profile' }
             ];
+            const normalizedComms = normalizeCommunications(communications);
+            const whatsappConfig = normalizedComms.whatsapp;
 
             const themePaletteOptions = useMemo(() => (
                 THEME_PALETTE_FILTERS
@@ -1198,7 +1248,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                 const commsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications');
                 const unsubComms = FirebaseSDK.onSnapshot(commsRef, (docSnap) => { 
-                    if (docSnap.exists()) setCommunications(docSnap.data());
+                    if (docSnap.exists()) setCommunications(normalizeCommunications(docSnap.data()));
                 });
 
                 const clientsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients');
@@ -1434,13 +1484,64 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             };
 
             const saveComms = async (newComms) => {
-                setCommunications(newComms);
+                const normalizedComms = normalizeCommunications(newComms);
+                setCommunications(normalizedComms);
                 if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
                 if (!canManageWorkspace) {
-                    showToast("Only owners and admins can manage email delivery.");
+                    showToast("Only owners and admins can manage communication settings.");
                     return;
                 }
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications'), newComms);
+                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications'), normalizedComms);
+            };
+
+            const handleWhatsAppConfigChange = (key, value) => {
+                setCommunications(prev => {
+                    const normalized = normalizeCommunications(prev);
+                    return {
+                        ...normalized,
+                        whatsapp: {
+                            ...normalized.whatsapp,
+                            [key]: value
+                        }
+                    };
+                });
+            };
+
+            const updateWhatsAppStaffRecipient = (index, field, value) => {
+                const normalized = normalizeCommunications(communications);
+                const recipients = [...(normalized.whatsapp.staffRecipients || [])];
+                recipients[index] = { ...(recipients[index] || {}), [field]: value };
+                handleWhatsAppConfigChange('staffRecipients', recipients);
+            };
+
+            const addWhatsAppStaffRecipient = () => {
+                const normalized = normalizeCommunications(communications);
+                handleWhatsAppConfigChange('staffRecipients', [
+                    ...(normalized.whatsapp.staffRecipients || []),
+                    { id: `manual-${Date.now()}`, name: '', number: '' }
+                ]);
+            };
+
+            const importTeamWhatsAppRecipients = () => {
+                const normalized = normalizeCommunications(communications);
+                const existingRecipients = normalized.whatsapp.staffRecipients || [];
+                const imported = staffList
+                    .filter(staff => staff.id !== 'owner')
+                    .map(staff => {
+                        const existing = existingRecipients.find(recipient => recipient.id === staff.id || recipient.name === staff.name);
+                        return {
+                            id: staff.id,
+                            name: staff.name || staff.email || 'Team member',
+                            number: existing?.number || staff.whatsappNumber || ''
+                        };
+                    });
+                handleWhatsAppConfigChange('staffRecipients', imported.length ? imported : existingRecipients);
+                showToast(imported.length ? "Team recipients loaded. Add their WhatsApp numbers." : "Add staff first, then import them here.");
+            };
+
+            const removeWhatsAppStaffRecipient = (index) => {
+                const normalized = normalizeCommunications(communications);
+                handleWhatsAppConfigChange('staffRecipients', (normalized.whatsapp.staffRecipients || []).filter((_, idx) => idx !== index));
             };
 
             const applyTheme = (themeId) => {
@@ -1610,6 +1711,12 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     clientPhone: formData.phone,
                     clientEmail: formData.email || '',
                     clientBirthday: formData.birthday || '',
+                    clientWhatsappOptIn: Boolean(formData.whatsappOptIn),
+                    clientWhatsappNumber: formData.whatsappOptIn ? formData.phone : '',
+                    notificationChannels: {
+                        email: true,
+                        whatsapp: Boolean(formData.whatsappOptIn)
+                    },
                     date,
                     dateKey: dateKey || null,
                     time,
@@ -1640,6 +1747,12 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     clientPhone: formData.phone,
                     clientEmail: formData.email || '',
                     clientBirthday: formData.birthday || '',
+                    clientWhatsappOptIn: Boolean(formData.whatsappOptIn),
+                    clientWhatsappNumber: formData.whatsappOptIn ? formData.phone : '',
+                    notificationChannels: {
+                        email: true,
+                        whatsapp: Boolean(formData.whatsappOptIn)
+                    },
                     date,
                     dateKey: dateKey || null,
                     time,
@@ -1852,8 +1965,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                         {/* Box 4: Communication Studio (Span 1) */}
                         <div className="bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <MessageSquare className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Email Studio.</h3>
-                          <p className="text-neutral-500 font-medium">Write clean emails for confirmations, reviews, waitlists, and schedule updates without starting from scratch.</p>
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Communication Studio.</h3>
+                          <p className="text-neutral-500 font-medium">Write clean emails, prepare WhatsApp updates, and keep client communication consistent.</p>
                         </div>
 
                         {/* Box 5: Client Intel (Span 1) */}
@@ -2517,9 +2630,123 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     {activeTab === 'communications' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
                             <header className="mb-8 md:mb-10">
-                                <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter mb-4 text-black">Email Studio</h2>
-                                <p className="text-neutral-400 font-medium text-lg">Write the emails your clients receive before and after a booking.</p>
+                                <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter mb-4 text-black">Communication Studio</h2>
+                                <p className="text-neutral-400 font-medium text-lg max-w-3xl">Write client emails, prepare WhatsApp updates, and choose who gets alerted when a new booking request lands.</p>
                             </header>
+
+                            <section data-tour="whatsapp-setup" className="max-w-6xl mb-8 rounded-lg overflow-hidden border border-neutral-900 bg-black text-white shadow-[0_30px_90px_-70px_rgba(0,0,0,0.9)]">
+                                <div className="grid grid-cols-1 xl:grid-cols-12">
+                                    <div className="xl:col-span-5 p-5 sm:p-6 md:p-8 border-b xl:border-b-0 xl:border-r border-white/10">
+                                        <div className="w-12 h-12 rounded-lg bg-[#39FF14] text-black flex items-center justify-center mb-6 shadow-xl shadow-[#39FF14]/20">
+                                            <MessageCircle size={20} />
+                                        </div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/35 mb-3">WhatsApp Setup</p>
+                                        <h3 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Booking alerts where teams actually look.</h3>
+                                        <p className="text-sm text-white/55 leading-relaxed mb-6">Use this to prepare owner and staff WhatsApp notifications. Client WhatsApp messages only send when the booking page opt-in is enabled and the client accepts it.</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {[
+                                                ['Workspace alerts', whatsappConfig.enabled ? 'Ready' : 'Off'],
+                                                ['Client opt-in', settings.features?.whatsappUpdates ? 'Shown on page' : 'Hidden'],
+                                                ['API token', 'Server-side only'],
+                                                ['Provider', 'Meta Cloud API']
+                                            ].map(item => (
+                                                <div key={item[0]} className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 mb-1">{item[0]}</p>
+                                                    <p className="text-sm font-bold text-white">{item[1]}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="xl:col-span-7 p-5 sm:p-6 md:p-8 space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            {[
+                                                ['enabled', 'Owner Alerts', 'Notify owner when new bookings land.'],
+                                                ['notifyStaff', 'Staff Alerts', 'Also notify selected staff numbers.'],
+                                                ['clientMessages', 'Client WhatsApps', 'Allow approved client templates later.']
+                                            ].map(([key, label, note]) => (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => handleWhatsAppConfigChange(key, !whatsappConfig[key])}
+                                                    className={`rounded-lg border p-4 text-left transition-all ${whatsappConfig[key] ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.06] text-white border-white/10 hover:bg-white/[0.09]'}`}
+                                                    aria-pressed={Boolean(whatsappConfig[key])}
+                                                >
+                                                    <span className="flex items-center justify-between gap-3 mb-4">
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                                                        <span className={`w-10 h-6 rounded-full flex items-center px-1 transition-colors ${whatsappConfig[key] ? 'bg-black/15' : 'bg-white/10'}`}>
+                                                            <span className={`w-4 h-4 rounded-full transition-transform ${whatsappConfig[key] ? 'translate-x-4 bg-black' : 'bg-white'}`} />
+                                                        </span>
+                                                    </span>
+                                                    <span className={`block text-xs leading-relaxed ${whatsappConfig[key] ? 'text-black/65' : 'text-white/45'}`}>{note}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Owner WhatsApp Number</p>
+                                                <input type="tel" value={whatsappConfig.ownerNumber || ''} onChange={(e) => handleWhatsAppConfigChange('ownerNumber', e.target.value)} placeholder="+27 82 000 0000" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Business WhatsApp Display Number</p>
+                                                <input type="tel" value={whatsappConfig.businessPhoneNumber || ''} onChange={(e) => handleWhatsAppConfigChange('businessPhoneNumber', e.target.value)} placeholder="+27 21 000 0000" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Phone Number ID</p>
+                                                <input type="text" value={whatsappConfig.phoneNumberId || ''} onChange={(e) => handleWhatsAppConfigChange('phoneNumberId', e.target.value)} placeholder="Meta phone_number_id" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Business Account ID</p>
+                                                <input type="text" value={whatsappConfig.businessAccountId || ''} onChange={(e) => handleWhatsAppConfigChange('businessAccountId', e.target.value)} placeholder="WhatsApp Business Account ID" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Template Language</p>
+                                                <input type="text" value={whatsappConfig.templateLanguage || ''} onChange={(e) => handleWhatsAppConfigChange('templateLanguage', e.target.value)} placeholder="en_US" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Booking Alert Template</p>
+                                                <input type="text" value={whatsappConfig.bookingRequestTemplate || ''} onChange={(e) => handleWhatsAppConfigChange('bookingRequestTemplate', e.target.value)} placeholder="booking_request_alert" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-lg border border-white/10 bg-white/[0.05] p-4 md:p-5">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">Staff WhatsApp Recipients</p>
+                                                    <p className="text-xs text-white/40 mt-1">Use separate numbers when owner and staff notifications should go to different phones.</p>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button type="button" onClick={importTeamWhatsAppRecipients} className="h-9 px-3 rounded-lg bg-white/10 text-white text-[9px] font-bold uppercase tracking-widest hover:bg-white/15 transition-colors">Load Team</button>
+                                                    <button type="button" onClick={addWhatsAppStaffRecipient} className="h-9 px-3 rounded-lg bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest hover:brightness-95 transition-colors flex items-center gap-2"><Plus size={12} /> Add</button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {(whatsappConfig.staffRecipients || []).length === 0 && (
+                                                    <div className="rounded-lg border border-dashed border-white/15 px-4 py-5 text-sm text-white/35">No staff WhatsApp recipients yet.</div>
+                                                )}
+                                                {(whatsappConfig.staffRecipients || []).map((recipient, index) => (
+                                                    <div key={recipient.id || index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+                                                        <input type="text" value={recipient.name || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'name', e.target.value)} placeholder="Staff name" className="h-11 rounded-lg bg-black/25 border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                        <input type="tel" value={recipient.number || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'number', e.target.value)} placeholder="+27 72 000 0000" className="h-11 rounded-lg bg-black/25 border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                        <button type="button" onClick={() => removeWhatsAppStaffRecipient(index)} className="h-11 w-11 rounded-lg bg-white/10 text-white/60 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center transition-colors">
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <p className="text-xs text-white/35 leading-relaxed">Access tokens are intentionally not saved here. They should live in Firebase Functions environment config when the real WhatsApp sender is connected.</p>
+                                            <button type="button" onClick={() => { saveComms(normalizedComms); showToast("WhatsApp setup saved"); }} className="h-11 px-5 rounded-lg bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors shrink-0">
+                                                Save WhatsApp Setup
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
                             <div data-tour="email-messages" className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl">
                                 {[
                                     { key: 'confirmed', title: 'Request Confirmed', desc: 'Sent when you approve a booking request.' },
@@ -3466,9 +3693,39 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                                     <div className="rounded-lg border border-neutral-100 bg-neutral-50 overflow-hidden">
                                         <div className="p-4 md:p-6 flex items-center justify-between gap-4">
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-11 h-11 rounded-lg bg-white border border-neutral-100 flex items-center justify-center text-black shrink-0">
+                                                    <MessageCircle size={17} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-black">WhatsApp Updates Opt-In</p>
+                                                    <p className="text-xs text-neutral-400 font-medium mt-1 max-w-lg">Adds a client consent checkbox before the booking action button. Actual sends use the WhatsApp setup in Communication Studio.</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => handleFeatureChange('whatsappUpdates', !settings.features?.whatsappUpdates)} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.whatsappUpdates ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.whatsappUpdates)}>
+                                                <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.whatsappUpdates ? 'translate-x-6' : ''}`} />
+                                            </button>
+                                        </div>
+                                        {settings.features?.whatsappUpdates && (
+                                            <div className="border-t border-neutral-100 bg-white p-4 md:p-6">
+                                                <div className="rounded-lg bg-black text-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#39FF14] mb-2">Booking Page Consent</p>
+                                                        <p className="text-sm text-white/65 leading-relaxed">Clients will be able to accept WhatsApp updates using the mobile number they enter on the booking form.</p>
+                                                    </div>
+                                                    <button type="button" onClick={() => setActiveTab('communications')} className="h-10 px-4 rounded-lg bg-white text-black text-[9px] font-bold uppercase tracking-widest shrink-0">
+                                                        Open Communication Studio
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="rounded-lg border border-neutral-100 bg-neutral-50 overflow-hidden">
+                                        <div className="p-4 md:p-6 flex items-center justify-between gap-4">
                                             <div>
                                                 <p className="text-sm font-bold text-black">FAQ After Details</p>
-                                                <p className="text-xs text-neutral-400 font-medium mt-1">Shows client questions after name and number, before final email details.</p>
+                                                <p className="text-xs text-neutral-400 font-medium mt-1">Shows client questions after name and number, before final contact details.</p>
                                             </div>
                                             <button onClick={toggleFaqFeature} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.faqEnabled ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.faqEnabled)}>
                                                 <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.faqEnabled ? 'translate-x-6' : ''}`} />
