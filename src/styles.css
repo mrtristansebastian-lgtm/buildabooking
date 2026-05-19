@@ -57,7 +57,9 @@ body {
 
         :root {
             --native-accent-gradient: linear-gradient(115deg, #39ff14 0%, #eaff32 12%, #39ff14 24%, #12f0cf 38%, #14a7ff 52%, #755cff 66%, #ff4fd8 80%, #755cff 88%, #14a7ff 94%, #12f0cf 98%, #39ff14 100%);
+            --native-accent-button-gradient: linear-gradient(115deg, #cbffb8 0%, #f1ff9a 12%, #c9ffbf 24%, #b7fff0 38%, #b9e3ff 52%, #d2cbff 66%, #ffd4f2 80%, #d8ccff 88%, #c1e7ff 94%, #c0fff1 98%, #cbffb8 100%);
             --native-accent-glow: rgba(20, 167, 255, 0.28);
+            --native-accent-button-glow: rgba(117, 92, 255, 0.16);
             --native-accent-border: #755cff;
             --native-accent-duration: 24s;
             --native-accent-easing: ease-in-out;
@@ -76,10 +78,13 @@ body {
         }
 
         .native-ui .bg-\[\#39FF14\] {
-            background-color: #39ff14 !important;
-            background-image: var(--native-accent-gradient) !important;
-            background-size: 420% 420% !important;
-            background-position: var(--native-accent-x) 50% !important;
+            background-color: #eaffdf !important;
+            background-image:
+                linear-gradient(180deg, rgba(255,255,255,0.48), rgba(255,255,255,0.18)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            background-blend-mode: soft-light, normal !important;
         }
 
         .native-ui .text-\[\#39FF14\] {
@@ -93,7 +98,7 @@ body {
 
         .native-ui .shadow-\[\#39FF14\]\/20,
         .native-ui .shadow-\[\#39FF14\]\/50 {
-            box-shadow: 0 22px 48px -28px var(--native-accent-glow) !important;
+            box-shadow: 0 20px 44px -30px var(--native-accent-button-glow) !important;
         }
 
         .native-ui .native-accent-text {
