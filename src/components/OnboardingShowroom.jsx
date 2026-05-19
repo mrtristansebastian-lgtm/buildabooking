@@ -336,6 +336,7 @@ export function OnboardingShowroom({
     facebook: '',
     website: ''
   });
+  const stageRef = useRef(null);
   const onNavigateRef = useRef(onNavigate);
 
   const scene = scenes[sceneIndex] || scenes[0];
@@ -365,6 +366,11 @@ export function OnboardingShowroom({
     if (!open || scene.type !== 'platform') return;
     onNavigateRef.current?.(scene.tab);
   }, [open, scene.id, scene.tab, scene.type]);
+
+  useEffect(() => {
+    if (!open || scene.type === 'platform') return;
+    stageRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [open, scene.id, scene.type]);
 
   useLayoutEffect(() => {
     if (!open || scene.type !== 'platform') {
@@ -439,16 +445,18 @@ export function OnboardingShowroom({
     let retryTimer = null;
     const padding = isMobileTourViewport() ? 10 : 16;
 
-    const updateFocus = () => {
+    const updateFocus = (shouldCenterTarget = false) => {
       if (cancelled) return;
       const target = document.querySelector(`[data-tour="${scene.target}"]`);
       if (!target) {
         setTourFocus(null);
-        retryTimer = window.setTimeout(updateFocus, 120);
+        retryTimer = window.setTimeout(() => updateFocus(shouldCenterTarget), 120);
         return;
       }
 
-      target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+      if (shouldCenterTarget) {
+        target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+      }
 
       window.requestAnimationFrame(() => {
         if (cancelled) return;
@@ -472,17 +480,19 @@ export function OnboardingShowroom({
       });
     };
 
-    updateFocus();
-    timer = window.setTimeout(updateFocus, 420);
-    window.addEventListener('resize', updateFocus);
-    window.addEventListener('scroll', updateFocus, true);
+    const refreshFocus = () => updateFocus(false);
+
+    updateFocus(true);
+    timer = window.setTimeout(() => updateFocus(true), 420);
+    window.addEventListener('resize', refreshFocus);
+    window.addEventListener('scroll', refreshFocus, true);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
       window.clearTimeout(retryTimer);
-      window.removeEventListener('resize', updateFocus);
-      window.removeEventListener('scroll', updateFocus, true);
+      window.removeEventListener('resize', refreshFocus);
+      window.removeEventListener('scroll', refreshFocus, true);
     };
   }, [open, scene.id, scene.target, scene.type]);
 
@@ -507,10 +517,12 @@ export function OnboardingShowroom({
 
   if (!open) return null;
 
-  const stageBackground = scene.type === 'platform' ? 'pointer-events-none' : 'bg-[#050505] pointer-events-auto';
+  const stageBackground = scene.type === 'platform'
+    ? 'pointer-events-none overflow-visible'
+    : 'bg-[#050505] pointer-events-auto overflow-y-auto overflow-x-hidden overscroll-contain tour-scroll-stage';
 
   return (
-    <div className={`fixed inset-0 z-[9998] text-white overflow-hidden ${stageBackground}`}>
+    <div ref={stageRef} className={`fixed inset-0 z-[9998] text-white ${stageBackground}`}>
       <TopProgress progress={progress} />
       <SkipButton onSkip={skipTour} soundEnabled={soundEnabled} onToggleSound={() => setSoundEnabled(enabled => !enabled)} />
 
@@ -579,7 +591,7 @@ export function OnboardingShowroom({
 
 function TopProgress({ progress }) {
   return (
-    <div className="absolute inset-x-0 top-0 z-50 h-1 bg-white/10">
+    <div className="fixed inset-x-0 top-0 z-50 h-1 bg-white/10">
       <div className="h-full bg-white transition-all duration-700" style={{ width: `${progress}%` }} />
     </div>
   );
@@ -588,7 +600,7 @@ function TopProgress({ progress }) {
 function SkipButton({ onSkip, soundEnabled, onToggleSound }) {
   const SoundIcon = soundEnabled ? Volume2 : VolumeX;
   return (
-    <div className="absolute right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2 pointer-events-auto">
+    <div className="fixed right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2 pointer-events-auto">
       <button
         onClick={onToggleSound}
         className="h-11 w-11 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 flex items-center justify-center shadow-2xl backdrop-blur-xl"
@@ -608,7 +620,7 @@ function SkipButton({ onSkip, soundEnabled, onToggleSound }) {
 
 function CinemaScene({ generatedLink, onNext, onJump }) {
   return (
-    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-10 items-center">
         <div className="xl:col-span-7">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/55 mb-8">
@@ -659,7 +671,7 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
   const inputValue = draft[field] || '';
 
   return (
-    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
         <div className="xl:col-span-7 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-8 xl:p-10 shadow-[0_40px_120px_-80px_rgba(255,255,255,0.5)]">
           <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/35 mb-5">{copy.eyebrow}</p>
@@ -763,7 +775,7 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
 
 function LinkScene({ draft, generatedLink, onBack, onNext }) {
   return (
-    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="max-w-5xl mx-auto text-center">
         <div className="w-16 h-16 rounded-2xl bg-white text-black flex items-center justify-center mx-auto mb-10">
           <Check size={24} />
@@ -807,6 +819,14 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNav
         height: spotlight.height
       }
     : null;
+  const showCurrentArea = () => {
+    onNavigate?.(scene.tab);
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-tour="${scene.target}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    });
+  };
 
   return (
     <>
@@ -849,7 +869,7 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNav
             </button>
           </div>
           <button
-            onClick={() => onNavigate?.(scene.tab)}
+            onClick={showCurrentArea}
             className="mt-3 w-full h-10 rounded-full border border-neutral-200 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-black hover:bg-neutral-50 flex items-center justify-center gap-2"
           >
             <MousePointerClick size={14} /> Show This Area
@@ -925,12 +945,12 @@ function NavigationClickCue({ cue }) {
 
 function SpotlightPanels({ spotlight }) {
   if (!spotlight) {
-    return <div className="fixed inset-0 z-[10000] pointer-events-auto bg-black/70 backdrop-blur-sm" />;
+    return <div className="fixed inset-0 z-[10000] pointer-events-none bg-black/70 backdrop-blur-sm" />;
   }
 
   const right = window.innerWidth - spotlight.left - spotlight.width;
   const bottom = window.innerHeight - spotlight.top - spotlight.height;
-  const panelClass = 'fixed z-[10000] pointer-events-auto bg-black/72 backdrop-blur-[2px]';
+  const panelClass = 'fixed z-[10000] pointer-events-none bg-black/72 backdrop-blur-[2px]';
 
   return (
     <>
@@ -944,7 +964,7 @@ function SpotlightPanels({ spotlight }) {
 
 function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
   return (
-    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-center">
+    <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
         <div className="xl:col-span-7 rounded-[2rem] bg-white text-black p-6 md:p-10">
           <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-10">

@@ -551,6 +551,15 @@ body {
         }
         .animate-subtle-pulse { animation: subtle-pulse 1.5s ease-in-out infinite; }
 
+        .tour-scroll-stage {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        .tour-scroll-stage::-webkit-scrollbar {
+            display: none;
+        }
+
         @keyframes tour-glow {
             0%, 100% {
                 box-shadow:
