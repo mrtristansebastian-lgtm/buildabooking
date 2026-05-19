@@ -224,6 +224,43 @@ const isMobileTourViewport = () => (
   (window.innerWidth < 768 || (window.innerWidth <= 1024 && window.innerHeight <= 560))
 );
 
+const useMobileTourViewport = () => {
+  const [isMobile, setIsMobile] = useState(isMobileTourViewport);
+
+  useEffect(() => {
+    const update = () => setIsMobile(isMobileTourViewport());
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  return isMobile;
+};
+
+const getScrollableParent = (element) => {
+  let parent = element?.parentElement;
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent);
+    const scrollable = /(auto|scroll)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight;
+    if (scrollable) return parent;
+    parent = parent.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+};
+
+const scrollTargetForTour = (target, mobile = false) => {
+  target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+  if (!mobile) return;
+
+  const scroller = getScrollableParent(target);
+  const lift = Math.min(220, Math.max(110, window.innerHeight * 0.18));
+  if (scroller === document.scrollingElement || scroller === document.documentElement || scroller === document.body) {
+    window.scrollBy({ top: lift, left: 0, behavior: 'auto' });
+    return;
+  }
+  scroller.scrollTop += lift;
+};
+
 const getTourNavTarget = (tab) => {
   const mobileTarget = document.querySelector(`[data-tour="mobile-nav-${tab}"]`);
   const desktopTarget = document.querySelector(`[data-tour="nav-${tab}"]`);
@@ -344,6 +381,7 @@ export function OnboardingShowroom({
   const generatedLink = `${bookingOrigin}/book/${generatedSlug}`;
   const progress = Math.round(((sceneIndex + 1) / scenes.length) * 100);
   const { soundEnabled, setSoundEnabled, playSound } = useTourSound();
+  const isMobileTour = useMobileTourViewport();
 
   useEffect(() => {
     onNavigateRef.current = onNavigate;
@@ -454,9 +492,7 @@ export function OnboardingShowroom({
         return;
       }
 
-      if (shouldCenterTarget) {
-        target.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
-      }
+      if (shouldCenterTarget) scrollTargetForTour(target, isMobileTour);
 
       window.requestAnimationFrame(() => {
         if (cancelled) return;
@@ -494,7 +530,7 @@ export function OnboardingShowroom({
       window.removeEventListener('resize', refreshFocus);
       window.removeEventListener('scroll', refreshFocus, true);
     };
-  }, [open, scene.id, scene.target, scene.type]);
+  }, [isMobileTour, open, scene.id, scene.target, scene.type]);
 
   const next = () => {
     const nextScene = scenes[Math.min(sceneIndex + 1, scenes.length - 1)];
@@ -568,6 +604,7 @@ export function OnboardingShowroom({
           focus={tourFocus}
           navCue={navCue}
           progress={progress}
+          isMobileTour={isMobileTour}
           onBack={back}
           onNext={next}
           onNavigate={(tab) => {
@@ -801,7 +838,7 @@ function LinkScene({ draft, generatedLink, onBack, onNext }) {
   );
 }
 
-function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNavigate }) {
+function PlatformScene({ scene, sceneIndex, focus, navCue, isMobileTour, onBack, onNext, onNavigate }) {
   const isFocusReady = focus?.sceneId === scene.id && focus?.target === scene.target;
   const spotlight = isFocusReady ? focus.spotlightStyle : null;
   const popoverStyle = isFocusReady ? focus.popoverStyle : null;
@@ -822,11 +859,25 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNav
   const showCurrentArea = () => {
     onNavigate?.(scene.tab);
     window.requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-tour="${scene.target}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      const target = document.querySelector(`[data-tour="${scene.target}"]`);
+      if (target) scrollTargetForTour(target, isMobileTour);
     });
   };
+
+  if (isMobileTour) {
+    return (
+      <MobilePlatformScene
+        scene={scene}
+        sceneIndex={sceneIndex}
+        spotlight={spotlight}
+        ringStyle={ringStyle}
+        navCue={navCue}
+        onBack={onBack}
+        onNext={onNext}
+        onShowArea={showCurrentArea}
+      />
+    );
+  }
 
   return (
     <>
@@ -876,6 +927,64 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNav
           </button>
         </div>
       )}
+    </>
+  );
+}
+
+function MobilePlatformScene({ scene, sceneIndex, spotlight, ringStyle, navCue, onBack, onNext, onShowArea }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[10000] pointer-events-none bg-black/45 backdrop-blur-[1.5px]" />
+      <NavigationClickCue cue={navCue} />
+
+      {spotlight?.target === scene.target && (
+        <div
+          className="tour-spotlight-ring fixed z-[10001] rounded-[1.1rem] border-2 pointer-events-none"
+          style={ringStyle}
+        >
+          <div className="absolute -right-2.5 -top-2.5 h-7 w-7 rounded-full bg-[#39FF14] text-black flex items-center justify-center shadow-xl shadow-[#39FF14]/50">
+            <MousePointerClick size={14} />
+          </div>
+        </div>
+      )}
+
+      <div className="fixed left-3 right-3 bottom-24 z-[10004] pointer-events-auto">
+        <div className="tour-mobile-platform-card rounded-[1.35rem] bg-white text-black border border-black/10 shadow-[0_24px_90px_-28px_rgba(0,0,0,0.8)] overflow-hidden">
+          <div className="max-h-[42vh] overflow-y-auto p-4">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <p className="tour-copy-line text-[9px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">{scene.kicker}</p>
+                <h2 className="tour-copy-line text-[24px] font-bold tracking-tight leading-[0.98]" style={{ animationDelay: '70ms' }}>{scene.title}</h2>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center shrink-0">
+                <ArrowUpRight size={17} />
+              </div>
+            </div>
+            <p className="tour-copy-line text-sm text-neutral-500 leading-relaxed" style={{ animationDelay: '140ms' }}>{scene.text}</p>
+            <div className="tour-copy-line mt-4 rounded-2xl bg-neutral-100 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-neutral-500" style={{ animationDelay: '180ms' }}>
+              Scroll the page to look around. The highlight follows this section.
+            </div>
+          </div>
+
+          <div className="border-t border-neutral-100 p-3 bg-white">
+            <div className="flex items-center justify-between gap-2">
+              <button onClick={onBack} className="h-11 px-4 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95">
+                <ChevronLeft size={14} /> Back
+              </button>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">{sceneIndex - 5} / 8</div>
+              <button onClick={onNext} className="h-11 px-5 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95">
+                Next <ArrowRight size={14} />
+              </button>
+            </div>
+            <button
+              onClick={onShowArea}
+              className="mt-2 w-full h-10 rounded-full border border-neutral-200 text-[10px] font-bold uppercase tracking-widest text-neutral-500 active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <MousePointerClick size={14} /> Show This Area
+            </button>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
