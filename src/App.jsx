@@ -487,6 +487,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const [selectedClientId, setSelectedClientId] = useState(null);
             const [clientNoteDraft, setClientNoteDraft] = useState('');
             const [showOnboarding, setShowOnboarding] = useState(false);
+            const [onboardingStartScene, setOnboardingStartScene] = useState('intro');
             const containerRef = useRef(null);
             const editorContentRef = useRef(null);
             const themePaletteRailRef = useRef(null);
@@ -900,7 +901,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 const locallyHandled = localStorage.getItem(onboardingStorageKey) === 'done';
                 if (workspaceAlreadyHandled || locallyHandled || showOnboarding) return;
 
-                const timer = setTimeout(() => setShowOnboarding(true), 650);
+                const timer = setTimeout(() => {
+                    setOnboardingStartScene('intro');
+                    setShowOnboarding(true);
+                }, 650);
                 return () => clearTimeout(timer);
             }, [
                 publicSlug,
@@ -1895,7 +1899,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             if (view === 'landing') {
                 return (
-                  <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white overflow-x-hidden">
+                  <div className="native-ui min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white overflow-x-hidden">
                     {/* Navigation */}
                     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-neutral-200/50 transition-all">
                       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
@@ -2062,7 +2066,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             return (
                 <div
-                    className={`flex h-screen bg-[#FBFBFB] text-black overflow-hidden font-sans relative ${backendSkinEnabled ? `backend-skin backend-skin-${backendSkinMode}` : ''}`}
+                    className={`flex h-screen bg-[#FBFBFB] text-black overflow-hidden font-sans relative ${backendSkinEnabled ? `backend-skin backend-skin-${backendSkinMode}` : 'native-ui'}`}
                     style={backendSkinEnabled ? backendSkinVars : undefined}
                 >
                 {backendSkinEnabled && <div className="backend-skin-ambient pointer-events-none absolute inset-0 z-0" />}
@@ -2076,6 +2080,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     open={showOnboarding}
                     settings={settings}
                     bookingOrigin={window.location.origin}
+                    initialSceneId={onboardingStartScene}
                     canApply={canSetupWorkspace}
                     onSkip={handleOnboardingSkip}
                     onComplete={handleOnboardingComplete}
@@ -2183,8 +2188,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
-                                    <button onClick={() => setShowOnboarding(true)} className="h-11 px-5 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
+                                    <button onClick={() => { setOnboardingStartScene('intro'); setShowOnboarding(true); }} className="h-11 px-5 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
                                         <Sparkles size={15}/> Intro Tour
+                                    </button>
+                                    <button onClick={() => { setOnboardingStartScene('name'); setShowOnboarding(true); }} className="h-11 px-5 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
+                                        <ArrowRight size={15}/> Continue Setup
                                     </button>
                                     <button onClick={() => setActiveTab('editor')} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors">
                                         <Palette size={15}/> Edit Page
@@ -2460,7 +2468,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </div>
                                 <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
                                     <div>
-                                        <h2 className="text-4xl md:text-6xl font-serif font-bold tracking-tighter mb-4 text-black">Profile</h2>
+                                        <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-black">Profile</h2>
                                         <p className="text-neutral-500 font-medium text-lg max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
                                     </div>
                                     <button onClick={() => {saveSettings(); showToast("Profile Updated");}} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
@@ -2664,19 +2672,19 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     {activeTab === 'communications' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
                             <header className="mb-8 md:mb-10">
-                                <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter mb-4 text-black">Communication Studio</h2>
+                                <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-black">Communication Studio</h2>
                                 <p className="text-neutral-400 font-medium text-lg max-w-3xl">Write client emails, prepare WhatsApp updates, and choose who gets alerted when a new booking request lands.</p>
                             </header>
 
-                            <section data-tour="whatsapp-setup" className="max-w-6xl mb-8 rounded-lg overflow-hidden border border-neutral-900 bg-black text-white shadow-[0_30px_90px_-70px_rgba(0,0,0,0.9)]">
+                            <section data-tour="whatsapp-setup" className="max-w-6xl mb-8 rounded-lg overflow-hidden border border-neutral-200 bg-white text-black shadow-[0_24px_80px_-65px_rgba(15,23,42,0.45)]">
                                 <div className="grid grid-cols-1 xl:grid-cols-12">
-                                    <div className="xl:col-span-5 p-5 sm:p-6 md:p-8 border-b xl:border-b-0 xl:border-r border-white/10">
-                                        <div className="w-12 h-12 rounded-lg bg-[#39FF14] text-black flex items-center justify-center mb-6 shadow-xl shadow-[#39FF14]/20">
+                                    <div className="xl:col-span-5 p-5 sm:p-6 md:p-8 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
+                                        <div className="w-12 h-12 rounded-lg bg-[#39FF14] text-black flex items-center justify-center mb-6 shadow-xl shadow-black/5">
                                             <MessageCircle size={20} />
                                         </div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/35 mb-3">WhatsApp Setup</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">WhatsApp Setup</p>
                                         <h3 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Booking alerts where teams actually look.</h3>
-                                        <p className="text-sm text-white/55 leading-relaxed mb-6">Use this to prepare owner and staff WhatsApp notifications. Client WhatsApp messages only send when the booking page opt-in is enabled and the client accepts it.</p>
+                                        <p className="text-sm text-neutral-500 leading-relaxed mb-6">Use this to prepare owner and staff WhatsApp notifications. Client WhatsApp messages only send when the booking page opt-in is enabled and the client accepts it.</p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {[
                                                 ['Workspace alerts', whatsappConfig.enabled ? 'Ready' : 'Off'],
@@ -2684,9 +2692,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                 ['API token', 'Server-side only'],
                                                 ['Provider', 'Meta Cloud API']
                                             ].map(item => (
-                                                <div key={item[0]} className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 mb-1">{item[0]}</p>
-                                                    <p className="text-sm font-bold text-white">{item[1]}</p>
+                                                <div key={item[0]} className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-1">{item[0]}</p>
+                                                    <p className="text-sm font-bold text-black">{item[1]}</p>
                                                 </div>
                                             ))}
                                         </div>
@@ -2703,67 +2711,67 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                     key={key}
                                                     type="button"
                                                     onClick={() => handleWhatsAppConfigChange(key, !whatsappConfig[key])}
-                                                    className={`rounded-lg border p-4 text-left transition-all ${whatsappConfig[key] ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/[0.06] text-white border-white/10 hover:bg-white/[0.09]'}`}
+                                                    className={`rounded-lg border p-4 text-left transition-all ${whatsappConfig[key] ? 'bg-black text-white border-black shadow-xl shadow-black/10' : 'bg-neutral-50 text-black border-neutral-200 hover:bg-white hover:border-neutral-300'}`}
                                                     aria-pressed={Boolean(whatsappConfig[key])}
                                                 >
                                                     <span className="flex items-center justify-between gap-3 mb-4">
                                                         <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
-                                                        <span className={`w-10 h-6 rounded-full flex items-center px-1 transition-colors ${whatsappConfig[key] ? 'bg-black/15' : 'bg-white/10'}`}>
-                                                            <span className={`w-4 h-4 rounded-full transition-transform ${whatsappConfig[key] ? 'translate-x-4 bg-black' : 'bg-white'}`} />
+                                                        <span className={`w-10 h-6 rounded-full flex items-center px-1 transition-colors ${whatsappConfig[key] ? 'bg-[#39FF14]' : 'bg-neutral-200'}`}>
+                                                            <span className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${whatsappConfig[key] ? 'translate-x-4' : ''}`} />
                                                         </span>
                                                     </span>
-                                                    <span className={`block text-xs leading-relaxed ${whatsappConfig[key] ? 'text-black/65' : 'text-white/45'}`}>{note}</span>
+                                                    <span className={`block text-xs leading-relaxed ${whatsappConfig[key] ? 'text-white/60' : 'text-neutral-500'}`}>{note}</span>
                                                 </button>
                                             ))}
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Owner WhatsApp Number</p>
-                                                <input type="tel" value={whatsappConfig.ownerNumber || ''} onChange={(e) => handleWhatsAppConfigChange('ownerNumber', e.target.value)} placeholder="+27 82 000 0000" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Owner WhatsApp Number</p>
+                                                <input type="tel" value={whatsappConfig.ownerNumber || ''} onChange={(e) => handleWhatsAppConfigChange('ownerNumber', e.target.value)} placeholder="+27 82 000 0000" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Business WhatsApp Display Number</p>
-                                                <input type="tel" value={whatsappConfig.businessPhoneNumber || ''} onChange={(e) => handleWhatsAppConfigChange('businessPhoneNumber', e.target.value)} placeholder="+27 21 000 0000" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Business WhatsApp Display Number</p>
+                                                <input type="tel" value={whatsappConfig.businessPhoneNumber || ''} onChange={(e) => handleWhatsAppConfigChange('businessPhoneNumber', e.target.value)} placeholder="+27 21 000 0000" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Phone Number ID</p>
-                                                <input type="text" value={whatsappConfig.phoneNumberId || ''} onChange={(e) => handleWhatsAppConfigChange('phoneNumberId', e.target.value)} placeholder="Meta phone_number_id" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Phone Number ID</p>
+                                                <input type="text" value={whatsappConfig.phoneNumberId || ''} onChange={(e) => handleWhatsAppConfigChange('phoneNumberId', e.target.value)} placeholder="Meta phone_number_id" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Business Account ID</p>
-                                                <input type="text" value={whatsappConfig.businessAccountId || ''} onChange={(e) => handleWhatsAppConfigChange('businessAccountId', e.target.value)} placeholder="WhatsApp Business Account ID" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Business Account ID</p>
+                                                <input type="text" value={whatsappConfig.businessAccountId || ''} onChange={(e) => handleWhatsAppConfigChange('businessAccountId', e.target.value)} placeholder="WhatsApp Business Account ID" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Template Language</p>
-                                                <input type="text" value={whatsappConfig.templateLanguage || ''} onChange={(e) => handleWhatsAppConfigChange('templateLanguage', e.target.value)} placeholder="en_US" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Template Language</p>
+                                                <input type="text" value={whatsappConfig.templateLanguage || ''} onChange={(e) => handleWhatsAppConfigChange('templateLanguage', e.target.value)} placeholder="en_US" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2 ml-2">Booking Alert Template</p>
-                                                <input type="text" value={whatsappConfig.bookingRequestTemplate || ''} onChange={(e) => handleWhatsAppConfigChange('bookingRequestTemplate', e.target.value)} placeholder="booking_request_alert" className="w-full h-12 rounded-lg bg-white/[0.08] border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
+                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Booking Alert Template</p>
+                                                <input type="text" value={whatsappConfig.bookingRequestTemplate || ''} onChange={(e) => handleWhatsAppConfigChange('bookingRequestTemplate', e.target.value)} placeholder="booking_request_alert" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
                                             </div>
                                         </div>
 
-                                        <div className="rounded-lg border border-white/10 bg-white/[0.05] p-4 md:p-5">
+                                        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 md:p-5">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                                                 <div>
-                                                    <p className="text-sm font-bold text-white">Staff WhatsApp Recipients</p>
-                                                    <p className="text-xs text-white/40 mt-1">Use separate numbers when owner and staff notifications should go to different phones.</p>
+                                                    <p className="text-sm font-bold text-black">Staff WhatsApp Recipients</p>
+                                                    <p className="text-xs text-neutral-500 mt-1">Use separate numbers when owner and staff notifications should go to different phones.</p>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
-                                                    <button type="button" onClick={importTeamWhatsAppRecipients} className="h-9 px-3 rounded-lg bg-white/10 text-white text-[9px] font-bold uppercase tracking-widest hover:bg-white/15 transition-colors">Load Team</button>
+                                                    <button type="button" onClick={importTeamWhatsAppRecipients} className="h-9 px-3 rounded-lg bg-white border border-neutral-200 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-neutral-100 transition-colors">Load Team</button>
                                                     <button type="button" onClick={addWhatsAppStaffRecipient} className="h-9 px-3 rounded-lg bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest hover:brightness-95 transition-colors flex items-center gap-2"><Plus size={12} /> Add</button>
                                                 </div>
                                             </div>
                                             <div className="space-y-3">
                                                 {(whatsappConfig.staffRecipients || []).length === 0 && (
-                                                    <div className="rounded-lg border border-dashed border-white/15 px-4 py-5 text-sm text-white/35">No staff WhatsApp recipients yet.</div>
+                                                    <div className="rounded-lg border border-dashed border-neutral-300 bg-white px-4 py-5 text-sm text-neutral-400">No staff WhatsApp recipients yet.</div>
                                                 )}
                                                 {(whatsappConfig.staffRecipients || []).map((recipient, index) => (
                                                     <div key={recipient.id || index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
-                                                        <input type="text" value={recipient.name || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'name', e.target.value)} placeholder="Staff name" className="h-11 rounded-lg bg-black/25 border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
-                                                        <input type="tel" value={recipient.number || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'number', e.target.value)} placeholder="+27 72 000 0000" className="h-11 rounded-lg bg-black/25 border border-white/10 px-4 text-sm font-bold outline-none text-white placeholder-white/25 focus:border-[#39FF14] transition-colors" />
-                                                        <button type="button" onClick={() => removeWhatsAppStaffRecipient(index)} className="h-11 w-11 rounded-lg bg-white/10 text-white/60 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center transition-colors">
+                                                        <input type="text" value={recipient.name || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'name', e.target.value)} placeholder="Staff name" className="h-11 rounded-lg bg-white border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:border-black transition-colors" />
+                                                        <input type="tel" value={recipient.number || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'number', e.target.value)} placeholder="+27 72 000 0000" className="h-11 rounded-lg bg-white border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:border-black transition-colors" />
+                                                        <button type="button" onClick={() => removeWhatsAppStaffRecipient(index)} className="h-11 w-11 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors">
                                                             <Trash2 size={15} />
                                                         </button>
                                                     </div>
@@ -2772,8 +2780,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                         </div>
 
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <p className="text-xs text-white/35 leading-relaxed">Access tokens are intentionally not saved here. They should live in Firebase Functions environment config when the real WhatsApp sender is connected.</p>
-                                            <button type="button" onClick={() => { saveComms(normalizedComms); showToast("WhatsApp setup saved"); }} className="h-11 px-5 rounded-lg bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors shrink-0">
+                                            <p className="text-xs text-neutral-500 leading-relaxed rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">Access tokens are intentionally not saved here. They should live in Firebase Functions environment config when the real WhatsApp sender is connected.</p>
+                                            <button type="button" onClick={() => { saveComms(normalizedComms); showToast("WhatsApp setup saved"); }} className="h-11 px-5 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors shrink-0">
                                                 Save WhatsApp Setup
                                             </button>
                                         </div>
@@ -3286,7 +3294,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                         {!editorCollapsed && (
                             <>
                             <header className="editor-panel-header p-5 sm:p-6 md:p-10 border-b border-neutral-50 flex flex-col lg:flex-row items-start lg:items-center justify-between flex-shrink-0 gap-4 md:gap-6">
-                                <h2 className="text-3xl md:text-4xl font-serif font-bold tracking-tighter text-black">Editor</h2>
+                                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-black">Editor</h2>
                                 <div className="editor-tab-rail flex bg-neutral-100 p-1.5 rounded-full overflow-x-auto w-full lg:w-auto no-scrollbar">
                                 {['identity', 'themes', 'visuals', 'features', 'copy'].map(tab => (
                                     <button key={tab} onClick={() => setEditorTab(tab)} className={`editor-tab-button flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${editorTab === tab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'}`}>{tab}</button>

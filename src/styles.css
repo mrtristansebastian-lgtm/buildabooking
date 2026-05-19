@@ -49,6 +49,59 @@ body {
             font-feature-settings: "tnum" on, "lnum" on;
         }
 
+        :root {
+            --native-accent-gradient: linear-gradient(115deg, #39ff14 0%, #00d9ff 18%, #6c5cff 38%, #ff3fa4 58%, #ffb423 78%, #39ff14 100%);
+            --native-accent-glow: rgba(108, 92, 255, 0.28);
+            --native-accent-border: #6c5cff;
+        }
+
+        @keyframes native-accent-phase {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes native-accent-hue {
+            0%, 100% { filter: hue-rotate(0deg) saturate(1.08); }
+            50% { filter: hue-rotate(180deg) saturate(1.18); }
+        }
+
+        .native-ui .bg-\[\#39FF14\] {
+            background-color: #39ff14 !important;
+            background-image: var(--native-accent-gradient) !important;
+            background-size: 420% 420% !important;
+            animation: native-accent-phase 24s ease-in-out infinite;
+        }
+
+        .native-ui .text-\[\#39FF14\] {
+            color: var(--native-accent-border) !important;
+            animation: native-accent-hue 24s linear infinite;
+        }
+
+        .native-ui .border-\[\#39FF14\],
+        .native-ui .focus\:border-\[\#39FF14\]:focus {
+            border-color: var(--native-accent-border) !important;
+        }
+
+        .native-ui .shadow-\[\#39FF14\]\/20,
+        .native-ui .shadow-\[\#39FF14\]\/50 {
+            box-shadow: 0 22px 48px -28px var(--native-accent-glow) !important;
+        }
+
+        .backend-skin .bg-\[\#39FF14\],
+        .backend-skin .text-\[\#39FF14\],
+        .backend-skin .border-\[\#39FF14\] {
+            animation: none !important;
+            filter: none !important;
+            background-image: none !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .native-ui .bg-\[\#39FF14\],
+            .native-ui .text-\[\#39FF14\] {
+                animation: none !important;
+            }
+        }
+
         @media (max-width: 767px) {
             .dashboard-main > div:not(.mobile-editor-shell) {
                 padding: 0.75rem 0.75rem 5.75rem !important;

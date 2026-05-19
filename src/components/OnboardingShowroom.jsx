@@ -373,6 +373,7 @@ export function OnboardingShowroom({
   open,
   settings,
   bookingOrigin,
+  initialSceneId = 'intro',
   canApply = true,
   onSkip,
   onComplete,
@@ -405,7 +406,8 @@ export function OnboardingShowroom({
 
   useEffect(() => {
     if (!open) return;
-    setSceneIndex(0);
+    const nextIndex = scenes.findIndex(item => item.id === initialSceneId);
+    setSceneIndex(nextIndex >= 0 ? nextIndex : 0);
     setDraft({
       businessName: settings.brandName || '',
       industry: settings.onboarding?.industry || settings.tagline || '',
@@ -414,7 +416,7 @@ export function OnboardingShowroom({
       facebook: settings.socials?.facebook || '',
       website: settings.socials?.website || ''
     });
-  }, [open, settings.brandName, settings.onboarding?.industry, settings.tagline, settings.socials?.instagram, settings.socials?.tiktok, settings.socials?.facebook, settings.socials?.website]);
+  }, [initialSceneId, open, settings.brandName, settings.onboarding?.industry, settings.tagline, settings.socials?.instagram, settings.socials?.tiktok, settings.socials?.facebook, settings.socials?.website]);
 
   useEffect(() => {
     if (!open || scene.type !== 'platform') return;
@@ -590,20 +592,21 @@ export function OnboardingShowroom({
 
   const stageBackground = scene.type === 'platform'
     ? 'pointer-events-none overflow-visible'
-    : 'bg-[#050505] pointer-events-auto overflow-y-auto overflow-x-hidden overscroll-contain tour-scroll-stage';
+    : 'bg-[#FBFBFB] text-black pointer-events-auto overflow-y-auto overflow-x-hidden overscroll-contain tour-scroll-stage';
 
   return (
-    <div ref={stageRef} className={`fixed inset-0 z-[9998] text-white ${stageBackground}`}>
+    <div ref={stageRef} className={`fixed inset-0 z-[9998] ${scene.type === 'platform' ? 'text-white' : 'text-black'} ${stageBackground}`}>
       <TopProgress progress={progress} />
       <SkipButton
         onSkip={skipTour}
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(enabled => !enabled)}
         darkControls={scene.type === 'platform' && isMobileTour}
+        lightControls={scene.type !== 'platform'}
       />
 
       {scene.type !== 'platform' && (
-        <div className="absolute inset-0 opacity-[0.06] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:72px_72px]" />
+        <div className="absolute inset-0 opacity-[0.05] bg-[linear-gradient(to_right,#000000_1px,transparent_1px),linear-gradient(to_bottom,#000000_1px,transparent_1px)] bg-[size:72px_72px]" />
       )}
 
       {scene.type === 'cinema' && (
@@ -668,17 +671,19 @@ export function OnboardingShowroom({
 
 function TopProgress({ progress }) {
   return (
-    <div className="fixed inset-x-0 top-0 z-50 h-1 bg-white/10">
-      <div className="h-full bg-white transition-all duration-700" style={{ width: `${progress}%` }} />
+    <div className="fixed inset-x-0 top-0 z-50 h-1 bg-black/5">
+      <div className="h-full bg-black transition-all duration-700" style={{ width: `${progress}%` }} />
     </div>
   );
 }
 
-function SkipButton({ onSkip, soundEnabled, onToggleSound, darkControls = false }) {
+function SkipButton({ onSkip, soundEnabled, onToggleSound, darkControls = false, lightControls = false }) {
   const SoundIcon = soundEnabled ? Volume2 : VolumeX;
   const controlClass = darkControls
     ? 'bg-black/85 border-black/10 text-white hover:bg-black shadow-2xl'
-    : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/15 shadow-2xl';
+    : lightControls
+      ? 'bg-white/90 border-neutral-200 text-black hover:bg-neutral-50 shadow-2xl'
+      : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/15 shadow-2xl';
   return (
     <div className="fixed right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2 pointer-events-auto">
       <button
@@ -703,28 +708,28 @@ function CinemaScene({ generatedLink, onNext, onJump }) {
     <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-10 items-center">
         <div className="xl:col-span-7">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white/55 mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-8 shadow-sm">
             <Sparkles size={14} /> Build A Booking Intro
           </div>
           <h1 className="text-5xl md:text-7xl xl:text-[92px] font-bold tracking-tight leading-[0.9] mb-8">
             Welcome to Build A Booking. Let's get you set up and take the tour.
           </h1>
-          <p className="text-lg md:text-2xl text-white/55 max-w-3xl leading-relaxed mb-10">
+          <p className="text-lg md:text-2xl text-neutral-500 max-w-3xl leading-relaxed mb-10">
             A quick cinematic setup that shows the real platform, highlights the tools that matter, and builds your first booking identity step by step.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={onNext} className="h-14 px-7 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
+            <button onClick={onNext} className="h-14 px-7 rounded-full bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-2xl shadow-black/15">
               Begin Setup <ArrowRight size={15} />
             </button>
-            <button onClick={onJump} className="h-14 px-7 rounded-full bg-white/10 border border-white/15 text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/15 transition-colors">
+            <button onClick={onJump} className="h-14 px-7 rounded-full bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors shadow-sm">
               Watch Platform Tour <Eye size={15} />
             </button>
           </div>
         </div>
 
         <div className="xl:col-span-5">
-          <div className="relative rounded-[2rem] border border-white/15 bg-white/[0.03] p-5 shadow-[0_40px_120px_-70px_rgba(255,255,255,0.55)]">
-            <div className="aspect-[4/5] rounded-[1.5rem] bg-white text-black p-6 md:p-8 flex flex-col justify-between overflow-hidden">
+          <div className="relative rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-[0_40px_120px_-80px_rgba(15,23,42,0.35)]">
+            <div className="aspect-[4/5] rounded-[1.5rem] bg-[#FAFAFA] text-black border border-neutral-100 p-6 md:p-8 flex flex-col justify-between overflow-hidden">
               <div>
                 <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-12">
                   <MousePointerClick size={22} />
@@ -753,14 +758,14 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
   return (
     <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
-        <div className="xl:col-span-7 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 md:p-8 xl:p-10 shadow-[0_40px_120px_-80px_rgba(255,255,255,0.5)]">
-          <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/35 mb-5">{copy.eyebrow}</p>
+        <div className="xl:col-span-7 rounded-[2rem] border border-neutral-200 bg-white p-5 md:p-8 xl:p-10 shadow-[0_40px_120px_-80px_rgba(15,23,42,0.38)]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-400 mb-5">{copy.eyebrow}</p>
           <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-none mb-5">{copy.title}</h2>
-          <p className="text-white/50 text-lg leading-relaxed max-w-2xl mb-10">{copy.helper}</p>
+          <p className="text-neutral-500 text-lg leading-relaxed max-w-2xl mb-10">{copy.helper}</p>
 
           {field !== 'socials' ? (
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/35 block mb-4">{copy.label}</label>
+              <label className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 block mb-4">{copy.label}</label>
               <input
                 value={inputValue}
                 onChange={(event) => updateDraft(field, event.target.value)}
@@ -770,7 +775,7 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
                 list={field === 'industry' ? 'industry-options' : undefined}
                 placeholder={copy.placeholder}
                 autoFocus
-                className="w-full bg-transparent border-0 border-b border-white/25 focus:border-white text-4xl md:text-6xl font-bold tracking-tight outline-none py-5 text-white placeholder:text-white/20"
+                className="w-full bg-transparent border-0 border-b border-neutral-200 focus:border-black text-4xl md:text-6xl font-bold tracking-tight outline-none py-5 text-black placeholder:text-neutral-300"
               />
               {field === 'industry' && (
                 <datalist id="industry-options">
@@ -784,7 +789,7 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
                       key={industry}
                       type="button"
                       onClick={() => updateDraft('industry', industry)}
-                      className="h-10 px-4 rounded-full bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/65 hover:bg-white hover:text-black transition-colors"
+                      className="h-10 px-4 rounded-full bg-neutral-50 border border-neutral-200 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:bg-black hover:text-white hover:border-black transition-colors"
                     >
                       {industry}
                     </button>
@@ -799,7 +804,7 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
                 ['facebook', 'Facebook', 'yourstudio'],
                 ['website', 'Website', 'yourstudio.com']
               ].map(([key, label, placeholder]) => (
-                <label key={key} className="rounded-2xl bg-white text-black p-4">
+                <label key={key} className="rounded-2xl border border-neutral-200 bg-white text-black p-4">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 block mb-3">{label}</span>
                   <input
                     value={draft[key]}
@@ -813,16 +818,16 @@ function SetupScene({ field, draft, generatedLink, updateDraft, onBack, onNext }
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 mt-12">
-            <button onClick={onNext} className="h-14 px-7 py-4 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
+            <button onClick={onNext} className="h-14 px-7 py-4 rounded-full bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-2xl shadow-black/15">
               Continue <ArrowRight size={15} />
             </button>
-            <button onClick={onBack} className="h-14 px-7 py-4 rounded-full bg-white/10 border border-white/15 text-white/70 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-white transition-colors">
+            <button onClick={onBack} className="h-14 px-7 py-4 rounded-full bg-white border border-neutral-200 text-neutral-500 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-black hover:bg-neutral-50 transition-colors">
               <ChevronLeft size={15} /> Back
             </button>
           </div>
         </div>
 
-        <aside className="xl:col-span-5 rounded-[2rem] bg-white text-black p-6 md:p-8 flex flex-col justify-between">
+        <aside className="xl:col-span-5 rounded-[2rem] bg-white text-black border border-neutral-200 p-6 md:p-8 flex flex-col justify-between shadow-[0_35px_100px_-80px_rgba(15,23,42,0.38)]">
           <div>
             <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center mb-10">
               <Globe size={18} />
@@ -857,22 +862,22 @@ function LinkScene({ draft, generatedLink, onBack, onNext }) {
   return (
     <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="max-w-5xl mx-auto text-center">
-        <div className="w-16 h-16 rounded-2xl bg-white text-black flex items-center justify-center mx-auto mb-10">
+        <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-black/15">
           <Check size={24} />
         </div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/35 mb-5">Identity locked</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-400 mb-5">Identity locked</p>
         <h2 className="text-5xl md:text-7xl xl:text-8xl font-bold tracking-tight leading-[0.9] mb-8">
           {draft.businessName || 'Your business'} now has a booking link.
         </h2>
-        <div className="rounded-[2rem] bg-white text-black p-6 md:p-8 mb-10 text-left">
+        <div className="rounded-[2rem] bg-white text-black border border-neutral-200 p-6 md:p-8 mb-10 text-left shadow-[0_35px_100px_-80px_rgba(15,23,42,0.45)]">
           <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3">Client-facing link</p>
           <p className="text-xl md:text-3xl font-bold break-all">{generatedLink}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button onClick={onNext} className="h-14 px-7 rounded-full bg-white text-black text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors">
+          <button onClick={onNext} className="h-14 px-7 rounded-full bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-2xl shadow-black/15">
             Walk The Platform <Search size={15} />
           </button>
-          <button onClick={onBack} className="h-14 px-7 rounded-full bg-white/10 border border-white/15 text-white/70 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-white transition-colors">
+          <button onClick={onBack} className="h-14 px-7 rounded-full bg-white border border-neutral-200 text-neutral-500 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:text-black hover:bg-neutral-50 transition-colors">
             <ChevronLeft size={15} /> Back
           </button>
         </div>
@@ -1137,7 +1142,7 @@ function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
   return (
     <section className="relative z-10 min-h-full px-5 md:px-10 xl:px-16 py-24 flex items-start md:items-center">
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
-        <div className="xl:col-span-7 rounded-[2rem] bg-white text-black p-6 md:p-10">
+        <div className="xl:col-span-7 rounded-[2rem] bg-white text-black border border-neutral-200 p-6 md:p-10 shadow-[0_35px_100px_-80px_rgba(15,23,42,0.45)]">
           <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mb-10">
             <Zap size={22} />
           </div>
@@ -1150,11 +1155,11 @@ function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
           </div>
         </div>
 
-        <div className="xl:col-span-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 md:p-8 flex flex-col justify-between">
+        <div className="xl:col-span-5 rounded-[2rem] border border-neutral-200 bg-white text-black p-6 md:p-8 flex flex-col justify-between shadow-[0_35px_100px_-80px_rgba(15,23,42,0.38)]">
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Next best actions</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Next best actions</p>
             <h3 className="text-3xl font-bold tracking-tight mb-4">Make it unmistakably yours.</h3>
-            <p className="text-white/50 leading-relaxed mb-6">Start with identity, theme, schedule, and communication. The workspace is ready to guide the rest.</p>
+            <p className="text-neutral-500 leading-relaxed mb-6">Start with identity, theme, schedule, and communication. The workspace is ready to guide the rest.</p>
             <div className="space-y-3">
               {[
                 [Palette, 'Choose a theme'],
@@ -1162,7 +1167,7 @@ function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
                 [Mail, 'Set up messages'],
                 [ShieldCheck, 'Invite staff']
               ].map(([Icon, label]) => (
-                <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div key={label} className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
                   <Icon size={15} />
                   <span className="text-sm font-bold">{label}</span>
                 </div>
@@ -1170,10 +1175,10 @@ function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
-            <button onClick={() => onFinish('editor')} disabled={!canApply} className="h-12 rounded-full bg-white text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-neutral-200">
+            <button onClick={() => onFinish('editor')} disabled={!canApply} className="h-12 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-neutral-800">
               Finish In Editor <ArrowRight size={15} />
             </button>
-            <button onClick={onBack} className="h-12 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/15 flex items-center justify-center gap-2">
+            <button onClick={onBack} className="h-12 rounded-full bg-white border border-neutral-200 text-neutral-500 text-[10px] font-bold uppercase tracking-widest hover:text-black hover:bg-neutral-50 flex items-center justify-center gap-2">
               <ChevronLeft size={15} /> Back
             </button>
           </div>
