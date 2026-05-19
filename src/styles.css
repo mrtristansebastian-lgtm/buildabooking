@@ -49,32 +49,41 @@ body {
             font-feature-settings: "tnum" on, "lnum" on;
         }
 
+        @property --native-accent-x {
+            syntax: '<percentage>';
+            inherits: true;
+            initial-value: 0%;
+        }
+
         :root {
-            --native-accent-gradient: linear-gradient(115deg, #39ff14 0%, #12f0cf 17%, #14a7ff 34%, #755cff 52%, #ff4fd8 70%, #f4ff3a 86%, #39ff14 100%);
+            --native-accent-gradient: linear-gradient(115deg, #39ff14 0%, #eaff32 12%, #39ff14 24%, #12f0cf 38%, #14a7ff 52%, #755cff 66%, #ff4fd8 80%, #755cff 88%, #14a7ff 94%, #12f0cf 98%, #39ff14 100%);
             --native-accent-glow: rgba(20, 167, 255, 0.28);
             --native-accent-border: #755cff;
+            --native-accent-duration: 24s;
+            --native-accent-easing: ease-in-out;
+            --native-beam-duration: 12s;
+            --native-accent-x: 0%;
         }
 
-        @keyframes native-accent-phase {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        @keyframes native-accent-sync {
+            0%, 100% { --native-accent-x: 0%; }
+            50% { --native-accent-x: 100%; }
         }
 
-        @keyframes native-accent-hue {
-            0%, 100% { filter: hue-rotate(0deg) saturate(1.08); }
-            50% { filter: hue-rotate(180deg) saturate(1.18); }
+        .native-ui,
+        .native-home {
+            animation: native-accent-sync var(--native-accent-duration) var(--native-accent-easing) infinite;
         }
 
         .native-ui .bg-\[\#39FF14\] {
             background-color: #39ff14 !important;
             background-image: var(--native-accent-gradient) !important;
             background-size: 420% 420% !important;
-            animation: native-accent-phase 24s ease-in-out infinite;
+            background-position: var(--native-accent-x) 50% !important;
         }
 
         .native-ui .text-\[\#39FF14\] {
             color: var(--native-accent-border) !important;
-            animation: native-accent-hue 24s linear infinite;
         }
 
         .native-ui .border-\[\#39FF14\],
@@ -93,7 +102,7 @@ body {
             color: transparent;
             -webkit-background-clip: text;
             background-clip: text;
-            animation: native-accent-phase 24s ease-in-out infinite;
+            background-position: var(--native-accent-x) 50%;
         }
 
         .native-home-nav::after {
@@ -104,8 +113,8 @@ body {
             height: 1px;
             background-image: var(--native-accent-gradient);
             background-size: 420% 420%;
+            background-position: var(--native-accent-x) 50%;
             opacity: 0.7;
-            animation: native-accent-phase 24s ease-in-out infinite;
         }
 
         .native-feature-wave-list {
@@ -128,7 +137,7 @@ body {
             filter: blur(28px) saturate(1.18);
             opacity: 0.28;
             transform: translate3d(-4%, 1%, 0) rotate(-2deg);
-            animation: native-feature-wall-wave 22s ease-in-out infinite;
+            animation: native-feature-wall-wave var(--native-accent-duration) var(--native-accent-easing) infinite;
             pointer-events: none;
         }
 
@@ -169,14 +178,13 @@ body {
                 linear-gradient(112deg, transparent 31%, rgba(255,255,255,0.72) 42%, rgba(244,255,58,0.2) 46%, rgba(57,255,20,0.2) 50%, rgba(20,167,255,0.24) 55%, rgba(117,92,255,0.2) 60%, rgba(255,79,216,0.18) 65%, transparent 74%),
                 var(--native-accent-gradient);
             background-size: 240% 100%, 420% 420%;
+            background-position: 50% 50%, var(--native-accent-x) 50%;
             background-blend-mode: screen, normal;
             opacity: 0;
             filter: blur(14px) saturate(1.22);
             transform: translate3d(-62%, 18%, 0) rotate(-8deg);
-            animation:
-                native-panel-beam 12s cubic-bezier(0.45, 0, 0.2, 1) infinite,
-                native-accent-phase 24s ease-in-out infinite;
-            animation-delay: var(--feature-wave-delay, var(--stat-wave-delay, 0s)), 0s;
+            animation: native-panel-beam var(--native-beam-duration) cubic-bezier(0.45, 0, 0.2, 1) infinite;
+            animation-delay: var(--feature-wave-delay, var(--stat-wave-delay, 0s));
             pointer-events: none;
         }
 
@@ -192,14 +200,13 @@ body {
                 linear-gradient(112deg, transparent 24%, rgba(255,255,255,0.88) 38%, rgba(57,255,20,0.4), rgba(20,167,255,0.36), rgba(255,79,216,0.3), transparent 76%),
                 var(--native-accent-gradient);
             background-size: 220% 100%, 420% 420%;
+            background-position: -140% 50%, var(--native-accent-x) 50%;
             opacity: 0.32;
             -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
-            animation:
-                native-panel-border-beam 12s cubic-bezier(0.45, 0, 0.2, 1) infinite,
-                native-accent-phase 24s ease-in-out infinite;
-            animation-delay: var(--feature-wave-delay, var(--stat-wave-delay, 0s)), 0s;
+            animation: native-panel-border-beam var(--native-beam-duration) cubic-bezier(0.45, 0, 0.2, 1) infinite;
+            animation-delay: var(--feature-wave-delay, var(--stat-wave-delay, 0s));
             pointer-events: none;
         }
 
@@ -234,15 +241,15 @@ body {
 
         @keyframes native-feature-wall-wave {
             0%, 100% {
-                background-position: 0% 50%, 95% 8%, 70% 90%, 0% 50%;
+                background-position: 0% 50%, 95% 8%, 70% 90%, var(--native-accent-x) 50%;
                 transform: translate3d(-5%, 1%, 0) rotate(-2deg) scale(1);
             }
             42% {
-                background-position: 65% 36%, 40% 50%, 16% 68%, 62% 48%;
+                background-position: 65% 36%, 40% 50%, 16% 68%, var(--native-accent-x) 50%;
                 transform: translate3d(1.5%, -1.5%, 0) rotate(1deg) scale(1.02);
             }
             72% {
-                background-position: 92% 68%, 10% 78%, 94% 24%, 100% 58%;
+                background-position: 92% 68%, 10% 78%, 94% 24%, var(--native-accent-x) 50%;
                 transform: translate3d(4%, 2.5%, 0) rotate(-1deg) scale(1.01);
             }
         }
@@ -275,19 +282,19 @@ body {
 
         @keyframes native-panel-border-beam {
             0%, 8% {
-                background-position: -140% 50%, 0% 50%;
+                background-position: -140% 50%, var(--native-accent-x) 50%;
                 opacity: 0.18;
             }
             16% {
-                background-position: 40% 50%, 50% 50%;
+                background-position: 40% 50%, var(--native-accent-x) 50%;
                 opacity: 0.55;
             }
             30% {
-                background-position: 170% 50%, 100% 50%;
+                background-position: 170% 50%, var(--native-accent-x) 50%;
                 opacity: 0.24;
             }
             100% {
-                background-position: 170% 50%, 100% 50%;
+                background-position: 170% 50%, var(--native-accent-x) 50%;
                 opacity: 0.18;
             }
         }
@@ -308,7 +315,7 @@ body {
                 linear-gradient(#ffffff, #ffffff) padding-box,
                 var(--native-accent-gradient) border-box !important;
             background-size: auto, 420% 420% !important;
-            animation: native-accent-phase 24s ease-in-out infinite;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
             box-shadow: 0 24px 70px -34px var(--native-accent-glow), 0 0 0 1px rgba(108, 92, 255, 0.2) !important;
         }
 
@@ -327,6 +334,8 @@ body {
         }
 
         @media (prefers-reduced-motion: reduce) {
+            .native-ui,
+            .native-home,
             .native-ui .bg-\[\#39FF14\],
             .native-ui .text-\[\#39FF14\],
             .native-ui .schedule-day-selected,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BusinessCalendar } from './components/BusinessCalendar';
 import { BookingFlow } from './components/BookingFlow';
@@ -46,7 +46,7 @@ const editorPreviewFrames = {
     compact: { width: 900, height: 380, maxScale: 0.92, minScale: 0.26, paddingX: 22, paddingY: 118 }
   },
   mobile: {
-    full: { width: 390, height: 880, maxScale: 0.82, minScale: 0.28, paddingX: 96, paddingY: 146 },
+    full: { width: 470, height: 880, maxScale: 0.82, minScale: 0.28, paddingX: 96, paddingY: 146 },
     compact: { width: 360, height: 520, maxScale: 0.82, minScale: 0.3, paddingX: 20, paddingY: 106 }
   }
 };
@@ -2107,22 +2107,22 @@ const shouldUseRedirectGoogleAuth = () => {
                         {/* Box 1: Design (Span 2) */}
                         <div className="native-feature-card md:col-span-2 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group relative overflow-hidden">
                           <Palette className="mb-6 text-black relative z-10" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl md:text-4xl font-bold tracking-tight mb-4 text-black relative z-10">Live Page Editor.</h3>
+                          <h3 className="text-2xl md:text-4xl font-bold tracking-tight mb-4 text-black relative z-10">Editor.</h3>
                           <p className="text-neutral-500 font-medium text-lg max-w-md relative z-10">Design your booking page in minutes. Change colors, try fonts, upload your logo, and preview every detail as you go.</p>
                         </div>
                         
-                        {/* Box 2: Waitlist (Span 1) */}
+                        {/* Box 2: My Bookings (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
-                          <Bell className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Waitlists.</h3>
-                          <p className="text-neutral-500 font-medium flex-1">When a day is full, clients can still join the waitlist so you never lose the opportunity.</p>
+                          <BookOpen className="mb-6 text-black" size={36} strokeWidth={1.5} />
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">My Bookings.</h3>
+                          <p className="text-neutral-500 font-medium flex-1">Review requests, confirm clients, manage waitlists, and keep every booking moving.</p>
                         </div>
                         
-                        {/* Box 3: Approvals (Span 1) */}
+                        {/* Box 3: Schedule (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
-                          <ShieldCheck className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Approve Requests.</h3>
-                          <p className="text-neutral-500 font-medium">Review new requests before they become bookings, keep an eye on no-shows, and stay in control of your calendar.</p>
+                          <Calendar className="mb-6 text-black" size={36} strokeWidth={1.5} />
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Schedule.</h3>
+                          <p className="text-neutral-500 font-medium">Open days, close dates, adjust slots, and keep availability clear for clients.</p>
                         </div>
 
                         {/* Box 4: Communication Studio (Span 1) */}
@@ -2132,11 +2132,11 @@ const shouldUseRedirectGoogleAuth = () => {
                           <p className="text-neutral-500 font-medium">Write clean emails, prepare WhatsApp updates, and keep client communication consistent.</p>
                         </div>
 
-                        {/* Box 5: Client Intel (Span 1) */}
+                        {/* Box 5: My Clients (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
-                          <Heart className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Client Details.</h3>
-                          <p className="text-neutral-500 font-medium">Save useful client details like birthdays and spot clients who may be ready to book again.</p>
+                          <Star className="mb-6 text-black" size={36} strokeWidth={1.5} />
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">My Clients.</h3>
+                          <p className="text-neutral-500 font-medium">Build client profiles with notes, labels, photos, and booking history.</p>
                         </div>
             
                         {/* Box 6: Team/Staff (Span 2) */}
@@ -2144,30 +2144,30 @@ const shouldUseRedirectGoogleAuth = () => {
                           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
                               <div className="max-w-xl">
                                   <Users className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                                  <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Team Scheduling.</h3>
+                                  <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Team.</h3>
                                   <p className="text-neutral-500 font-medium text-lg">Add your team, assign bookings, and see who handled each client at a glance.</p>
                               </div>
                           </div>
                         </div>
 
-                        {/* Box 7: Booked Rate Kit (Span 1) */}
+                        {/* Box 7: Profile (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
-                          <Flame className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Booking Tools.</h3>
-                          <p className="text-neutral-500 font-medium flex-1">Add social proof, first available buttons, and FAQs so clients can book with confidence.</p>
+                          <User className="mb-6 text-black" size={36} strokeWidth={1.5} />
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Profile.</h3>
+                          <p className="text-neutral-500 font-medium flex-1">Keep business details, logos, social links, and referral tools in one place.</p>
                         </div>
 
-                        {/* Box 8: Business Tools (Span 3) */}
+                        {/* Box 8: Dashboard (Span 3) */}
                         <div className="native-feature-card md:col-span-3 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-12 border border-neutral-200/60 hover:shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 text-center md:text-left">
                             <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-black shadow-sm shrink-0"><Briefcase size={24}/></div>
+                                <div className="w-16 h-16 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-black shadow-sm shrink-0"><Layout size={24}/></div>
                                 <div>
-                                    <h3 className="text-xl font-bold tracking-tight text-black mb-1">Helpful Business Tools</h3>
-                                    <p className="text-neutral-500 font-medium">Google Maps directions, calendar links, and simple referral tools built in.</p>
+                                    <h3 className="text-xl font-bold tracking-tight text-black mb-1">Dashboard.</h3>
+                                    <p className="text-neutral-500 font-medium">See today, requests, booking rate, clients, and schedule health at a glance.</p>
                                 </div>
                             </div>
                             <button onClick={openGuestDashboard} className="h-14 px-8 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shrink-0 w-full md:w-auto shadow-xl shadow-[#39FF14]/20">
-                                Explore All Features
+                                Browse Dashboard
                             </button>
                         </div>
 
