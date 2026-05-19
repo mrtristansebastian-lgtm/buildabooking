@@ -261,6 +261,22 @@ const scrollTargetForTour = (target, mobile = false) => {
   scroller.scrollTop += lift;
 };
 
+const getWorkspaceScrollers = () => {
+  if (typeof document === 'undefined') return [];
+  return Array.from(document.querySelectorAll('.dashboard-main .overflow-y-auto, .dashboard-main [class*="overflow-y-auto"]'))
+    .filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && element.scrollHeight > element.clientHeight + 4;
+    });
+};
+
+const scrollWorkspaceToTop = () => {
+  getWorkspaceScrollers().forEach((element) => {
+    element.scrollTo?.({ top: 0, left: 0, behavior: 'auto' });
+    element.scrollTop = 0;
+  });
+};
+
 const getTourNavTarget = (tab) => {
   const mobileTarget = document.querySelector(`[data-tour="mobile-nav-${tab}"]`);
   const desktopTarget = document.querySelector(`[data-tour="nav-${tab}"]`);
@@ -411,6 +427,25 @@ export function OnboardingShowroom({
   }, [open, scene.id, scene.type]);
 
   useLayoutEffect(() => {
+    if (!open || scene.type !== 'platform' || !isMobileTour) return undefined;
+
+    let cancelled = false;
+    const scrollTop = () => {
+      window.requestAnimationFrame(() => {
+        if (!cancelled) scrollWorkspaceToTop();
+      });
+    };
+
+    scrollTop();
+    const timer = window.setTimeout(scrollTop, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isMobileTour, open, scene.id, scene.type]);
+
+  useLayoutEffect(() => {
     if (!open || scene.type !== 'platform') {
       setNavCue(null);
       return undefined;
@@ -472,7 +507,7 @@ export function OnboardingShowroom({
   }, [open, scene.id, scene.tab, scene.target, scene.type]);
 
   useLayoutEffect(() => {
-    if (!open || scene.type !== 'platform') {
+    if (!open || scene.type !== 'platform' || isMobileTour) {
       setTourFocus(null);
       return undefined;
     }
@@ -560,7 +595,12 @@ export function OnboardingShowroom({
   return (
     <div ref={stageRef} className={`fixed inset-0 z-[9998] text-white ${stageBackground}`}>
       <TopProgress progress={progress} />
-      <SkipButton onSkip={skipTour} soundEnabled={soundEnabled} onToggleSound={() => setSoundEnabled(enabled => !enabled)} />
+      <SkipButton
+        onSkip={skipTour}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled(enabled => !enabled)}
+        darkControls={scene.type === 'platform' && isMobileTour}
+      />
 
       {scene.type !== 'platform' && (
         <div className="absolute inset-0 opacity-[0.06] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:72px_72px]" />
@@ -634,20 +674,23 @@ function TopProgress({ progress }) {
   );
 }
 
-function SkipButton({ onSkip, soundEnabled, onToggleSound }) {
+function SkipButton({ onSkip, soundEnabled, onToggleSound, darkControls = false }) {
   const SoundIcon = soundEnabled ? Volume2 : VolumeX;
+  const controlClass = darkControls
+    ? 'bg-black/85 border-black/10 text-white hover:bg-black shadow-2xl'
+    : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/15 shadow-2xl';
   return (
     <div className="fixed right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2 pointer-events-auto">
       <button
         onClick={onToggleSound}
-        className="h-11 w-11 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 flex items-center justify-center shadow-2xl backdrop-blur-xl"
+        className={`h-11 w-11 rounded-full border flex items-center justify-center backdrop-blur-xl ${controlClass}`}
         aria-label={soundEnabled ? 'Mute tour sound' : 'Enable tour sound'}
       >
         <SoundIcon size={15} />
       </button>
       <button
         onClick={onSkip}
-        className="h-11 px-4 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-2xl backdrop-blur-xl"
+        className={`h-11 px-4 rounded-full border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 backdrop-blur-xl ${controlClass}`}
       >
         <SkipForward size={14} /> Skip Tour
       </button>
@@ -859,8 +902,12 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, isMobileTour, onBack,
   const showCurrentArea = () => {
     onNavigate?.(scene.tab);
     window.requestAnimationFrame(() => {
+      if (isMobileTour) {
+        scrollWorkspaceToTop();
+        return;
+      }
       const target = document.querySelector(`[data-tour="${scene.target}"]`);
-      if (target) scrollTargetForTour(target, isMobileTour);
+      if (target) scrollTargetForTour(target, false);
     });
   };
 
@@ -869,8 +916,6 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, isMobileTour, onBack,
       <MobilePlatformScene
         scene={scene}
         sceneIndex={sceneIndex}
-        spotlight={spotlight}
-        ringStyle={ringStyle}
         navCue={navCue}
         onBack={onBack}
         onNext={onNext}
@@ -931,61 +976,78 @@ function PlatformScene({ scene, sceneIndex, focus, navCue, isMobileTour, onBack,
   );
 }
 
-function MobilePlatformScene({ scene, sceneIndex, spotlight, ringStyle, navCue, onBack, onNext, onShowArea }) {
+function MobilePlatformScene({ scene, sceneIndex, navCue, onBack, onNext, onShowArea }) {
   return (
     <>
-      <div className="fixed inset-0 z-[10000] pointer-events-none bg-black/45 backdrop-blur-[1.5px]" />
-      <NavigationClickCue cue={navCue} />
+      <MobileTabCue cue={navCue} />
 
-      {spotlight?.target === scene.target && (
-        <div
-          className="tour-spotlight-ring fixed z-[10001] rounded-[1.1rem] border-2 pointer-events-none"
-          style={ringStyle}
-        >
-          <div className="absolute -right-2.5 -top-2.5 h-7 w-7 rounded-full bg-[#39FF14] text-black flex items-center justify-center shadow-xl shadow-[#39FF14]/50">
-            <MousePointerClick size={14} />
-          </div>
-        </div>
-      )}
-
-      <div className="fixed left-3 right-3 bottom-24 z-[10004] pointer-events-auto">
-        <div className="tour-mobile-platform-card rounded-[1.35rem] bg-white text-black border border-black/10 shadow-[0_24px_90px_-28px_rgba(0,0,0,0.8)] overflow-hidden">
-          <div className="max-h-[42vh] overflow-y-auto p-4">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <p className="tour-copy-line text-[9px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">{scene.kicker}</p>
-                <h2 className="tour-copy-line text-[24px] font-bold tracking-tight leading-[0.98]" style={{ animationDelay: '70ms' }}>{scene.title}</h2>
+      <div className="fixed left-3 right-3 bottom-[5.4rem] z-[10004] pointer-events-none">
+        <div className="tour-mobile-platform-card pointer-events-auto rounded-[1.15rem] bg-white/95 text-black border border-black/10 shadow-[0_18px_70px_-32px_rgba(0,0,0,0.72)] overflow-hidden backdrop-blur-xl">
+          <div className="p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="tour-copy-line text-[8px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1.5">{scene.kicker}</p>
+                <h2 className="tour-copy-line text-[20px] font-bold tracking-tight leading-[0.98]" style={{ animationDelay: '60ms' }}>{scene.title}</h2>
+                <p className="tour-copy-line mt-2 text-[13px] text-neutral-500 leading-relaxed" style={{ animationDelay: '120ms' }}>{scene.text}</p>
+                <p className="tour-copy-line mt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-neutral-400" style={{ animationDelay: '170ms' }}>
+                  Scroll this page, then tap next.
+                </p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center shrink-0">
-                <ArrowUpRight size={17} />
-              </div>
-            </div>
-            <p className="tour-copy-line text-sm text-neutral-500 leading-relaxed" style={{ animationDelay: '140ms' }}>{scene.text}</p>
-            <div className="tour-copy-line mt-4 rounded-2xl bg-neutral-100 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-neutral-500" style={{ animationDelay: '180ms' }}>
-              Scroll the page to look around. The highlight follows this section.
+              <button
+                type="button"
+                onClick={onShowArea}
+                className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center shrink-0 active:scale-95"
+                aria-label="Back to top of this section"
+              >
+                <ArrowUpRight size={16} />
+              </button>
             </div>
           </div>
 
-          <div className="border-t border-neutral-100 p-3 bg-white">
+          <div className="border-t border-neutral-100 px-3 py-2.5 bg-white/90">
             <div className="flex items-center justify-between gap-2">
-              <button onClick={onBack} className="h-11 px-4 rounded-full bg-neutral-100 text-neutral-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95">
+              <button onClick={onBack} className="h-10 px-4 rounded-full bg-neutral-100 text-neutral-500 text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95">
                 <ChevronLeft size={14} /> Back
               </button>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-300">{sceneIndex - 5} / 8</div>
-              <button onClick={onNext} className="h-11 px-5 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95">
+              <div className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">{sceneIndex - 5} / 8</div>
+              <button onClick={onNext} className="h-10 px-5 rounded-full bg-black text-white text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95">
                 Next <ArrowRight size={14} />
               </button>
             </div>
-            <button
-              onClick={onShowArea}
-              className="mt-2 w-full h-10 rounded-full border border-neutral-200 text-[10px] font-bold uppercase tracking-widest text-neutral-500 active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              <MousePointerClick size={14} /> Show This Area
-            </button>
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+function MobileTabCue({ cue }) {
+  if (!cue?.navRect) return null;
+
+  const width = typeof window !== 'undefined' ? window.innerWidth : 390;
+  const labelWidth = 148;
+  const left = clamp(cue.navRect.left + cue.navRect.width / 2 - labelWidth / 2, 10, width - labelWidth - 10);
+  const labelTop = Math.max(10, cue.navRect.top - 36);
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[10003]">
+      <div
+        className="tour-nav-target absolute rounded-[1rem] border-2 border-[#39FF14] shadow-[0_0_30px_rgba(57,255,20,0.7)]"
+        style={{ top: cue.navRect.top, left: cue.navRect.left, width: cue.navRect.width, height: cue.navRect.height }}
+      />
+      <div
+        className="tour-nav-cursor absolute h-8 w-8 rounded-full bg-[#39FF14] text-black flex items-center justify-center shadow-[0_14px_40px_rgba(57,255,20,0.55)]"
+        style={{ top: cue.navRect.top + cue.navRect.height / 2 - 16, left: cue.navRect.left + cue.navRect.width / 2 - 16 }}
+      >
+        <MousePointerClick size={14} strokeWidth={3} />
+      </div>
+      <div
+        className="absolute rounded-full bg-black text-white border border-[#39FF14]/40 shadow-2xl px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.22em] text-center"
+        style={{ top: labelTop, left, width: labelWidth }}
+      >
+        Opening {cue.label}
+      </div>
+    </div>
   );
 }
 
