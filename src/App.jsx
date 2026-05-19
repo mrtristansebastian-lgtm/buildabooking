@@ -53,7 +53,6 @@ const identityTextControls = [
     label: 'Business Name',
     hint: 'Main booking page heading.',
     fieldKey: 'brandName',
-    alignKey: 'brandNameAlign',
     sizeKey: 'brandNameSize',
     fontKey: 'brandNameFontFamily',
     fallbackFontKey: 'headingFontFamily',
@@ -69,7 +68,6 @@ const identityTextControls = [
     label: 'Eyebrow / Tagline',
     hint: 'Small line above the title.',
     fieldKey: 'tagline',
-    alignKey: 'taglineAlign',
     sizeKey: 'taglineSize',
     fontKey: 'taglineFontFamily',
     fallbackFontKey: 'bodyFontFamily',
@@ -85,7 +83,6 @@ const identityTextControls = [
     label: 'Welcome Text',
     hint: 'Intro copy under the heading.',
     fieldKey: 'welcomeMessage',
-    alignKey: 'welcomeAlign',
     sizeKey: 'welcomeSize',
     fontKey: 'welcomeFontFamily',
     fallbackFontKey: 'bodyFontFamily',
@@ -99,10 +96,9 @@ const identityTextControls = [
 ];
 
 const getIdentityTextSettings = (settings = {}, config) => {
-  const align = textAlignmentOptions.some(option => option.id === settings[config.alignKey]) ? settings[config.alignKey] : 'left';
   const size = clampNumber(settings[config.sizeKey], config.min, config.max, config.fallbackSize);
   const font = settings[config.fontKey] || settings[config.fallbackFontKey] || settings.fontFamily || 'inter';
-  return { align, size, font };
+  return { size, font };
 };
 
 function AlignmentButtonGroup({ value, onChange, label = 'Alignment' }) {
@@ -221,9 +217,10 @@ function LogoDisplayControls({ settings, onChange, className = '' }) {
 
 function IdentityTextControl({ settings, config, onChange }) {
   const appearance = getIdentityTextSettings(settings, config);
+  const masterAlignment = getLogoDisplay(settings).alignment;
   const value = settings[config.fieldKey] || '';
   const inputStyle = {
-    textAlign: appearance.align,
+    textAlign: masterAlignment,
     fontFamily: getFontFamily(appearance.font),
     fontSize: `${config.id === 'brandName' ? Math.min(28, Math.max(18, appearance.size * 0.32)) : Math.min(18, Math.max(12, appearance.size))}px`
   };
@@ -257,9 +254,7 @@ function IdentityTextControl({ settings, config, onChange }) {
         />
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <AlignmentButtonGroup value={appearance.align} onChange={(value) => onChange(config.alignKey, value)} />
-
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div>
           <div className="flex items-center justify-between gap-3 mb-2">
             <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">Size</p>
@@ -280,6 +275,10 @@ function IdentityTextControl({ settings, config, onChange }) {
         </div>
 
         <FontDropdown value={settings[config.fontKey] || ''} onChange={(value) => onChange(config.fontKey, value)} />
+      </div>
+
+      <div className="rounded-lg bg-white border border-neutral-100 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+        Uses logo position: <span className="text-black">{masterAlignment}</span>
       </div>
     </div>
   );
@@ -348,9 +347,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 buttonTextColor: '#000000', 
                 fontFamily: 'inter', 
                 headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '',
-                brandNameAlign: 'left', brandNameSize: 76, brandNameFontFamily: '',
-                taglineAlign: 'left', taglineSize: 9, taglineFontFamily: '',
-                welcomeAlign: 'left', welcomeSize: 20, welcomeFontFamily: '',
+                brandNameSize: 76, brandNameFontFamily: '',
+                taglineSize: 9, taglineFontFamily: '',
+                welcomeSize: 20, welcomeFontFamily: '',
                 buttonStyle: 'pill', availabilityStyle: 'minimal',
                 dateLabel: 'Which day are you looking to book ?', timeLabel: 'Lets see what time works', buttonText: 'Book Now', confirmButtonText: 'Confirm Booking', 
                 detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
@@ -2880,9 +2879,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
                                         <div>
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Business Text</label>
-                                            <p className="text-xs text-neutral-400 font-medium mt-2">Fine tune the booking page title, tagline, and intro copy.</p>
+                                            <p className="text-xs text-neutral-400 font-medium mt-2">Fine tune the booking page title, tagline, and intro copy. Position follows the logo setting above.</p>
                                         </div>
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 border border-neutral-100 px-3 py-2 rounded-lg">Per Text Styling</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 border border-neutral-100 px-3 py-2 rounded-lg">Size And Fonts</span>
                                     </div>
                                     {identityTextControls.map(config => (
                                         <IdentityTextControl

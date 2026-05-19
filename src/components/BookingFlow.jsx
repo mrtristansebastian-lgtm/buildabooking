@@ -101,18 +101,19 @@ const getBlockMargins = (align) => ({
             const logoAlignmentStyle = {
                 justifyContent: logoDisplay.alignment === 'center' ? 'center' : logoDisplay.alignment === 'right' ? 'flex-end' : 'flex-start'
             };
+            const pageAlignment = getAlign(logoDisplay.alignment);
+            const pageJustify = pageAlignment === 'center' ? 'center' : pageAlignment === 'right' ? 'flex-end' : 'flex-start';
+            const pageItems = pageAlignment === 'center' ? 'items-center' : pageAlignment === 'right' ? 'items-end' : 'items-start';
+            const pageTextClass = pageAlignment === 'center' ? 'text-center' : pageAlignment === 'right' ? 'text-right' : 'text-left';
             const brandText = {
-                align: getAlign(settings.brandNameAlign),
                 size: clampNumber(settings.brandNameSize, 36, 120, 76),
                 font: settings.brandNameFontFamily || settings.headingFontFamily || settings.fontFamily
             };
             const taglineText = {
-                align: getAlign(settings.taglineAlign),
                 size: clampNumber(settings.taglineSize, 8, 22, 9),
                 font: settings.taglineFontFamily || settings.bodyFontFamily || settings.fontFamily
             };
             const welcomeText = {
-                align: getAlign(settings.welcomeAlign),
                 size: clampNumber(settings.welcomeSize, 13, 32, 20),
                 font: settings.welcomeFontFamily || settings.bodyFontFamily || settings.fontFamily
             };
@@ -170,13 +171,13 @@ const getBlockMargins = (align) => ({
                     <header className="mb-10 flex-shrink-0">
                         <div
                             className={`flex items-center gap-4 mb-8 ${inspectClass}`}
-                            style={{ justifyContent: taglineText.align === 'center' ? 'center' : taglineText.align === 'right' ? 'flex-end' : 'flex-start' }}
+                            style={{ justifyContent: pageJustify }}
                             onClick={() => isPreview && onInspect('visuals')}
                         >
                             <div className="w-12 h-[2px]" style={{ backgroundColor: settings.primaryColor }} />
                             <span
                                 className="font-bold uppercase tracking-[0.6em] opacity-40"
-                                style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: taglineText.align }}
+                                style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment }}
                             >
                                 {settings.tagline}
                             </span>
@@ -209,9 +210,9 @@ const getBlockMargins = (align) => ({
                                 color: settings.headingColor,
                                 fontFamily: getFontFamily(brandText.font),
                                 fontSize: `${brandText.size}px`,
-                                textAlign: brandText.align,
+                                textAlign: pageAlignment,
                                 overflowWrap: 'anywhere',
-                                ...getBlockMargins(brandText.align)
+                                ...getBlockMargins(pageAlignment)
                             }}
                             onClick={() => isPreview && onInspect('identity')}
                         >
@@ -223,8 +224,8 @@ const getBlockMargins = (align) => ({
                                 color: settings.bodyColor,
                                 fontFamily: getFontFamily(welcomeText.font),
                                 fontSize: `${welcomeText.size}px`,
-                                textAlign: welcomeText.align,
-                                ...getBlockMargins(welcomeText.align)
+                                textAlign: pageAlignment,
+                                ...getBlockMargins(pageAlignment)
                             }}
                             onClick={() => isPreview && onInspect('identity')}
                         >
@@ -233,7 +234,7 @@ const getBlockMargins = (align) => ({
 
                         <div
                             className="flex flex-wrap items-center gap-3 mt-4"
-                            style={{ justifyContent: welcomeText.align === 'center' ? 'center' : welcomeText.align === 'right' ? 'flex-end' : 'flex-start' }}
+                            style={{ justifyContent: pageJustify }}
                         >
                             {settings.address && (
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest" style={{ backgroundColor: settings.headingColor + '10', color: settings.headingColor }}>
@@ -272,10 +273,10 @@ const getBlockMargins = (align) => ({
                         
                         {/* DATE SLIDER */}
                         <section>
-                        <div className={`flex items-end justify-between mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
-                            <div>
+                        <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
+                            <div className={`flex flex-col ${pageItems} ${pageTextClass}`}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>01 // {settings.dateLabel || "Which day?"}</h3>
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-wrap items-center gap-4" style={{ justifyContent: pageJustify }}>
                                     <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
                                         {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
                                     </h4>
@@ -284,7 +285,7 @@ const getBlockMargins = (align) => ({
                                     )}
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2" style={{ justifyContent: pageJustify }}>
                                 <button className="appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-20 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}><ChevronLeft size={14} /></button>
                                 <button className="appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-20 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}><ChevronRight size={14} /></button>
                             </div>
@@ -308,7 +309,7 @@ const getBlockMargins = (align) => ({
 
                         {/* TIME GRID OR WAITLIST */}
                         <section>
-                        <div className={`flex flex-col items-start mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
+                        <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
                             <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>02 // {settings.timeLabel || "Select Time"}</h3>
                             <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
                                 {isWaitlistMode ? 'Day Full - Join Waitlist' : 'Available Slots'}
@@ -344,7 +345,7 @@ const getBlockMargins = (align) => ({
 
                         {/* DETAILS FORM */}
                         <section className="pt-10">
-                            <div className={`flex flex-col items-start mb-8 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
+                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>03 // {settings.detailsHeading || "Your Details"}</h3>
                                 <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
                                     {isWaitlistMode ? 'Join Standby' : (settings.detailsSubHeading || "Secure Your Slot")}
