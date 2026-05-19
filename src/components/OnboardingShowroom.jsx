@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -20,6 +20,8 @@ import {
   Sparkles,
   Star,
   Users,
+  Volume2,
+  VolumeX,
   Zap
 } from 'lucide-react';
 
@@ -205,6 +207,74 @@ const setupCopy = {
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+const buildRect = (rect, padding = 0) => ({
+  top: Math.max(8, rect.top - padding),
+  left: Math.max(8, rect.left - padding),
+  width: Math.min(window.innerWidth - 16, rect.width + padding * 2),
+  height: Math.min(window.innerHeight - 16, rect.height + padding * 2)
+});
+
+const getRectCenter = (rect) => ({
+  x: rect.left + rect.width / 2,
+  y: rect.top + rect.height / 2
+});
+
+const useTourSound = () => {
+  const audioRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  const playSound = useCallback((type = 'tap') => {
+    if (!soundEnabled || typeof window === 'undefined') return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    try {
+      const context = audioRef.current || new AudioContext();
+      audioRef.current = context;
+      if (context.state === 'suspended') context.resume();
+
+      const now = context.currentTime;
+      const output = context.createGain();
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.linearRampToValueAtTime(type === 'launch' ? 0.08 : 0.055, now + 0.012);
+      output.gain.exponentialRampToValueAtTime(0.0001, now + (type === 'launch' ? 0.52 : 0.22));
+      output.connect(context.destination);
+
+      const playTone = (frequency, start, duration, wave = 'sine', endFrequency = frequency) => {
+        const osc = context.createOscillator();
+        const toneGain = context.createGain();
+        osc.type = wave;
+        osc.frequency.setValueAtTime(frequency, now + start);
+        osc.frequency.exponentialRampToValueAtTime(endFrequency, now + start + duration);
+        toneGain.gain.setValueAtTime(0.0001, now + start);
+        toneGain.gain.linearRampToValueAtTime(0.8, now + start + 0.01);
+        toneGain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+        osc.connect(toneGain);
+        toneGain.connect(output);
+        osc.start(now + start);
+        osc.stop(now + start + duration + 0.03);
+      };
+
+      if (type === 'back') {
+        playTone(520, 0, 0.14, 'triangle', 330);
+      } else if (type === 'launch') {
+        playTone(392, 0, 0.2, 'sine', 588);
+        playTone(588, 0.08, 0.22, 'sine', 784);
+        playTone(1176, 0.18, 0.22, 'triangle', 1568);
+      } else if (type === 'navigate') {
+        playTone(740, 0, 0.1, 'sine', 960);
+        playTone(1240, 0.055, 0.12, 'triangle', 1480);
+      } else {
+        playTone(640, 0, 0.12, 'triangle', 900);
+      }
+    } catch (error) {
+      console.warn('Tour sound unavailable', error);
+    }
+  }, [soundEnabled]);
+
+  return { soundEnabled, setSoundEnabled, playSound };
+};
+
 const getPopoverStyle = (spotlight) => {
   const isMobile = window.innerWidth < 640;
   const width = isMobile ? window.innerWidth - 32 : 360;
@@ -239,6 +309,7 @@ export function OnboardingShowroom({
 }) {
   const [sceneIndex, setSceneIndex] = useState(0);
   const [tourFocus, setTourFocus] = useState(null);
+  const [navCue, setNavCue] = useState(null);
   const [draft, setDraft] = useState({
     businessName: '',
     industry: '',
@@ -247,11 +318,17 @@ export function OnboardingShowroom({
     facebook: '',
     website: ''
   });
+  const onNavigateRef = useRef(onNavigate);
 
   const scene = scenes[sceneIndex] || scenes[0];
   const generatedSlug = buildBookingSlug(draft.businessName, draft.instagram);
   const generatedLink = `${bookingOrigin}/book/${generatedSlug}`;
   const progress = Math.round(((sceneIndex + 1) / scenes.length) * 100);
+  const { soundEnabled, setSoundEnabled, playSound } = useTourSound();
+
+  useEffect(() => {
+    onNavigateRef.current = onNavigate;
+  }, [onNavigate]);
 
   useEffect(() => {
     if (!open) return;
@@ -268,8 +345,69 @@ export function OnboardingShowroom({
 
   useEffect(() => {
     if (!open || scene.type !== 'platform') return;
-    onNavigate?.(scene.tab);
-  }, [open, scene.id, scene.tab, scene.type, onNavigate]);
+    onNavigateRef.current?.(scene.tab);
+  }, [open, scene.id, scene.tab, scene.type]);
+
+  useLayoutEffect(() => {
+    if (!open || scene.type !== 'platform') {
+      setNavCue(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer = null;
+    let cleanupTimer = null;
+
+    const updateCue = () => {
+      if (cancelled) return;
+      const navTarget = document.querySelector(`[data-tour="nav-${scene.tab}"]`) || document.querySelector(`[data-tour="mobile-nav-${scene.tab}"]`);
+      const contentTarget = document.querySelector(`[data-tour="${scene.target}"]`);
+      if (!navTarget) {
+        timer = window.setTimeout(updateCue, 100);
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        const navRect = buildRect(navTarget.getBoundingClientRect(), 8);
+        const contentRect = contentTarget ? buildRect(contentTarget.getBoundingClientRect(), 12) : null;
+        const fallbackTo = {
+          x: clamp(navRect.left + navRect.width + 420, 240, window.innerWidth - 220),
+          y: clamp(navRect.top + navRect.height / 2, 96, window.innerHeight - 96)
+        };
+        window.clearTimeout(cleanupTimer);
+        setNavCue({
+          sceneId: scene.id,
+          tab: scene.tab,
+          label: scene.kicker,
+          navRect,
+          contentRect,
+          from: getRectCenter(navRect),
+          to: contentRect ? getRectCenter(contentRect) : fallbackTo,
+          phase: contentRect ? 'ready' : 'seeking'
+        });
+        if (!contentRect) {
+          timer = window.setTimeout(updateCue, 90);
+          return;
+        }
+        cleanupTimer = window.setTimeout(() => {
+          if (!cancelled) setNavCue(current => current?.sceneId === scene.id ? { ...current, phase: 'settled' } : current);
+        }, 5200);
+      });
+    };
+
+    timer = window.setTimeout(updateCue, 180);
+    window.addEventListener('resize', updateCue);
+    window.addEventListener('scroll', updateCue, true);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      window.clearTimeout(cleanupTimer);
+      window.removeEventListener('resize', updateCue);
+      window.removeEventListener('scroll', updateCue, true);
+    };
+  }, [open, scene.id, scene.tab, scene.target, scene.type]);
 
   useLayoutEffect(() => {
     if (!open || scene.type !== 'platform') {
@@ -330,10 +468,24 @@ export function OnboardingShowroom({
     };
   }, [open, scene.id, scene.target, scene.type]);
 
-  const next = () => setSceneIndex(index => Math.min(index + 1, scenes.length - 1));
-  const back = () => setSceneIndex(index => Math.max(index - 1, 0));
+  const next = () => {
+    const nextScene = scenes[Math.min(sceneIndex + 1, scenes.length - 1)];
+    playSound(nextScene?.type === 'platform' ? 'navigate' : nextScene?.type === 'launch' ? 'launch' : 'tap');
+    setSceneIndex(index => Math.min(index + 1, scenes.length - 1));
+  };
+  const back = () => {
+    playSound('back');
+    setSceneIndex(index => Math.max(index - 1, 0));
+  };
   const updateDraft = (key, value) => setDraft(prev => ({ ...prev, [key]: value }));
-  const complete = (destination = 'editor') => onComplete(draft, { destination });
+  const skipTour = () => {
+    playSound('back');
+    onSkip?.();
+  };
+  const complete = (destination = 'editor') => {
+    playSound('launch');
+    onComplete(draft, { destination });
+  };
 
   if (!open) return null;
 
@@ -342,7 +494,7 @@ export function OnboardingShowroom({
   return (
     <div className={`fixed inset-0 z-[9998] text-white overflow-hidden ${stageBackground}`}>
       <TopProgress progress={progress} />
-      <SkipButton onSkip={onSkip} />
+      <SkipButton onSkip={skipTour} soundEnabled={soundEnabled} onToggleSound={() => setSoundEnabled(enabled => !enabled)} />
 
       {scene.type !== 'platform' && (
         <div className="absolute inset-0 opacity-[0.06] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:72px_72px]" />
@@ -352,7 +504,10 @@ export function OnboardingShowroom({
         <CinemaScene
           generatedLink={generatedLink}
           onNext={next}
-          onJump={() => setSceneIndex(6)}
+          onJump={() => {
+            playSound('navigate');
+            setSceneIndex(6);
+          }}
         />
       )}
 
@@ -381,10 +536,14 @@ export function OnboardingShowroom({
           scene={scene}
           sceneIndex={sceneIndex}
           focus={tourFocus}
+          navCue={navCue}
           progress={progress}
           onBack={back}
           onNext={next}
-          onNavigate={onNavigate}
+          onNavigate={(tab) => {
+            playSound('navigate');
+            onNavigate?.(tab);
+          }}
         />
       )}
 
@@ -408,14 +567,24 @@ function TopProgress({ progress }) {
   );
 }
 
-function SkipButton({ onSkip }) {
+function SkipButton({ onSkip, soundEnabled, onToggleSound }) {
+  const SoundIcon = soundEnabled ? Volume2 : VolumeX;
   return (
-    <button
-      onClick={onSkip}
-      className="absolute right-4 top-4 md:right-8 md:top-8 z-50 h-11 px-4 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-2xl backdrop-blur-xl"
-    >
-      <SkipForward size={14} /> Skip Tour
-    </button>
+    <div className="absolute right-4 top-4 md:right-8 md:top-8 z-50 flex items-center gap-2">
+      <button
+        onClick={onToggleSound}
+        className="h-11 w-11 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 flex items-center justify-center shadow-2xl backdrop-blur-xl"
+        aria-label={soundEnabled ? 'Mute tour sound' : 'Enable tour sound'}
+      >
+        <SoundIcon size={15} />
+      </button>
+      <button
+        onClick={onSkip}
+        className="h-11 px-4 rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-2xl backdrop-blur-xl"
+      >
+        <SkipForward size={14} /> Skip Tour
+      </button>
+    </div>
   );
 }
 
@@ -602,7 +771,7 @@ function LinkScene({ draft, generatedLink, onBack, onNext }) {
   );
 }
 
-function PlatformScene({ scene, sceneIndex, focus, onBack, onNext, onNavigate }) {
+function PlatformScene({ scene, sceneIndex, focus, navCue, onBack, onNext, onNavigate }) {
   const isFocusReady = focus?.sceneId === scene.id && focus?.target === scene.target;
   const spotlight = isFocusReady ? focus.spotlightStyle : null;
   const popoverStyle = isFocusReady ? focus.popoverStyle : null;
@@ -624,6 +793,7 @@ function PlatformScene({ scene, sceneIndex, focus, onBack, onNext, onNavigate })
   return (
     <>
       <SpotlightPanels spotlight={spotlight} />
+      <NavigationClickCue cue={navCue} />
       {spotlight?.target === scene.target && (
         <div
           className="tour-spotlight-ring fixed z-[10001] rounded-[1.35rem] border-2 pointer-events-none"
@@ -669,6 +839,69 @@ function PlatformScene({ scene, sceneIndex, focus, onBack, onNext, onNavigate })
         </div>
       )}
     </>
+  );
+}
+
+function NavigationClickCue({ cue }) {
+  if (!cue?.navRect || !cue?.from || !cue?.to || cue.phase === 'settled') return null;
+
+  const width = typeof window !== 'undefined' ? window.innerWidth : 1440;
+  const height = typeof window !== 'undefined' ? window.innerHeight : 900;
+  const curveX = cue.from.x + (cue.to.x - cue.from.x) * 0.42;
+  const curveY = cue.from.y - 70;
+  const path = `M ${cue.from.x} ${cue.from.y} Q ${curveX} ${curveY} ${cue.to.x} ${cue.to.y}`;
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[10003]">
+      <svg className="tour-nav-arrow absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <defs>
+          <filter id={`tour-arrow-glow-${cue.sceneId}`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <marker id={`tour-arrow-head-${cue.sceneId}`} markerWidth="13" markerHeight="13" refX="10" refY="6.5" orient="auto">
+            <path d="M 0 0 L 12 6.5 L 0 13 z" fill="#39FF14" />
+          </marker>
+        </defs>
+        <path
+          d={path}
+          fill="none"
+          stroke="rgba(57,255,20,0.92)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="10 12"
+          filter={`url(#tour-arrow-glow-${cue.sceneId})`}
+          markerEnd={`url(#tour-arrow-head-${cue.sceneId})`}
+        />
+      </svg>
+
+      <div
+        className="tour-nav-target absolute rounded-[1.1rem] border-2 border-[#39FF14] shadow-[0_0_36px_rgba(57,255,20,0.65)]"
+        style={{ top: cue.navRect.top, left: cue.navRect.left, width: cue.navRect.width, height: cue.navRect.height }}
+      />
+      <div
+        className="tour-nav-cursor absolute h-9 w-9 rounded-full bg-[#39FF14] text-black flex items-center justify-center shadow-[0_18px_50px_rgba(57,255,20,0.55)]"
+        style={{ top: cue.from.y - 18, left: cue.from.x - 18 }}
+      >
+        <MousePointerClick size={16} strokeWidth={3} />
+      </div>
+      <div
+        className="tour-nav-endpoint absolute h-5 w-5 rounded-full border-2 border-[#39FF14] bg-black shadow-[0_0_34px_rgba(57,255,20,0.75)]"
+        style={{ top: cue.to.y - 10, left: cue.to.x - 10 }}
+      />
+      <div
+        className="tour-nav-label absolute rounded-full bg-black text-white border border-[#39FF14]/40 shadow-2xl px-4 py-2 text-[9px] font-bold uppercase tracking-[0.28em]"
+        style={{
+          top: Math.max(16, cue.navRect.top - 44),
+          left: Math.min(width - 240, Math.max(16, cue.navRect.left))
+        }}
+      >
+        Opening {cue.label}
+      </div>
+    </div>
   );
 }
 
