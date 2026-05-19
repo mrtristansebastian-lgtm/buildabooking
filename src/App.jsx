@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, MessageSquare, Monitor, MousePointerClick, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Flame, Globe, Heart, History, Instagram, Layers, Layout, Mail, Maximize2, MessageSquare, Minimize2, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BusinessCalendar } from './components/BusinessCalendar';
 import { BookingFlow } from './components/BookingFlow';
@@ -423,12 +423,17 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const [scale, setScale] = useState(1);
             const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
             const [editorCollapsed, setEditorCollapsed] = useState(false);
+            const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
+            const [fullscreenPromptDismissed, setFullscreenPromptDismissed] = useState(false);
+            const [isCompactEditorViewport, setIsCompactEditorViewport] = useState(false);
+            const [mobileNavCollapsed, setMobileNavCollapsed] = useState(false);
             const [bookingFilter, setBookingFilter] = useState('all');
             const [clientRecords, setClientRecords] = useState([]);
             const [clientSearch, setClientSearch] = useState('');
             const [selectedClientId, setSelectedClientId] = useState(null);
             const [clientNoteDraft, setClientNoteDraft] = useState('');
             const [showOnboarding, setShowOnboarding] = useState(false);
+            const appShellRef = useRef(null);
             const containerRef = useRef(null);
             const themePaletteRailRef = useRef(null);
             const [toast, setToast] = useState(null);
@@ -862,10 +867,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             const navItems = [
                 { id: 'overview', icon: Layout, label: 'Dashboard' },
-                { id: 'bookings', icon: Layers, label: 'My Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
+                { id: 'bookings', icon: BookOpen, label: 'My Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
                 { id: 'business', icon: Calendar, label: 'Schedule' },
                 { id: 'communications', icon: MessageSquare, label: 'Email Studio' },
-                { id: 'editor', icon: Zap, label: 'Editor' },
+                { id: 'editor', icon: Paintbrush, label: 'Editor' },
                 { id: 'clients', icon: Star, label: 'My Clients', mobileLabel: 'Clients', badge: clientMetrics.firstTimers > 0 },
                 { id: 'staff', icon: Users, label: 'Team' },
                 { id: 'profile', icon: User, label: 'Profile' }
@@ -959,14 +964,47 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 themePaletteRailRef.current.scrollBy({ left: direction * 312, behavior: 'smooth' });
             };
 
+            const isMobileEditorViewport = () => (
+                window.innerWidth < 768 || (window.innerWidth <= 1024 && window.innerHeight <= 560)
+            );
+
+            const toggleEditorFullscreen = async () => {
+                const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+                try {
+                    if (fullscreenElement) {
+                        const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+                        await exitFullscreen?.call(document);
+                        return;
+                    }
+
+                    const target = appShellRef.current || document.documentElement;
+                    const requestFullscreen = target.requestFullscreen || target.webkitRequestFullscreen;
+                    if (!requestFullscreen) {
+                        showToast('Full screen is not supported in this browser. Add the site to your home screen for the cleanest mobile view.');
+                        return;
+                    }
+                    await requestFullscreen.call(target, { navigationUI: 'hide' });
+                    setFullscreenPromptDismissed(true);
+                } catch (error) {
+                    console.error(error);
+                    showToast('Full screen could not start. Your browser may need permission first.');
+                }
+            };
+
             useEffect(() => {
                 const updateScale = () => {
                     if (!containerRef.current) return;
                     const c = containerRef.current;
-                    const dWidth = device === 'desktop' ? 1200 : 420;
-                    const dHeight = device === 'desktop' ? 820 : 1050;
-                    const padding = device === 'desktop' ? 140 : 60;
-                    setScale(Math.min((c.offsetWidth - padding) / dWidth, (c.offsetHeight - padding) / dHeight, device === 'desktop' ? 1 : 1.2));
+                    const compact = activeTab === 'editor' && isMobileEditorViewport();
+                    setIsCompactEditorViewport(compact);
+                    const dWidth = device === 'desktop' ? (compact ? 900 : 1200) : (compact ? 390 : 420);
+                    const dHeight = device === 'desktop' ? (compact ? 560 : 820) : (compact ? 720 : 1050);
+                    const paddingX = compact ? 28 : (device === 'desktop' ? 140 : 60);
+                    const paddingY = compact ? 110 : (device === 'desktop' ? 140 : 60);
+                    const maxScale = device === 'desktop' ? (compact ? 0.76 : 1) : (compact ? 0.72 : 1.2);
+                    const minScale = compact ? 0.42 : 0.2;
+                    const nextScale = Math.min((c.offsetWidth - paddingX) / dWidth, (c.offsetHeight - paddingY) / dHeight, maxScale);
+                    setScale(Math.max(minScale, nextScale));
                 };
 
                 updateScale();
@@ -982,7 +1020,25 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     clearTimeout(t3); 
                     window.removeEventListener('resize', updateScale); 
                 };
-            }, [device, activeTab, view, sidebarCollapsed, editorCollapsed]);
+            }, [device, activeTab, view, sidebarCollapsed, editorCollapsed, isEditorFullscreen]);
+
+            useEffect(() => {
+                const updateFullscreenState = () => {
+                    setIsEditorFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
+                };
+                updateFullscreenState();
+                document.addEventListener('fullscreenchange', updateFullscreenState);
+                document.addEventListener('webkitfullscreenchange', updateFullscreenState);
+                return () => {
+                    document.removeEventListener('fullscreenchange', updateFullscreenState);
+                    document.removeEventListener('webkitfullscreenchange', updateFullscreenState);
+                };
+            }, []);
+
+            useEffect(() => {
+                if (isEditorFullscreen) return;
+                setMobileNavCollapsed(false);
+            }, [isEditorFullscreen]);
 
             const syncCurrentAccount = async (signedInUser) => {
                 if (!isFirebaseConfigured || !signedInUser?.email) return;
@@ -1846,7 +1902,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             return (
                 <div
-                    className={`flex h-screen bg-[#FBFBFB] text-black overflow-hidden font-sans relative ${backendSkinEnabled ? `backend-skin backend-skin-${backendSkinMode}` : ''}`}
+                    ref={appShellRef}
+                    className={`flex h-screen bg-[#FBFBFB] text-black overflow-hidden font-sans relative ${isEditorFullscreen ? 'mobile-editor-fullscreen-active' : ''} ${backendSkinEnabled ? `backend-skin backend-skin-${backendSkinMode}` : ''}`}
                     style={backendSkinEnabled ? backendSkinVars : undefined}
                 >
                 {backendSkinEnabled && <div className="backend-skin-ambient pointer-events-none absolute inset-0 z-0" />}
@@ -1936,8 +1993,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
                 </button>
 
-                <nav className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] bg-white/95 backdrop-blur-xl border-t border-neutral-200 shadow-[0_-16px_40px_-30px_rgba(0,0,0,0.45)]">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 py-3">
+                <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] bg-white/95 backdrop-blur-xl border-t border-neutral-200 shadow-[0_-16px_40px_-30px_rgba(0,0,0,0.45)] transition-all duration-500 ${isEditorFullscreen && mobileNavCollapsed ? 'mobile-bottom-nav-collapsed' : ''}`}>
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 py-3 justify-around">
                         {navItems.map(item => {
                             const IconCmp = item.icon;
                             const isActive = activeTab === item.id;
@@ -1945,11 +2002,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 <button
                                     key={item.id}
                                     data-tour={`mobile-nav-${item.id}`}
+                                    aria-label={item.label}
                                     onClick={() => setActiveTab(item.id)}
-                                    className={`relative min-w-[72px] h-14 rounded-lg flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-black text-white shadow-lg' : 'text-neutral-400 bg-neutral-50'}`}
+                                    className={`relative min-w-[56px] h-14 rounded-lg flex items-center justify-center transition-all ${isActive ? 'bg-black text-white shadow-lg scale-[1.03]' : 'text-neutral-400 bg-neutral-50'}`}
                                 >
-                                    <IconCmp size={15} strokeWidth={2.5} />
-                                    <span className="truncate max-w-[62px]">{item.mobileLabel || item.label.split(' ')[0]}</span>
+                                    <IconCmp size={20} strokeWidth={2.35} />
                                     {item.badge && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-[#39FF14]" />}
                                 </button>
                             );
@@ -2014,7 +2071,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-3">
                                     {[
                                         { label: 'Bookings', value: dashboardPortfolio.activeBookings, hint: `${dashboardPortfolio.confirmed} confirmed`, icon: CalendarCheck, dark: true },
                                         { label: 'Needs Review', value: dashboardPortfolio.needsAttention, hint: `${dashboardPortfolio.pending} requests / ${dashboardPortfolio.waitlist} waitlist`, icon: Bell },
@@ -2519,7 +2576,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </button>
                             </header>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                            <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                                 {[
                                     { label: 'Client Profiles', value: clientMetrics.total, hint: clientMetrics.total ? 'Live records' : 'Ready for data', icon: Users },
                                     { label: 'Regulars', value: clientMetrics.regulars, hint: 'Auto + VIP', icon: Star },
@@ -2821,7 +2878,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </button>
                             </header>
 
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                                 {[
                                     { label: 'Team Members', value: staffList.length, hint: 'Active roster', icon: Users },
                                     { label: 'Admins', value: staffList.filter(staff => staff.role === 'owner' || staff.role === 'admin').length, hint: 'Full access', icon: ShieldCheck },
@@ -2983,14 +3040,52 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 <p className="text-xs text-white/65 leading-relaxed">Turn your phone sideways for the live preview workspace. You can still edit settings here in portrait.</p>
                             </div>
                         </div>
-                        <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'w-0 opacity-0' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
+                        {!fullscreenPromptDismissed && !isEditorFullscreen && (
+                            <div className="mobile-editor-fullscreen-prompt md:hidden absolute left-4 right-4 top-4 z-[155] rounded-lg border border-black/10 bg-white text-black p-4 shadow-2xl items-start gap-3">
+                                <Maximize2 size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1">Go Full Screen</p>
+                                    <p className="text-xs text-neutral-500 leading-relaxed">Tap full screen after rotating to hide the browser bar and give the editor more room.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={toggleEditorFullscreen}
+                                    className="h-10 px-4 rounded-lg bg-black text-white text-[9px] font-bold uppercase tracking-widest shrink-0"
+                                >
+                                    Full
+                                </button>
+                            </div>
+                        )}
+                        {isEditorFullscreen && (
+                            <div className="mobile-editor-immersive-controls md:hidden fixed right-3 top-3 z-[180] flex items-center gap-2 rounded-full bg-black/75 p-1.5 shadow-2xl backdrop-blur-xl border border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileNavCollapsed(prev => !prev)}
+                                    className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${mobileNavCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
+                                    aria-pressed={mobileNavCollapsed}
+                                >
+                                    {mobileNavCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+                                    Nav
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditorCollapsed(prev => !prev)}
+                                    className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${editorCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
+                                    aria-pressed={editorCollapsed}
+                                >
+                                    {editorCollapsed ? <PanelRightOpen size={14} /> : <PanelRightClose size={14} />}
+                                    Panel
+                                </button>
+                            </div>
+                        )}
+                        <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'mobile-editor-panel-collapsed w-0 opacity-0 pointer-events-none' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
                         {!editorCollapsed && (
                             <>
-                            <header className="p-5 sm:p-6 md:p-10 border-b border-neutral-50 flex flex-col md:flex-row items-start md:items-center justify-between flex-shrink-0 gap-4 md:gap-6">
+                            <header className="editor-panel-header p-5 sm:p-6 md:p-10 border-b border-neutral-50 flex flex-col lg:flex-row items-start lg:items-center justify-between flex-shrink-0 gap-4 md:gap-6">
                                 <h2 className="text-3xl md:text-4xl font-serif font-bold tracking-tighter text-black">Editor</h2>
-                                <div className="flex bg-neutral-100 p-1.5 rounded-full overflow-x-auto w-full md:w-auto no-scrollbar">
+                                <div className="editor-tab-rail flex bg-neutral-100 p-1.5 rounded-full overflow-x-auto w-full lg:w-auto no-scrollbar">
                                 {['identity', 'themes', 'visuals', 'features', 'copy'].map(tab => (
-                                    <button key={tab} onClick={() => setEditorTab(tab)} className={`px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${editorTab === tab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'}`}>{tab}</button>
+                                    <button key={tab} onClick={() => setEditorTab(tab)} className={`editor-tab-button flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${editorTab === tab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'}`}>{tab}</button>
                                 ))}
                                 </div>
                             </header>
@@ -3485,15 +3580,21 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                         {/* LIVE SIMULATOR ENVIRONMENT */}
                         <div ref={containerRef} className="mobile-editor-preview flex-1 bg-[#F5F5F7] hidden md:flex flex-col items-center justify-center relative overflow-hidden p-6 md:p-8">
-                        <div className="absolute top-8 flex flex-col md:flex-row items-center gap-6 md:gap-12 z-50">
+                        <div className="absolute top-4 md:top-8 flex flex-col md:flex-row items-center gap-3 md:gap-12 z-50">
                             <div className="flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
                                 <button onClick={() => setDevice('desktop')} className={`px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
                                 <button onClick={() => setDevice('mobile')} className={`px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'mobile' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>Mobile</button>
                             </div>
-                            <button onClick={() => setPreviewKey(prev => prev + 1)} className="p-3 rounded-full bg-white text-neutral-400 hover:text-black shadow-lg border border-white/80 transition-all hidden md:block"><RefreshCw size={16}/></button>
+                            <div className="flex items-center gap-2">
+                                <button onClick={toggleEditorFullscreen} className="mobile-editor-fullscreen-action hidden h-11 px-4 rounded-full bg-black text-white shadow-lg border border-black transition-all items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-widest">
+                                    {isEditorFullscreen ? <Minimize2 size={15}/> : <Maximize2 size={15}/>}
+                                    {isEditorFullscreen ? 'Exit' : 'Full Screen'}
+                                </button>
+                                <button onClick={() => setPreviewKey(prev => prev + 1)} className="p-3 rounded-full bg-white text-neutral-400 hover:text-black shadow-lg border border-white/80 transition-all hidden md:block"><RefreshCw size={16}/></button>
+                            </div>
                         </div>
 
-                        <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }} className={`transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) relative flex flex-col bg-white shadow-[0_100px_200px_-50px_rgba(0,0,0,0.15)] ${device === 'desktop' ? 'w-[1200px] h-[820px] rounded-lg border-[24px] border-black overflow-hidden' : 'w-[420px] h-[950px] md:h-[1050px] rounded-[5rem] md:rounded-[6rem] border-[16px] md:border-[20px] border-black overflow-hidden'}`}>
+                        <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }} className={`transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) relative flex flex-col bg-white shadow-[0_100px_200px_-50px_rgba(0,0,0,0.15)] ${device === 'desktop' ? (isCompactEditorViewport ? 'w-[900px] h-[560px] rounded-lg border-[16px] border-black overflow-hidden' : 'w-[1200px] h-[820px] rounded-lg border-[24px] border-black overflow-hidden') : (isCompactEditorViewport ? 'w-[390px] h-[720px] rounded-[4rem] border-[14px] border-black overflow-hidden' : 'w-[420px] h-[950px] md:h-[1050px] rounded-[5rem] md:rounded-[6rem] border-[16px] md:border-[20px] border-black overflow-hidden')}`}>
                             
                             {device === 'desktop' && (
                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-6 bg-black rounded-b-3xl z-[100] flex items-center justify-center">
@@ -3544,7 +3645,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             </div>
                         </header>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                             {[
                                 { label: 'Needs Review', value: bookingStats.attention, hint: 'Pending + waitlist', icon: Bell },
                                 { label: 'Confirmed', value: bookingStats.confirmed, hint: 'Approved visits', icon: CheckCircle2 },

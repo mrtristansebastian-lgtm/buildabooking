@@ -219,6 +219,17 @@ const getRectCenter = (rect) => ({
   y: rect.top + rect.height / 2
 });
 
+const isMobileTourViewport = () => (
+  typeof window !== 'undefined' &&
+  (window.innerWidth < 768 || (window.innerWidth <= 1024 && window.innerHeight <= 560))
+);
+
+const getTourNavTarget = (tab) => {
+  const mobileTarget = document.querySelector(`[data-tour="mobile-nav-${tab}"]`);
+  const desktopTarget = document.querySelector(`[data-tour="nav-${tab}"]`);
+  return isMobileTourViewport() ? (mobileTarget || desktopTarget) : (desktopTarget || mobileTarget);
+};
+
 const useTourSound = () => {
   const audioRef = useRef(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -277,12 +288,17 @@ const useTourSound = () => {
 
 const getPopoverStyle = (spotlight) => {
   const isMobile = window.innerWidth < 640;
-  const width = isMobile ? window.innerWidth - 32 : 360;
-  const height = isMobile ? 360 : 300;
+  const isMobileTour = isMobileTourViewport();
+  const width = isMobile ? window.innerWidth - 32 : isMobileTour ? Math.min(340, window.innerWidth - 32) : 360;
+  const height = isMobile ? 360 : isMobileTour ? 260 : 300;
   const enoughRight = spotlight.left + spotlight.width + width + 28 < window.innerWidth;
   const enoughLeft = spotlight.left - width - 28 > 0;
   const left = isMobile
     ? 16
+    : isMobileTour
+      ? spotlight.left + spotlight.width / 2 > window.innerWidth / 2
+        ? 16
+        : window.innerWidth - width - 16
     : enoughRight
       ? spotlight.left + spotlight.width + 24
       : enoughLeft
@@ -293,9 +309,11 @@ const getPopoverStyle = (spotlight) => {
   const below = spotlight.top + spotlight.height + 18;
   const top = isMobile
     ? clamp(below, 16, window.innerHeight - height - 16)
+    : isMobileTour
+      ? clamp(spotlight.top, 12, window.innerHeight - height - 86)
     : clamp(spotlight.top, 20, window.innerHeight - height - 20);
 
-  return { left, top, width, maxHeight: isMobile ? 'calc(100vh - 32px)' : undefined };
+  return { left, top, width, maxHeight: isMobile || isMobileTour ? 'calc(100vh - 32px)' : undefined };
 };
 
 export function OnboardingShowroom({
@@ -360,7 +378,7 @@ export function OnboardingShowroom({
 
     const updateCue = () => {
       if (cancelled) return;
-      const navTarget = document.querySelector(`[data-tour="nav-${scene.tab}"]`) || document.querySelector(`[data-tour="mobile-nav-${scene.tab}"]`);
+      const navTarget = getTourNavTarget(scene.tab);
       const contentTarget = document.querySelector(`[data-tour="${scene.target}"]`);
       if (!navTarget) {
         timer = window.setTimeout(updateCue, 100);
@@ -419,7 +437,7 @@ export function OnboardingShowroom({
     let cancelled = false;
     let timer = null;
     let retryTimer = null;
-    const padding = window.innerWidth < 640 ? 10 : 16;
+    const padding = isMobileTourViewport() ? 10 : 16;
 
     const updateFocus = () => {
       if (cancelled) return;

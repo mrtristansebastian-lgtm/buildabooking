@@ -302,7 +302,7 @@ import { getLocalDateStr } from '../utils/dates';
                                 ))}
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4">
                             {scheduleMetricCards.map((item, index) => {
                                 const IconCmp = item.icon;
                                 const isDark = item.tone === 'dark';
