@@ -1089,9 +1089,9 @@ const shouldUseRedirectGoogleAuth = () => {
                     setIsCompactEditorViewport(compact);
                     const dWidth = device === 'desktop' ? (compact ? 980 : 1200) : (compact ? 430 : 420);
                     const dHeight = device === 'desktop' ? (compact ? 470 : 820) : (compact ? 520 : 1050);
-                    const paddingX = compact ? 18 : (device === 'desktop' ? 140 : 60);
-                    const paddingY = compact ? (mobileNavCollapsed ? 74 : 125) : (device === 'desktop' ? 140 : 60);
-                    const maxScale = device === 'desktop' ? (compact ? 0.95 : 1) : (compact ? 0.88 : 1.2);
+                    const paddingX = compact ? 18 : (device === 'desktop' ? 220 : 110);
+                    const paddingY = compact ? (mobileNavCollapsed ? 74 : 125) : (device === 'desktop' ? 220 : 150);
+                    const maxScale = device === 'desktop' ? (compact ? 0.95 : 0.78) : (compact ? 0.88 : 0.72);
                     const minScale = compact ? (device === 'desktop' ? 0.39 : 0.42) : 0.2;
                     const nextScale = Math.min((c.offsetWidth - paddingX) / dWidth, (c.offsetHeight - paddingY) / dHeight, maxScale);
                     setScale(Math.max(minScale, nextScale));
