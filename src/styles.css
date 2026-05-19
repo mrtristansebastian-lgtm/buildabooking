@@ -375,6 +375,13 @@ body {
             pointer-events: none !important;
         }
 
+        .mobile-editor-shell,
+        .mobile-editor-panel,
+        .mobile-editor-preview {
+            min-width: 0;
+            min-height: 0;
+        }
+
         @media (max-width: 767px) and (orientation: portrait) {
             .mobile-editor-rotate-prompt {
                 display: flex;
@@ -385,15 +392,53 @@ body {
             .mobile-editor-panel {
                 width: 100% !important;
             }
+            .editor-panel-header {
+                padding: 1.15rem 1.25rem 0.95rem !important;
+                gap: 0.75rem !important;
+                align-items: stretch !important;
+            }
+            .editor-panel-header h2 {
+                font-size: 2.45rem !important;
+                line-height: 0.9 !important;
+            }
+            .editor-tab-rail {
+                width: 100% !important;
+                max-width: 100% !important;
+                border-radius: 1.35rem !important;
+                scroll-snap-type: x mandatory;
+            }
+            .editor-tab-button {
+                flex: 1 1 0 !important;
+                min-width: 0;
+                scroll-snap-align: start;
+                padding: 0.75rem 0.5rem !important;
+                font-size: 0.5rem !important;
+                letter-spacing: 0.12em !important;
+            }
+            .editor-publish-footer {
+                padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom)) !important;
+            }
+            .editor-publish-button {
+                min-height: 3.35rem !important;
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+                font-size: 0.58rem !important;
+                letter-spacing: 0.34em !important;
+            }
         }
 
         @media (max-width: 767px) and (orientation: landscape) {
             .mobile-editor-shell {
                 flex-direction: row;
+                height: 100%;
+                max-height: 100%;
+                overflow: hidden;
+                overscroll-behavior: none;
             }
             .mobile-editor-panel {
                 width: 46vw !important;
                 min-width: 320px;
+                flex: 0 0 46vw;
             }
             .editor-panel-header {
                 padding: 1.25rem !important;
@@ -409,23 +454,46 @@ body {
                 padding-left: 1rem !important;
                 padding-right: 1rem !important;
             }
+            .editor-panel-scroll {
+                padding: 1.1rem 1.25rem !important;
+            }
+            .editor-publish-footer {
+                padding: 0.9rem 1.25rem !important;
+            }
+            .editor-publish-button {
+                min-height: 3.15rem !important;
+                padding-top: 0.85rem !important;
+                padding-bottom: 0.85rem !important;
+                font-size: 0.58rem !important;
+                letter-spacing: 0.34em !important;
+            }
             .mobile-editor-panel.mobile-editor-panel-collapsed {
                 width: 0 !important;
                 min-width: 0 !important;
+                flex: 0 0 0 !important;
                 border-width: 0 !important;
             }
             .mobile-editor-preview {
                 display: flex !important;
                 justify-content: flex-start !important;
+                align-items: center !important;
+                flex: 1 1 auto !important;
                 padding-top: 4rem !important;
                 padding-bottom: 5.25rem !important;
-            }
-            .mobile-editor-install-prompt {
-                display: flex;
             }
             .mobile-editor-install-action,
             .mobile-editor-compact-controls {
                 display: flex !important;
+            }
+            .mobile-editor-compact-controls {
+                right: 0.9rem !important;
+                bottom: 0.9rem !important;
+            }
+            .mobile-editor-compact-controls button {
+                height: 2.15rem !important;
+                padding-left: 0.7rem !important;
+                padding-right: 0.7rem !important;
+                letter-spacing: 0.12em !important;
             }
             .mobile-editor-preview-toolbar {
                 top: 0.75rem !important;
@@ -476,10 +544,15 @@ body {
             }
             .mobile-editor-shell {
                 flex-direction: row;
+                height: 100%;
+                max-height: 100%;
+                overflow: hidden;
+                overscroll-behavior: none;
             }
             .mobile-editor-panel {
                 width: 46vw !important;
                 min-width: 320px;
+                flex: 0 0 46vw;
             }
             .editor-panel-header {
                 padding: 1.25rem !important;
@@ -495,26 +568,49 @@ body {
                 padding-left: 1rem !important;
                 padding-right: 1rem !important;
             }
+            .editor-panel-scroll {
+                padding: 1.1rem 1.25rem !important;
+            }
+            .editor-publish-footer {
+                padding: 0.9rem 1.25rem !important;
+            }
+            .editor-publish-button {
+                min-height: 3.15rem !important;
+                padding-top: 0.85rem !important;
+                padding-bottom: 0.85rem !important;
+                font-size: 0.58rem !important;
+                letter-spacing: 0.34em !important;
+            }
             .mobile-editor-panel.mobile-editor-panel-collapsed {
                 width: 0 !important;
                 min-width: 0 !important;
+                flex: 0 0 0 !important;
                 border-width: 0 !important;
             }
             .mobile-editor-preview {
                 display: flex !important;
                 justify-content: flex-start !important;
+                align-items: center !important;
+                flex: 1 1 auto !important;
                 padding-top: 4rem !important;
                 padding-bottom: 5.25rem !important;
             }
             .mobile-editor-rotate-prompt {
                 display: none !important;
             }
-            .mobile-editor-install-prompt {
-                display: flex;
-            }
             .mobile-editor-install-action,
             .mobile-editor-compact-controls {
                 display: flex !important;
+            }
+            .mobile-editor-compact-controls {
+                right: 0.9rem !important;
+                bottom: 0.9rem !important;
+            }
+            .mobile-editor-compact-controls button {
+                height: 2.15rem !important;
+                padding-left: 0.7rem !important;
+                padding-right: 0.7rem !important;
+                letter-spacing: 0.12em !important;
             }
             .mobile-editor-preview-toolbar {
                 top: 0.75rem !important;

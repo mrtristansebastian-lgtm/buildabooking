@@ -477,7 +477,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const [scale, setScale] = useState(1);
             const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
             const [editorCollapsed, setEditorCollapsed] = useState(false);
-            const [installPromptDismissed, setInstallPromptDismissed] = useState(false);
+            const [, setInstallPromptDismissed] = useState(false);
             const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
             const [isCompactEditorViewport, setIsCompactEditorViewport] = useState(false);
             const [mobileNavCollapsed, setMobileNavCollapsed] = useState(false);
@@ -488,6 +488,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const [clientNoteDraft, setClientNoteDraft] = useState('');
             const [showOnboarding, setShowOnboarding] = useState(false);
             const containerRef = useRef(null);
+            const editorContentRef = useRef(null);
             const themePaletteRailRef = useRef(null);
             const [toast, setToast] = useState(null);
             
@@ -1064,9 +1065,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     const dWidth = device === 'desktop' ? (compact ? 980 : 1200) : (compact ? 430 : 420);
                     const dHeight = device === 'desktop' ? (compact ? 470 : 820) : (compact ? 520 : 1050);
                     const paddingX = compact ? 18 : (device === 'desktop' ? 140 : 60);
-                    const paddingY = compact ? 94 : (device === 'desktop' ? 140 : 60);
+                    const paddingY = compact ? 125 : (device === 'desktop' ? 140 : 60);
                     const maxScale = device === 'desktop' ? (compact ? 0.95 : 1) : (compact ? 0.88 : 1.2);
-                    const minScale = compact ? (device === 'desktop' ? 0.44 : 0.47) : 0.2;
+                    const minScale = compact ? (device === 'desktop' ? 0.39 : 0.42) : 0.2;
                     const nextScale = Math.min((c.offsetWidth - paddingX) / dWidth, (c.offsetHeight - paddingY) / dHeight, maxScale);
                     setScale(Math.max(minScale, nextScale));
                 };
@@ -1085,6 +1086,39 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     window.removeEventListener('resize', updateScale); 
                 };
             }, [device, activeTab, view, sidebarCollapsed, editorCollapsed]);
+
+            useEffect(() => {
+                if (activeTab !== 'editor') return;
+                let lastLandscape = window.matchMedia('(orientation: landscape)').matches;
+
+                const resetMobileEditorPosition = () => {
+                    setEditorCollapsed(false);
+                    setMobileNavCollapsed(false);
+                    requestAnimationFrame(() => {
+                        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                        document.documentElement.scrollLeft = 0;
+                        document.body.scrollLeft = 0;
+                        containerRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                        editorContentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                    });
+                };
+
+                const handleOrientationSettle = () => {
+                    window.setTimeout(() => {
+                        const nextLandscape = window.matchMedia('(orientation: landscape)').matches;
+                        if (nextLandscape === lastLandscape) return;
+                        lastLandscape = nextLandscape;
+                        resetMobileEditorPosition();
+                    }, 90);
+                };
+
+                window.addEventListener('orientationchange', handleOrientationSettle);
+                window.addEventListener('resize', handleOrientationSettle);
+                return () => {
+                    window.removeEventListener('orientationchange', handleOrientationSettle);
+                    window.removeEventListener('resize', handleOrientationSettle);
+                };
+            }, [activeTab]);
 
             useEffect(() => {
                 const handleBeforeInstallPrompt = (event) => {
@@ -3248,49 +3282,6 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                     {activeTab === 'editor' && (
                     <div className="flex-1 flex overflow-hidden mobile-editor-shell bg-[#F5F5F7]">
-                        <div className="mobile-editor-rotate-prompt md:hidden absolute inset-x-4 top-4 z-[150] rounded-lg border border-black/10 bg-black text-white p-4 shadow-2xl items-start gap-3">
-                            <RefreshCw size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mb-1">Rotate For Editor</p>
-                                <p className="text-xs text-white/65 leading-relaxed">Turn your phone sideways for the live preview workspace. You can still edit settings here in portrait.</p>
-                            </div>
-                        </div>
-                        {!installPromptDismissed && (
-                            <div className="mobile-editor-install-prompt md:hidden absolute left-4 right-4 top-4 z-[155] rounded-lg border border-black/10 bg-white text-black p-4 shadow-2xl items-start gap-3">
-                                <Share2 size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1">Add To Home Screen</p>
-                                    <p className="text-xs text-neutral-500 leading-relaxed">Open from your home screen for the cleanest editor view without browser bars.</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddToHomeScreen}
-                                    className="h-10 px-4 rounded-lg bg-black text-white text-[9px] font-bold uppercase tracking-widest shrink-0"
-                                >
-                                    Open Share
-                                </button>
-                            </div>
-                        )}
-                        <div className="mobile-editor-compact-controls md:hidden fixed right-3 bottom-24 z-[180] items-center gap-2 rounded-full bg-black/80 p-1.5 shadow-2xl backdrop-blur-xl border border-white/10">
-                            <button
-                                type="button"
-                                onClick={() => setEditorCollapsed(prev => !prev)}
-                                className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${editorCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
-                                aria-pressed={editorCollapsed}
-                            >
-                                {editorCollapsed ? <PanelRightOpen size={14} /> : <PanelRightClose size={14} />}
-                                Panel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setMobileNavCollapsed(prev => !prev)}
-                                className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${mobileNavCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
-                                aria-pressed={mobileNavCollapsed}
-                            >
-                                {mobileNavCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-                                Nav
-                            </button>
-                        </div>
                         <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'mobile-editor-panel-collapsed w-0 opacity-0 pointer-events-none' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
                         {!editorCollapsed && (
                             <>
@@ -3303,7 +3294,16 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </div>
                             </header>
 
-                            <div className="flex-1 overflow-y-auto p-5 sm:p-6 md:p-12 space-y-10 md:space-y-12 no-scrollbar">
+                            <div ref={editorContentRef} className="editor-panel-scroll flex-1 overflow-y-auto p-5 sm:p-6 md:p-12 space-y-8 md:space-y-12 no-scrollbar">
+                                <div className="mobile-editor-portrait-guides md:hidden space-y-3">
+                                    <div className="mobile-editor-rotate-prompt rounded-lg border border-black/10 bg-black text-white p-4 shadow-2xl items-start gap-3">
+                                        <RefreshCw size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest mb-1">Rotate For Editor</p>
+                                            <p className="text-xs text-white/65 leading-relaxed">Turn your phone sideways for the live preview workspace. You can still edit settings here in portrait.</p>
+                                        </div>
+                                    </div>
+                                </div>
                                 {editorTab === 'identity' && (
                                 <div className="space-y-10 animate-in fade-in duration-700">
                                     <div className="space-y-5">
@@ -3810,8 +3810,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 )}
                             </div>
 
-                            <div className="p-5 sm:p-6 md:p-8 border-t border-neutral-50 flex-shrink-0 bg-white">
-                                <ProButton onClick={saveSettings} variant="primary" className="w-full py-7 text-[10px] md:text-[11px] uppercase shadow-2xl shadow-black/20">Publish To Web</ProButton>
+                            <div className="editor-publish-footer p-4 sm:p-5 md:p-8 border-t border-neutral-50 flex-shrink-0 bg-white">
+                                <ProButton onClick={saveSettings} variant="primary" className="editor-publish-button w-full py-4 sm:py-5 md:py-7 text-[9px] md:text-[11px] uppercase shadow-2xl shadow-black/20">Publish To Web</ProButton>
                             </div>
                             </>
                         )}
@@ -3835,6 +3835,27 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 </button>
                                 <button onClick={() => setPreviewKey(prev => prev + 1)} className="mobile-editor-refresh-action p-3 rounded-full bg-white text-neutral-400 hover:text-black shadow-lg border border-white/80 transition-all hidden md:block"><RefreshCw size={16}/></button>
                             </div>
+                        </div>
+
+                        <div className="mobile-editor-compact-controls md:hidden absolute right-4 bottom-4 z-[180] items-center gap-2 rounded-full bg-black/80 p-1.5 shadow-2xl backdrop-blur-xl border border-white/10">
+                            <button
+                                type="button"
+                                onClick={() => setEditorCollapsed(prev => !prev)}
+                                className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${editorCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
+                                aria-pressed={editorCollapsed}
+                            >
+                                {editorCollapsed ? <PanelRightOpen size={14} /> : <PanelRightClose size={14} />}
+                                Panel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMobileNavCollapsed(prev => !prev)}
+                                className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${mobileNavCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
+                                aria-pressed={mobileNavCollapsed}
+                            >
+                                {mobileNavCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+                                Nav
+                            </button>
                         </div>
 
                         <div style={{ transform: `scale(${scale})`, transformOrigin: isCompactEditorViewport ? 'top center' : 'center center' }} className={`transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) relative flex flex-col shrink-0 bg-white shadow-[0_100px_200px_-50px_rgba(0,0,0,0.15)] ${device === 'desktop' ? (isCompactEditorViewport ? 'w-[980px] h-[470px] rounded-lg border-[14px] border-black overflow-hidden' : 'w-[1200px] h-[820px] rounded-lg border-[24px] border-black overflow-hidden') : (isCompactEditorViewport ? 'w-[430px] h-[520px] rounded-[3.25rem] border-[14px] border-black overflow-hidden' : 'w-[420px] h-[950px] md:h-[1050px] rounded-[5rem] md:rounded-[6rem] border-[16px] md:border-[20px] border-black overflow-hidden')}`}>
