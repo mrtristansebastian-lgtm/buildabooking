@@ -2247,13 +2247,13 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     ].map(metric => {
                                     const IconCmp = metric.icon;
                                     return (
-                                        <div key={metric.label} className={`rounded-lg border p-5 ${metric.dark ? 'bg-black text-white border-black' : 'bg-white border-neutral-100'}`}>
+                                        <div key={metric.label} className={`rounded-lg border p-5 ${metric.dark ? 'bg-[#39FF14] text-black border-transparent shadow-xl shadow-[#39FF14]/20' : 'bg-white border-neutral-100'}`}>
                                             <div className="flex items-start justify-between mb-7">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${metric.dark ? 'bg-white/10 text-[#39FF14]' : 'bg-neutral-100 text-black'}`}><IconCmp size={17}/></div>
-                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${metric.dark ? 'bg-white/10 text-white/65' : 'bg-neutral-100 text-neutral-500'}`}>{metric.hint}</span>
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${metric.dark ? 'bg-black/10 text-black' : 'bg-neutral-100 text-black'}`}><IconCmp size={17}/></div>
+                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${metric.dark ? 'bg-black/10 text-black/65' : 'bg-neutral-100 text-neutral-500'}`}>{metric.hint}</span>
                                             </div>
-                                            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 ${metric.dark ? 'text-white/45' : 'text-neutral-400'}`}>{metric.label}</p>
-                                            <p className={`metric-value text-3xl md:text-4xl font-bold tracking-tight ${metric.dark ? 'text-white' : 'text-black'}`}>{metric.value}</p>
+                                            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 ${metric.dark ? 'text-black/55' : 'text-neutral-400'}`}>{metric.label}</p>
+                                            <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight text-black">{metric.value}</p>
                                         </div>
                                     );
                                 })}
