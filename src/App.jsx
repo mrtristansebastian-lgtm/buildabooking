@@ -452,6 +452,17 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
   color
 });
 
+const guestModeStorageKey = 'build-a-booking-guest-mode';
+const authRedirectStorageKey = 'build-a-booking-auth-return';
+
+const shouldUseRedirectGoogleAuth = () => {
+  if (typeof window === 'undefined') return false;
+  const userAgent = navigator.userAgent || '';
+  const isTouchMobile = window.matchMedia?.('(max-width: 767px), (pointer: coarse)')?.matches;
+  const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS/i.test(userAgent);
+  return Boolean(isTouchMobile || isMobileBrowser);
+};
+
 // --- Main App Component ---
         export default function App() {
             const [user, setUser] = useState(null);
@@ -464,6 +475,14 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const [authForm, setAuthForm] = useState({ email: '', password: '' });
             const [authError, setAuthError] = useState('');
             const [authPanelOpen, setAuthPanelOpen] = useState(false);
+            const [authBusy, setAuthBusy] = useState(false);
+            const [guestMode, setGuestMode] = useState(() => {
+                try {
+                    return localStorage.getItem(guestModeStorageKey) === 'true';
+                } catch {
+                    return false;
+                }
+            });
             const [publicSlug] = useState(getPublicBookingSlug);
             const [publicWorkspace, setPublicWorkspace] = useState(null);
             const [publicLoading, setPublicLoading] = useState(false);
@@ -527,15 +546,16 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             const bookingPageUrl = useMemo(() => `${window.location.origin}/book/${settings.slug || 'studio'}`, [settings.slug]);
             const referralUrl = useMemo(() => `${window.location.origin}/ref/${user?.uid?.substring(0,6) || '10X'}`, [user?.uid]);
             const workspaceOwnerId = activeWorkspaceOwnerId || user?.uid || '';
+            const isGuestWorkspace = Boolean(guestMode && !user && !publicSlug);
             const activeWorkspaceGrant = useMemo(
                 () => workspaceAccess.find(grant => grant.ownerId === workspaceOwnerId),
                 [workspaceAccess, workspaceOwnerId]
             );
             const workspaceRole = user
                 ? (workspaceOwnerId === user.uid ? 'owner' : activeWorkspaceGrant?.role || 'staff')
-                : 'demo';
+                : (isGuestWorkspace ? 'guest' : 'demo');
             const isWorkspaceOwner = Boolean(user && workspaceOwnerId === user.uid);
-            const canManageWorkspace = workspaceRole === 'owner' || workspaceRole === 'admin';
+            const canManageWorkspace = isGuestWorkspace || workspaceRole === 'owner' || workspaceRole === 'admin';
             const canManageTeam = canManageWorkspace;
             const canSetupWorkspace = !isFirebaseConfigured || canManageWorkspace;
             const onboardingStorageKey = useMemo(
@@ -896,7 +916,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             }, [selectedClient?.id]);
 
             useEffect(() => {
-                if (publicSlug || loading || view !== 'dashboard' || !canSetupWorkspace) return;
+                if (publicSlug || loading || view !== 'dashboard' || !canSetupWorkspace || isGuestWorkspace) return;
                 const workspaceAlreadyHandled = Boolean(settings.onboarding?.completedAt || settings.onboarding?.skippedAt);
                 const locallyHandled = localStorage.getItem(onboardingStorageKey) === 'done';
                 if (workspaceAlreadyHandled || locallyHandled || showOnboarding) return;
@@ -911,6 +931,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 loading,
                 view,
                 canSetupWorkspace,
+                isGuestWorkspace,
                 settings.onboarding?.completedAt,
                 settings.onboarding?.skippedAt,
                 onboardingStorageKey,
@@ -1193,6 +1214,12 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 const initAuth = async () => {
                     try {
                         if (isFirebaseConfigured) {
+                            if (!publicSlug) {
+                                await FirebaseSDK.getRedirectResult(auth).catch((error) => {
+                                    console.error(error);
+                                    setAuthError(error.message || 'Google sign-in could not finish.');
+                                });
+                            }
                             if (initialAuthToken) await FirebaseSDK.signInWithCustomToken(auth, initialAuthToken);
                             else if (publicSlug) await FirebaseSDK.signInAnonymously(auth);
                             else setLoading(false);
@@ -1212,10 +1239,19 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     return FirebaseSDK.onAuthStateChanged(auth, (u) => {
                         setUser(u);
                         setLoading(false);
+                        setAuthBusy(false);
                         if (!u) {
                             setWorkspaceAccess([]);
                             setActiveWorkspaceOwnerId('');
                             return;
+                        }
+                        setGuestMode(false);
+                        localStorage.removeItem(guestModeStorageKey);
+                        if (sessionStorage.getItem(authRedirectStorageKey) === 'dashboard') {
+                            sessionStorage.removeItem(authRedirectStorageKey);
+                            setAuthPanelOpen(false);
+                            setView('dashboard');
+                            showToast('Signed in with Google');
                         }
                         if (!publicSlug) {
                             syncCurrentAccount(u).catch(console.error);
@@ -1226,10 +1262,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             }, [publicSlug]);
 
             useEffect(() => {
-                if (isFirebaseConfigured && !publicSlug && view === 'dashboard' && !user) {
+                if (isFirebaseConfigured && !publicSlug && view === 'dashboard' && !user && !guestMode) {
                     setView('landing');
                 }
-            }, [view, user, publicSlug]);
+            }, [view, user, publicSlug, guestMode]);
 
             useEffect(() => {
                 if (!publicSlug) return;
@@ -1682,13 +1718,26 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 }
             };
             const openDashboard = () => {
-                if (!isFirebaseConfigured || user) {
+                if (!isFirebaseConfigured || user || guestMode) {
                     setView('dashboard');
                     return;
                 }
                 setAuthMode('signin');
                 setAuthPanelOpen(true);
-                setAuthError('Sign in first to manage your business workspace.');
+                setAuthError('');
+            };
+            const openAuthPanel = (mode = 'signin') => {
+                setAuthMode(mode);
+                setAuthError('');
+                setAuthPanelOpen(true);
+            };
+            const openGuestDashboard = () => {
+                setGuestMode(true);
+                localStorage.setItem(guestModeStorageKey, 'true');
+                setAuthPanelOpen(false);
+                setAuthError('');
+                setView('dashboard');
+                showToast('Guest workspace opened.');
             };
             const handleAuthSubmit = async (event) => {
                 event.preventDefault();
@@ -1697,18 +1746,23 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     return;
                 }
                 setAuthError('');
+                setAuthBusy(true);
                 try {
                     if (authMode === 'signup') {
                         await FirebaseSDK.createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
                     } else {
                         await FirebaseSDK.signInWithEmailAndPassword(auth, authForm.email, authForm.password);
                     }
+                    setGuestMode(false);
+                    localStorage.removeItem(guestModeStorageKey);
                     setAuthPanelOpen(false);
                     setView('dashboard');
                     showToast(authMode === 'signup' ? 'Account created' : 'Signed in');
                 } catch (error) {
                     console.error(error);
                     setAuthError(error.message || 'Could not sign in.');
+                } finally {
+                    setAuthBusy(false);
                 }
             };
             const handleGoogleAuth = async () => {
@@ -1717,27 +1771,52 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     return;
                 }
                 setAuthError('');
+                setAuthBusy(true);
                 try {
                     const provider = new FirebaseSDK.GoogleAuthProvider();
                     provider.setCustomParameters({ prompt: 'select_account' });
+                    if (shouldUseRedirectGoogleAuth()) {
+                        sessionStorage.setItem(authRedirectStorageKey, 'dashboard');
+                        await FirebaseSDK.signInWithRedirect(auth, provider);
+                        return;
+                    }
                     await FirebaseSDK.signInWithPopup(auth, provider);
+                    setGuestMode(false);
+                    localStorage.removeItem(guestModeStorageKey);
                     setAuthPanelOpen(false);
                     setView('dashboard');
                     showToast('Signed in with Google');
                 } catch (error) {
                     console.error(error);
+                    if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported'].includes(error?.code)) {
+                        try {
+                            const provider = new FirebaseSDK.GoogleAuthProvider();
+                            provider.setCustomParameters({ prompt: 'select_account' });
+                            sessionStorage.setItem(authRedirectStorageKey, 'dashboard');
+                            await FirebaseSDK.signInWithRedirect(auth, provider);
+                            return;
+                        } catch (redirectError) {
+                            console.error(redirectError);
+                            setAuthError(redirectError.message || 'Could not start Google sign-in.');
+                            return;
+                        }
+                    }
                     const message = error?.code === 'auth/operation-not-allowed'
                         ? 'Google sign-in is not enabled yet. Enable Google under Firebase Authentication > Sign-in method.'
                         : error?.code === 'auth/popup-closed-by-user'
                             ? 'Google sign-in was closed before it finished.'
                             : error.message || 'Could not sign in with Google.';
                     setAuthError(message);
+                } finally {
+                    setAuthBusy(false);
                 }
             };
             const handleSignOut = async () => {
                 if (isFirebaseConfigured && user) {
                     await FirebaseSDK.signOut(auth);
                 }
+                setGuestMode(false);
+                localStorage.removeItem(guestModeStorageKey);
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
                 setView('landing');
@@ -1763,11 +1842,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     noShowHistory: false
                 };
 
-                if (!isFirebaseConfigured) {
+                if (!isFirebaseConfigured || !user) {
                     setBookings(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...prev]);
                     return;
                 }
-                if (!user) return;
                 try {
                     await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
                         ...bookingRecord
@@ -1831,21 +1909,19 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
             };
 
             const updateBooking = async (bookingId, updates) => {
-                if (!isFirebaseConfigured) {
+                if (!isFirebaseConfigured || !user) {
                     setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
                     return;
                 }
-                if (!user) return;
                 try { await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates); } 
                 catch (err) { console.error(err); }
             };
 
             const deleteBooking = async (bookingId) => {
-                if (!isFirebaseConfigured) {
+                if (!isFirebaseConfigured || !user) {
                     setBookings(prev => prev.filter(b => b.id !== bookingId));
                     return;
                 }
-                if (!user) return;
                 try { await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId)); } 
                 catch (err) { console.error(err); }
             };
@@ -1874,6 +1950,43 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 await sendBookingEmail(booking, 'review');
             };
 
+            const authDialog = authPanelOpen && (
+                <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <form onSubmit={handleAuthSubmit} className="native-auth-panel w-full sm:max-w-md bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-5 sm:p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300 max-h-[calc(100dvh-1rem)] overflow-y-auto">
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Workspace Access</p>
+                                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-black">{authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
+                                <p className="text-sm text-neutral-500 mt-2">Owners and invited staff can use the same secure sign-in.</p>
+                            </div>
+                            <button type="button" onClick={() => { setAuthPanelOpen(false); setAuthError(''); }} className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center hover:text-black transition-colors shrink-0"><X size={16}/></button>
+                        </div>
+                        <button type="button" onClick={handleGoogleAuth} disabled={authBusy} className="w-full h-12 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 disabled:cursor-wait">
+                            <Globe size={16}/> {authBusy ? 'Connecting...' : authMode === 'signup' ? 'Sign Up With Google' : 'Continue With Google'}
+                        </button>
+                        <button type="button" onClick={openGuestDashboard} className="mt-3 w-full h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-[#39FF14]/20 hover:brightness-95 transition-all">
+                            <Eye size={16}/> Browse As Guest
+                        </button>
+                        <div className="flex items-center gap-4 my-5">
+                            <div className="h-px bg-neutral-100 flex-1" />
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">or email</span>
+                            <div className="h-px bg-neutral-100 flex-1" />
+                        </div>
+                        <div className="space-y-3">
+                            <input type="email" value={authForm.email} onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))} required placeholder="Email address" autoComplete="email" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
+                            <input type="password" value={authForm.password} onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))} required minLength={6} placeholder="Password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
+                        </div>
+                        {authError && <p className="mt-4 text-xs font-bold text-red-500 leading-relaxed">{authError}</p>}
+                        <button type="submit" disabled={authBusy} className="mt-5 w-full h-12 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-wait">
+                            {authBusy ? 'Please Wait' : authMode === 'signup' ? 'Create Workspace' : 'Sign In'}
+                        </button>
+                        <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthError(''); }} className="mt-4 w-full text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-black transition-colors">
+                            {authMode === 'signup' ? 'Already have an account?' : 'Need an account? Create one'}
+                        </button>
+                    </form>
+                </div>
+            );
+
             if (loading || publicLoading) return <div className="h-screen bg-[#050505] flex items-center justify-center"><img src="/logoblackonwhite.png" alt="Build A Booking" className="w-24 h-24 rounded-lg object-contain bg-white shadow-2xl animate-subtle-pulse" /></div>;
 
             if (publicSlug) {
@@ -1899,73 +2012,45 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
             if (view === 'landing') {
                 return (
-                  <div className="native-ui min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white overflow-x-hidden">
+                  <div className="native-ui native-home min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white overflow-x-hidden">
                     {/* Navigation */}
-                    <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-neutral-200/50 transition-all">
+                    <nav className="fixed w-full z-50 bg-white/82 backdrop-blur-xl border-b border-neutral-200/50 transition-all native-home-nav">
                       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
                           <img src="logoblackonwhite.png" alt="Build A Booking logo" className="w-9 h-9 rounded-lg object-contain bg-white shadow-sm" />
                           <span className="font-display font-semibold text-base md:text-xl tracking-tight">Build A Booking</span>
                         </div>
-                        <div className="flex items-center gap-6">
-                          <button onClick={openDashboard} className="hidden md:block text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
-                          <button onClick={openDashboard} className="h-10 px-4 md:px-6 rounded-full bg-black text-white font-bold text-[11px] md:text-xs hover:scale-105 transition-transform shadow-lg shadow-black/10">Get Started</button>
+                        <div className="flex items-center gap-3 md:gap-6">
+                          <button onClick={() => openAuthPanel('signin')} className="hidden md:block text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
+                          <button onClick={openGuestDashboard} className="hidden sm:block h-10 px-4 rounded-full bg-white border border-neutral-200 text-black font-bold text-[11px] hover:border-black transition-colors">Guest Mode</button>
+                          <button onClick={openDashboard} className="h-10 px-4 md:px-6 rounded-full bg-[#39FF14] text-black font-bold text-[11px] md:text-xs hover:scale-105 transition-transform shadow-lg shadow-[#39FF14]/20">Get Started</button>
                         </div>
                       </div>
                     </nav>
 
-                    {authPanelOpen && (
-                    <div className="fixed inset-0 z-[100] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4">
-                        <form onSubmit={handleAuthSubmit} className="w-full max-w-md bg-white rounded-lg border border-neutral-100 shadow-2xl p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300">
-                            <div className="flex items-start justify-between gap-4 mb-8">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Workspace Access</p>
-                                    <h2 className="text-3xl font-bold tracking-tight text-black">{authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
-                                    <p className="text-sm text-neutral-500 mt-2">Owners and invited staff can use the same secure sign-in.</p>
-                                </div>
-                                <button type="button" onClick={() => { setAuthPanelOpen(false); setAuthError(''); }} className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center hover:text-black transition-colors"><X size={16}/></button>
-                            </div>
-                            <button type="button" onClick={handleGoogleAuth} className="w-full h-12 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex items-center justify-center gap-3 shadow-sm">
-                                <Globe size={16}/> Continue With Google
-                            </button>
-                            <div className="flex items-center gap-4 my-5">
-                                <div className="h-px bg-neutral-100 flex-1" />
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">or email</span>
-                                <div className="h-px bg-neutral-100 flex-1" />
-                            </div>
-                            <div className="space-y-4">
-                                <input type="email" value={authForm.email} onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))} required placeholder="Email address" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                                <input type="password" value={authForm.password} onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))} required minLength={6} placeholder="Password" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
-                            </div>
-                            {authError && <p className="mt-4 text-xs font-bold text-red-500 leading-relaxed">{authError}</p>}
-                            <button type="submit" className="mt-6 w-full h-12 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
-                                {authMode === 'signup' ? 'Create Workspace' : 'Sign In'}
-                            </button>
-                            <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthError(''); }} className="mt-4 w-full text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-black transition-colors">
-                                {authMode === 'signup' ? 'Already have an account?' : 'Need an account? Create one'}
-                            </button>
-                        </form>
-                    </div>
-                    )}
+                    {authDialog}
             
                     {/* Hero Section */}
                     <section className="relative pt-32 md:pt-56 pb-20 md:pb-32 px-4 sm:px-6 flex flex-col items-center text-center border-b border-neutral-100">
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-50 border border-neutral-200 text-xs font-bold mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-neutral-600">
-                        <Sparkles size={14} className="text-black" /> The next generation of scheduling
+                        <span className="w-5 h-5 rounded-full bg-[#39FF14] text-black flex items-center justify-center"><Sparkles size={13} /></span> The next generation of scheduling
                       </div>
                       
                       <h1 className="text-4xl sm:text-5xl md:text-[90px] lg:text-[110px] font-bold tracking-tighter leading-[0.95] md:leading-[0.9] max-w-6xl mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
                         Schedule like a studio. <br className="hidden md:block" />
-                        <span className="text-neutral-300">Not a spreadsheet.</span>
+                        <span className="native-accent-text">Not a spreadsheet.</span>
                       </h1>
                       
                       <p className="text-lg md:text-2xl font-medium text-neutral-500 max-w-2xl mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200">
                         A beautiful booking page and simple dashboard for creators, studios, and service businesses that want to look polished from the first click.
                       </p>
                       
-                      <div className="flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
-                        <button onClick={openDashboard} className="h-14 px-10 rounded-full bg-black text-white font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-black/20 flex items-center gap-2 w-full md:w-auto justify-center">
+                      <div className="flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 w-full md:w-auto">
+                        <button onClick={openDashboard} className="h-14 px-10 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20 flex items-center gap-2 w-full md:w-auto justify-center">
                           Start Building Free <ArrowRight size={16} />
+                        </button>
+                        <button onClick={openGuestDashboard} className="h-14 px-10 rounded-full bg-white text-black border border-neutral-200 font-bold text-sm hover:border-black transition-colors flex items-center gap-2 w-full md:w-auto justify-center">
+                          Browse Dashboard <Eye size={16} />
                         </button>
                       </div>
                     </section>
@@ -1980,61 +2065,60 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         
                         {/* Box 1: Design (Span 2) */}
-                        <div className="md:col-span-2 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group relative overflow-hidden">
+                        <div className="native-feature-card md:col-span-2 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group relative overflow-hidden">
                           <Palette className="mb-6 text-black relative z-10" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl md:text-4xl font-bold tracking-tight mb-4 text-black relative z-10">Live Page Editor.</h3>
                           <p className="text-neutral-500 font-medium text-lg max-w-md relative z-10">Design your booking page in minutes. Change colors, try fonts, upload your logo, and preview every detail as you go.</p>
                         </div>
                         
                         {/* Box 2: Waitlist (Span 1) */}
-                        <div className="bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
                           <Bell className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Waitlists.</h3>
                           <p className="text-neutral-500 font-medium flex-1">When a day is full, clients can still join the waitlist so you never lose the opportunity.</p>
                         </div>
                         
                         {/* Box 3: Approvals (Span 1) */}
-                        <div className="bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <ShieldCheck className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Approve Requests.</h3>
                           <p className="text-neutral-500 font-medium">Review new requests before they become bookings, keep an eye on no-shows, and stay in control of your calendar.</p>
                         </div>
 
                         {/* Box 4: Communication Studio (Span 1) */}
-                        <div className="bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <MessageSquare className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Communication Studio.</h3>
                           <p className="text-neutral-500 font-medium">Write clean emails, prepare WhatsApp updates, and keep client communication consistent.</p>
                         </div>
 
                         {/* Box 5: Client Intel (Span 1) */}
-                        <div className="bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <Heart className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Client Details.</h3>
                           <p className="text-neutral-500 font-medium">Save useful client details like birthdays and spot clients who may be ready to book again.</p>
                         </div>
             
                         {/* Box 6: Team/Staff (Span 2) */}
-                        <div className="md:col-span-2 bg-black text-white rounded-lg p-6 sm:p-8 md:p-16 relative overflow-hidden group">
-                          <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-[80px] -mr-20 -mt-20" />
+                        <div className="md:col-span-2 bg-[#39FF14] text-black rounded-lg p-6 sm:p-8 md:p-16 relative overflow-hidden group shadow-2xl shadow-[#39FF14]/20">
                           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
                               <div className="max-w-xl">
-                                  <Users className="mb-6 text-white" size={36} strokeWidth={1.5} />
+                                  <Users className="mb-6 text-black" size={36} strokeWidth={1.5} />
                                   <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Team Scheduling.</h3>
-                                  <p className="text-neutral-400 font-medium text-lg">Add your team, assign bookings, and see who handled each client at a glance.</p>
+                                  <p className="text-black/65 font-medium text-lg">Add your team, assign bookings, and see who handled each client at a glance.</p>
                               </div>
                           </div>
                         </div>
 
                         {/* Box 7: Booked Rate Kit (Span 1) */}
-                        <div className="bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
                           <Flame className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Booking Tools.</h3>
                           <p className="text-neutral-500 font-medium flex-1">Add social proof, first available buttons, and FAQs so clients can book with confidence.</p>
                         </div>
 
                         {/* Box 8: Business Tools (Span 3) */}
-                        <div className="md:col-span-3 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-12 border border-neutral-200/60 hover:shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 text-center md:text-left">
+                        <div className="native-feature-card md:col-span-3 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-12 border border-neutral-200/60 hover:shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 text-center md:text-left">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-black shadow-sm shrink-0"><Briefcase size={24}/></div>
                                 <div>
@@ -2042,7 +2126,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     <p className="text-neutral-500 font-medium">Google Maps directions, calendar links, and simple referral tools built in.</p>
                                 </div>
                             </div>
-                            <button onClick={openDashboard} className="h-14 px-8 rounded-full bg-black text-white font-bold text-sm hover:scale-105 transition-transform shrink-0 w-full md:w-auto">
+                            <button onClick={openGuestDashboard} className="h-14 px-8 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shrink-0 w-full md:w-auto shadow-xl shadow-[#39FF14]/20">
                                 Explore All Features
                             </button>
                         </div>
@@ -2055,7 +2139,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                       <div className="flex flex-col items-center max-w-3xl mx-auto">
                         <h2 className="text-4xl md:text-7xl font-bold tracking-tighter mb-8 text-black leading-[0.95] md:leading-[0.9]">Ready to upgrade your booking flow?</h2>
                         <p className="text-xl text-neutral-500 font-medium mb-10">Build a booking experience that feels clean, premium, and easy for clients to use.</p>
-                        <button onClick={openDashboard} className="h-16 px-12 rounded-full bg-black text-white font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-black/20">
+                        <button onClick={openDashboard} className="h-16 px-12 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20">
                           Build Your Booking Flow
                         </button>
                       </div>
@@ -2072,10 +2156,11 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 {backendSkinEnabled && <div className="backend-skin-ambient pointer-events-none absolute inset-0 z-0" />}
                 {/* Global Toast */}
                 {toast && (
-                    <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] px-8 py-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-widest shadow-2xl animate-in slide-in-from-top-10 fade-in duration-500 flex items-center gap-3">
-                        <CheckCircle2 size={16} className="text-[#39FF14]" /> {toast}
+                    <div className="native-toast fixed top-4 md:top-10 left-1/2 -translate-x-1/2 z-[9999] max-w-[calc(100vw-2rem)] px-5 md:px-8 py-3 md:py-4 bg-black text-white rounded-2xl md:rounded-full text-[10px] md:text-xs font-bold uppercase tracking-[0.18em] md:tracking-widest leading-relaxed shadow-2xl animate-in slide-in-from-top-10 fade-in duration-500 flex items-center gap-3 text-center">
+                        <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" /> {toast}
                     </div>
                 )}
+                {authDialog}
                 <OnboardingShowroom
                     open={showOnboarding}
                     settings={settings}
@@ -2098,7 +2183,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                             <div className="mb-6 rounded-lg border border-neutral-100 bg-neutral-50 p-3">
                                 <div className="flex items-center justify-between gap-3 mb-2">
                                     <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Workspace</span>
-                                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md ${workspaceRole === 'owner' ? 'bg-[#39FF14] text-black' : workspaceRole === 'admin' ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}>
+                                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md ${workspaceRole === 'owner' || workspaceRole === 'guest' ? 'bg-[#39FF14] text-black' : workspaceRole === 'admin' ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}>
                                         {workspaceRole}
                                     </span>
                                 </div>
@@ -2119,13 +2204,22 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 {accessLoading && <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-2">Checking access...</p>}
                             </div>
                         )}
+                        {isGuestWorkspace && (
+                            <div className="mb-6 rounded-lg border border-neutral-100 bg-neutral-50 p-4">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Guest Mode</p>
+                                <p className="text-sm font-bold text-black mb-3">Browse every tool with local demo edits.</p>
+                                <button onClick={() => openAuthPanel('signup')} className="h-10 w-full rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
+                                    <ShieldCheck size={14}/> Save For Real
+                                </button>
+                            </div>
+                        )}
                         <nav className="space-y-3 flex-1 overflow-y-auto no-scrollbar pb-10">
                         {navItems.map(item => {
                             const IconCmp = item.icon;
                             return (
-                                <button key={item.id} data-tour={`nav-${item.id}`} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-lg text-[11px] font-bold transition-all duration-700 ${activeTab === item.id ? 'bg-black text-white shadow-xl scale-[1.02]' : 'text-neutral-400 hover:bg-neutral-50 hover:text-black'}`}>
+                                <button key={item.id} data-tour={`nav-${item.id}`} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-lg text-[11px] font-bold transition-all duration-700 ${activeTab === item.id ? 'bg-[#39FF14] text-black shadow-xl shadow-[#39FF14]/20 scale-[1.02]' : 'text-neutral-400 hover:bg-neutral-50 hover:text-black'}`}>
                                 <IconCmp size={18} strokeWidth={2.5} /> {item.label.toUpperCase()}
-                                {item.badge && <div className="ml-auto w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />}
+                                {item.badge && <div className={`ml-auto w-2 h-2 rounded-full animate-pulse ${activeTab === item.id ? 'bg-black' : 'bg-[#39FF14]'}`} />}
                                 </button>
                             );
                         })}
@@ -2147,7 +2241,14 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     </div>
                                 </div>
                             )}
-                            <ProButton onClick={handleSignOut} variant="outline" className="w-full py-4 text-[10px]">Sign Out</ProButton>
+                            {isGuestWorkspace ? (
+                                <div className="space-y-2">
+                                    <ProButton onClick={() => openAuthPanel('signin')} variant="neon" className="w-full py-4 text-[10px]">Sign In</ProButton>
+                                    <ProButton onClick={handleSignOut} variant="outline" className="w-full py-4 text-[10px]">Exit Guest</ProButton>
+                                </div>
+                            ) : (
+                                <ProButton onClick={handleSignOut} variant="outline" className="w-full py-4 text-[10px]">Sign Out</ProButton>
+                            )}
                         </div>
                     </>
                     )}
@@ -2168,10 +2269,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                     data-tour={`mobile-nav-${item.id}`}
                                     aria-label={item.label}
                                     onClick={() => setActiveTab(item.id)}
-                                    className={`relative min-w-[56px] h-14 rounded-lg flex items-center justify-center transition-all ${isActive ? 'bg-black text-white shadow-lg scale-[1.03]' : 'text-neutral-400 bg-neutral-50'}`}
+                                    className={`relative min-w-[56px] h-14 rounded-lg flex items-center justify-center transition-all ${isActive ? 'bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20 scale-[1.03]' : 'text-neutral-400 bg-neutral-50'}`}
                                 >
                                     <IconCmp size={20} strokeWidth={2.35} />
-                                    {item.badge && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-[#39FF14]" />}
+                                    {item.badge && <span className={`absolute top-1.5 right-2 w-2 h-2 rounded-full ${isActive ? 'bg-black' : 'bg-[#39FF14]'}`} />}
                                 </button>
                             );
                         })}
@@ -2221,7 +2322,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                                 <button
                                                     key={period.id}
                                                     onClick={() => setDashboardPeriod(period.id)}
-                                                    className={`h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black'}`}
+                                                    className={`h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
                                                 >
                                                     {period.label}
                                                 </button>

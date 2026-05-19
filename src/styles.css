@@ -87,6 +87,55 @@ body {
             box-shadow: 0 22px 48px -28px var(--native-accent-glow) !important;
         }
 
+        .native-ui .native-accent-text {
+            background-image: var(--native-accent-gradient);
+            background-size: 420% 420%;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: native-accent-phase 24s ease-in-out infinite;
+        }
+
+        .native-home-nav::after {
+            content: "";
+            position: absolute;
+            inset-inline: 0;
+            bottom: -1px;
+            height: 1px;
+            background-image: var(--native-accent-gradient);
+            background-size: 420% 420%;
+            opacity: 0.7;
+            animation: native-accent-phase 24s ease-in-out infinite;
+        }
+
+        .native-feature-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .native-feature-card::before {
+            content: "";
+            position: absolute;
+            inset-inline: 0;
+            top: 0;
+            height: 3px;
+            background-image: var(--native-accent-gradient);
+            background-size: 420% 420%;
+            opacity: 0;
+            animation: native-accent-phase 24s ease-in-out infinite;
+            transition: opacity 260ms ease;
+        }
+
+        .native-feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .native-auth-panel {
+            box-shadow:
+                0 34px 90px -48px rgba(15, 23, 42, 0.55),
+                0 0 0 1px rgba(255, 255, 255, 0.9);
+        }
+
         .schedule-day-selected {
             box-shadow: 0 22px 54px -34px rgba(57, 255, 20, 0.82), 0 0 0 1px rgba(57, 255, 20, 0.45) !important;
         }
@@ -118,7 +167,10 @@ body {
         @media (prefers-reduced-motion: reduce) {
             .native-ui .bg-\[\#39FF14\],
             .native-ui .text-\[\#39FF14\],
-            .native-ui .schedule-day-selected {
+            .native-ui .schedule-day-selected,
+            .native-ui .native-accent-text,
+            .native-home-nav::after,
+            .native-feature-card::before {
                 animation: none !important;
             }
         }
