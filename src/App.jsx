@@ -2516,34 +2516,10 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
                     {activeTab === 'communications' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
-                            <header className="mb-8 md:mb-16">
+                            <header className="mb-8 md:mb-10">
                                 <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter mb-4 text-black">Email Studio</h2>
                                 <p className="text-neutral-400 font-medium text-lg">Write the emails your clients receive before and after a booking.</p>
                             </header>
-                            <section data-tour="email-delivery" className="max-w-6xl bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm mb-8">
-                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
-                                    <div className="xl:col-span-7">
-                                        <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-5 bg-[#39FF14] text-black shadow-xl shadow-[#39FF14]/20">
-                                            <Mail size={18} />
-                                        </div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Managed Delivery</p>
-                                        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black mb-3">No email keys for business owners.</h3>
-                                        <p className="text-sm text-neutral-500 leading-relaxed max-w-2xl">Build A Booking will handle delivery behind the scenes. Owners only choose which messages are active and what each message says.</p>
-                                    </div>
-                                    <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-3">
-                                        {[
-                                            ['No client setup', 'Keys stay out of the workspace'],
-                                            ['Brand ready', 'Logo and booking details can be included'],
-                                            ['4 messages', 'Confirmations, waitlist, late notes, reviews']
-                                        ].map(item => (
-                                            <div key={item[0]} className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
-                                                <p className="text-sm font-bold text-black mb-1">{item[0]}</p>
-                                                <p className="text-xs font-medium text-neutral-400 leading-relaxed">{item[1]}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </section>
                             <div data-tour="email-messages" className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl">
                                 {[
                                     { key: 'confirmed', title: 'Request Confirmed', desc: 'Sent when you approve a booking request.' },
