@@ -87,6 +87,20 @@ body {
             box-shadow: 0 22px 48px -28px var(--native-accent-glow) !important;
         }
 
+        .schedule-day-selected {
+            box-shadow: 0 22px 54px -34px rgba(57, 255, 20, 0.82), 0 0 0 1px rgba(57, 255, 20, 0.45) !important;
+        }
+
+        .native-ui .schedule-day-selected {
+            border-color: transparent !important;
+            background:
+                linear-gradient(#ffffff, #ffffff) padding-box,
+                var(--native-accent-gradient) border-box !important;
+            background-size: auto, 420% 420% !important;
+            animation: native-accent-phase 24s ease-in-out infinite;
+            box-shadow: 0 24px 70px -34px var(--native-accent-glow), 0 0 0 1px rgba(108, 92, 255, 0.2) !important;
+        }
+
         .backend-skin .bg-\[\#39FF14\],
         .backend-skin .text-\[\#39FF14\],
         .backend-skin .border-\[\#39FF14\] {
@@ -95,9 +109,16 @@ body {
             background-image: none !important;
         }
 
+        .backend-skin .schedule-day-selected {
+            background: var(--skin-surface) !important;
+            border-color: var(--skin-primary) !important;
+            box-shadow: 0 24px 64px -40px var(--skin-primary-soft) !important;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .native-ui .bg-\[\#39FF14\],
-            .native-ui .text-\[\#39FF14\] {
+            .native-ui .text-\[\#39FF14\],
+            .native-ui .schedule-day-selected {
                 animation: none !important;
             }
         }
@@ -426,6 +447,8 @@ body {
             transform: translateY(120%) !important;
             opacity: 0 !important;
             pointer-events: none !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
         }
 
         .mobile-editor-shell,
@@ -690,6 +713,43 @@ body {
             .mobile-editor-refresh-action {
                 display: flex !important;
                 padding: 0.68rem !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .dashboard-main.mobile-nav-space-collapsed {
+                padding-bottom: 0 !important;
+            }
+        }
+
+        @media (max-width: 767px) and (orientation: landscape), (max-height: 520px) and (max-width: 950px) {
+            .dashboard-main.mobile-nav-space-collapsed {
+                padding-bottom: 0 !important;
+            }
+
+            .mobile-bottom-nav.mobile-bottom-nav-collapsed {
+                transform: translateY(calc(100% + 18px)) !important;
+                border-color: transparent !important;
+                box-shadow: none !important;
+            }
+
+            .mobile-editor-shell.mobile-editor-nav-is-collapsed .mobile-editor-preview {
+                padding-bottom: 1rem !important;
+            }
+
+            .mobile-editor-shell.mobile-editor-panel-is-collapsed .mobile-editor-preview {
+                justify-content: center !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+
+            .mobile-editor-shell.mobile-editor-panel-is-collapsed.mobile-editor-nav-is-collapsed .mobile-editor-preview {
+                padding-top: 3.45rem !important;
+                padding-bottom: 1rem !important;
+            }
+
+            .mobile-editor-shell.mobile-editor-nav-is-collapsed .mobile-editor-compact-controls {
+                bottom: 0.75rem !important;
             }
         }
 

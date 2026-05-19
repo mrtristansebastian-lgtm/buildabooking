@@ -1069,7 +1069,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     const dWidth = device === 'desktop' ? (compact ? 980 : 1200) : (compact ? 430 : 420);
                     const dHeight = device === 'desktop' ? (compact ? 470 : 820) : (compact ? 520 : 1050);
                     const paddingX = compact ? 18 : (device === 'desktop' ? 140 : 60);
-                    const paddingY = compact ? 125 : (device === 'desktop' ? 140 : 60);
+                    const paddingY = compact ? (mobileNavCollapsed ? 74 : 125) : (device === 'desktop' ? 140 : 60);
                     const maxScale = device === 'desktop' ? (compact ? 0.95 : 1) : (compact ? 0.88 : 1.2);
                     const minScale = compact ? (device === 'desktop' ? 0.39 : 0.42) : 0.2;
                     const nextScale = Math.min((c.offsetWidth - paddingX) / dWidth, (c.offsetHeight - paddingY) / dHeight, maxScale);
@@ -1089,7 +1089,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     clearTimeout(t3); 
                     window.removeEventListener('resize', updateScale); 
                 };
-            }, [device, activeTab, view, sidebarCollapsed, editorCollapsed]);
+            }, [device, activeTab, view, sidebarCollapsed, editorCollapsed, mobileNavCollapsed]);
 
             useEffect(() => {
                 if (activeTab !== 'editor') return;
@@ -2178,7 +2178,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     </div>
                 </nav>
 
-                <div className="dashboard-main relative z-10 flex-1 flex overflow-hidden pb-20 md:pb-0">
+                <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden pb-20 md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
                     {activeTab === 'overview' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <header className="mb-6 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
@@ -3289,7 +3289,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     )}
 
                     {activeTab === 'editor' && (
-                    <div className="flex-1 flex overflow-hidden mobile-editor-shell bg-[#F5F5F7]">
+                    <div className={`flex-1 flex overflow-hidden mobile-editor-shell bg-[#F5F5F7] ${editorCollapsed ? 'mobile-editor-panel-is-collapsed' : ''} ${mobileNavCollapsed ? 'mobile-editor-nav-is-collapsed' : ''}`}>
                         <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'mobile-editor-panel-collapsed w-0 opacity-0 pointer-events-none' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
                         {!editorCollapsed && (
                             <>

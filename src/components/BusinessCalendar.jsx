@@ -356,11 +356,11 @@ import { getLocalDateStr } from '../utils/dates';
                                         const isCustom = Boolean(settings.schedule?.[dateStr]);
                                         const calendarBubble = getCalendarBubble(dateStr, config);
                                         const bubbleClass = {
-                                            open: isSelected ? 'bg-[#39FF14] text-black' : 'bg-[#39FF14]/20 text-black',
-                                            confirmed: isSelected ? 'bg-[#39FF14] text-black' : 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                                            quiet: isSelected ? 'bg-white/10 text-white/70 border-white/10' : 'bg-neutral-100 text-neutral-400 border-neutral-200',
-                                            closed: isSelected ? 'bg-red-500/20 text-red-100 border-red-400/20' : 'bg-red-50 text-red-600 border-red-100',
-                                            full: isSelected ? 'bg-amber-400/20 text-amber-100 border-amber-300/20' : 'bg-amber-50 text-amber-700 border-amber-100'
+                                            open: isSelected ? 'bg-[#39FF14] text-black border-transparent shadow-[0_12px_28px_-18px_rgba(57,255,20,0.9)]' : 'bg-[#39FF14]/15 text-black border-[#39FF14]/20',
+                                            confirmed: isSelected ? 'bg-[#39FF14] text-black border-transparent shadow-[0_12px_28px_-18px_rgba(57,255,20,0.9)]' : 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                                            quiet: 'bg-neutral-100 text-neutral-400 border-neutral-200',
+                                            closed: 'bg-red-50 text-red-600 border-red-100',
+                                            full: 'bg-amber-50 text-amber-700 border-amber-100'
                                         }[calendarBubble.tone];
 
                                         return (
@@ -375,7 +375,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         setExpandedDate(dateStr);
                                                     }
                                                 }}
-                                                className={`group relative min-h-[92px] md:min-h-[126px] rounded-lg border transition-all duration-500 flex flex-col p-2 text-left overflow-hidden cursor-pointer ${isSelected ? 'bg-black text-white border-black shadow-xl shadow-black/15 scale-[1.01]' : config.available ? 'bg-white border-neutral-200 hover:shadow-xl hover:-translate-y-0.5' : 'bg-neutral-50 border-transparent text-neutral-300 grayscale'}`}
+                                                className={`group relative min-h-[92px] md:min-h-[126px] rounded-lg border transition-all duration-500 flex flex-col p-2 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-[#39FF14] shadow-xl scale-[1.01]' : config.available ? 'bg-white border-neutral-200 hover:shadow-xl hover:-translate-y-0.5' : 'bg-neutral-50 border-transparent text-neutral-300 grayscale'}`}
                                             >
                                                 {!isPastDay && (
                                                     <button
@@ -396,14 +396,14 @@ import { getLocalDateStr } from '../utils/dates';
                                                 </div>
                                                 <div className="mt-auto space-y-1.5">
                                                     {isToday && <p className={`text-[8px] font-bold uppercase tracking-widest ${isSelected ? 'text-[#39FF14]' : 'text-black'}`}>Today</p>}
-                                                    {isCustom && <p className={`text-[8px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/50' : 'text-neutral-400'}`}>Custom</p>}
+                                                    {isCustom && <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">Custom</p>}
                                                     <span
-                                                        className={`inline-flex min-h-[34px] w-full flex-col items-center justify-center rounded-md border px-1 py-1 text-center font-bold leading-none transition-colors ${bubbleClass}`}
+                                                        className={`inline-flex min-h-[30px] w-full max-w-[70px] self-center flex-col items-center justify-center rounded-md border px-1 py-0.5 text-center font-bold leading-none transition-colors ${bubbleClass}`}
                                                         aria-label={calendarBubble.label}
                                                         title={calendarBubble.label}
                                                     >
-                                                        {calendarBubble.count !== null && <span className="metric-value text-[10px] md:text-[11px] leading-none">{calendarBubble.count}</span>}
-                                                        <span className="text-[6px] md:text-[7px] uppercase tracking-[0.08em] leading-tight">{calendarBubble.caption}</span>
+                                                        {calendarBubble.count !== null && <span className="text-[13px] md:text-[14px] leading-none font-black tracking-tight">{calendarBubble.count}</span>}
+                                                        <span className="text-[5.5px] md:text-[6px] uppercase tracking-[0.07em] leading-tight">{calendarBubble.caption}</span>
                                                     </span>
                                                 </div>
                                             </div>
