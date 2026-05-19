@@ -2244,61 +2244,72 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                     )}
 
                     {activeTab === 'profile' && (
-                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
-                            <header className="mb-8 md:mb-16">
-                                <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter mb-4 text-black">Profile</h2>
-                                <p className="text-neutral-400 font-medium text-lg">Manage your personal account and business details.</p>
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F7F7F5]">
+                            <header className="max-w-6xl mb-8 md:mb-12">
+                                <div className="inline-flex items-center gap-2 rounded-full bg-white border border-neutral-100 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400 shadow-sm mb-5">
+                                    <ShieldCheck size={14} className="text-[#39FF14]" />
+                                    Workspace profile
+                                </div>
+                                <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+                                    <div>
+                                        <h2 className="text-4xl md:text-6xl font-serif font-bold tracking-tighter mb-4 text-black">Profile</h2>
+                                        <p className="text-neutral-500 font-medium text-lg max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
+                                    </div>
+                                    <button onClick={() => {saveSettings(); showToast("Profile Updated");}} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                                        <Check size={14}/> Save Profile
+                                    </button>
+                                </div>
                             </header>
 
-                            <div className="max-w-4xl space-y-12">
-                                <div className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm">
-                                    <h3 className="text-xl font-bold tracking-tight mb-8 text-black">Account Details</h3>
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-4 rounded-lg bg-neutral-50 border border-neutral-100 p-4">
-                                            <div className="w-14 h-14 rounded-lg bg-black text-white flex items-center justify-center overflow-hidden font-bold">
-                                                {user?.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || 'A')}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Signed In As</p>
-                                                <p className="text-base font-bold text-black truncate">{user?.displayName || user?.email || 'Admin User'}</p>
-                                                <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mt-1">{workspaceRole} access</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block text-black">Account Email</label>
-                                            <input type="text" readOnly value={user?.email || 'Admin User'} className="w-full bg-neutral-50 border-none rounded-lg px-6 py-4 text-sm font-bold outline-none text-neutral-400" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block text-black">Account ID</label>
-                                            <input type="text" readOnly value={user?.uid || 'BUILD-BOOKING-001'} className="w-full bg-neutral-50 border-none rounded-lg px-6 py-4 text-sm font-bold outline-none text-neutral-400" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="overflow-hidden bg-black text-white rounded-lg border border-black shadow-[0_30px_90px_-55px_rgba(0,0,0,0.9)]">
+                            <div className="max-w-6xl space-y-8">
+                                <div className="overflow-hidden bg-white rounded-lg border border-neutral-100 shadow-[0_25px_80px_-60px_rgba(0,0,0,0.75)]">
                                     <div className="grid grid-cols-1 lg:grid-cols-12">
-                                        <div className="lg:col-span-7 p-6 md:p-8">
-                                            <div className="w-11 h-11 rounded-lg bg-[#39FF14] text-black flex items-center justify-center mb-8 shadow-xl shadow-[#39FF14]/20">
-                                                <Share2 size={18} />
+                                        <div className="lg:col-span-5 bg-black text-white p-6 md:p-8 flex flex-col justify-between gap-10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 rounded-lg bg-white text-black flex items-center justify-center overflow-hidden font-bold text-2xl shadow-xl">
+                                                    {user?.photoURL ? <img src={user.photoURL} alt="Account avatar" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || 'A')}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/35 mb-2">Signed In As</p>
+                                                    <p className="text-xl font-bold tracking-tight truncate">{user?.displayName || user?.email || 'Admin User'}</p>
+                                                </div>
                                             </div>
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-white/40 mb-3">Affiliate Link</p>
-                                            <h3 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Share Build A Booking</h3>
-                                            <p className="text-sm text-white/55 leading-relaxed max-w-xl">Keep your referral link tucked inside Profile where it belongs. Share it with other business owners when you want to recommend the platform.</p>
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#39FF14] mb-3">{workspaceRole} access</p>
+                                                <p className="text-sm leading-relaxed text-white/55">Your profile powers the business workspace, booking page identity, client communication, and staff access.</p>
+                                            </div>
                                         </div>
-                                        <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-white/10 p-5 md:p-8 flex flex-col justify-end gap-4">
-                                            <div className="rounded-lg bg-white/10 border border-white/10 p-4">
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Your Link</p>
-                                                <p className="text-sm font-bold text-white truncate">{referralUrl}</p>
+                                        <div className="lg:col-span-7 p-5 md:p-8">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Account Email</p>
+                                                    <p className="text-sm font-bold text-black break-all">{user?.email || 'Admin User'}</p>
+                                                </div>
+                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Account ID</p>
+                                                    <p className="text-sm font-bold text-black break-all">{user?.uid || 'BUILD-BOOKING-001'}</p>
+                                                </div>
+                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Business</p>
+                                                    <p className="text-sm font-bold text-black truncate">{settings.brandName || 'Build A Booking workspace'}</p>
+                                                </div>
+                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Booking Page</p>
+                                                    <p className="text-sm font-bold text-black truncate">/{settings.slug || 'studio-noir'}</p>
+                                                </div>
                                             </div>
-                                            <button onClick={() => copyToClipboard(referralUrl, 'Affiliate link')} className="h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
-                                                <Share2 size={15}/> Copy Link
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div data-tour="profile-business-info" className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-sm">
-                                    <h3 className="text-xl font-bold tracking-tight mb-8 text-black">Business Information</h3>
+                                <div data-tour="profile-business-info" className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-[0_25px_80px_-65px_rgba(0,0,0,0.75)]">
+                                    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-300 mb-3">Business Profile</p>
+                                            <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Brand Details</h3>
+                                        </div>
+                                        <p className="text-sm text-neutral-400 max-w-md">These details sync into the booking page, client touchpoints, and the editor defaults.</p>
+                                    </div>
                                     <div className="space-y-10">
                                         <div>
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-4 block text-black">Brand Logo</label>
@@ -2365,23 +2376,63 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                         </div>
 
                                         <div className="pt-6 border-t border-neutral-50">
-                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-4 block text-black">Social Links</label>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 transition-all">
-                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-black"><Instagram size={16} /></div>
-                                                    <input type="text" value={settings.socials?.instagram || ''} onChange={e => handleSettingChange('socials', {...settings.socials, instagram: e.target.value})} placeholder="@yourhandle" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
+                                                <div>
+                                                    <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 block text-black">Social Links</label>
+                                                    <p className="text-xs text-neutral-400 font-medium mt-2">Used for your public booking page footer when enabled.</p>
                                                 </div>
-                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 transition-all">
-                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-black"><Zap size={16} /></div>
-                                                    <input type="text" value={settings.socials?.tiktok || ''} onChange={e => handleSettingChange('socials', {...settings.socials, tiktok: e.target.value})} placeholder="@yourtiktok" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 border border-neutral-100 px-3 py-2 rounded-lg">Client facing</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 hover:border-neutral-100 transition-all">
+                                                    <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm text-black shrink-0"><Instagram size={16} /></div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-1">Instagram</p>
+                                                        <input type="text" value={settings.socials?.instagram || ''} onChange={e => handleSettingChange('socials', {...settings.socials, instagram: e.target.value})} placeholder="@yourhandle" className="w-full bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 transition-all">
-                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-black"><Users size={16} /></div>
-                                                    <input type="text" value={settings.socials?.facebook || ''} onChange={e => handleSettingChange('socials', {...settings.socials, facebook: e.target.value})} placeholder="facebook page or handle" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 hover:border-neutral-100 transition-all">
+                                                    <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm text-black shrink-0"><Zap size={16} /></div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-1">TikTok</p>
+                                                        <input type="text" value={settings.socials?.tiktok || ''} onChange={e => handleSettingChange('socials', {...settings.socials, tiktok: e.target.value})} placeholder="@yourtiktok" className="w-full bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 transition-all">
-                                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-black"><Globe size={16} /></div>
-                                                    <input type="text" value={settings.socials?.website || ''} onChange={e => handleSettingChange('socials', {...settings.socials, website: e.target.value})} placeholder="https://yourwebsite.com" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 hover:border-neutral-100 transition-all">
+                                                    <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm text-black shrink-0"><Users size={16} /></div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-1">Facebook</p>
+                                                        <input type="text" value={settings.socials?.facebook || ''} onChange={e => handleSettingChange('socials', {...settings.socials, facebook: e.target.value})} placeholder="facebook page or handle" className="w-full bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-lg border border-transparent focus-within:border-neutral-200 hover:border-neutral-100 transition-all">
+                                                    <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-sm text-black shrink-0"><Globe size={16} /></div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-1">Website</p>
+                                                        <input type="text" value={settings.socials?.website || ''} onChange={e => handleSettingChange('socials', {...settings.socials, website: e.target.value})} placeholder="https://yourwebsite.com" className="w-full bg-transparent text-sm font-bold outline-none placeholder-neutral-300" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-hidden rounded-lg bg-black text-white border border-black shadow-[0_30px_90px_-55px_rgba(0,0,0,0.9)]">
+                                            <div className="grid grid-cols-1 lg:grid-cols-12">
+                                                <div className="lg:col-span-7 p-6 md:p-8">
+                                                    <div className="w-11 h-11 rounded-lg bg-[#39FF14] text-black flex items-center justify-center mb-8 shadow-xl shadow-[#39FF14]/20">
+                                                        <Share2 size={18} />
+                                                    </div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-white/40 mb-3">Affiliate Link</p>
+                                                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Share Build A Booking</h3>
+                                                    <p className="text-sm text-white/55 leading-relaxed max-w-xl">Your referral link sits below your social settings so it is easy to find when you recommend the platform.</p>
+                                                </div>
+                                                <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-white/10 p-5 md:p-8 flex flex-col justify-end gap-4">
+                                                    <div className="rounded-lg bg-white/10 border border-white/10 p-4">
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-2">Your Link</p>
+                                                        <p className="text-sm font-bold text-white truncate">{referralUrl}</p>
+                                                    </div>
+                                                    <button onClick={() => copyToClipboard(referralUrl, 'Affiliate link')} className="h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
+                                                        <Share2 size={15}/> Copy Link
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -2957,47 +3008,64 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                 {editorTab === 'identity' && (
                                 <div className="space-y-10 animate-in fade-in duration-700">
                                     <div className="space-y-5">
-                                    <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Booking Page Media</label>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        <div className="bg-neutral-50 rounded-lg border border-neutral-100/70 p-4 md:p-5">
-                                            <div className="flex items-center gap-4 mb-5">
-                                                <div className="w-16 h-16 rounded-lg bg-white border border-neutral-100 shadow-inner flex items-center justify-center overflow-hidden shrink-0">
-                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <User size={20} className="text-neutral-300" />}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-bold text-black">Business Logo</p>
-                                                    <p className="text-xs text-neutral-400 leading-relaxed">Shared with Business Profile.</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <label className="h-10 px-4 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2">
-                                                    <Camera size={14}/> Upload
-                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                                        const file = e.target.files[0];
-                                                        handleSettingImageUpload('logo', file, 'brand');
-                                                        e.target.value = '';
-                                                    }}/>
-                                                </label>
-                                                {settings.logo && <button onClick={() => handleSettingChange('logo', '')} className="h-10 px-4 rounded-lg bg-white border border-neutral-200 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors">Remove</button>}
-                                            </div>
-                                            <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} className="mt-5 pt-5 border-t border-neutral-100" />
+                                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Booking Page Media</label>
+                                            <p className="text-xs text-neutral-400 font-medium mt-2">Upload the images clients see first on your booking page.</p>
                                         </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 border border-neutral-100 px-3 py-2 rounded-lg">Shared Assets</span>
+                                    </div>
+                                    <div className="space-y-4">
                                         <div className="bg-neutral-50 rounded-lg border border-neutral-100/70 p-4 md:p-5">
-                                            <div className="w-full aspect-[16/7] rounded-lg bg-white border border-neutral-100 shadow-inner flex items-center justify-center overflow-hidden mb-5">
-                                                {settings.bannerImage ? <img src={settings.bannerImage} className="w-full h-full object-cover" /> : <div className="text-center px-4"><Monitor size={22} className="mx-auto text-neutral-300" /><p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 mt-2">Optional Banner</p></div>}
+                                            <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-5 items-start">
+                                                <div className="rounded-lg bg-white border border-neutral-100 p-4 shadow-inner">
+                                                    <div className="w-full aspect-square rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center overflow-hidden mb-4">
+                                                        {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : <User size={22} className="text-neutral-300" />}
+                                                    </div>
+                                                    <p className="text-sm font-bold text-black">Business Logo</p>
+                                                    <p className="text-xs text-neutral-400 leading-relaxed mt-1">Shared with Business Profile.</p>
+                                                    <div className="flex flex-wrap gap-2 mt-4">
+                                                        <label className="h-10 px-4 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2">
+                                                            <Camera size={14}/> Upload
+                                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                                const file = e.target.files[0];
+                                                                handleSettingImageUpload('logo', file, 'brand');
+                                                                e.target.value = '';
+                                                            }}/>
+                                                        </label>
+                                                        {settings.logo && <button onClick={() => handleSettingChange('logo', '')} className="h-10 px-4 rounded-lg bg-white border border-neutral-200 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors">Remove</button>}
+                                                    </div>
+                                                </div>
+                                                <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} className="xl:pl-5 xl:border-l border-neutral-100" />
                                             </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <label className="h-10 px-4 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2">
-                                                    <Camera size={14}/> Upload Banner
-                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                                        const file = e.target.files[0];
-                                                        handleSettingImageUpload('bannerImage', file, 'brand');
-                                                        e.target.value = '';
-                                                    }}/>
-                                                </label>
-                                                {settings.bannerImage && <button onClick={() => handleSettingChange('bannerImage', '')} className="h-10 px-4 rounded-lg bg-white border border-neutral-200 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors">Remove</button>}
+                                        </div>
+
+                                        <div className="bg-neutral-50 rounded-lg border border-neutral-100/70 p-4 md:p-5">
+                                            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_220px] gap-5 items-center">
+                                                <div className="w-full aspect-[16/6] min-h-[150px] rounded-lg bg-white border border-neutral-100 shadow-inner flex items-center justify-center overflow-hidden">
+                                                    {settings.bannerImage ? <img src={settings.bannerImage} className="w-full h-full object-cover" /> : (
+                                                        <div className="text-center px-4">
+                                                            <Monitor size={24} className="mx-auto text-neutral-300" />
+                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 mt-2">Optional Banner</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-black">Landscape Banner</p>
+                                                    <p className="text-xs text-neutral-400 leading-relaxed mt-1">Shown above the booking page heading. Wide images work best.</p>
+                                                    <div className="flex flex-wrap gap-2 mt-4">
+                                                        <label className="h-10 px-4 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2">
+                                                            <Camera size={14}/> Upload
+                                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                                const file = e.target.files[0];
+                                                                handleSettingImageUpload('bannerImage', file, 'brand');
+                                                                e.target.value = '';
+                                                            }}/>
+                                                        </label>
+                                                        {settings.bannerImage && <button onClick={() => handleSettingChange('bannerImage', '')} className="h-10 px-4 rounded-lg bg-white border border-neutral-200 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors">Remove</button>}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <p className="text-xs text-neutral-400 font-medium mt-3">Landscape image shown above the booking page heading.</p>
                                         </div>
                                     </div>
                                     </div>
