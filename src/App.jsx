@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BusinessCalendar } from './components/BusinessCalendar';
 import { BookingFlow } from './components/BookingFlow';
-import { OnboardingShowroom, prepareOnboardingSettings } from './components/OnboardingShowroom';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
 import { PRESET_THEMES } from './data/themes';
@@ -12,7 +11,12 @@ import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
 import { getLocalDateStr } from './utils/dates';
+import { prepareOnboardingSettings } from './utils/onboarding';
 import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_PALETTE_FILTERS, ensureReadableTextColor } from './utils/theme';
+
+const OnboardingShowroom = lazy(() => (
+  import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
+));
 
 const getPublicBookingSlug = () => {
   const url = new URL(window.location.href);
@@ -453,6 +457,46 @@ function ColorFontControl({ settings, item, onChange }) {
 
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
 
+const safeStorageGet = (storage, key) => {
+  try {
+    return storage?.getItem(key) || null;
+  } catch {
+    return null;
+  }
+};
+
+const safeStorageSet = (storage, key, value) => {
+  try {
+    storage?.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const safeStorageRemove = (storage, key) => {
+  try {
+    storage?.removeItem(key);
+  } catch {
+    // Storage can be unavailable in private, embedded, or homescreen contexts.
+  }
+};
+
+const safeLocalGet = (key) => safeStorageGet(typeof window !== 'undefined' ? window.localStorage : null, key);
+const safeLocalSet = (key, value) => safeStorageSet(typeof window !== 'undefined' ? window.localStorage : null, key, value);
+const safeLocalRemove = (key) => safeStorageRemove(typeof window !== 'undefined' ? window.localStorage : null, key);
+const safeSessionGet = (key) => safeStorageGet(typeof window !== 'undefined' ? window.sessionStorage : null, key);
+const safeSessionSet = (key, value) => safeStorageSet(typeof window !== 'undefined' ? window.sessionStorage : null, key, value);
+const safeSessionRemove = (key) => safeStorageRemove(typeof window !== 'undefined' ? window.sessionStorage : null, key);
+
+const getTimestampValue = (value) => {
+  if (typeof value === 'number') return value;
+  if (value?.toMillis) return value.toMillis();
+  if (typeof value?.seconds === 'number') return value.seconds * 1000;
+  const parsed = new Date(value || 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const buildStaffId = (email = '') => {
   const emailKey = normalizeEmail(email);
   return `staff-${emailKey.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`;
@@ -470,6 +514,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 
 const guestModeStorageKey = 'build-a-booking-guest-mode';
 const authRedirectStorageKey = 'build-a-booking-auth-return';
+const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 
 const shouldUseRedirectGoogleAuth = () => {
   if (typeof window === 'undefined') return false;
@@ -477,6 +522,41 @@ const shouldUseRedirectGoogleAuth = () => {
   const isTouchMobile = window.matchMedia?.('(max-width: 767px), (pointer: coarse)')?.matches;
   const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS/i.test(userAgent);
   return Boolean(isTouchMobile || isMobileBrowser);
+};
+
+const isStandaloneAppWindow = () => {
+  if (typeof window === 'undefined') return false;
+  return Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone);
+};
+
+const shouldOpenGoogleAuthInBrowser = () => shouldUseRedirectGoogleAuth() && isStandaloneAppWindow();
+
+const getGoogleAuthIntent = () => {
+  if (typeof window === 'undefined') return '';
+  const url = new URL(window.location.href);
+  return url.searchParams.get('auth') === 'google' ? (url.searchParams.get('return') || 'dashboard') : '';
+};
+
+const clearGoogleAuthIntentUrl = () => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('auth')) return;
+  url.searchParams.delete('auth');
+  url.searchParams.delete('return');
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+};
+
+const buildGoogleAuthBrowserUrl = () => {
+  const url = new URL(window.location.origin);
+  url.searchParams.set('auth', 'google');
+  url.searchParams.set('return', 'dashboard');
+  return url.toString();
+};
+
+const createGoogleProvider = () => {
+  const provider = new FirebaseSDK.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  return provider;
 };
 
 // --- Main App Component ---
@@ -493,11 +573,7 @@ const shouldUseRedirectGoogleAuth = () => {
             const [authPanelOpen, setAuthPanelOpen] = useState(false);
             const [authBusy, setAuthBusy] = useState(false);
             const [guestMode, setGuestMode] = useState(() => {
-                try {
-                    return localStorage.getItem(guestModeStorageKey) === 'true';
-                } catch {
-                    return false;
-                }
+                return safeLocalGet(guestModeStorageKey) === 'true';
             });
             const [publicSlug] = useState(getPublicBookingSlug);
             const [publicWorkspace, setPublicWorkspace] = useState(null);
@@ -526,9 +602,18 @@ const shouldUseRedirectGoogleAuth = () => {
             const containerRef = useRef(null);
             const editorContentRef = useRef(null);
             const themePaletteRailRef = useRef(null);
+            const scaleRef = useRef(1);
+            const compactViewportRef = useRef(false);
             const [toast, setToast] = useState(null);
+            const toastTimerRef = useRef(null);
             
-            const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
+            const showToast = (msg) => {
+                window.clearTimeout(toastTimerRef.current);
+                setToast(msg);
+                toastTimerRef.current = window.setTimeout(() => setToast(null), 4000);
+            };
+
+            useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
 
             const [settings, setSettings] = useState({
                 slug: 'studio-noir', brandName: 'Studio Noir',
@@ -934,7 +1019,7 @@ const shouldUseRedirectGoogleAuth = () => {
             useEffect(() => {
                 if (publicSlug || loading || view !== 'dashboard' || !canSetupWorkspace || isGuestWorkspace) return;
                 const workspaceAlreadyHandled = Boolean(settings.onboarding?.completedAt || settings.onboarding?.skippedAt);
-                const locallyHandled = localStorage.getItem(onboardingStorageKey) === 'done';
+                const locallyHandled = safeLocalGet(onboardingStorageKey) === 'done';
                 if (workspaceAlreadyHandled || locallyHandled || showOnboarding) return;
 
                 const timer = setTimeout(() => {
@@ -1106,12 +1191,18 @@ const shouldUseRedirectGoogleAuth = () => {
             };
 
             useEffect(() => {
+                let frameRequest = 0;
                 const updateScale = () => {
+                    window.cancelAnimationFrame(frameRequest);
+                    frameRequest = window.requestAnimationFrame(() => {
                     if (!containerRef.current) return;
                     const c = containerRef.current;
                     const rect = c.getBoundingClientRect();
                     const compact = activeTab === 'editor' && isMobileEditorViewport(c);
-                    setIsCompactEditorViewport(compact);
+                    if (compactViewportRef.current !== compact) {
+                        compactViewportRef.current = compact;
+                        setIsCompactEditorViewport(compact);
+                    }
                     const frame = getEditorPreviewFrame(device, compact);
                     const collapsedNavGain = compact && mobileNavCollapsed ? 24 : 0;
                     const collapsedPanelGain = editorCollapsed ? (compact ? 16 : 28) : 0;
@@ -1122,7 +1213,12 @@ const shouldUseRedirectGoogleAuth = () => {
                         (rect.height - paddingY) / frame.height,
                         frame.maxScale
                     );
-                    setScale(Math.max(frame.minScale, nextScale));
+                    const boundedScale = Math.max(frame.minScale, nextScale);
+                    if (Math.abs(scaleRef.current - boundedScale) > 0.002) {
+                        scaleRef.current = boundedScale;
+                        setScale(boundedScale);
+                    }
+                    });
                 };
 
                 updateScale();
@@ -1142,6 +1238,7 @@ const shouldUseRedirectGoogleAuth = () => {
                     clearTimeout(t2); 
                     clearTimeout(t3); 
                     clearTimeout(t4);
+                    window.cancelAnimationFrame(frameRequest);
                     resizeObserver?.disconnect();
                     window.removeEventListener('resize', updateScale); 
                 };
@@ -1229,12 +1326,12 @@ const shouldUseRedirectGoogleAuth = () => {
                     const grants = grantsSnap.docs
                         .map(grantDoc => ({ id: grantDoc.id, ...grantDoc.data() }))
                         .filter(grant => grant.status !== 'revoked');
-                    const savedOwnerId = localStorage.getItem('build-a-booking-active-workspace');
+                    const savedOwnerId = safeLocalGet('build-a-booking-active-workspace');
                     const hasSavedWorkspace = savedOwnerId && (savedOwnerId === signedInUser.uid || grants.some(grant => grant.ownerId === savedOwnerId));
                     const nextOwnerId = hasSavedWorkspace ? savedOwnerId : (grants[0]?.ownerId || signedInUser.uid);
                     setWorkspaceAccess(grants);
                     setActiveWorkspaceOwnerId(nextOwnerId);
-                    localStorage.setItem('build-a-booking-active-workspace', nextOwnerId);
+                    safeLocalSet('build-a-booking-active-workspace', nextOwnerId);
                 } catch (error) {
                     console.error(error);
                     setWorkspaceAccess([]);
@@ -1245,15 +1342,31 @@ const shouldUseRedirectGoogleAuth = () => {
                 }
             };
 
+            const startGoogleRedirect = async (returnTarget = 'dashboard') => {
+                const provider = createGoogleProvider();
+                safeSessionSet(authRedirectStorageKey, returnTarget);
+                safeSessionSet(authRedirectStartedStorageKey, String(Date.now()));
+                await FirebaseSDK.signInWithRedirect(auth, provider);
+            };
+
             useEffect(() => {
                 const initAuth = async () => {
                     try {
                         if (isFirebaseConfigured) {
+                            const googleAuthIntent = getGoogleAuthIntent();
+                            const redirectWasStarted = Boolean(safeSessionGet(authRedirectStartedStorageKey));
                             if (!publicSlug) {
                                 await FirebaseSDK.getRedirectResult(auth).catch((error) => {
                                     console.error(error);
                                     setAuthError(error.message || 'Google sign-in could not finish.');
                                 });
+                                if (redirectWasStarted) {
+                                    safeSessionRemove(authRedirectStartedStorageKey);
+                                    clearGoogleAuthIntentUrl();
+                                } else if (googleAuthIntent && !auth.currentUser) {
+                                    await startGoogleRedirect(googleAuthIntent);
+                                    return;
+                                }
                             }
                             if (initialAuthToken) await FirebaseSDK.signInWithCustomToken(auth, initialAuthToken);
                             else if (publicSlug) await FirebaseSDK.signInAnonymously(auth);
@@ -1281,9 +1394,9 @@ const shouldUseRedirectGoogleAuth = () => {
                             return;
                         }
                         setGuestMode(false);
-                        localStorage.removeItem(guestModeStorageKey);
-                        if (sessionStorage.getItem(authRedirectStorageKey) === 'dashboard') {
-                            sessionStorage.removeItem(authRedirectStorageKey);
+                        safeLocalRemove(guestModeStorageKey);
+                        if (safeSessionGet(authRedirectStorageKey) === 'dashboard') {
+                            safeSessionRemove(authRedirectStorageKey);
                             setAuthPanelOpen(false);
                             setView('dashboard');
                             showToast('Signed in with Google');
@@ -1334,6 +1447,9 @@ const shouldUseRedirectGoogleAuth = () => {
                 if ((!user || !workspaceOwnerId) && isFirebaseConfigured) return;
                 if (!isFirebaseConfigured) return;
 
+                const handleSyncError = (label) => (error) => {
+                    console.error(`${label} sync failed`, error);
+                };
                 const settingsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings');
                 const unsubSettings = FirebaseSDK.onSnapshot(settingsRef, (docSnap) => { 
                     if (docSnap.exists()) {
@@ -1344,7 +1460,7 @@ const shouldUseRedirectGoogleAuth = () => {
                         if(data.fontFamily === 'display') data.fontFamily = 'syne';
                         setSettings(prev => ({...prev, ...data}));
                     }
-                });
+                }, handleSyncError('Settings'));
                 
                 const staffRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff');
                 const unsubStaff = FirebaseSDK.onSnapshot(staffRef, (docSnap) => { 
@@ -1353,22 +1469,22 @@ const shouldUseRedirectGoogleAuth = () => {
                     } else if (isWorkspaceOwner) {
                         setStaffList([createOwnerStaffProfile(user)]);
                     }
-                });
+                }, handleSyncError('Staff'));
 
                 const commsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications');
                 const unsubComms = FirebaseSDK.onSnapshot(commsRef, (docSnap) => { 
                     if (docSnap.exists()) setCommunications(normalizeCommunications(docSnap.data()));
-                });
+                }, handleSyncError('Communication'));
 
                 const clientsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients');
                 const unsubClients = FirebaseSDK.onSnapshot(clientsRef, (docSnap) => { 
                     if (docSnap.exists()) setClientRecords(docSnap.data().list || []);
-                });
+                }, handleSyncError('Client'));
 
                 const bookingsCol = FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings');
                 const unsubBookings = FirebaseSDK.onSnapshot(bookingsCol, (snap) => {
-                    setBookings(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => b.timestamp - a.timestamp));
-                });
+                    setBookings(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => getTimestampValue(b.timestamp) - getTimestampValue(a.timestamp)));
+                }, handleSyncError('Booking'));
                 return () => { unsubSettings(); unsubStaff(); unsubComms(); unsubClients(); unsubBookings(); };
             }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug]);
 
@@ -1399,7 +1515,7 @@ const shouldUseRedirectGoogleAuth = () => {
             };
 
             const markOnboardingHandled = () => {
-                localStorage.setItem(onboardingStorageKey, 'done');
+                safeLocalSet(onboardingStorageKey, 'done');
             };
 
             const handleOnboardingSkip = () => {
@@ -1768,7 +1884,7 @@ const shouldUseRedirectGoogleAuth = () => {
             };
             const openGuestDashboard = () => {
                 setGuestMode(true);
-                localStorage.setItem(guestModeStorageKey, 'true');
+                safeLocalSet(guestModeStorageKey, 'true');
                 setAuthPanelOpen(false);
                 setAuthError('');
                 setView('dashboard');
@@ -1789,7 +1905,7 @@ const shouldUseRedirectGoogleAuth = () => {
                         await FirebaseSDK.signInWithEmailAndPassword(auth, authForm.email, authForm.password);
                     }
                     setGuestMode(false);
-                    localStorage.removeItem(guestModeStorageKey);
+                    safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
                     setView('dashboard');
                     showToast(authMode === 'signup' ? 'Account created' : 'Signed in');
@@ -1808,16 +1924,23 @@ const shouldUseRedirectGoogleAuth = () => {
                 setAuthError('');
                 setAuthBusy(true);
                 try {
-                    const provider = new FirebaseSDK.GoogleAuthProvider();
-                    provider.setCustomParameters({ prompt: 'select_account' });
+                    if (shouldOpenGoogleAuthInBrowser()) {
+                        const opened = window.open(buildGoogleAuthBrowserUrl(), '_blank');
+                        if (opened) {
+                            try { opened.opener = null; } catch {}
+                            setAuthBusy(false);
+                            showToast('Google sign-in opened in your browser.');
+                            return;
+                        }
+                    }
                     if (shouldUseRedirectGoogleAuth()) {
-                        sessionStorage.setItem(authRedirectStorageKey, 'dashboard');
-                        await FirebaseSDK.signInWithRedirect(auth, provider);
+                        await startGoogleRedirect('dashboard');
                         return;
                     }
+                    const provider = createGoogleProvider();
                     await FirebaseSDK.signInWithPopup(auth, provider);
                     setGuestMode(false);
-                    localStorage.removeItem(guestModeStorageKey);
+                    safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
                     setView('dashboard');
                     showToast('Signed in with Google');
@@ -1825,10 +1948,7 @@ const shouldUseRedirectGoogleAuth = () => {
                     console.error(error);
                     if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported'].includes(error?.code)) {
                         try {
-                            const provider = new FirebaseSDK.GoogleAuthProvider();
-                            provider.setCustomParameters({ prompt: 'select_account' });
-                            sessionStorage.setItem(authRedirectStorageKey, 'dashboard');
-                            await FirebaseSDK.signInWithRedirect(auth, provider);
+                            await startGoogleRedirect('dashboard');
                             return;
                         } catch (redirectError) {
                             console.error(redirectError);
@@ -1851,7 +1971,7 @@ const shouldUseRedirectGoogleAuth = () => {
                     await FirebaseSDK.signOut(auth);
                 }
                 setGuestMode(false);
-                localStorage.removeItem(guestModeStorageKey);
+                safeLocalRemove(guestModeStorageKey);
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
                 setView('landing');
@@ -1985,6 +2105,14 @@ const shouldUseRedirectGoogleAuth = () => {
                 await sendBookingEmail(booking, 'review');
             };
 
+            const googleAuthLabel = authBusy
+                ? 'Connecting...'
+                : shouldOpenGoogleAuthInBrowser()
+                    ? 'Open Google In Browser'
+                    : authMode === 'signup'
+                        ? 'Sign Up With Google'
+                        : 'Continue With Google';
+
             const authDialog = authPanelOpen && (
                 <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
                     <form onSubmit={handleAuthSubmit} className="native-auth-panel w-full sm:max-w-md bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-5 sm:p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300 max-h-[calc(100dvh-1rem)] overflow-y-auto">
@@ -1997,8 +2125,13 @@ const shouldUseRedirectGoogleAuth = () => {
                             <button type="button" onClick={() => { setAuthPanelOpen(false); setAuthError(''); }} className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center hover:text-black transition-colors shrink-0"><X size={16}/></button>
                         </div>
                         <button type="button" onClick={handleGoogleAuth} disabled={authBusy} className="w-full h-12 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 disabled:cursor-wait">
-                            <Globe size={16}/> {authBusy ? 'Connecting...' : authMode === 'signup' ? 'Sign Up With Google' : 'Continue With Google'}
+                            <Globe size={16}/> {googleAuthLabel}
                         </button>
+                        {shouldOpenGoogleAuthInBrowser() && (
+                            <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+                                Homescreen mode opens Google in your browser so saved Google accounts are available.
+                            </p>
+                        )}
                         <button type="button" onClick={openGuestDashboard} className="mt-3 w-full h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-[#39FF14]/20 hover:brightness-95 transition-all">
                             <Eye size={16}/> Browse As Guest
                         </button>
@@ -2201,16 +2334,20 @@ const shouldUseRedirectGoogleAuth = () => {
                     </div>
                 )}
                 {authDialog}
-                <OnboardingShowroom
-                    open={showOnboarding}
-                    settings={settings}
-                    bookingOrigin={window.location.origin}
-                    initialSceneId={onboardingStartScene}
-                    canApply={canSetupWorkspace}
-                    onSkip={handleOnboardingSkip}
-                    onComplete={handleOnboardingComplete}
-                    onNavigate={handleOnboardingNavigate}
-                />
+                {showOnboarding && (
+                    <Suspense fallback={null}>
+                        <OnboardingShowroom
+                            open={showOnboarding}
+                            settings={settings}
+                            bookingOrigin={window.location.origin}
+                            initialSceneId={onboardingStartScene}
+                            canApply={canSetupWorkspace}
+                            onSkip={handleOnboardingSkip}
+                            onComplete={handleOnboardingComplete}
+                            onNavigate={handleOnboardingNavigate}
+                        />
+                    </Suspense>
+                )}
 
                 <div className={`dashboard-sidebar hidden md:flex transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex-col relative z-50 shadow-sm ${sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 p-8'}`}>
                     {!sidebarCollapsed && (
@@ -2231,7 +2368,7 @@ const shouldUseRedirectGoogleAuth = () => {
                                     value={workspaceOwnerId}
                                     onChange={(event) => {
                                         setActiveWorkspaceOwnerId(event.target.value);
-                                        localStorage.setItem('build-a-booking-active-workspace', event.target.value);
+                                        safeLocalSet('build-a-booking-active-workspace', event.target.value);
                                     }}
                                     className="w-full h-10 rounded-lg bg-white border border-neutral-100 px-3 text-xs font-bold text-black outline-none focus:border-black"
                                 >
