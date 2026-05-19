@@ -2082,7 +2082,7 @@ const shouldUseRedirectGoogleAuth = () => {
                       </h1>
                       
                       <p className="text-lg md:text-2xl font-medium text-neutral-500 max-w-2xl mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200">
-                        A beautiful booking page and simple dashboard for creators, studios, and service businesses that want to look polished from the first click.
+                        Welcome clients with a polished booking page, then run every request from one calm dashboard built for busy studios, creators, and service businesses.
                       </p>
                       
                       <div className="flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 w-full md:w-auto">
@@ -2098,8 +2098,8 @@ const shouldUseRedirectGoogleAuth = () => {
                     {/* Bento Grid Features */}
                     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-32">
                       <div className="text-center mb-16 md:mb-24">
-                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tighter mb-6">Everything your booking page needs.</h2>
-                        <p className="text-neutral-500 font-medium text-lg md:text-xl max-w-2xl mx-auto">Create a polished client experience, manage requests, and keep your schedule organized in one place.</p>
+                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tighter mb-6">The tools behind a booking page clients trust.</h2>
+                        <p className="text-neutral-500 font-medium text-lg md:text-xl max-w-2xl mx-auto">Design the page, manage the flow, remember the people, and keep every booking moving without the admin mess.</p>
                       </div>
                       
                       <div className="native-feature-wave-list grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2178,7 +2178,7 @@ const shouldUseRedirectGoogleAuth = () => {
                     <section className="py-20 md:py-32 px-4 sm:px-6 text-center border-t border-neutral-200/50 bg-neutral-50/50">
                       <div className="flex flex-col items-center max-w-3xl mx-auto">
                         <h2 className="text-4xl md:text-7xl font-bold tracking-tighter mb-8 text-black leading-[0.95] md:leading-[0.9]">Ready to upgrade your booking flow?</h2>
-                        <p className="text-xl text-neutral-500 font-medium mb-10">Build a booking experience that feels clean, premium, and easy for clients to use.</p>
+                        <p className="text-xl text-neutral-500 font-medium mb-10">Build a booking experience that feels clean, premium, easy for you to manage, and effortless for clients to use.</p>
                         <button onClick={openDashboard} className="h-16 px-12 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20">
                           Build Your Booking Flow
                         </button>
