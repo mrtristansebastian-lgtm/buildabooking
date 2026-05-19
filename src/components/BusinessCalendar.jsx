@@ -302,20 +302,18 @@ import { getLocalDateStr } from '../utils/dates';
                                 ))}
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="native-stat-grid grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4">
                             {scheduleMetricCards.map((item, index) => {
                                 const IconCmp = item.icon;
-                                const isDark = item.tone === 'dark';
-                                const isAccent = item.tone === 'accent' || isDark;
                                 return (
-                                    <div key={item.label} className={`p-5 md:p-6 border-neutral-100 ${index > 0 ? 'xl:border-l' : ''} ${index % 2 === 1 ? 'sm:border-l xl:border-l' : ''} ${index > 1 ? 'sm:border-t xl:border-t-0' : ''} ${isAccent ? 'bg-[#39FF14] text-black' : 'bg-white text-black'}`}>
+                                    <div key={item.label} className={`native-stat-card p-5 md:p-6 border-neutral-100 bg-white text-black ${index > 0 ? 'xl:border-l' : ''} ${index % 2 === 1 ? 'sm:border-l xl:border-l' : ''} ${index > 1 ? 'sm:border-t xl:border-t-0' : ''}`}>
                                         <div className="flex items-start justify-between gap-4 mb-8">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAccent ? 'bg-black/10 text-black' : 'bg-neutral-100 text-black'}`}>
+                                            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-neutral-100 text-black">
                                                 <IconCmp size={17}/>
                                             </div>
-                                            <span className={`max-w-[170px] text-right leading-tight text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${isAccent ? 'bg-black/10 text-black/65' : 'bg-neutral-100 text-neutral-500'}`}>{item.hint}</span>
+                                            <span className="max-w-[170px] text-right leading-tight text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-500">{item.hint}</span>
                                         </div>
-                                        <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 ${isAccent ? 'text-black/55' : 'text-neutral-400'}`}>{item.label}</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-2 text-neutral-400">{item.label}</p>
                                         <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight leading-none">{item.value}</p>
                                     </div>
                                 );

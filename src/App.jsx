@@ -2140,12 +2140,12 @@ const shouldUseRedirectGoogleAuth = () => {
                         </div>
             
                         {/* Box 6: Team/Staff (Span 2) */}
-                        <div className="native-feature-card native-feature-hero-card md:col-span-2 bg-[#39FF14] text-black rounded-lg p-6 sm:p-8 md:p-16 relative overflow-hidden group shadow-2xl shadow-[#39FF14]/20">
+                        <div className="native-feature-card native-feature-hero-card md:col-span-2 bg-[#fafafa] text-black rounded-lg p-6 sm:p-8 md:p-16 border border-neutral-200/60 hover:shadow-xl transition-all relative overflow-hidden group">
                           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
                               <div className="max-w-xl">
                                   <Users className="mb-6 text-black" size={36} strokeWidth={1.5} />
                                   <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Team Scheduling.</h3>
-                                  <p className="text-black/65 font-medium text-lg">Add your team, assign bookings, and see who handled each client at a glance.</p>
+                                  <p className="text-neutral-500 font-medium text-lg">Add your team, assign bookings, and see who handled each client at a glance.</p>
                               </div>
                           </div>
                         </div>
@@ -2379,21 +2379,21 @@ const shouldUseRedirectGoogleAuth = () => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-3">
+                                <div className="native-stat-grid grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-3">
                                     {[
-                                        { label: 'Bookings', value: dashboardPortfolio.activeBookings, hint: `${dashboardPortfolio.confirmed} confirmed`, icon: CalendarCheck, dark: true },
+                                        { label: 'Bookings', value: dashboardPortfolio.activeBookings, hint: `${dashboardPortfolio.confirmed} confirmed`, icon: CalendarCheck },
                                         { label: 'Needs Review', value: dashboardPortfolio.needsAttention, hint: `${dashboardPortfolio.pending} requests / ${dashboardPortfolio.waitlist} waitlist`, icon: Bell },
                                         { label: 'Booking Rate', value: `${dashboardPortfolio.bookingRate}%`, hint: `${dashboardPortfolio.confirmed}/${dashboardPortfolio.activeBookings || 0} confirmed`, icon: ShieldCheck },
                                         { label: 'Open Slots', value: dashboardPortfolio.openSlots, hint: `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity} booked`, icon: Clock }
                                     ].map(metric => {
                                     const IconCmp = metric.icon;
                                     return (
-                                        <div key={metric.label} className={`rounded-lg border p-5 ${metric.dark ? 'bg-[#39FF14] text-black border-transparent shadow-xl shadow-[#39FF14]/20' : 'bg-white border-neutral-100'}`}>
+                                        <div key={metric.label} className="native-stat-card rounded-lg border border-neutral-100 bg-white p-5 text-black">
                                             <div className="flex items-start justify-between mb-7">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${metric.dark ? 'bg-black/10 text-black' : 'bg-neutral-100 text-black'}`}><IconCmp size={17}/></div>
-                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${metric.dark ? 'bg-black/10 text-black/65' : 'bg-neutral-100 text-neutral-500'}`}>{metric.hint}</span>
+                                                <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-500">{metric.hint}</span>
                                             </div>
-                                            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 ${metric.dark ? 'text-black/55' : 'text-neutral-400'}`}>{metric.label}</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-2 text-neutral-400">{metric.label}</p>
                                             <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight text-black">{metric.value}</p>
                                         </div>
                                     );
@@ -2974,7 +2974,7 @@ const shouldUseRedirectGoogleAuth = () => {
                                 </button>
                             </header>
 
-                            <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
+                            <div className="native-stat-grid grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                                 {[
                                     { label: 'Client Profiles', value: clientMetrics.total, hint: clientMetrics.total ? 'Live records' : 'Ready for data', icon: Users },
                                     { label: 'Regulars', value: clientMetrics.regulars, hint: 'Auto + VIP', icon: Star },
@@ -2983,7 +2983,7 @@ const shouldUseRedirectGoogleAuth = () => {
                                 ].map(metric => {
                                     const IconCmp = metric.icon;
                                     return (
-                                        <div key={metric.label} className="saas-card p-5">
+                                        <div key={metric.label} className="saas-card native-stat-card p-5">
                                             <div className="flex items-start justify-between mb-7">
                                                 <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
                                                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">{metric.hint}</span>
@@ -3276,7 +3276,7 @@ const shouldUseRedirectGoogleAuth = () => {
                                 </button>
                             </header>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
+                            <div className="native-stat-grid grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                                 {[
                                     { label: 'Team Members', value: staffList.length, hint: 'Active roster', icon: Users },
                                     { label: 'Admins', value: staffList.filter(staff => staff.role === 'owner' || staff.role === 'admin').length, hint: 'Full access', icon: ShieldCheck },
@@ -3285,7 +3285,7 @@ const shouldUseRedirectGoogleAuth = () => {
                                 ].map(metric => {
                                     const IconCmp = metric.icon;
                                     return (
-                                        <div key={metric.label} className="saas-card p-5">
+                                        <div key={metric.label} className="saas-card native-stat-card p-5">
                                             <div className="flex items-start justify-between mb-7">
                                                 <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
                                                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">{metric.hint}</span>
@@ -4066,7 +4066,7 @@ const shouldUseRedirectGoogleAuth = () => {
                             </div>
                         </header>
 
-                        <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
+                        <div className="native-stat-grid grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                             {[
                                 { label: 'Needs Review', value: bookingStats.attention, hint: 'Pending + waitlist', icon: Bell },
                                 { label: 'Confirmed', value: bookingStats.confirmed, hint: 'Approved visits', icon: CheckCircle2 },
@@ -4075,7 +4075,7 @@ const shouldUseRedirectGoogleAuth = () => {
                             ].map(metric => {
                                 const IconCmp = metric.icon;
                                 return (
-                                    <div key={metric.label} className="saas-card p-5">
+                                    <div key={metric.label} className="saas-card native-stat-card p-5">
                                         <div className="flex items-start justify-between mb-7">
                                             <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
                                             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">{metric.hint}</span>
