@@ -2062,7 +2062,7 @@ const shouldUseRedirectGoogleAuth = () => {
                         <p className="text-neutral-500 font-medium text-lg md:text-xl max-w-2xl mx-auto">Create a polished client experience, manage requests, and keep your schedule organized in one place.</p>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="native-feature-wave-list grid grid-cols-1 md:grid-cols-3 gap-6">
                         
                         {/* Box 1: Design (Span 2) */}
                         <div className="native-feature-card md:col-span-2 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group relative overflow-hidden">
@@ -2100,7 +2100,7 @@ const shouldUseRedirectGoogleAuth = () => {
                         </div>
             
                         {/* Box 6: Team/Staff (Span 2) */}
-                        <div className="md:col-span-2 bg-[#39FF14] text-black rounded-lg p-6 sm:p-8 md:p-16 relative overflow-hidden group shadow-2xl shadow-[#39FF14]/20">
+                        <div className="native-feature-card native-feature-hero-card md:col-span-2 bg-[#39FF14] text-black rounded-lg p-6 sm:p-8 md:p-16 relative overflow-hidden group shadow-2xl shadow-[#39FF14]/20">
                           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
                               <div className="max-w-xl">
                                   <Users className="mb-6 text-black" size={36} strokeWidth={1.5} />

@@ -108,26 +108,145 @@ body {
             animation: native-accent-phase 24s ease-in-out infinite;
         }
 
+        .native-feature-wave-list {
+            position: relative;
+            isolation: isolate;
+        }
+
+        .native-feature-wave-list::before {
+            content: "";
+            position: absolute;
+            inset: -9% -7%;
+            z-index: 0;
+            border-radius: 34px;
+            background:
+                radial-gradient(circle at 12% 22%, rgba(57, 255, 20, 0.22), transparent 25%),
+                radial-gradient(circle at 86% 12%, rgba(0, 217, 255, 0.2), transparent 27%),
+                linear-gradient(112deg, rgba(57, 255, 20, 0), rgba(0, 217, 255, 0.18), rgba(108, 92, 255, 0.2), rgba(255, 63, 164, 0.18), rgba(255, 180, 35, 0), rgba(57, 255, 20, 0));
+            background-size: 140% 140%, 150% 150%, 260% 260%;
+            filter: blur(28px) saturate(1.18);
+            opacity: 0.42;
+            transform: translate3d(-4%, 1%, 0) rotate(-2deg);
+            animation: native-feature-wall-wave 22s ease-in-out infinite;
+            pointer-events: none;
+        }
+
         .native-feature-card {
             position: relative;
             overflow: hidden;
+            isolation: isolate;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248,249,251,0.9)),
+                #fafafa !important;
+            box-shadow: 0 22px 70px -58px rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(14px);
+            z-index: 1;
+        }
+
+        .native-feature-card > * {
+            position: relative;
+            z-index: 2;
         }
 
         .native-feature-card::before {
             content: "";
             position: absolute;
+            inset: -38%;
+            z-index: 0;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.58), transparent 16%),
+                var(--native-accent-gradient);
+            background-size: 160% 160%, 420% 420%;
+            opacity: 0.22;
+            filter: blur(16px) saturate(1.14);
+            transform: translate3d(-34%, 18%, 0) rotate(-8deg);
+            animation:
+                native-feature-wave 14s cubic-bezier(0.45, 0, 0.2, 1) infinite,
+                native-accent-phase 24s ease-in-out infinite;
+            animation-delay: var(--feature-wave-delay, 0s), 0s;
+            pointer-events: none;
+        }
+
+        .native-feature-card::after {
+            content: "";
+            position: absolute;
             inset-inline: 0;
             top: 0;
-            height: 3px;
-            background-image: var(--native-accent-gradient);
-            background-size: 420% 420%;
-            opacity: 0;
+            z-index: 1;
+            height: 1px;
+            background:
+                linear-gradient(90deg, transparent, rgba(255,255,255,0.94), transparent),
+                var(--native-accent-gradient);
+            background-size: 180% 100%, 420% 420%;
+            opacity: 0.62;
             animation: native-accent-phase 24s ease-in-out infinite;
-            transition: opacity 260ms ease;
+            pointer-events: none;
         }
 
         .native-feature-card:hover::before {
-            opacity: 1;
+            opacity: 0.34;
+            filter: blur(14px) saturate(1.28);
+        }
+
+        .native-feature-hero-card {
+            background-image: var(--native-accent-gradient) !important;
+            background-size: 420% 420% !important;
+            animation: native-accent-phase 24s ease-in-out infinite;
+        }
+
+        .native-feature-hero-card::before {
+            background:
+                radial-gradient(circle at 15% 20%, rgba(255,255,255,0.32), transparent 24%),
+                radial-gradient(circle at 92% 72%, rgba(255,255,255,0.24), transparent 28%),
+                linear-gradient(105deg, rgba(255,255,255,0), rgba(255,255,255,0.26), rgba(255,255,255,0));
+            opacity: 0.38;
+            filter: blur(10px);
+        }
+
+        .native-feature-wave-list .native-feature-card:nth-child(1) { --feature-wave-delay: 0s; }
+        .native-feature-wave-list .native-feature-card:nth-child(2) { --feature-wave-delay: 0.55s; }
+        .native-feature-wave-list .native-feature-card:nth-child(3) { --feature-wave-delay: 1.1s; }
+        .native-feature-wave-list .native-feature-card:nth-child(4) { --feature-wave-delay: 1.65s; }
+        .native-feature-wave-list .native-feature-card:nth-child(5) { --feature-wave-delay: 2.2s; }
+        .native-feature-wave-list .native-feature-card:nth-child(6) { --feature-wave-delay: 2.75s; }
+        .native-feature-wave-list .native-feature-card:nth-child(7) { --feature-wave-delay: 3.3s; }
+        .native-feature-wave-list .native-feature-card:nth-child(8) { --feature-wave-delay: 3.85s; }
+
+        @keyframes native-feature-wall-wave {
+            0%, 100% {
+                background-position: 0% 50%, 95% 8%, 0% 50%;
+                transform: translate3d(-5%, 1%, 0) rotate(-2deg) scale(1);
+            }
+            42% {
+                background-position: 65% 36%, 40% 50%, 62% 48%;
+                transform: translate3d(1.5%, -1.5%, 0) rotate(1deg) scale(1.02);
+            }
+            72% {
+                background-position: 92% 68%, 10% 78%, 100% 58%;
+                transform: translate3d(4%, 2.5%, 0) rotate(-1deg) scale(1.01);
+            }
+        }
+
+        @keyframes native-feature-wave {
+            0% {
+                opacity: 0;
+                transform: translate3d(-44%, 22%, 0) rotate(-10deg) scale(0.92);
+            }
+            14% {
+                opacity: 0.24;
+            }
+            42% {
+                opacity: 0.18;
+                transform: translate3d(10%, -4%, 0) rotate(-8deg) scale(1.08);
+            }
+            68% {
+                opacity: 0.26;
+                transform: translate3d(40%, -18%, 0) rotate(-5deg) scale(1.02);
+            }
+            100% {
+                opacity: 0;
+                transform: translate3d(72%, -28%, 0) rotate(-4deg) scale(0.96);
+            }
         }
 
         .native-auth-panel {
@@ -170,7 +289,9 @@ body {
             .native-ui .schedule-day-selected,
             .native-ui .native-accent-text,
             .native-home-nav::after,
-            .native-feature-card::before {
+            .native-feature-card::before,
+            .native-feature-card::after,
+            .native-feature-hero-card {
                 animation: none !important;
             }
         }
