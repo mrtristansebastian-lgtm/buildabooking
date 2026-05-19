@@ -4,6 +4,7 @@ import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
 
 const alignments = ['left', 'center', 'right'];
+const visualStyles = ['minimal', 'outline', 'solid'];
 const clampNumber = (value, min, max, fallback) => {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return fallback;
@@ -11,10 +12,18 @@ const clampNumber = (value, min, max, fallback) => {
 };
 
 const getAlign = (value) => alignments.includes(value) ? value : 'left';
+const getVisualStyle = (value, fallback = 'minimal') => visualStyles.includes(value) ? value : fallback;
 const getBlockMargins = (align) => ({
     marginLeft: align === 'left' ? 0 : 'auto',
     marginRight: align === 'right' ? 0 : 'auto'
 });
+
+const normalizeHandle = (value = '') => value.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+const normalizeWebsite = (value = '') => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
 
 // --- PUBLIC BOOKING ENGINE (WITH NEW EXTENSIONS & SPECIFIC FONTS) ---
         export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onInspect }) => {
@@ -117,6 +126,40 @@ const getBlockMargins = (align) => ({
                 size: clampNumber(settings.welcomeSize, 13, 32, 20),
                 font: settings.welcomeFontFamily || settings.bodyFontFamily || settings.fontFamily
             };
+            const dateStyle = getVisualStyle(settings.dateStyle || settings.availabilityStyle, 'minimal');
+            const timeSlotStyle = getVisualStyle(settings.timeSlotStyle || settings.availabilityStyle, 'minimal');
+            const actionButtonStyle = getVisualStyle(settings.actionButtonStyle, 'solid');
+            const faqStyle = getVisualStyle(settings.faqStyle, 'minimal');
+            const socialIconStyle = getVisualStyle(settings.socialIconStyle, 'outline');
+            const faqItems = (settings.features?.faqEnabled && Array.isArray(settings.features?.faqs))
+                ? settings.features.faqs.filter(faq => faq?.q?.trim() && faq?.a?.trim())
+                : [];
+            const socialLinks = settings.features?.socialLinks ? [
+                settings.socials?.instagram && {
+                    key: 'instagram',
+                    label: 'Instagram',
+                    href: `https://instagram.com/${normalizeHandle(settings.socials.instagram).replace(/^instagram\.com\//i, '')}`,
+                    icon: Instagram
+                },
+                settings.socials?.tiktok && {
+                    key: 'tiktok',
+                    label: 'TikTok',
+                    href: `https://www.tiktok.com/@${normalizeHandle(settings.socials.tiktok).replace(/^tiktok\.com\/@?/i, '')}`,
+                    icon: Globe
+                },
+                settings.socials?.facebook && {
+                    key: 'facebook',
+                    label: 'Facebook',
+                    href: `https://facebook.com/${normalizeHandle(settings.socials.facebook).replace(/^(facebook|fb)\.com\//i, '')}`,
+                    icon: Globe
+                },
+                settings.socials?.website && {
+                    key: 'website',
+                    label: 'Website',
+                    href: normalizeWebsite(settings.socials.website),
+                    icon: Globe
+                }
+            ].filter(Boolean) : [];
 
             const handleAction = () => {
                 if (isPreview) { onInspect('copy'); return; }
@@ -127,15 +170,46 @@ const getBlockMargins = (align) => ({
             };
 
             const getDateSlotStyle = (isActive) => {
-                const bg = isActive ? (settings.dateActiveBgColor || 'transparent') : (settings.dateBgColor || 'transparent');
-                const text = isActive ? (settings.dateActiveTextColor || '#000000') : (settings.dateTextColor || '#666666');
                 const radius = settings.buttonStyle === 'pill' ? '32px' : '12px';
-                return { backgroundColor: bg, color: text, borderRadius: radius, border: isActive && bg === 'transparent' ? '1px solid transparent' : (bg !== 'transparent' ? 'none' : '1px solid transparent'), fontFamily: getFontFamily(settings.dateFontFamily || settings.fontFamily) };
+                const activeColor = settings.primaryColor || '#000000';
+                const baseTextColor = settings.dateTextColor || '#666666';
+                const activeTextColor = settings.dateActiveTextColor || activeColor;
+                const activeBg = settings.dateActiveBgColor && settings.dateActiveBgColor !== 'transparent' ? settings.dateActiveBgColor : `${activeColor}18`;
+                const baseBg = settings.dateBgColor && settings.dateBgColor !== 'transparent' ? settings.dateBgColor : 'transparent';
+                const fontFamily = getFontFamily(settings.dateFontFamily || settings.fontFamily);
+
+                if (dateStyle === 'solid') {
+                    return {
+                        backgroundColor: isActive ? activeBg : (baseBg === 'transparent' ? `${settings.headingColor || '#000000'}08` : baseBg),
+                        color: isActive ? activeTextColor : baseTextColor,
+                        borderRadius: radius,
+                        border: '1px solid transparent',
+                        boxShadow: isActive ? `0 16px 34px -22px ${activeColor}` : 'none',
+                        fontFamily
+                    };
+                }
+                if (dateStyle === 'outline') {
+                    return {
+                        backgroundColor: isActive ? `${activeColor}0D` : 'transparent',
+                        color: isActive ? activeColor : baseTextColor,
+                        borderRadius: radius,
+                        border: `1px solid ${isActive ? activeColor : `${baseTextColor}24`}`,
+                        boxShadow: isActive ? `0 12px 28px -24px ${activeColor}` : 'none',
+                        fontFamily
+                    };
+                }
+                return {
+                    backgroundColor: 'transparent',
+                    color: isActive ? activeColor : baseTextColor,
+                    borderRadius: '0px',
+                    border: '1px solid transparent',
+                    fontFamily
+                };
             };
 
             const getTimeSlotStyle = (isActive) => {
-                const isSolid = settings.availabilityStyle === 'solid';
-                const isOutline = settings.availabilityStyle === 'outline';
+                const isSolid = timeSlotStyle === 'solid';
+                const isOutline = timeSlotStyle === 'outline';
                 const radius = settings.buttonStyle === 'pill' ? '9999px' : '12px';
                 const activeColor = settings.primaryColor;
                 const baseTextColor = settings.slotTextColor || '#000000';
@@ -148,6 +222,36 @@ const getBlockMargins = (align) => ({
                     return { backgroundColor: isActive ? activeColor + '0D' : 'transparent', color: isActive ? activeColor : baseTextColor, borderRadius: radius, border: `1px solid ${isActive ? activeColor : baseTextColor + '20'}`, fontFamily: fontF };
                 }
                 return { backgroundColor: 'transparent', color: isActive ? activeColor : baseTextColor, border: '1px solid transparent', borderRadius: '0px', fontFamily: fontF };
+            };
+
+            const getActionButtonStyle = () => {
+                const radius = settings.buttonStyle === 'pill' ? '9999px' : '8px';
+                const accent = settings.primaryColor || '#000000';
+                const textColor = settings.buttonTextColor || '#000000';
+                const fontFamily = getFontFamily(settings.buttonFontFamily || settings.fontFamily);
+                if (actionButtonStyle === 'outline') {
+                    return { backgroundColor: 'transparent', color: accent, border: `1px solid ${accent}`, borderRadius: radius, fontFamily };
+                }
+                if (actionButtonStyle === 'minimal') {
+                    return { backgroundColor: 'transparent', color: settings.headingColor || accent, border: '1px solid transparent', borderBottom: `2px solid ${accent}`, borderRadius: '0px', boxShadow: 'none', fontFamily };
+                }
+                return { backgroundColor: accent, color: textColor, border: '1px solid transparent', borderRadius: radius, fontFamily };
+            };
+
+            const getFaqItemStyle = () => {
+                const bg = settings.faqBgColor || 'transparent';
+                const borderColor = settings.faqBorderColor || `${settings.headingColor || '#000000'}18`;
+                if (faqStyle === 'solid') return { backgroundColor: bg === 'transparent' ? `${settings.headingColor || '#000000'}08` : bg, border: '1px solid transparent', borderRadius: '16px', padding: '18px' };
+                if (faqStyle === 'outline') return { backgroundColor: 'transparent', border: `1px solid ${borderColor}`, borderRadius: '16px', padding: '18px' };
+                return { backgroundColor: 'transparent', borderBottom: `1px solid ${borderColor}`, borderRadius: '0px', paddingBottom: '16px' };
+            };
+
+            const getSocialLinkStyle = () => {
+                const accent = settings.socialIconColor || settings.primaryColor || settings.headingColor || '#000000';
+                const bg = settings.socialIconBgColor || 'transparent';
+                if (socialIconStyle === 'solid') return { backgroundColor: bg === 'transparent' ? accent : bg, color: settings.socialIconTextColor || settings.buttonTextColor || '#000000', border: '1px solid transparent' };
+                if (socialIconStyle === 'outline') return { backgroundColor: 'transparent', color: accent, border: `1px solid ${accent}55` };
+                return { backgroundColor: 'transparent', color: accent, border: '1px solid transparent' };
             };
 
             if (isInitialLoading) {
@@ -242,28 +346,8 @@ const getBlockMargins = (align) => ({
                                 </span>
                             )}
                             {settings.features?.location && (
-                                <a href={settings.features.location} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.primaryColor + '20', color: settings.primaryColor }}>
+                                <a href={settings.features.location} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.primaryColor + '20', color: settings.primaryColor }}>
                                     <MapPin size={12} /> Get Directions
-                                </a>
-                            )}
-                            {settings.socials?.instagram && (
-                                <a href={`https://instagram.com/${settings.socials.instagram.replace('@','')}`} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.headingColor + '10', color: settings.headingColor }}>
-                                    <Instagram size={12} /> IG
-                                </a>
-                            )}
-                            {settings.socials?.tiktok && (
-                                <a href={`https://www.tiktok.com/@${settings.socials.tiktok.replace('@','')}`} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.headingColor + '10', color: settings.headingColor }}>
-                                    <Globe size={12} /> TikTok
-                                </a>
-                            )}
-                            {settings.socials?.facebook && (
-                                <a href={`https://facebook.com/${settings.socials.facebook.replace('@','')}`} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.headingColor + '10', color: settings.headingColor }}>
-                                    <Globe size={12} /> FB
-                                </a>
-                            )}
-                            {settings.socials?.website && (
-                                <a href={settings.socials.website} target="_blank" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.headingColor + '10', color: settings.headingColor }}>
-                                    <Globe size={12} /> Web
                                 </a>
                             )}
                         </div>
@@ -299,7 +383,7 @@ const getBlockMargins = (align) => ({
                                     <button key={i} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'}`} style={getDateSlotStyle(isActive)}>
                                         <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] transition-all`}>{d.dayName}</span>
                                         <span className={`text-3xl md:text-4xl font-bold tracking-tighter transition-all`}>{d.dayNum}</span>
-                                        {settings.availabilityStyle === 'minimal' && isActive && <div className="absolute -bottom-3 w-10 h-[2px] rounded-full" style={{ backgroundColor: settings.primaryColor }} />}
+                                        {dateStyle === 'minimal' && isActive && <div className="absolute -bottom-3 w-10 h-[2px] rounded-full" style={{ backgroundColor: settings.primaryColor }} />}
                                     </button>
                                 );
                                 })}
@@ -327,14 +411,14 @@ const getBlockMargins = (align) => ({
                                 <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-20">Fully Booked</div>
                             )
                         ) : (
-                            <div className={`grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => isPreview && onInspect('availability')}>
+                            <div className={`grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => isPreview && onInspect('visuals')}>
                                 {availableTimesForActiveDate.map((t) => {
                                 const isActive = selectedTime === t;
                                 return (
-                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${settings.availabilityStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${settings.availabilityStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''}`} style={getTimeSlotStyle(isActive)}>
+                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''}`} style={getTimeSlotStyle(isActive)}>
                                         <div className="flex items-center justify-center relative w-full">
-                                            <span className={`text-lg md:text-xl font-bold tracking-tighter transition-all duration-500 ${isActive && settings.availabilityStyle === 'minimal' ? '-translate-y-1 scale-110' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{t}</span>
-                                            {settings.availabilityStyle === 'minimal' && isActive && <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: settings.primaryColor }} />}
+                                            <span className={`text-lg md:text-xl font-bold tracking-tighter transition-all duration-500 ${isActive && timeSlotStyle === 'minimal' ? '-translate-y-1 scale-110' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{t}</span>
+                                            {timeSlotStyle === 'minimal' && isActive && <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: settings.primaryColor }} />}
                                         </div>
                                     </button>
                                 );
@@ -363,6 +447,31 @@ const getBlockMargins = (align) => ({
                                     <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
                                     <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
                                 </div>
+                                {faqItems.length > 0 && (
+                                <div className={`pt-2 ${inspectClass}`} onClick={() => isPreview && onInspect('features')}>
+                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-5 opacity-40" style={{ color: settings.bodyColor }}>Questions</h3>
+                                    <div className="space-y-3">
+                                        {faqItems.map((faq, i) => (
+                                            <button
+                                                key={`${faq.q}-${i}`}
+                                                type="button"
+                                                className="w-full text-left transition-all"
+                                                style={getFaqItemStyle()}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setOpenFaq(openFaq === i ? null : i);
+                                                }}
+                                            >
+                                                <span className="flex justify-between items-center gap-4">
+                                                    <span className="font-bold text-sm" style={{ color: settings.faqTextColor || settings.headingColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
+                                                    {openFaq === i ? <ChevronUp size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} />}
+                                                </span>
+                                                {openFaq === i && <span className="block mt-3 text-sm opacity-85 leading-relaxed" style={{ color: settings.faqAnswerColor || settings.bodyColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.bodyFontFamily || settings.fontFamily) }}>{faq.a}</span>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                )}
                                 <div className="group relative">
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Email Address</label>
                                     <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
@@ -378,32 +487,41 @@ const getBlockMargins = (align) => ({
                             </div>
                         </section>
 
-                        {/* FAQs */}
-                        {settings.features?.faqs?.length > 0 && (
-                        <section className="pt-10 px-1">
-                            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-6 opacity-40" style={{ color: settings.bodyColor }}>FAQ</h3>
-                            <div className="space-y-4">
-                                {settings.features.faqs.map((faq, i) => (
-                                    <div key={i} className="border-b pb-4 cursor-pointer" style={{ borderColor: (settings.headingColor || '#000') + '15' }} onClick={() => setOpenFaq(openFaq === i ? null : i)}>
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-bold text-sm" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
-                                            {openFaq === i ? <ChevronUp size={16} style={{ color: settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.bodyColor }} />}
-                                        </div>
-                                        {openFaq === i && <p className="mt-3 text-sm opacity-80 leading-relaxed" style={{ color: settings.bodyColor }}>{faq.a}</p>}
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                        )}
-
                         <div className="pt-16 pb-12 mt-auto text-center">
-                            <button onClick={handleAction} disabled={(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={{ backgroundColor: settings.primaryColor, color: settings.buttonTextColor || '#000', borderRadius: settings.buttonStyle === 'pill' ? '9999px' : '0px', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>
+                            <button onClick={handleAction} disabled={(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out"></div>
                                 <span className="relative z-10">{isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span> 
                                 <ArrowRight size={20} className="relative z-10 transition-transform duration-500 group-hover:translate-x-3" />
                             </button>
                             {settings.features?.socialProof && (
                                 <p className="mt-6 text-[10px] font-bold uppercase tracking-widest opacity-40" style={{ color: settings.bodyColor }}><Flame size={12} className="inline mr-1 -mt-0.5"/> 4 People secured slots this week</p>
+                            )}
+                            {socialLinks.length > 0 && (
+                                <div className={`mt-8 flex flex-wrap items-center justify-center gap-3 ${inspectClass}`} onClick={() => isPreview && onInspect('features')}>
+                                    {socialLinks.map(link => {
+                                        const IconCmp = link.icon;
+                                        return (
+                                            <a
+                                                key={link.key}
+                                                href={link.href}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                onClick={(event) => {
+                                                    if (isPreview) {
+                                                        event.preventDefault();
+                                                        onInspect('features');
+                                                    }
+                                                }}
+                                                className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-4 text-[10px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
+                                                style={getSocialLinkStyle()}
+                                                aria-label={link.label}
+                                            >
+                                                <IconCmp size={14} />
+                                                <span>{link.label}</span>
+                                            </a>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
                     </div>

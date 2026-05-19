@@ -30,6 +30,15 @@ const logoAlignmentOptions = [
 ];
 
 const textAlignmentOptions = logoAlignmentOptions;
+const visualStyleOptions = [
+  { id: 'minimal', label: 'Minimal' },
+  { id: 'outline', label: 'Outline' },
+  { id: 'solid', label: 'Solid' }
+];
+const defaultFaqItems = [
+  { q: 'How do I know my booking is confirmed?', a: 'You will see a confirmation on this page and receive a message when the business approves your request.' },
+  { q: 'Can I join a waitlist if the day is full?', a: 'Yes. If waitlist is enabled, you can leave your details and the business can contact you when a slot opens.' }
+];
 
 const clampNumber = (value, min, max, fallback) => {
   const parsed = Number(value);
@@ -284,6 +293,94 @@ function IdentityTextControl({ settings, config, onChange }) {
   );
 }
 
+function StyleSegmentedControl({ value, onChange, label = 'Style' }) {
+  return (
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-2">{label}</p>
+      <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-neutral-100 p-1">
+        {visualStyleOptions.map(option => {
+          const isActive = (value || 'minimal') === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onChange(option.id)}
+              className={`h-10 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:bg-white hover:text-black'}`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ButtonShapeControl({ value, onChange }) {
+  return (
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-2">Button Shape</p>
+      <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-neutral-100 p-1">
+        {[
+          { id: 'pill', label: 'Pill' },
+          { id: 'sharp', label: 'Boxed' }
+        ].map(option => {
+          const isActive = (value || 'pill') === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onChange(option.id)}
+              className={`h-10 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all ${isActive ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:bg-white hover:text-black'}`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VisualEditorGroup({ title, note, children }) {
+  return (
+    <section className="rounded-lg border border-neutral-100 bg-white p-4 md:p-5 shadow-sm space-y-5">
+      <div>
+        <p className="text-sm font-bold text-black">{title}</p>
+        {note && <p className="text-xs text-neutral-400 leading-relaxed mt-1">{note}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ColorFontControl({ settings, item, onChange }) {
+  const colorValue = settings[item.key] || item.fallback || (item.key.toLowerCase().includes('bg') ? 'transparent' : '#000000');
+  return (
+    <div className="flex flex-col bg-neutral-50 p-4 rounded-lg group relative border border-neutral-100/50 hover:border-neutral-200 transition-all">
+      <div className="flex items-center gap-4 w-full">
+        <label className="cursor-pointer flex-shrink-0">
+          <div className="w-12 h-12 rounded-[1rem] shadow-sm border border-black/5 hover:scale-110 transition-transform overflow-hidden relative" style={{ backgroundColor: colorValue }}>
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 backdrop-blur-sm">
+              <Pipette size={16} className="text-white drop-shadow-md" />
+            </div>
+          </div>
+          <input type="color" className="sr-only" value={colorValue === 'transparent' ? '#ffffff' : colorValue} onChange={(event) => onChange(item.key, event.target.value)} />
+        </label>
+        <div className="flex-1 min-w-0">
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-400 mb-1 truncate">{item.label}</p>
+          <input type="text" value={colorValue} onChange={(event) => onChange(item.key, event.target.value)} className="w-full bg-transparent text-sm font-mono font-bold uppercase outline-none text-black" />
+        </div>
+      </div>
+      {item.fontKey && (
+        <div className="mt-4 pt-3 border-t border-neutral-200/50 w-full">
+          <FontDropdown value={settings[item.fontKey] || ''} onChange={(value) => onChange(item.fontKey, value)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
 
 const buildStaffId = (email = '') => {
@@ -350,12 +447,14 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 brandNameSize: 76, brandNameFontFamily: '',
                 taglineSize: 9, taglineFontFamily: '',
                 welcomeSize: 20, welcomeFontFamily: '',
-                buttonStyle: 'pill', availabilityStyle: 'minimal',
+                buttonStyle: 'pill', availabilityStyle: 'minimal', dateStyle: 'minimal', timeSlotStyle: 'minimal', actionButtonStyle: 'solid',
+                faqStyle: 'minimal', faqBgColor: 'transparent', faqBorderColor: '#00000020', faqTextColor: '', faqAnswerColor: '', faqFontFamily: '',
+                socialIconStyle: 'outline', socialIconBgColor: 'transparent', socialIconColor: '', socialIconTextColor: '',
                 dateLabel: 'Which day are you looking to book ?', timeLabel: 'Lets see what time works', buttonText: 'Book Now', confirmButtonText: 'Confirm Booking', 
                 detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
                 availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
                 schedule: {},
-                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, favicon: '', location: '', faqs: [] },
+                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, faqEnabled: false, socialLinks: false, favicon: '', location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
@@ -1288,7 +1387,9 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 if(theme) {
                     setSettings(prev => ({
                         ...prev, 
-                        ...theme, 
+                        ...theme,
+                        dateStyle: theme.availabilityStyle || prev.dateStyle || 'minimal',
+                        timeSlotStyle: theme.availabilityStyle || prev.timeSlotStyle || 'minimal',
                         headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '' // reset overrides on theme change
                     }));
                 }
@@ -1309,6 +1410,30 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                 }));
             };
             const handleFeatureChange = (key, value) => { setSettings(prev => ({ ...prev, features: { ...prev.features, [key]: value } })); };
+            const toggleFaqFeature = () => {
+                setSettings(prev => {
+                    const enabled = !prev.features?.faqEnabled;
+                    const existingFaqs = Array.isArray(prev.features?.faqs) ? prev.features.faqs : [];
+                    return {
+                        ...prev,
+                        features: {
+                            ...prev.features,
+                            faqEnabled: enabled,
+                            faqs: enabled && existingFaqs.length === 0 ? defaultFaqItems : existingFaqs
+                        }
+                    };
+                });
+            };
+            const updateFaqItem = (index, field, value) => {
+                const faqs = [...(settings.features?.faqs || [])];
+                faqs[index] = { ...(faqs[index] || { q: '', a: '' }), [field]: value };
+                handleFeatureChange('faqs', faqs);
+            };
+            const addFaqItem = () => handleFeatureChange('faqs', [...(settings.features?.faqs || []), { q: '', a: '' }]);
+            const removeFaqItem = (index) => handleFeatureChange('faqs', (settings.features?.faqs || []).filter((_, idx) => idx !== index));
+            const handleSocialChange = (key, value) => {
+                setSettings(prev => ({ ...prev, socials: { ...(prev.socials || {}), [key]: value } }));
+            };
             const handleBackendSkinChange = (key, value) => {
                 setSettings(prev => ({
                     ...prev,
@@ -3096,119 +3221,178 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="pt-10 border-t border-neutral-50">
-                                        <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Time Slot Style</label>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            {['minimal', 'outline', 'solid'].map(s => (
-                                                <button key={s} onClick={() => handleSettingChange('availabilityStyle', s)} className={`py-5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${settings.availabilityStyle === s ? 'bg-black text-white border-black shadow-lg' : 'bg-neutral-50 text-neutral-400 border-transparent hover:bg-neutral-100'}`}>
-                                                    {s}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
                                 </div>
                                 )}
 
                                 {editorTab === 'visuals' && (
-                                <div className="space-y-10 animate-in fade-in duration-700 pb-10">
-                                    <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Colors And Fonts</label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {[
-                                        { label: 'Accent', key: 'primaryColor' },
-                                        { label: 'Background', key: 'backgroundColor' },
-                                        { label: 'Heading Text', key: 'headingColor', fontKey: 'headingFontFamily' },
-                                        { label: 'Body Text', key: 'bodyColor', fontKey: 'bodyFontFamily' },
-                                        { label: 'Button Text', key: 'buttonTextColor', fontKey: 'buttonFontFamily' },
-                                        { label: 'Time Box Bg', key: 'slotBgColor' },
-                                        { label: 'Time Box Text', key: 'slotTextColor', fontKey: 'slotFontFamily' },
-                                        { label: 'Date Bg', key: 'dateBgColor' },
-                                        { label: 'Date Text', key: 'dateTextColor', fontKey: 'dateFontFamily' },
-                                        { label: 'Date Active Bg', key: 'dateActiveBgColor' },
-                                        { label: 'Date Active Text', key: 'dateActiveTextColor', fontKey: 'dateFontFamily' }
-                                        ].map(item => (
-                                        <div key={item.key} className="flex flex-col bg-neutral-50 p-4 rounded-lg group relative border border-neutral-100/50 hover:border-neutral-200 transition-all">
-                                            <div className="flex items-center gap-4 w-full">
-                                                <label className="cursor-pointer flex-shrink-0">
-                                                <div className="w-12 h-12 rounded-[1rem] shadow-sm border border-black/5 hover:scale-110 transition-transform overflow-hidden relative" style={{ backgroundColor: settings[item.key] || (item.key.includes('Bg') ? 'transparent' : '#000') }}>
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 backdrop-blur-sm">
-                                                        <Pipette size={16} className="text-white drop-shadow-md" />
-                                                    </div>
-                                                </div>
-                                                <input type="color" className="sr-only" value={settings[item.key] || (item.key.includes('Bg') ? '#ffffff' : '#000000')} onChange={(e) => handleSettingChange(item.key, e.target.value)} />
-                                                </label>
-                                                <div className="flex-1 min-w-0">
-                                                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-400 mb-1 truncate">{item.label}</p>
-                                                <input type="text" value={settings[item.key] || (item.key.includes('Bg') ? 'transparent' : '#000')} onChange={(e) => handleSettingChange(item.key, e.target.value)} className="w-full bg-transparent text-sm font-mono font-bold uppercase outline-none text-black" />
-                                                </div>
-                                            </div>
-                                            {item.fontKey && (
-                                                <div className="mt-4 pt-3 border-t border-neutral-200/50 w-full relative group/dropdown">
-                                                    <select
-                                                        value={settings[item.fontKey] || ''}
-                                                        onChange={(e) => handleSettingChange(item.fontKey, e.target.value)}
-                                                        className="w-full bg-transparent text-[11px] font-bold uppercase tracking-widest text-neutral-600 outline-none appearance-none cursor-pointer pr-6"
-                                                        style={{ fontFamily: getFontFamily(settings[item.fontKey] || settings.fontFamily) }}
-                                                    >
-                                                        <option value="">Auto (Theme Default)</option>
-                                                        {FONT_OPTIONS.map(f => (
-                                                            <option key={f.id} value={f.id} style={{ fontFamily: f.family }}>
-                                                                {f.name} ({f.category})
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown size={14} className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover/dropdown:text-black transition-colors" />
-                                                </div>
-                                            )}
+                                <div className="space-y-6 animate-in fade-in duration-700 pb-10">
+                                    <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Visual System</label>
+
+                                    <VisualEditorGroup title="Page Palette" note="Core colors and typography used across the whole booking page.">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                { label: 'Accent', key: 'primaryColor' },
+                                                { label: 'Background', key: 'backgroundColor' },
+                                                { label: 'Heading Text', key: 'headingColor', fontKey: 'headingFontFamily' },
+                                                { label: 'Body Text', key: 'bodyColor', fontKey: 'bodyFontFamily' }
+                                            ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
                                         </div>
-                                        ))}
-                                    </div>
+                                    </VisualEditorGroup>
+
+                                    <VisualEditorGroup title="Calendar Buttons" note="Controls the day selector style, colors, and date font.">
+                                        <StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                { label: 'Date Background', key: 'dateBgColor' },
+                                                { label: 'Date Text', key: 'dateTextColor', fontKey: 'dateFontFamily' },
+                                                { label: 'Active Date Background', key: 'dateActiveBgColor' },
+                                                { label: 'Active Date Text', key: 'dateActiveTextColor', fontKey: 'dateFontFamily' }
+                                            ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                        </div>
+                                    </VisualEditorGroup>
+
+                                    <VisualEditorGroup title="Time Boxes" note="Controls the available time slot buttons clients tap.">
+                                        <StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => {
+                                            handleSettingChange('timeSlotStyle', value);
+                                            handleSettingChange('availabilityStyle', value);
+                                        }} label="Time Box Style" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                { label: 'Time Box Bg', key: 'slotBgColor' },
+                                                { label: 'Time Box Text', key: 'slotTextColor', fontKey: 'slotFontFamily' }
+                                            ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                        </div>
+                                    </VisualEditorGroup>
+
+                                    <VisualEditorGroup title="Action Button" note="Controls the final booking button style and typography.">
+                                        <StyleSegmentedControl value={settings.actionButtonStyle || 'solid'} onChange={(value) => handleSettingChange('actionButtonStyle', value)} label="Action Style" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                { label: 'Action Background', key: 'primaryColor' },
+                                                { label: 'Action Text', key: 'buttonTextColor', fontKey: 'buttonFontFamily' }
+                                            ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                        </div>
+                                        <ButtonShapeControl value={settings.buttonStyle || 'pill'} onChange={(value) => handleSettingChange('buttonStyle', value)} />
+                                    </VisualEditorGroup>
+
+                                    <VisualEditorGroup title="FAQ Styling" note="Applies when the FAQ feature is enabled.">
+                                        <StyleSegmentedControl value={settings.faqStyle || 'minimal'} onChange={(value) => handleSettingChange('faqStyle', value)} label="FAQ Style" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                { label: 'FAQ Background', key: 'faqBgColor' },
+                                                { label: 'FAQ Border', key: 'faqBorderColor' },
+                                                { label: 'Question Text', key: 'faqTextColor', fontKey: 'faqFontFamily' },
+                                                { label: 'Answer Text', key: 'faqAnswerColor', fontKey: 'faqFontFamily' }
+                                            ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                        </div>
+                                    </VisualEditorGroup>
+
+                                    <VisualEditorGroup title="Social Footer" note="Styles the clickable social icons below the action button.">
+                                        <StyleSegmentedControl value={settings.socialIconStyle || 'outline'} onChange={(value) => handleSettingChange('socialIconStyle', value)} label="Icon Style" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                { label: 'Icon Background', key: 'socialIconBgColor' },
+                                                { label: 'Icon / Label Color', key: 'socialIconColor' },
+                                                { label: 'Solid Text Color', key: 'socialIconTextColor' }
+                                            ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                        </div>
+                                    </VisualEditorGroup>
                                 </div>
                                 )}
 
                                 {editorTab === 'features' && (
-                                <div className="space-y-12 animate-in fade-in duration-700 pb-20">
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Booking Features</label>
-                                        <div className="space-y-4">
-                                            {[
-                                                { key: 'loadingScreen', label: 'Loading Logo Pulse' },
-                                                { key: 'birthday', label: 'Birthday Capture (MM/DD)' },
-                                                { key: 'waitlist', label: 'Waitlist Fallback (When Full)' },
-                                                { key: 'firstAvailable', label: '"First Available" Jump Button' },
-                                                { key: 'socialProof', label: 'Social Proof Ticker' }
-                                            ].map(f => (
-                                                <div key={f.key} className="flex items-center justify-between gap-4 bg-neutral-50 p-4 md:p-6 rounded-lg border border-neutral-100/50">
-                                                    <span className="text-sm font-bold">{f.label}</span>
-                                                    <button onClick={() => handleFeatureChange(f.key, !settings.features?.[f.key])} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors ${settings.features?.[f.key] ? 'bg-[#39FF14]' : 'bg-neutral-200'}`}>
-                                                        <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.[f.key] ? 'translate-x-6' : ''}`} />
-                                                    </button>
+                                <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+                                    <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Booking Features</label>
+
+                                    <div className="space-y-4">
+                                        {[
+                                            { key: 'loadingScreen', label: 'Loading Logo Pulse', note: 'Brief branded loading moment before the page appears.' },
+                                            { key: 'birthday', label: 'Birthday Capture', note: 'Adds an optional birthday field to the details form.' },
+                                            { key: 'waitlist', label: 'Waitlist Fallback', note: 'Allows clients to join standby when a day has no slots.' },
+                                            { key: 'firstAvailable', label: 'First Available Button', note: 'Lets clients jump to the next open day.' },
+                                            { key: 'socialProof', label: 'Social Proof Ticker', note: 'Shows a small confidence cue under the action button.' }
+                                        ].map(f => (
+                                            <div key={f.key} className="flex items-center justify-between gap-4 bg-neutral-50 p-4 md:p-6 rounded-lg border border-neutral-100/50">
+                                                <div>
+                                                    <span className="text-sm font-bold text-black">{f.label}</span>
+                                                    <p className="text-xs text-neutral-400 font-medium mt-1">{f.note}</p>
                                                 </div>
-                                            ))}
-                                        </div>
+                                                <button onClick={() => handleFeatureChange(f.key, !settings.features?.[f.key])} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.[f.key] ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.[f.key])}>
+                                                    <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.[f.key] ? 'translate-x-6' : ''}`} />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="pt-10 border-t border-neutral-50 space-y-6">
+
+                                    <div className="rounded-lg border border-neutral-100 bg-neutral-50 overflow-hidden">
+                                        <div className="p-4 md:p-6 flex items-center justify-between gap-4">
+                                            <div>
+                                                <p className="text-sm font-bold text-black">FAQ After Details</p>
+                                                <p className="text-xs text-neutral-400 font-medium mt-1">Shows client questions after name and number, before final email details.</p>
+                                            </div>
+                                            <button onClick={toggleFaqFeature} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.faqEnabled ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.faqEnabled)}>
+                                                <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.faqEnabled ? 'translate-x-6' : ''}`} />
+                                            </button>
+                                        </div>
+                                        {settings.features?.faqEnabled && (
+                                            <div className="border-t border-neutral-100 bg-white p-4 md:p-6 space-y-4">
+                                                {(settings.features?.faqs || []).map((faq, i) => (
+                                                    <details key={i} className="group rounded-lg border border-neutral-100 bg-neutral-50 open:bg-white open:shadow-sm transition-all">
+                                                        <summary className="list-none cursor-pointer p-4 flex items-center justify-between gap-4">
+                                                            <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">{faq.q || `Question ${i + 1}`}</span>
+                                                            <ChevronDown size={15} className="text-neutral-300 transition-transform group-open:rotate-180" />
+                                                        </summary>
+                                                        <div className="px-4 pb-4 space-y-3">
+                                                            <input type="text" value={faq.q} onChange={(e) => updateFaqItem(i, 'q', e.target.value)} placeholder="Question" className="w-full bg-white border border-neutral-100 rounded-lg px-4 py-3 font-bold text-sm outline-none focus:border-black transition-colors" />
+                                                            <textarea value={faq.a} onChange={(e) => updateFaqItem(i, 'a', e.target.value)} placeholder="Answer" className="w-full bg-white border border-neutral-100 rounded-lg px-4 py-3 text-sm font-medium outline-none resize-none min-h-[92px] focus:border-black transition-colors" />
+                                                            <button onClick={() => removeFaqItem(i)} className="h-9 px-3 rounded-lg bg-white border border-neutral-100 text-red-500 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors flex items-center gap-2">
+                                                                <X size={13} /> Remove
+                                                            </button>
+                                                        </div>
+                                                    </details>
+                                                ))}
+                                                <button onClick={addFaqItem} className="w-full py-5 rounded-lg border-2 border-dashed border-neutral-200 text-neutral-400 font-bold text-xs uppercase tracking-widest hover:border-black hover:text-black transition-all">Add Question</button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="rounded-lg border border-neutral-100 bg-neutral-50 overflow-hidden">
+                                        <div className="p-4 md:p-6 flex items-center justify-between gap-4">
+                                            <div>
+                                                <p className="text-sm font-bold text-black">Social Footer Links</p>
+                                                <p className="text-xs text-neutral-400 font-medium mt-1">Adds clickable social icons below the booking action button.</p>
+                                            </div>
+                                            <button onClick={() => handleFeatureChange('socialLinks', !settings.features?.socialLinks)} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.socialLinks ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.socialLinks)}>
+                                                <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.socialLinks ? 'translate-x-6' : ''}`} />
+                                            </button>
+                                        </div>
+                                        {settings.features?.socialLinks && (
+                                            <div className="border-t border-neutral-100 bg-white p-4 md:p-6 space-y-4">
+                                                {[
+                                                    ['instagram', 'Instagram', '@yourstudio'],
+                                                    ['tiktok', 'TikTok', '@yourstudio'],
+                                                    ['facebook', 'Facebook', 'your page or handle'],
+                                                    ['website', 'Website', 'https://yourwebsite.com']
+                                                ].map(([key, label, placeholder]) => (
+                                                    <div key={key}>
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">{label}</p>
+                                                        <input type="text" value={settings.socials?.[key] || ''} onChange={(e) => handleSocialChange(key, e.target.value)} placeholder={placeholder} className="w-full bg-neutral-50 border border-neutral-100 rounded-lg px-5 py-4 text-sm font-bold outline-none focus:bg-white focus:border-black transition-all" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-8 border-t border-neutral-50 space-y-6">
                                         <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">External Links</label>
                                         <div>
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3 ml-4">Google Maps Link (Shows 'Get Directions')</p>
+                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3 ml-4">Google Maps Link (Shows Get Directions)</p>
                                             <input type="url" value={settings.features?.location || ''} onChange={(e) => handleFeatureChange('location', e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full bg-neutral-50 border-none rounded-lg px-5 md:px-8 py-4 md:py-5 text-sm font-medium outline-none" />
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3 ml-4">Custom Favicon URL</p>
                                             <input type="url" value={settings.features?.favicon || ''} onChange={(e) => handleFeatureChange('favicon', e.target.value)} placeholder="https://image.url/icon.png" className="w-full bg-neutral-50 border-none rounded-lg px-5 md:px-8 py-4 md:py-5 text-sm font-medium outline-none" />
                                         </div>
-                                    </div>
-                                    <div className="pt-10 border-t border-neutral-50">
-                                        <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">FAQ Block</label>
-                                        <div className="space-y-4 mb-6">
-                                            {settings.features?.faqs?.map((faq, i) => (
-                                                <div key={i} className="bg-neutral-50 p-6 rounded-lg relative">
-                                                    <input type="text" value={faq.q} onChange={(e) => { const f = [...settings.features.faqs]; f[i].q = e.target.value; handleFeatureChange('faqs', f); }} placeholder="Question" className="w-full bg-transparent font-bold text-sm outline-none mb-2" />
-                                                    <textarea value={faq.a} onChange={(e) => { const f = [...settings.features.faqs]; f[i].a = e.target.value; handleFeatureChange('faqs', f); }} placeholder="Answer" className="w-full bg-transparent text-sm opacity-70 outline-none resize-none h-16" />
-                                                    <button onClick={() => { const f = settings.features.faqs.filter((_, idx) => idx !== i); handleFeatureChange('faqs', f); }} className="absolute top-6 right-6 text-neutral-300 hover:text-red-500"><X size={16} /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <button onClick={() => handleFeatureChange('faqs', [...(settings.features?.faqs || []), {q: '', a: ''}])} className="w-full py-5 rounded-lg border-2 border-dashed border-neutral-200 text-neutral-400 font-bold text-xs uppercase tracking-widest hover:border-black hover:text-black transition-all">Add Question</button>
                                     </div>
                                 </div>
                                 )}
