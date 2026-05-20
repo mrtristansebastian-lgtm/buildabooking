@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
@@ -61,6 +61,27 @@ const visualStyleOptions = [
   { id: 'outline', label: 'Outline' },
   { id: 'solid', label: 'Solid' }
 ];
+
+const themeTemplateKeys = [
+  'primaryColor', 'headingColor', 'bodyColor', 'backgroundColor',
+  'slotBgColor', 'slotTextColor', 'dateBgColor', 'dateTextColor',
+  'dateActiveBgColor', 'dateActiveTextColor', 'buttonTextColor',
+  'fontFamily', 'nativeAccent',
+  'headingFontFamily', 'bodyFontFamily', 'buttonFontFamily', 'slotFontFamily', 'dateFontFamily',
+  'brandNameSize', 'brandNameFontFamily', 'taglineSize', 'taglineFontFamily',
+  'welcomeSize', 'welcomeFontFamily', 'headingLetterSpacing', 'subtextLetterSpacing',
+  'buttonStyle', 'availabilityStyle', 'dateStyle', 'timeSlotStyle', 'actionButtonStyle',
+  'faqStyle', 'faqBgColor', 'faqBorderColor', 'faqTextColor', 'faqAnswerColor', 'faqFontFamily',
+  'socialIconStyle', 'socialIconBgColor', 'socialIconColor', 'socialIconTextColor'
+];
+
+const pickThemeTemplateSettings = (source = {}) => (
+  themeTemplateKeys.reduce((template, key) => {
+    if (source[key] !== undefined) template[key] = source[key];
+    return template;
+  }, {})
+);
+
 const defaultFaqItems = [
   { q: 'How do I know my booking is confirmed?', a: 'You will see a confirmation on this page and receive a message when the business approves your request.' },
   { q: 'Can I join a waitlist if the day is full?', a: 'Yes. If waitlist is enabled, you can leave your details and the business can contact you when a slot opens.' }
@@ -877,6 +898,7 @@ const createGoogleProvider = () => {
             const [themeFilters, setThemeFilters] = useState({ palette: 'all', industry: 'all-industries', style: 'all-styles' });
             const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
             const [themeBatchLoading, setThemeBatchLoading] = useState(false);
+            const [themeTemplateName, setThemeTemplateName] = useState('');
             const [detectedThemePalette, setDetectedThemePalette] = useState('');
             const [paletteDetecting, setPaletteDetecting] = useState(false);
             const [device, setDevice] = useState('desktop'); 
@@ -962,6 +984,7 @@ const createGoogleProvider = () => {
                 features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, faqEnabled: false, socialLinks: false, whatsappUpdates: false, location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
+                themeTemplates: [],
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
                 logo: '', bannerImage: '', address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
             });
@@ -1431,44 +1454,21 @@ const createGoogleProvider = () => {
                 THEME_FILTER_GROUPS.find(group => group.id === 'style') || THEME_FILTER_GROUPS[0]
             ), []);
             const activeThemeFilterId = `${themeGenerationInputs.industry}-${themeGenerationInputs.palette}-${themeGenerationInputs.style}`;
+            const shouldRunThemeEngine = activeTab === 'editor' && editorTab === 'themes';
 
             const visibleThemes = useMemo(() => (
-                generateThemeCollection(themeGenerationInputs)
-            ), [themeGenerationInputs]);
+                shouldRunThemeEngine ? generateThemeCollection(themeGenerationInputs) : []
+            ), [shouldRunThemeEngine, themeGenerationInputs]);
 
             const industryFilterOptions = useMemo(() => (
                 industryThemeFilterGroup.filters
-                    .map(filter => ({
-                        ...filter,
-                        count: generateThemeCollection({
-                            ...themeGenerationInputs,
-                            industry: filter.id
-                        }).length
-                    }))
-                    .filter(filter => filter.count > 0)
-            ), [industryThemeFilterGroup, themeGenerationInputs]);
+            ), [industryThemeFilterGroup]);
             const paletteFilterOptions = useMemo(() => (
                 paletteThemeFilterGroup.filters
-                    .map(filter => ({
-                        ...filter,
-                        count: generateThemeCollection({
-                            ...themeGenerationInputs,
-                            palette: filter.id
-                        }).length
-                    }))
-                    .filter(filter => filter.count > 0)
-            ), [paletteThemeFilterGroup, themeGenerationInputs]);
+            ), [paletteThemeFilterGroup]);
             const styleFilterOptions = useMemo(() => (
                 styleThemeFilterGroup.filters
-                    .map(filter => ({
-                        ...filter,
-                        count: generateThemeCollection({
-                            ...themeGenerationInputs,
-                            style: filter.id
-                        }).length
-                    }))
-                    .filter(filter => filter.count > 0)
-            ), [styleThemeFilterGroup, themeGenerationInputs]);
+            ), [styleThemeFilterGroup]);
             const selectedIndustryFilter = industryThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.industry) || industryThemeFilterGroup.filters[0];
             const selectedPaletteFilter = paletteThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.palette) || paletteThemeFilterGroup.filters[0];
             const selectedStyleFilter = styleThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.style) || styleThemeFilterGroup.filters[0];
@@ -1479,24 +1479,43 @@ const createGoogleProvider = () => {
             const themeBriefSupportText = selectedIndustryFilter.id === 'all-industries'
                 ? 'Pick a business type, then refine the color and style.'
                 : `Explore ${selectedPalettePhrase} with ${selectedStylePhrase}.`;
-            const generatedThemeSummary = selectedPaletteFilter.id === 'all'
-                ? `${visibleThemes.length} ${selectedIndustryDescriptor} themes across every palette`
-                : `${visibleThemes.length} ${selectedIndustryDescriptor} themes in ${selectedPaletteFilter.name}`;
+            const themeBriefResultLabel = selectedPaletteFilter.id === 'all'
+                ? `${selectedIndustryDescriptor} looks across the full palette`
+                : `${selectedIndustryDescriptor} looks in ${selectedPaletteFilter.name}`;
 
             const visibleThemeCards = useMemo(() => (
                 visibleThemes.slice(0, themeDisplayLimit)
             ), [visibleThemes, themeDisplayLimit]);
+            const savedThemeTemplates = useMemo(() => (
+                Array.isArray(settings.themeTemplates) ? settings.themeTemplates : []
+            ), [settings.themeTemplates]);
+            const currentThemeMatch = useMemo(() => (
+                visibleThemes.find(theme => (
+                    Boolean(settings.nativeAccent) === Boolean(theme.nativeAccent) &&
+                    normalizeHexColor(settings.primaryColor, '#000000') === normalizeHexColor(theme.primaryColor, '#000000') &&
+                    normalizeHexColor(settings.backgroundColor, '#ffffff') === normalizeHexColor(theme.backgroundColor, '#ffffff') &&
+                    (settings.fontFamily || 'inter') === (theme.fontFamily || 'inter')
+                )) || PRESET_THEMES.find(theme => (
+                    Boolean(settings.nativeAccent) === Boolean(theme.nativeAccent) &&
+                    normalizeHexColor(settings.primaryColor, '#000000') === normalizeHexColor(theme.primaryColor, '#000000') &&
+                    normalizeHexColor(settings.backgroundColor, '#ffffff') === normalizeHexColor(theme.backgroundColor, '#ffffff') &&
+                    (settings.fontFamily || 'inter') === (theme.fontFamily || 'inter')
+                ))
+            ), [settings.backgroundColor, settings.fontFamily, settings.nativeAccent, settings.primaryColor, visibleThemes]);
+            const suggestedThemeTemplateName = currentThemeMatch?.name
+                ? `${currentThemeMatch.name} Template`
+                : `${settings.brandName || 'Custom'} Theme`;
 
             const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
             const hasMoreThemes = themeDisplayLimit < visibleThemes.length;
-            const nextThemeBatchSize = isMobileEditorRuntime ? 12 : 48;
+            const nextThemeBatchSize = isMobileEditorRuntime ? 8 : 48;
             const shouldMountEditorPreview = activeTab === 'editor' && !isPortraitMobileRuntime;
 
             useEffect(() => {
                 window.clearTimeout(themeBatchTimerRef.current);
                 setThemeBatchLoading(false);
-                setThemeDisplayLimit(isMobileEditorRuntime ? 12 : 60);
-            }, [activeThemeFilterId, isMobileEditorRuntime, themeGenerationInputs]);
+                setThemeDisplayLimit(isMobileEditorRuntime ? 8 : 60);
+            }, [activeThemeFilterId, isMobileEditorRuntime]);
 
             const loadMoreThemes = () => {
                 if (!hasMoreThemes || themeBatchLoading) return;
@@ -1509,7 +1528,11 @@ const createGoogleProvider = () => {
             };
 
             const setThemeFilterValue = (groupId, filterId) => {
-                setThemeFilters(prev => ({ ...prev, [groupId]: filterId }));
+                startTransition(() => {
+                    setThemeFilters(prev => (
+                        prev[groupId] === filterId ? prev : { ...prev, [groupId]: filterId }
+                    ));
+                });
             };
 
             useEffect(() => {
@@ -1787,7 +1810,7 @@ const createGoogleProvider = () => {
 
             useEffect(() => {
                 if (typeof window === 'undefined') return;
-                const shouldLoadDesignerFonts = publicSlug || (activeTab === 'editor' && editorTab === 'themes' && !isMobileEditorRuntime);
+                const shouldLoadDesignerFonts = publicSlug || (activeTab === 'editor' && editorTab === 'visuals' && !isMobileEditorRuntime);
                 if (shouldLoadDesignerFonts) {
                     window.__loadBuildABookingFonts?.();
                     window.dispatchEvent(new Event('build-a-booking:load-fonts'));
@@ -2114,6 +2137,36 @@ const createGoogleProvider = () => {
                 await publishSettings(settings);
             };
 
+            const saveSettingsDraft = async (nextSettings = settings, successMessage = "Editor draft saved.") => {
+                const draftSettings = {
+                    ...nextSettings,
+                    updatedAt: Date.now()
+                };
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
+                    setSettings(draftSettings);
+                    showToast(successMessage);
+                    return true;
+                }
+                if (!canManageWorkspace) {
+                    showToast("Only owners and admins can save workspace settings.");
+                    return false;
+                }
+                try {
+                    await FirebaseSDK.setDoc(
+                        FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'),
+                        draftSettings,
+                        { merge: true }
+                    );
+                    setSettings(prev => ({ ...prev, ...draftSettings }));
+                    showToast(successMessage);
+                    return true;
+                } catch (err) {
+                    console.error(err);
+                    showToast("Draft could not be saved.");
+                    return false;
+                }
+            };
+
             const markOnboardingHandled = () => {
                 safeLocalSet(onboardingStorageKey, 'done');
             };
@@ -2405,6 +2458,7 @@ const createGoogleProvider = () => {
             const applyTheme = (themeId) => {
                 const theme = visibleThemes.find(t => t.id === themeId) || PRESET_THEMES.find(t => t.id === themeId);
                 if(theme) {
+                    setThemeTemplateName(`${theme.name} Template`);
                     setSettings(prev => ({
                         ...prev, 
                         ...theme,
@@ -2414,6 +2468,53 @@ const createGoogleProvider = () => {
                         headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '' // reset overrides on theme change
                     }));
                 }
+            };
+
+            const applySavedThemeTemplate = (template) => {
+                const templateSettings = template?.settings || pickThemeTemplateSettings(template);
+                if (!templateSettings || !Object.keys(templateSettings).length) return;
+                setSettings(prev => ({
+                    ...prev,
+                    ...templateSettings
+                }));
+                setThemeTemplateName(template.name || 'Saved Theme Template');
+                showToast(`${template.name || 'Theme template'} applied.`);
+            };
+
+            const saveCurrentThemeTemplate = async () => {
+                const cleanName = (themeTemplateName || suggestedThemeTemplateName || 'Custom Theme').trim();
+                const existingTemplates = Array.isArray(settings.themeTemplates) ? settings.themeTemplates : [];
+                const templateSlug = buildBookingSlug(cleanName) || 'theme-template';
+                const existingIndex = existingTemplates.findIndex(template => buildBookingSlug(template.name || '') === templateSlug);
+                const existingTemplate = existingIndex >= 0 ? existingTemplates[existingIndex] : null;
+                const nextTemplate = {
+                    id: existingTemplate?.id || `${templateSlug}-${Date.now()}`,
+                    name: cleanName,
+                    sourceThemeId: currentThemeMatch?.id || '',
+                    industry: themeGenerationInputs.industry,
+                    palette: themeGenerationInputs.palette,
+                    style: themeGenerationInputs.style,
+                    settings: pickThemeTemplateSettings(settings),
+                    createdAt: existingTemplate?.createdAt || Date.now(),
+                    updatedAt: Date.now()
+                };
+                const nextTemplates = existingIndex >= 0
+                    ? existingTemplates.map((template, index) => index === existingIndex ? nextTemplate : template)
+                    : [nextTemplate, ...existingTemplates].slice(0, 12);
+                const nextSettings = {
+                    ...settings,
+                    themeTemplates: nextTemplates
+                };
+                const saved = await saveSettingsDraft(nextSettings, `${cleanName} saved as a theme template.`);
+                if (saved) setThemeTemplateName('');
+            };
+
+            const deleteThemeTemplate = async (templateId) => {
+                const nextTemplates = savedThemeTemplates.filter(template => template.id !== templateId);
+                await saveSettingsDraft({
+                    ...settings,
+                    themeTemplates: nextTemplates
+                }, "Theme template removed.");
             };
 
             const handleInspect = (tab) => { if (activeTab !== 'editor') setActiveTab('editor'); setEditorCollapsed(false); setEditorTab(tab); };
@@ -4534,7 +4635,7 @@ const createGoogleProvider = () => {
                                     <div data-tour="editor-theme-library">
                                         <div className="flex items-center justify-between gap-4 mb-6">
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Industry Theme Engine</label>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">{visibleThemes.length} generated</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">Live Curated</span>
                                         </div>
                                         <div className="mb-7 rounded-[28px] border border-neutral-100 bg-white p-4 sm:p-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
                                             <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-5">
@@ -4590,12 +4691,9 @@ const createGoogleProvider = () => {
                                                                             <span key={color} className={`w-7 h-7 rounded-full border ${isActive ? 'border-white/30' : 'border-black/10'} ${i > 0 ? '-ml-2' : ''}`} style={{ backgroundColor: color }} />
                                                                         ))}
                                                                     </div>
-                                                                    <div className="flex items-end justify-between gap-2">
-                                                                        <div className="min-w-0">
-                                                                            <p className="text-[11px] font-bold uppercase tracking-widest truncate">{industry.name}</p>
-                                                                            <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 truncate ${isActive ? 'text-white/45' : 'text-neutral-300'}`}>{industry.hint}</p>
-                                                                        </div>
-                                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${isActive ? 'bg-white text-black' : 'bg-white text-neutral-500'}`}>{industry.count}</span>
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-[11px] font-bold uppercase tracking-widest truncate">{industry.name}</p>
+                                                                        <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 truncate ${isActive ? 'text-white/45' : 'text-neutral-300'}`}>{industry.hint}</p>
                                                                     </div>
                                                                 </button>
                                                             );
@@ -4652,9 +4750,53 @@ const createGoogleProvider = () => {
                                             </div>
 
                                             <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-neutral-100 pt-4">
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-black">{generatedThemeSummary}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-black">{themeBriefResultLabel}</p>
                                                 <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">Built from your theme brief</p>
                                             </div>
+                                        </div>
+                                        <div className="mb-5 rounded-[24px] border border-neutral-100 bg-white p-4 sm:p-5 shadow-[0_24px_70px_rgba(15,23,42,0.05)]">
+                                            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-2">Theme Workflow</p>
+                                                    <h4 className="text-xl font-black tracking-[-0.04em] text-black leading-tight">Save this look as a reusable template.</h4>
+                                                    <p className="text-sm text-neutral-400 font-medium mt-1">Keep polished looks for launches, seasons, or different client-facing pages.</p>
+                                                </div>
+                                                <div className="w-full xl:max-w-md flex flex-col sm:flex-row gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={themeTemplateName}
+                                                        onChange={(event) => setThemeTemplateName(event.target.value)}
+                                                        placeholder={suggestedThemeTemplateName}
+                                                        className="h-12 flex-1 rounded-lg border border-neutral-100 bg-neutral-50 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-all"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={saveCurrentThemeTemplate}
+                                                        className="h-12 px-5 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 shadow-xl shadow-black/10"
+                                                    >
+                                                        <Check size={14} />
+                                                        Save Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {savedThemeTemplates.length > 0 && (
+                                                <div className="mt-4 border-t border-neutral-100 pt-4">
+                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 mb-3">Saved Looks</p>
+                                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                                        {savedThemeTemplates.map(template => (
+                                                            <div key={template.id} className="shrink-0 min-w-[190px] rounded-2xl border border-neutral-100 bg-neutral-50 p-3 flex items-center justify-between gap-3">
+                                                                <button type="button" onClick={() => applySavedThemeTemplate(template)} className="min-w-0 text-left">
+                                                                    <span className="block text-[10px] font-bold uppercase tracking-widest text-black truncate">{template.name}</span>
+                                                                    <span className="block text-[9px] font-bold uppercase tracking-widest text-neutral-300 mt-1">Apply template</span>
+                                                                </button>
+                                                                <button type="button" onClick={() => deleteThemeTemplate(template.id)} title="Delete template" className="w-8 h-8 rounded-full bg-white border border-neutral-100 text-neutral-400 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center">
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[560px] overflow-y-auto pr-2 pb-4 no-scrollbar">
                                             {visibleThemeCards.map(t => {
@@ -4662,7 +4804,9 @@ const createGoogleProvider = () => {
                                                 const isSelectedTheme = settings.nativeAccent === t.nativeAccent && settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor && settings.fontFamily === t.fontFamily;
                                                 return (
                                                 <button data-theme-card key={t.id} onClick={() => applyTheme(t.id)} className={`group relative min-h-[230px] p-6 rounded-lg border transition-all overflow-hidden text-left flex flex-col justify-between hover:-translate-y-0.5 ${isNativeTheme ? 'native-theme-card-preview' : ''}`} style={{ backgroundColor: t.backgroundColor, borderColor: isNativeTheme ? 'rgba(117,92,255,0.28)' : (t.headingColor || '#000') + '15', boxShadow: isSelectedTheme ? (isNativeTheme ? '0 0 0 2px rgba(117,92,255,0.55), 0 22px 45px rgba(20,167,255,0.14)' : `0 0 0 2px ${t.primaryColor}, 0 22px 45px rgba(0,0,0,0.12)`) : '0 4px 15px rgba(0,0,0,0.05)' }}>
-                                                    <div className={`absolute inset-x-0 top-0 h-1 opacity-90 ${isNativeTheme ? 'native-theme-accent-bar' : ''}`} style={isNativeTheme ? undefined : { backgroundColor: t.primaryColor }} />
+                                                    {!isNativeTheme && (
+                                                        <div className="absolute inset-x-0 top-0 h-1 opacity-90" style={{ backgroundColor: t.primaryColor }} />
+                                                    )}
                                                     <div className="flex items-center justify-between w-full mb-6">
                                                         <span className="text-[9px] font-bold uppercase tracking-widest truncate max-w-[70%]" style={{ color: t.bodyColor }}>{t.name}</span>
                                                         <div className="flex gap-1.5 shrink-0">
@@ -4719,32 +4863,9 @@ const createGoogleProvider = () => {
                                                         <BuildABookingMark className="w-4 h-4" />
                                                     </span>
                                                 )}
-                                                {themeBatchLoading ? 'Loading Themes' : `Load More Themes (${visibleThemes.length - visibleThemeCards.length} left)`}
+                                                {themeBatchLoading ? 'Loading Themes' : 'Load More Themes'}
                                             </button>
                                         )}
-                                    </div>
-                                    <div className="pt-10 border-t border-neutral-50">
-                                        <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Typography Engine</label>
-                                        <div className="space-y-8">
-                                            <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
-                                            {['Sans', 'Serif', 'Display', 'Mono', 'Brush'].map(cat => (
-                                                <div key={cat}>
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-4">{cat}</p>
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                        {FONT_OPTIONS.filter(f => f.category === cat).map(f => (
-                                                            <button
-                                                                key={f.id}
-                                                                onClick={() => handleSettingChange('fontFamily', f.id)}
-                                                                className={`py-4 px-2 rounded-lg text-sm transition-all border ${settings.fontFamily === f.id ? 'bg-black text-white border-black shadow-xl' : 'bg-neutral-50 text-neutral-500 border-transparent hover:bg-neutral-100 hover:text-black'}`}
-                                                                style={{ fontFamily: f.family }}
-                                                            >
-                                                                {f.name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
                                     </div>
                                 </div>
                                 )}
@@ -4822,6 +4943,30 @@ const createGoogleProvider = () => {
                                             ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
                                         </div>
                                     </VisualEditorGroup>
+
+                                    <div className="pt-6 border-t border-neutral-50">
+                                        <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Typography Engine</label>
+                                        <div className="space-y-8">
+                                            <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
+                                            {['Sans', 'Serif', 'Display', 'Mono', 'Brush'].map(cat => (
+                                                <div key={cat}>
+                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-4">{cat}</p>
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                        {FONT_OPTIONS.filter(f => f.category === cat).map(f => (
+                                                            <button
+                                                                key={f.id}
+                                                                onClick={() => handleSettingChange('fontFamily', f.id)}
+                                                                className={`py-4 px-2 rounded-lg text-sm transition-all border ${settings.fontFamily === f.id ? 'bg-black text-white border-black shadow-xl' : 'bg-neutral-50 text-neutral-500 border-transparent hover:bg-neutral-100 hover:text-black'}`}
+                                                                style={{ fontFamily: f.family }}
+                                                            >
+                                                                {f.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                                 )}
 
@@ -5006,7 +5151,17 @@ const createGoogleProvider = () => {
                             </div>
 
                             <div className="editor-publish-footer p-4 sm:p-5 md:p-8 border-t border-neutral-50 flex-shrink-0 bg-white">
-                                <ProButton onClick={saveSettings} variant="primary" className="editor-publish-button w-full py-4 sm:py-5 md:py-7 text-[9px] md:text-[11px] uppercase shadow-2xl shadow-black/20">Publish To Web</ProButton>
+                                <div className="grid grid-cols-1 sm:grid-cols-[0.72fr_1fr] gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => saveSettingsDraft(settings, "Editor draft saved.")}
+                                        className="h-12 md:h-16 rounded-[999px] border border-neutral-200 bg-white text-black text-[9px] md:text-[10px] font-bold uppercase tracking-[0.22em] hover:border-black hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle2 size={14} />
+                                        Save Draft
+                                    </button>
+                                    <ProButton onClick={saveSettings} variant="primary" className="editor-publish-button w-full py-4 sm:py-5 md:py-7 text-[9px] md:text-[11px] uppercase shadow-2xl shadow-black/20">Publish To Web</ProButton>
+                                </div>
                             </div>
                             </>
                         )}

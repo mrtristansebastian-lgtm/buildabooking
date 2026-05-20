@@ -253,7 +253,6 @@ body {
             z-index: 1;
         }
 
-        .native-theme-accent-bar,
         .native-theme-swatch,
         .native-theme-action,
         .native-theme-soft-pill {
@@ -262,11 +261,6 @@ body {
                 var(--native-booking-accent-gradient) !important;
             background-size: 100% 100%, 420% 420% !important;
             background-position: 0 0, var(--native-accent-x) 50% !important;
-        }
-
-        .native-theme-accent-bar {
-            background-image: var(--native-booking-accent-gradient) !important;
-            background-size: 420% 420% !important;
         }
 
         .native-theme-swatch {
@@ -614,6 +608,16 @@ body {
 
             [data-theme-card]:hover {
                 transform: none !important;
+            }
+
+            .native-theme-card-preview,
+            .native-theme-card-preview::before {
+                animation: none !important;
+            }
+
+            .native-theme-card-preview::before {
+                opacity: 0.05 !important;
+                filter: blur(14px) saturate(1.04) !important;
             }
 
             .native-feature-card::before,

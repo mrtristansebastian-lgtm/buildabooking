@@ -1,5 +1,8 @@
 import { colorContrastRatio, ensureReadableTextColor, hexToHsl, mixHexColors, normalizeHexColor, readableTextFor, themeBackground } from '../utils/theme.js';
 
+const THEME_COLLECTION_CACHE_LIMIT = 72;
+const themeCollectionCache = new Map();
+
 const STYLE_ARCHETYPES = [
     {
         id: 'modern',
@@ -696,6 +699,10 @@ export const generateThemeCollection = ({
     style = 'all-styles',
     detectedPalette = ''
 } = {}) => {
+    const cacheKey = `${industry}|${palette}|${style}|${palette === 'all' ? detectedPalette : ''}`;
+    const cached = themeCollectionCache.get(cacheKey);
+    if (cached) return cached;
+
     const profile = getIndustryProfile(industry);
     const recipe = getIndustryRecipe(profile, style);
     const palettePlan = getPaletteCollections(palette);
@@ -713,7 +720,12 @@ export const generateThemeCollection = ({
         ? [NATIVE_THEME, ...generated]
         : generated;
 
-    return withNativeTheme.slice(0, generatedLimit).map(polishPresetTheme);
+    const themes = withNativeTheme.slice(0, generatedLimit).map(polishPresetTheme);
+    themeCollectionCache.set(cacheKey, themes);
+    if (themeCollectionCache.size > THEME_COLLECTION_CACHE_LIMIT) {
+        themeCollectionCache.delete(themeCollectionCache.keys().next().value);
+    }
+    return themes;
 };
 
 export const PRESET_THEMES = generateThemeCollection();
