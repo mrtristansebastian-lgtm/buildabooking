@@ -99,7 +99,7 @@ import { getLocalDateStr } from '../utils/dates';
                     return {
                         label: `${dayBookings.confirmed} ${dayBookings.confirmed === 1 ? 'booking' : 'bookings'} confirmed`,
                         count: dayBookings.confirmed,
-                        caption: `${dayBookings.confirmed === 1 ? 'booking' : 'bookings'} confirmed`,
+                        caption: 'confirmed',
                         tone: dayBookings.confirmed > 0 ? 'confirmed' : 'quiet'
                     };
                 }
@@ -109,7 +109,7 @@ import { getLocalDateStr } from '../utils/dates';
                 return {
                     label: `${openSlots} ${openSlots === 1 ? 'slot' : 'slots'} open`,
                     count: openSlots,
-                    caption: `${openSlots === 1 ? 'slot' : 'slots'} open`,
+                    caption: openSlots > 0 ? 'open' : 'full',
                     tone: openSlots > 0 ? 'open' : 'full'
                 };
             };
@@ -184,6 +184,10 @@ import { getLocalDateStr } from '../utils/dates';
             const selectedDateLabel = expandedDate
                 ? new Date(`${expandedDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
                 : 'Select a date';
+            const selectedDayBookings = expandedDate ? (bookingsByDate[expandedDate] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 }) : { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
+            const selectedCapacity = selectedConfig?.available ? selectedConfig.times.length : 0;
+            const selectedOpenSlots = expandedDate && expandedDate >= todayStr && selectedConfig?.available ? Math.max(0, selectedCapacity - selectedDayBookings.reserved) : 0;
+            const selectedBookingRate = selectedCapacity ? Math.min(100, Math.round((selectedDayBookings.reserved / selectedCapacity) * 100)) : 0;
 
             const scheduleInsight = useMemo(() => {
                 const anchorDate = expandedDate ? dateFromKey(expandedDate) : new Date();
@@ -321,23 +325,24 @@ import { getLocalDateStr } from '../utils/dates';
                         </div>
                     </section>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                        <section data-tour="schedule-calendar" className="xl:col-span-8 saas-card overflow-hidden">
-                            <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="grid grid-cols-1 min-[1400px]:grid-cols-[minmax(0,1fr)_340px] gap-6">
+                        <section data-tour="schedule-calendar" className="saas-card schedule-calendar-card overflow-hidden">
+                            <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-5 bg-white">
                                 <div>
-                                    <h3 className="text-lg font-bold tracking-tight text-black">Monthly Calendar</h3>
-                                    <p className="text-sm text-neutral-500">Select a date to tune availability and time slots.</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
+                                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Monthly Calendar</h3>
+                                    <p className="text-sm text-neutral-500 mt-1">Open, close, and tune each day from one calm workspace.</p>
                                 </div>
-                                <div className="flex items-center gap-2 bg-neutral-50 p-1.5 rounded-lg border border-neutral-100 w-fit">
-                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="w-10 h-10 rounded-md hover:bg-white text-neutral-500 hover:text-black transition-colors flex items-center justify-center"><ChevronLeft size={18}/></button>
-                                    <span className="text-[11px] font-bold uppercase tracking-widest min-w-[150px] text-center text-black">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="w-10 h-10 rounded-md hover:bg-white text-neutral-500 hover:text-black transition-colors flex items-center justify-center"><ChevronRight size={18}/></button>
+                                <div className="schedule-month-switcher flex items-center gap-2 bg-neutral-50 p-1.5 rounded-lg border border-neutral-100 w-fit shadow-sm">
+                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center"><ChevronLeft size={18}/></button>
+                                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] min-w-[158px] text-center text-black">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center"><ChevronRight size={18}/></button>
                                 </div>
                             </div>
 
-                            <div className="p-4 md:p-6 overflow-x-auto no-scrollbar">
-                                <div className="min-w-[620px]">
-                                <div className="grid grid-cols-7 gap-2 md:gap-3 mb-3">
+                            <div className="p-4 md:p-6 overflow-x-auto no-scrollbar bg-gradient-to-b from-white to-neutral-50/60">
+                                <div className="min-w-[560px] xl:min-w-0">
+                                <div className="grid grid-cols-7 gap-2 md:gap-3 mb-3 rounded-lg bg-white/75 border border-neutral-100 px-2 py-3">
                                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
                                         <div key={d} className="text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-neutral-300">{d}</div>
                                     ))}
@@ -345,7 +350,7 @@ import { getLocalDateStr } from '../utils/dates';
 
                                 <div className="grid grid-cols-7 gap-2 md:gap-3">
                                     {daysInMonth.map((dateStr, i) => {
-                                        if (!dateStr) return <div key={`empty-${i}`} className="min-h-[92px] md:min-h-[126px] rounded-lg bg-neutral-50/60 border border-neutral-100/60" />;
+                                        if (!dateStr) return <div key={`empty-${i}`} className="min-h-[92px] md:min-h-[120px] rounded-lg bg-white/35 border border-neutral-100/70" />;
                                         const dayNum = Number(dateStr.split('-')[2]);
                                         const config = getDayConfig(dateStr);
                                         const isSelected = expandedDate === dateStr;
@@ -354,9 +359,9 @@ import { getLocalDateStr } from '../utils/dates';
                                         const isCustom = Boolean(settings.schedule?.[dateStr]);
                                         const calendarBubble = getCalendarBubble(dateStr, config);
                                         const bubbleClass = {
-                                            open: isSelected ? 'bg-[#39FF14] text-black border-transparent shadow-[0_12px_28px_-18px_rgba(57,255,20,0.9)]' : 'bg-[#39FF14]/15 text-black border-[#39FF14]/20',
-                                            confirmed: isSelected ? 'bg-[#39FF14] text-black border-transparent shadow-[0_12px_28px_-18px_rgba(57,255,20,0.9)]' : 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                                            quiet: 'bg-neutral-100 text-neutral-400 border-neutral-200',
+                                            open: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-white text-black border-neutral-200',
+                                            confirmed: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                                            quiet: 'bg-white text-neutral-400 border-neutral-200',
                                             closed: 'bg-red-50 text-red-600 border-red-100',
                                             full: 'bg-amber-50 text-amber-700 border-amber-100'
                                         }[calendarBubble.tone];
@@ -373,7 +378,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         setExpandedDate(dateStr);
                                                     }
                                                 }}
-                                                className={`group relative min-h-[92px] md:min-h-[126px] rounded-lg border transition-all duration-500 flex flex-col p-2 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-[#39FF14] shadow-xl scale-[1.01]' : config.available ? 'bg-white border-neutral-200 hover:shadow-xl hover:-translate-y-0.5' : 'bg-neutral-50 border-transparent text-neutral-300 grayscale'}`}
+                                                className={`schedule-day-cell group relative min-h-[92px] md:min-h-[120px] rounded-lg border transition-all duration-500 flex flex-col p-2.5 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.012]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
                                             >
                                                 {!isPastDay && (
                                                     <button
@@ -384,24 +389,26 @@ import { getLocalDateStr } from '../utils/dates';
                                                             e.stopPropagation();
                                                             toggleDateAvailability(dateStr);
                                                         }}
-                                                        className={`absolute right-1 top-1 md:right-1.5 md:top-1.5 w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-300 shadow-sm z-10 ${config.available ? (isSelected ? 'bg-[#39FF14] border-[#39FF14] text-black' : 'bg-[#39FF14] border-[#39FF14] text-black hover:bg-black hover:border-black hover:text-white') : (isSelected ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-red-100 text-red-500 hover:bg-red-500 hover:border-red-500 hover:text-white')}`}
+                                                        className={`absolute right-1.5 top-1.5 w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-300 shadow-sm z-10 ${config.available ? (isSelected ? 'bg-[#39FF14] border-transparent text-black' : 'bg-white border-neutral-200 text-neutral-500 hover:bg-[#39FF14] hover:border-transparent hover:text-black') : (isSelected ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-red-100 text-red-500 hover:bg-red-500 hover:border-red-500 hover:text-white')}`}
                                                     >
                                                         {config.available ? <Check size={10}/> : <X size={10}/>}
                                                     </button>
                                                 )}
-                                                <div className="flex items-start justify-between gap-1 mb-2 pr-5">
-                                                    <span className={`metric-value text-base md:text-lg font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
+                                                <div className="flex items-start justify-between gap-1 mb-2 pr-6">
+                                                    <span className={`metric-value text-xl md:text-[22px] font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
                                                 </div>
-                                                <div className="mt-auto space-y-1.5">
-                                                    {isToday && <p className={`text-[8px] font-bold uppercase tracking-widest ${isSelected ? 'text-[#39FF14]' : 'text-black'}`}>Today</p>}
-                                                    {isCustom && <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">Custom</p>}
+                                                <div className="mt-auto space-y-2">
+                                                    <div className="min-h-[14px] flex flex-wrap items-center gap-1">
+                                                        {isToday && <span className={`rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-widest ${isSelected ? 'bg-black text-white' : 'bg-black text-white'}`}>Today</span>}
+                                                        {isCustom && <span className="rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-400">Custom</span>}
+                                                    </div>
                                                     <span
-                                                        className={`inline-flex min-h-[30px] w-full max-w-[70px] self-center flex-col items-center justify-center rounded-md border px-1 py-0.5 text-center font-bold leading-none transition-colors ${bubbleClass}`}
+                                                        className={`schedule-slot-pill inline-flex min-h-[28px] w-full items-center justify-center gap-1 rounded-full border px-2 py-1 text-center font-bold leading-none transition-colors ${bubbleClass}`}
                                                         aria-label={calendarBubble.label}
                                                         title={calendarBubble.label}
                                                     >
-                                                        {calendarBubble.count !== null && <span className="text-[13px] md:text-[14px] leading-none font-black tracking-tight">{calendarBubble.count}</span>}
-                                                        <span className="text-[5.5px] md:text-[6px] uppercase tracking-[0.07em] leading-tight">{calendarBubble.caption}</span>
+                                                        {calendarBubble.count !== null && <span className="metric-value text-[12px] leading-none font-black tracking-tight">{calendarBubble.count}</span>}
+                                                        <span className="text-[6px] uppercase tracking-[0.12em] leading-tight">{calendarBubble.caption}</span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -412,40 +419,43 @@ import { getLocalDateStr } from '../utils/dates';
                             </div>
                         </section>
 
-                        <aside className="xl:col-span-4 space-y-6">
-                            <section className="saas-panel p-5">
+                        <aside className="space-y-6">
+                            <section className="saas-card schedule-side-panel p-5">
                                 <div className="flex items-start justify-between gap-4 mb-5">
                                     <div>
-                                        <h3 className="text-lg font-bold tracking-tight text-black">Default Slots</h3>
-                                        <p className="text-sm text-neutral-500">New open days start with these times.</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-2">Template</p>
+                                        <h3 className="text-xl font-bold tracking-tight text-black">Default Slots</h3>
+                                        <p className="text-sm text-neutral-500 mt-1">New open days start with these times.</p>
                                     </div>
-                                    <button onClick={addDefaultTime} className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center hover:bg-neutral-800 transition-colors shrink-0">
+                                    <button onClick={addDefaultTime} className="w-11 h-11 rounded-lg bg-[#39FF14] text-black flex items-center justify-center hover:scale-105 transition-transform shrink-0 shadow-lg shadow-black/5">
                                         <Plus size={16}/>
                                     </button>
                                 </div>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     {defaultTimes.length ? defaultTimes.map((time, i) => (
-                                        <div key={`${time}-${i}`} className="flex items-center gap-2 bg-white border border-neutral-200 px-3 py-2 rounded-lg text-sm font-bold text-black shadow-sm">
-                                            <Clock size={13} className="text-neutral-400"/>
-                                            {time}
+                                        <div key={`${time}-${i}`} className="schedule-time-chip group flex items-center justify-between gap-2 bg-white border border-neutral-200 px-3 py-2.5 rounded-lg text-sm font-bold text-black shadow-sm">
+                                            <span className="flex items-center gap-2">
+                                                <Clock size={13} className="text-neutral-400"/>
+                                                {time}
+                                            </span>
                                             <button onClick={() => setSettings(prev => ({...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i)}))} className="text-neutral-300 hover:text-red-500 transition-colors"><X size={13}/></button>
                                         </div>
                                     )) : (
-                                        <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 w-full">No default slots yet.</p>
+                                        <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 col-span-2">No default slots yet.</p>
                                     )}
                                 </div>
                             </section>
 
-                            <section className="saas-card p-5 md:p-6">
+                            <section className="saas-card schedule-selected-panel p-5 md:p-6 overflow-hidden">
                                 <div className="flex items-start justify-between gap-4 mb-6">
                                     <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400 mb-2">Selected Day</p>
-                                        <h3 className="text-2xl font-bold tracking-tight text-black">{selectedDateLabel}</h3>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-2">Selected Day</p>
+                                        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black leading-none">{selectedDateLabel}</h3>
                                     </div>
                                     {selectedConfig && (
                                         <button
                                             onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, available: !selectedConfig.available })}
-                                            className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors ${selectedConfig.available ? 'bg-[#39FF14] text-black' : 'bg-red-50 text-red-600'}`}
+                                            className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${selectedConfig.available ? 'bg-[#39FF14] text-black shadow-lg shadow-black/5' : 'bg-red-50 text-red-600'}`}
                                         >
                                             {selectedConfig.available ? <CheckCircle2 size={14}/> : <XCircle size={14}/>}
                                             {selectedConfig.available ? 'Open' : 'Closed'}
@@ -457,11 +467,25 @@ import { getLocalDateStr } from '../utils/dates';
                                     <div className="py-14 text-center text-neutral-400 text-sm font-medium">Pick a date on the calendar.</div>
                                 ) : selectedConfig.available ? (
                                     <>
-                                        <div className="space-y-2 mb-5 max-h-[320px] overflow-y-auto no-scrollbar">
+                                        <div className="grid grid-cols-3 gap-2 mb-5">
+                                            {[
+                                                { label: 'Booked', value: selectedDayBookings.confirmed },
+                                                { label: 'Open', value: selectedOpenSlots },
+                                                { label: 'Rate', value: `${selectedBookingRate}%` }
+                                            ].map(item => (
+                                                <div key={item.label} className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-3">
+                                                    <p className="metric-value text-lg font-bold text-black leading-none">{item.value}</p>
+                                                    <p className="mt-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">{item.label}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="space-y-2 mb-5 max-h-[292px] overflow-y-auto no-scrollbar pr-1">
                                             {selectedConfig.times.length ? selectedConfig.times.map(time => (
-                                                <div key={time} className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-neutral-50 border border-neutral-100">
+                                                <div key={time} className="schedule-selected-slot flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-white border border-neutral-200">
                                                     <div className="flex items-center gap-3 text-sm font-bold tracking-widest text-black">
-                                                        <Clock size={14} className="text-neutral-400"/>
+                                                        <span className="w-8 h-8 rounded-md bg-neutral-50 border border-neutral-100 flex items-center justify-center">
+                                                            <Clock size={14} className="text-neutral-400"/>
+                                                        </span>
                                                         {time}
                                                     </div>
                                                     <button onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, times: selectedConfig.times.filter(t => t !== time) })} className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-white transition-colors">
@@ -473,7 +497,7 @@ import { getLocalDateStr } from '../utils/dates';
                                             )}
                                         </div>
                                         {isAddingSlot && (
-                                            <div className="mb-5 p-4 rounded-lg border border-black/10 bg-white shadow-[0_18px_50px_-32px_rgba(0,0,0,0.45)] animate-in fade-in zoom-in-95 duration-300">
+                                            <div className="mb-5 p-4 rounded-lg border border-neutral-200 bg-white shadow-[0_18px_50px_-32px_rgba(0,0,0,0.45)] animate-in fade-in zoom-in-95 duration-300">
                                                 <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400 block mb-3">New Time Slot</label>
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <div className="h-12 flex-1 rounded-lg bg-neutral-50 border border-neutral-100 px-4 flex items-center gap-3 focus-within:bg-white focus-within:border-neutral-300 transition-all">
@@ -487,7 +511,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
-                                                    <button onClick={saveNewSlot} className="h-10 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
+                                                    <button onClick={saveNewSlot} className="h-10 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest hover:scale-[1.01] transition-transform">
                                                         Save Time
                                                     </button>
                                                     <button onClick={() => setIsAddingSlot(false)} className="h-10 rounded-lg border border-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors">
@@ -499,7 +523,7 @@ import { getLocalDateStr } from '../utils/dates';
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <button
                                                 onClick={startAddingSlot}
-                                                className="h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors"
+                                                className="h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10"
                                             >
                                                 <Plus size={14}/> Add Slot
                                             </button>
