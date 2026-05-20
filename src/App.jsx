@@ -2596,7 +2596,7 @@ const createGoogleProvider = () => {
                                                 <h2 className="text-lg font-bold tracking-tight">Next Actions</h2>
                                                 <p className="text-sm text-neutral-500">The work most likely to matter now.</p>
                                             </div>
-                                            <div className="w-10 h-10 rounded-lg bg-black text-[#39FF14] flex items-center justify-center"><Zap size={17}/></div>
+                                            <div className="w-10 h-10 rounded-lg bg-[#39FF14] text-black flex items-center justify-center shadow-lg shadow-[#39FF14]/20"><Zap size={17}/></div>
                                         </div>
                                         <div className="space-y-3">
                                             {[
@@ -2631,13 +2631,13 @@ const createGoogleProvider = () => {
                                             ].map(action => {
                                                 const IconCmp = action.icon;
                                                 return (
-                                                    <button key={action.title} onClick={() => setActiveTab(action.tab)} className={`w-full rounded-lg border p-4 text-left transition-all hover:shadow-lg ${action.active ? 'bg-black text-white border-black' : 'bg-white text-black border-neutral-200 hover:border-black'}`}>
+                                                    <button key={action.title} onClick={() => setActiveTab(action.tab)} className="w-full rounded-lg border border-neutral-200 bg-white p-4 text-left text-black transition-all hover:border-neutral-300 hover:shadow-lg">
                                                         <div className="flex items-start justify-between gap-4">
                                                             <div className="min-w-0">
-                                                                <p className={`text-sm font-bold truncate ${action.active ? 'text-white' : 'text-black'}`}>{action.title}</p>
-                                                                <p className={`text-xs font-medium mt-1 ${action.active ? 'text-white/55' : 'text-neutral-500'}`}>{action.detail}</p>
+                                                                <p className="text-sm font-bold truncate text-black">{action.title}</p>
+                                                                <p className="text-xs font-medium mt-1 text-neutral-500">{action.detail}</p>
                                                             </div>
-                                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${action.active ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-400'}`}><IconCmp size={15}/></div>
+                                                            <div className="w-9 h-9 rounded-lg bg-[#39FF14] text-black flex items-center justify-center shrink-0 shadow-lg shadow-[#39FF14]/20"><IconCmp size={15}/></div>
                                                         </div>
                                                     </button>
                                                 );
