@@ -333,6 +333,7 @@ export function OnboardingShowroom({
   canApply = true,
   onSkip,
   onComplete,
+  onDraftChange,
   onNavigate
 }) {
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -348,6 +349,7 @@ export function OnboardingShowroom({
   });
   const stageRef = useRef(null);
   const onNavigateRef = useRef(onNavigate);
+  const onDraftChangeRef = useRef(onDraftChange);
 
   const scene = scenes[sceneIndex] || scenes[0];
   const generatedSlug = buildBookingSlug(draft.businessName, draft.instagram);
@@ -361,18 +363,28 @@ export function OnboardingShowroom({
   }, [onNavigate]);
 
   useEffect(() => {
+    onDraftChangeRef.current = onDraftChange;
+  }, [onDraftChange]);
+
+  useEffect(() => {
     if (!open) return;
     const nextIndex = scenes.findIndex(item => item.id === initialSceneId);
+    const savedDraft = settings.onboarding?.draft || {};
     setSceneIndex(nextIndex >= 0 ? nextIndex : 0);
     setDraft({
-      businessName: settings.brandName || '',
-      industry: settings.onboarding?.industry || settings.tagline || '',
-      instagram: settings.socials?.instagram || '',
-      tiktok: settings.socials?.tiktok || '',
-      facebook: settings.socials?.facebook || '',
-      website: settings.socials?.website || ''
+      businessName: savedDraft.businessName || settings.brandName || '',
+      industry: savedDraft.industry || settings.onboarding?.industry || settings.tagline || '',
+      instagram: savedDraft.instagram || settings.socials?.instagram || '',
+      tiktok: savedDraft.tiktok || settings.socials?.tiktok || '',
+      facebook: savedDraft.facebook || settings.socials?.facebook || '',
+      website: savedDraft.website || settings.socials?.website || ''
     });
-  }, [initialSceneId, open, settings.brandName, settings.onboarding?.industry, settings.tagline, settings.socials?.instagram, settings.socials?.tiktok, settings.socials?.facebook, settings.socials?.website]);
+  }, [initialSceneId, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    onDraftChangeRef.current?.(draft);
+  }, [draft, open]);
 
   useEffect(() => {
     if (!open || scene.type !== 'platform') return;

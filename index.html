@@ -30,12 +30,6 @@
           document.head.appendChild(link);
         };
         window.addEventListener('build-a-booking:load-fonts', window.__loadBuildABookingFonts);
-        window.addEventListener('load', function () {
-          var schedule = window.requestIdleCallback
-            ? function (callback) { window.requestIdleCallback(callback, { timeout: 8000 }); }
-            : function (callback) { window.setTimeout(callback, 6000); };
-          schedule(window.__loadBuildABookingFonts);
-        });
       }());
     </script>
   </head>

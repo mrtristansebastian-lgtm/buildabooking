@@ -32,3 +32,17 @@ export function BuildABookingBrand({ className = '', title = 'Build A Booking', 
     </svg>
   );
 }
+
+export function BuildABookingMark({ className = '', title = 'Build A Booking', variant = 'dark' }) {
+  const isLight = variant === 'light';
+
+  return (
+    <img
+      className={`build-booking-mark block object-contain ${className}`}
+      src={isLight ? '/build-a-booking-mark-light.png' : '/build-a-booking-mark-dark.png'}
+      alt={title}
+      loading="eager"
+      decoding="async"
+    />
+  );
+}

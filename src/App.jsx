@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
-import { BuildABookingBrand } from './components/BuildABookingBrand';
+import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
 import { PRESET_THEMES } from './data/themes';
@@ -10,7 +10,7 @@ import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
 import { getLocalDateStr } from './utils/dates';
-import { buildBookingSlug, prepareOnboardingSettings } from './utils/onboarding';
+import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
 import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_FILTER_GROUPS, ensureReadableTextColor } from './utils/theme';
 
 const OnboardingShowroom = lazy(() => (
@@ -25,12 +25,18 @@ const BookingFlow = lazy(() => (
   import('./components/BookingFlow').then((module) => ({ default: module.BookingFlow }))
 ));
 
-const LazySectionFallback = ({ label = 'Loading workspace' }) => (
-  <div className="min-h-[320px] w-full bg-white flex items-center justify-center text-center">
-    <div>
-      <BuildABookingBrand className="w-48 max-w-[70vw] mx-auto mb-6 animate-subtle-pulse" />
-      <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-300">{label}</p>
+const BrandLoader = ({ label = 'Loading workspace', variant = 'dark' }) => (
+  <div className="text-center">
+    <div className="brand-loader-orbit mx-auto mb-6">
+      <BuildABookingMark className="w-9 h-9" variant={variant} />
     </div>
+    <p className={`text-[10px] font-bold uppercase tracking-[0.35em] ${variant === 'light' ? 'text-white/40' : 'text-neutral-300'}`}>{label}</p>
+  </div>
+);
+
+const LazySectionFallback = ({ label = 'Loading workspace', variant = 'dark' }) => (
+  <div className="min-h-[320px] w-full bg-white flex items-center justify-center text-center">
+    <BrandLoader label={label} variant={variant} />
   </div>
 );
 
@@ -791,6 +797,7 @@ const createGoogleProvider = () => {
             const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
             const [themeFilterGroup, setThemeFilterGroup] = useState('palette');
             const [themeFilters, setThemeFilters] = useState({ palette: 'all', industry: 'all-industries', style: 'all-styles' });
+            const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
             const [device, setDevice] = useState('desktop'); 
             const [previewKey, setPreviewKey] = useState(0); 
             const [scale, setScale] = useState(1);
@@ -799,6 +806,9 @@ const createGoogleProvider = () => {
             const [, setInstallPromptDismissed] = useState(false);
             const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
             const [isCompactEditorViewport, setIsCompactEditorViewport] = useState(false);
+            const [isMobileRuntime, setIsMobileRuntime] = useState(() => (
+                typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches
+            ));
             const [mobileNavCollapsed, setMobileNavCollapsed] = useState(false);
             const [bookingFilter, setBookingFilter] = useState('all');
             const [clientRecords, setClientRecords] = useState([]);
@@ -812,6 +822,8 @@ const createGoogleProvider = () => {
             const themePaletteRailRef = useRef(null);
             const scaleRef = useRef(1);
             const compactViewportRef = useRef(false);
+            const settingsRef = useRef(null);
+            const onboardingDraftSaveTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
             const toastTimerRef = useRef(null);
             
@@ -822,6 +834,23 @@ const createGoogleProvider = () => {
             };
 
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
+            useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
+
+            useEffect(() => {
+                if (typeof window === 'undefined') return undefined;
+
+                const updateMobileRuntime = () => {
+                    setIsMobileRuntime(window.matchMedia('(max-width: 767px)').matches);
+                };
+
+                updateMobileRuntime();
+                window.addEventListener('resize', updateMobileRuntime);
+                window.addEventListener('orientationchange', updateMobileRuntime);
+                return () => {
+                    window.removeEventListener('resize', updateMobileRuntime);
+                    window.removeEventListener('orientationchange', updateMobileRuntime);
+                };
+            }, []);
 
             const [settings, setSettings] = useState({
                 slug: 'studio-noir', brandName: 'Studio Noir',
@@ -848,6 +877,10 @@ const createGoogleProvider = () => {
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
                 logo: '', bannerImage: '', address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
             });
+
+            useEffect(() => {
+                settingsRef.current = settings;
+            }, [settings]);
 
             const [bookings, setBookings] = useState([]);
             const [staffList, setStaffList] = useState([{id: 'owner', name: 'Admin', color: '#39FF14'}]);
@@ -1294,6 +1327,18 @@ const createGoogleProvider = () => {
                 PRESET_THEMES.filter(theme => activeThemeFilter.match(theme))
             ), [activeThemeFilter]);
 
+            const visibleThemeCards = useMemo(() => (
+                visibleThemes.slice(0, themeDisplayLimit)
+            ), [visibleThemes, themeDisplayLimit]);
+
+            const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
+            const hasMoreThemes = themeDisplayLimit < visibleThemes.length;
+            const nextThemeBatchSize = isMobileEditorRuntime ? 18 : 48;
+
+            useEffect(() => {
+                setThemeDisplayLimit(isMobileEditorRuntime ? 24 : 60);
+            }, [activeThemeFilterId, themeFilterGroup, isMobileEditorRuntime]);
+
             const setActiveThemeFilter = (filterId) => {
                 setThemeFilters(prev => ({ ...prev, [activeThemeFilterGroup.id]: filterId }));
             };
@@ -1426,6 +1471,8 @@ const createGoogleProvider = () => {
             };
 
             useEffect(() => {
+                if (activeTab !== 'editor') return undefined;
+
                 let frameRequest = 0;
                 const updateScale = () => {
                     window.cancelAnimationFrame(frameRequest);
@@ -1477,11 +1524,12 @@ const createGoogleProvider = () => {
                     resizeObserver?.disconnect();
                     window.removeEventListener('resize', updateScale); 
                 };
-            }, [device, activeTab, view, sidebarCollapsed, editorCollapsed, mobileNavCollapsed]);
+            }, [device, activeTab, sidebarCollapsed, editorCollapsed, mobileNavCollapsed]);
 
             useEffect(() => {
                 if (activeTab !== 'editor') return;
                 let lastLandscape = window.matchMedia('(orientation: landscape)').matches;
+                let settleTimer = 0;
 
                 const resetMobileEditorPosition = () => {
                     setEditorCollapsed(false);
@@ -1496,17 +1544,19 @@ const createGoogleProvider = () => {
                 };
 
                 const handleOrientationSettle = () => {
-                    window.setTimeout(() => {
+                    window.clearTimeout(settleTimer);
+                    settleTimer = window.setTimeout(() => {
                         const nextLandscape = window.matchMedia('(orientation: landscape)').matches;
                         if (nextLandscape === lastLandscape) return;
                         lastLandscape = nextLandscape;
                         resetMobileEditorPosition();
-                    }, 90);
+                    }, 180);
                 };
 
                 window.addEventListener('orientationchange', handleOrientationSettle);
                 window.addEventListener('resize', handleOrientationSettle);
                 return () => {
+                    window.clearTimeout(settleTimer);
                     window.removeEventListener('orientationchange', handleOrientationSettle);
                     window.removeEventListener('resize', handleOrientationSettle);
                 };
@@ -1531,11 +1581,12 @@ const createGoogleProvider = () => {
 
             useEffect(() => {
                 if (typeof window === 'undefined') return;
-                if (publicSlug || activeTab === 'editor') {
+                const shouldLoadDesignerFonts = publicSlug || (activeTab === 'editor' && editorTab === 'themes' && !isMobileEditorRuntime);
+                if (shouldLoadDesignerFonts) {
                     window.__loadBuildABookingFonts?.();
                     window.dispatchEvent(new Event('build-a-booking:load-fonts'));
                 }
-            }, [activeTab, publicSlug]);
+            }, [activeTab, editorTab, isMobileEditorRuntime, publicSlug]);
 
             useEffect(() => {
                 if (publicSlug || loading) return;
@@ -1815,16 +1866,17 @@ const createGoogleProvider = () => {
                 return () => { unsubSettings(); unsubStaff(); unsubComms(); unsubClients(); unsubBookings(); };
             }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug]);
 
-            const publishSettings = async (nextSettings = settings, successMessage = "Booking page published!") => {
+            const publishSettings = async (nextSettings = settings, successMessage = "Booking page published!", options = {}) => {
+                const silent = Boolean(options.silent);
                 if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
-                    showToast("Workspace updated in demo mode.");
+                    if (!silent) showToast("Workspace updated in demo mode.");
                     return true;
                 }
                 if (!canManageWorkspace) {
-                    showToast("Only owners and admins can publish workspace settings.");
+                    if (!silent) showToast("Only owners and admins can publish workspace settings.");
                     return false;
                 }
-                showToast("Publishing updates...");
+                if (!silent) showToast("Publishing updates...");
                 try {
                     const publicSlug = buildBookingSlug(nextSettings.slug || nextSettings.brandName);
                     const settingsToPublish = {
@@ -1843,11 +1895,11 @@ const createGoogleProvider = () => {
                         ownerEmail: user?.email || '',
                         workspaceName: settingsToPublish.brandName || 'Build A Booking Workspace'
                     });
-                    showToast(successMessage);
+                    if (!silent) showToast(successMessage);
                     return true;
                 } catch (err) {
                     console.error(err);
-                    showToast("Failed to publish.");
+                    if (!silent) showToast("Failed to publish.");
                     return false;
                 }
             };
@@ -1872,8 +1924,41 @@ const createGoogleProvider = () => {
                 if (tab === 'editor') setEditorTab('themes');
             };
 
+            const handleOnboardingDraftChange = (draft) => {
+                const currentSettings = settingsRef.current || settings;
+                const nextSettings = prepareOnboardingDraftSettings(currentSettings, draft, { draftUpdatedAt: Date.now() });
+                const currentDraftKey = JSON.stringify(currentSettings.onboarding?.draft || {});
+                const nextDraftKey = JSON.stringify(nextSettings.onboarding?.draft || {});
+
+                if (
+                    currentDraftKey === nextDraftKey &&
+                    currentSettings.brandName === nextSettings.brandName &&
+                    currentSettings.slug === nextSettings.slug &&
+                    currentSettings.tagline === nextSettings.tagline
+                ) {
+                    return;
+                }
+
+                settingsRef.current = nextSettings;
+                setSettings(nextSettings);
+                safeLocalSet(`${onboardingStorageKey}-draft`, JSON.stringify({
+                    draft: nextSettings.onboarding?.draft || {},
+                    savedAt: Date.now()
+                }));
+
+                window.clearTimeout(onboardingDraftSaveTimerRef.current);
+                if (canSetupWorkspace && !isGuestWorkspace) {
+                    onboardingDraftSaveTimerRef.current = window.setTimeout(() => {
+                        publishSettings(settingsRef.current || nextSettings, 'Setup progress saved.', { silent: true })
+                            .catch(error => console.error('Setup progress save failed', error));
+                    }, 900);
+                }
+            };
+
             const handleOnboardingComplete = async (draft, options = {}) => {
+                window.clearTimeout(onboardingDraftSaveTimerRef.current);
                 const nextSettings = prepareOnboardingSettings(settings, draft, { completedAt: Date.now() });
+                settingsRef.current = nextSettings;
                 setSettings(nextSettings);
                 markOnboardingHandled();
                 setShowOnboarding(false);
@@ -2555,7 +2640,7 @@ const createGoogleProvider = () => {
 
             if (loading || publicLoading) return (
                 <div className="h-screen bg-white flex items-center justify-center">
-                    <BuildABookingBrand className="w-64 max-w-[72vw] text-black animate-subtle-pulse" />
+                    <BrandLoader label={publicLoading ? 'Loading booking page' : 'Loading workspace'} />
                 </div>
             );
 
@@ -2735,7 +2820,7 @@ const createGoogleProvider = () => {
                 )}
                 {authDialog}
                 {showOnboarding && (
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<LazySectionFallback label="Loading setup" />}>
                         <OnboardingShowroom
                             open={showOnboarding}
                             settings={settings}
@@ -2744,6 +2829,7 @@ const createGoogleProvider = () => {
                             canApply={canSetupWorkspace}
                             onSkip={handleOnboardingSkip}
                             onComplete={handleOnboardingComplete}
+                            onDraftChange={handleOnboardingDraftChange}
                             onNavigate={handleOnboardingNavigate}
                         />
                     </Suspense>
@@ -4301,8 +4387,8 @@ const createGoogleProvider = () => {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[560px] overflow-y-auto pr-2 pb-4 no-scrollbar">
-                                            {visibleThemes.map(t => (
-                                                <button key={t.id} onClick={() => applyTheme(t.id)} className="group relative min-h-[230px] p-6 rounded-lg border transition-all overflow-hidden text-left flex flex-col justify-between hover:-translate-y-0.5" style={{ backgroundColor: t.backgroundColor, borderColor: (t.headingColor || '#000') + '15', boxShadow: settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor ? `0 0 0 2px ${t.primaryColor}, 0 22px 45px rgba(0,0,0,0.12)` : '0 4px 15px rgba(0,0,0,0.05)' }}>
+                                            {visibleThemeCards.map(t => (
+                                                <button data-theme-card key={t.id} onClick={() => applyTheme(t.id)} className="group relative min-h-[230px] p-6 rounded-lg border transition-all overflow-hidden text-left flex flex-col justify-between hover:-translate-y-0.5" style={{ backgroundColor: t.backgroundColor, borderColor: (t.headingColor || '#000') + '15', boxShadow: settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor ? `0 0 0 2px ${t.primaryColor}, 0 22px 45px rgba(0,0,0,0.12)` : '0 4px 15px rgba(0,0,0,0.05)' }}>
                                                     <div className="absolute inset-x-0 top-0 h-1 opacity-90" style={{ backgroundColor: t.primaryColor }} />
                                                     <div className="flex items-center justify-between w-full mb-6">
                                                         <span className="text-[9px] font-bold uppercase tracking-widest truncate max-w-[70%]" style={{ color: t.bodyColor }}>{t.name}</span>
@@ -4341,6 +4427,15 @@ const createGoogleProvider = () => {
                                                 </button>
                                             ))}
                                         </div>
+                                        {hasMoreThemes && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setThemeDisplayLimit(limit => Math.min(visibleThemes.length, limit + nextThemeBatchSize))}
+                                                className="mt-4 w-full h-12 rounded-lg border border-neutral-200 bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors"
+                                            >
+                                                Load More Themes ({visibleThemes.length - visibleThemeCards.length} left)
+                                            </button>
+                                        )}
                                     </div>
                                     <div className="pt-10 border-t border-neutral-50">
                                         <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Typography Engine</label>

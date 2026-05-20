@@ -49,6 +49,31 @@ body {
             font-feature-settings: "tnum" on, "lnum" on;
         }
 
+        .brand-loader-orbit {
+            position: relative;
+            width: 4.25rem;
+            height: 4.25rem;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background: #ffffff;
+            box-shadow: 0 22px 60px -42px rgba(15, 23, 42, 0.45), inset 0 0 0 1px rgba(228, 231, 236, 0.9);
+        }
+
+        .brand-loader-orbit::before {
+            content: "";
+            position: absolute;
+            inset: -3px;
+            border-radius: inherit;
+            border: 2px solid rgba(228, 231, 236, 0.9);
+            border-top-color: #050505;
+            animation: brand-loader-spin 0.9s linear infinite;
+        }
+
+        @keyframes brand-loader-spin {
+            to { transform: rotate(360deg); }
+        }
+
         @property --native-accent-x {
             syntax: '<percentage>';
             inherits: true;
@@ -428,6 +453,29 @@ body {
         }
 
         @media (max-width: 767px) {
+            [data-theme-card] {
+                content-visibility: auto;
+                contain: layout paint style;
+                contain-intrinsic-size: 230px;
+                transition: border-color 180ms ease, box-shadow 180ms ease !important;
+            }
+
+            [data-theme-card]:hover {
+                transform: none !important;
+            }
+
+            .native-feature-card::before,
+            .native-ui .native-stat-card::before {
+                animation: none !important;
+                opacity: 0 !important;
+            }
+
+            .native-feature-card::after,
+            .native-ui .native-stat-card::after {
+                animation-duration: 32s !important;
+                opacity: 0.18;
+            }
+
             .dashboard-main > div:not(.mobile-editor-shell) {
                 padding: 0.75rem 0.75rem 5.75rem !important;
             }
