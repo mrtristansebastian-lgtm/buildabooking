@@ -114,6 +114,16 @@ body {
             --native-accent-x: 0%;
         }
 
+        :root.app-idle {
+            --native-accent-duration: 72s;
+            --native-beam-duration: 42s;
+        }
+
+        :root.app-hidden {
+            --native-accent-duration: 120s;
+            --native-beam-duration: 120s;
+        }
+
         @keyframes native-accent-sync {
             0%, 100% { --native-accent-x: 0%; }
             50% { --native-accent-x: 100%; }
@@ -389,6 +399,26 @@ body {
             filter: blur(13px) saturate(1.35);
         }
 
+        :root.app-hidden .native-ui,
+        :root.app-hidden .native-home,
+        :root.app-hidden .native-booking-theme,
+        :root.app-hidden .native-theme-card-preview,
+        :root.app-idle .native-feature-card::before,
+        :root.app-idle .native-ui .native-stat-card::before,
+        :root.app-hidden .native-feature-card::before,
+        :root.app-hidden .native-feature-card::after,
+        :root.app-hidden .native-ui .native-stat-card::before,
+        :root.app-hidden .native-ui .native-stat-card::after,
+        :root.app-hidden .native-booking-theme .booking-gradient-card::before,
+        :root.app-hidden .native-home-nav::after {
+            animation-play-state: paused !important;
+        }
+
+        :root.app-idle .native-feature-card::before,
+        :root.app-idle .native-ui .native-stat-card::before {
+            opacity: 0 !important;
+        }
+
         .native-feature-hero-card {
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.86), rgba(248,249,251,0.94)),
@@ -630,6 +660,32 @@ body {
             .native-ui .native-stat-card::after {
                 animation-duration: 32s !important;
                 opacity: 0.18;
+            }
+
+            .native-feature-card,
+            .native-ui .native-stat-card {
+                content-visibility: auto;
+                contain: layout paint style;
+                contain-intrinsic-size: 185px;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+
+            :root.app-idle .native-ui,
+            :root.app-idle .native-home,
+            :root.app-idle .native-booking-theme {
+                animation-duration: 96s !important;
+            }
+
+            :root.app-idle .native-feature-card::after,
+            :root.app-idle .native-ui .native-stat-card::after {
+                animation-duration: 120s !important;
+                opacity: 0.1;
+            }
+
+            :root.app-idle .native-booking-theme .booking-gradient-card::before {
+                opacity: 0.06 !important;
+                filter: blur(8px) saturate(1.04) !important;
             }
 
             .dashboard-main > div:not(.mobile-editor-shell) {

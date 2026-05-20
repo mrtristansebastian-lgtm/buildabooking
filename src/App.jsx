@@ -741,6 +741,20 @@ const safeJsonParse = (value, fallback = null) => {
   }
 };
 
+const areJsonEqual = (left, right) => {
+  if (left === right) return true;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+};
+
+const mergeStateIfChanged = (current, incoming) => {
+  const next = { ...current, ...incoming };
+  return areJsonEqual(current, next) ? current : next;
+};
+
 const normalizeWorkspaceRoute = (route = {}, fallback = {}) => {
   const source = route || {};
   const nextView = source.view === 'dashboard' || source.return === 'dashboard' || source.returnTarget === 'dashboard'
@@ -947,17 +961,93 @@ const createGoogleProvider = () => {
             useEffect(() => {
                 if (typeof window === 'undefined') return undefined;
 
+                const mobileQuery = window.matchMedia('(max-width: 767px)');
+                const portraitQuery = window.matchMedia('(max-width: 767px) and (orientation: portrait)');
                 const updateMobileRuntime = () => {
-                    setIsMobileRuntime(window.matchMedia('(max-width: 767px)').matches);
-                    setIsPortraitMobileRuntime(window.matchMedia('(max-width: 767px) and (orientation: portrait)').matches);
+                    setIsMobileRuntime(current => current === mobileQuery.matches ? current : mobileQuery.matches);
+                    setIsPortraitMobileRuntime(current => current === portraitQuery.matches ? current : portraitQuery.matches);
                 };
 
                 updateMobileRuntime();
-                window.addEventListener('resize', updateMobileRuntime);
+                if (mobileQuery.addEventListener) {
+                    mobileQuery.addEventListener('change', updateMobileRuntime);
+                    portraitQuery.addEventListener('change', updateMobileRuntime);
+                } else {
+                    mobileQuery.addListener(updateMobileRuntime);
+                    portraitQuery.addListener(updateMobileRuntime);
+                }
                 window.addEventListener('orientationchange', updateMobileRuntime);
                 return () => {
-                    window.removeEventListener('resize', updateMobileRuntime);
+                    if (mobileQuery.removeEventListener) {
+                        mobileQuery.removeEventListener('change', updateMobileRuntime);
+                        portraitQuery.removeEventListener('change', updateMobileRuntime);
+                    } else {
+                        mobileQuery.removeListener(updateMobileRuntime);
+                        portraitQuery.removeListener(updateMobileRuntime);
+                    }
                     window.removeEventListener('orientationchange', updateMobileRuntime);
+                };
+            }, []);
+
+            useEffect(() => {
+                if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+                const root = document.documentElement;
+                const idleDelay = window.matchMedia('(max-width: 767px)').matches ? 24000 : 45000;
+                let idleTimer = 0;
+                let lastActivityAt = 0;
+
+                const setIdle = () => {
+                    root.classList.add('app-idle');
+                };
+
+                const resetIdle = () => {
+                    const now = Date.now();
+                    const alreadyActive = !root.classList.contains('app-idle');
+                    if (alreadyActive && now - lastActivityAt < 1200) return;
+                    lastActivityAt = now;
+                    root.classList.remove('app-idle');
+                    root.classList.remove('app-hidden');
+                    window.clearTimeout(idleTimer);
+                    idleTimer = window.setTimeout(setIdle, idleDelay);
+                };
+
+                const pauseForPageHide = () => {
+                    window.clearTimeout(idleTimer);
+                    root.classList.add('app-hidden', 'app-idle');
+                };
+
+                const handleVisibility = () => {
+                    const hidden = document.visibilityState !== 'visible';
+                    root.classList.toggle('app-hidden', hidden);
+                    if (hidden) {
+                        pauseForPageHide();
+                    } else {
+                        resetIdle();
+                    }
+                };
+
+                const passiveOptions = { passive: true };
+                const activityEvents = ['pointerdown', 'touchstart', 'keydown', 'scroll', 'wheel'];
+
+                activityEvents.forEach(eventName => {
+                    window.addEventListener(eventName, resetIdle, passiveOptions);
+                });
+                document.addEventListener('visibilitychange', handleVisibility);
+                window.addEventListener('pagehide', pauseForPageHide);
+                window.addEventListener('pageshow', resetIdle);
+
+                handleVisibility();
+
+                return () => {
+                    window.clearTimeout(idleTimer);
+                    root.classList.remove('app-idle', 'app-hidden');
+                    activityEvents.forEach(eventName => {
+                        window.removeEventListener(eventName, resetIdle, passiveOptions);
+                    });
+                    document.removeEventListener('visibilitychange', handleVisibility);
+                    window.removeEventListener('pagehide', pauseForPageHide);
+                    window.removeEventListener('pageshow', resetIdle);
                 };
             }, []);
 
@@ -2060,37 +2150,48 @@ const createGoogleProvider = () => {
                 const settingsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings');
                 const unsubSettings = FirebaseSDK.onSnapshot(settingsRef, (docSnap) => { 
                     if (docSnap.exists()) {
-                        const data = docSnap.data();
+                        const data = { ...docSnap.data() };
                         if(data.fontFamily === 'sans') data.fontFamily = 'inter';
                         if(data.fontFamily === 'serif') data.fontFamily = 'playfair';
                         if(data.fontFamily === 'mono') data.fontFamily = 'space-mono';
                         if(data.fontFamily === 'display') data.fontFamily = 'syne';
-                        setSettings(prev => ({...prev, ...data}));
+                        setSettings(prev => mergeStateIfChanged(prev, data));
                     }
                 }, handleSyncError('Settings'));
                 
                 const staffRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff');
                 const unsubStaff = FirebaseSDK.onSnapshot(staffRef, (docSnap) => { 
                     if (docSnap.exists()) {
-                        setStaffList(docSnap.data().list || []);
+                        const nextStaff = docSnap.data().list || [];
+                        setStaffList(prev => areJsonEqual(prev, nextStaff) ? prev : nextStaff);
                     } else if (isWorkspaceOwner) {
-                        setStaffList([createOwnerStaffProfile(user)]);
+                        const ownerProfile = [createOwnerStaffProfile(user)];
+                        setStaffList(prev => areJsonEqual(prev, ownerProfile) ? prev : ownerProfile);
                     }
                 }, handleSyncError('Staff'));
 
                 const commsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications');
                 const unsubComms = FirebaseSDK.onSnapshot(commsRef, (docSnap) => { 
-                    if (docSnap.exists()) setCommunications(normalizeCommunications(docSnap.data()));
+                    if (docSnap.exists()) {
+                        const nextComms = normalizeCommunications(docSnap.data());
+                        setCommunications(prev => areJsonEqual(prev, nextComms) ? prev : nextComms);
+                    }
                 }, handleSyncError('Communication'));
 
                 const clientsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients');
                 const unsubClients = FirebaseSDK.onSnapshot(clientsRef, (docSnap) => { 
-                    if (docSnap.exists()) setClientRecords(docSnap.data().list || []);
+                    if (docSnap.exists()) {
+                        const nextClients = docSnap.data().list || [];
+                        setClientRecords(prev => areJsonEqual(prev, nextClients) ? prev : nextClients);
+                    }
                 }, handleSyncError('Client'));
 
                 const bookingsCol = FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings');
                 const unsubBookings = FirebaseSDK.onSnapshot(bookingsCol, (snap) => {
-                    setBookings(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => getTimestampValue(b.timestamp) - getTimestampValue(a.timestamp)));
+                    const nextBookings = snap.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() }))
+                        .sort((a, b) => getTimestampValue(b.timestamp) - getTimestampValue(a.timestamp));
+                    setBookings(prev => areJsonEqual(prev, nextBookings) ? prev : nextBookings);
                 }, handleSyncError('Booking'));
                 return () => { unsubSettings(); unsubStaff(); unsubComms(); unsubClients(); unsubBookings(); };
             }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug]);
