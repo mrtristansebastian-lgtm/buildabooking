@@ -514,6 +514,7 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 });
 
 const guestModeStorageKey = 'build-a-booking-guest-mode';
+const rememberLoginStorageKey = 'build-a-booking-remember-login';
 const workspaceRouteStorageKey = 'build-a-booking-workspace-route';
 const authRedirectStorageKey = 'build-a-booking-auth-return';
 const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
@@ -630,13 +631,6 @@ const shouldUseRedirectGoogleAuth = () => {
   return Boolean(isTouchMobile || isMobileBrowser);
 };
 
-const isStandaloneAppWindow = () => {
-  if (typeof window === 'undefined') return false;
-  return Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone);
-};
-
-const shouldOpenGoogleAuthInBrowser = () => shouldUseRedirectGoogleAuth() && isStandaloneAppWindow();
-
 const getGoogleAuthIntent = () => {
   if (typeof window === 'undefined') return '';
   const url = new URL(window.location.href);
@@ -655,16 +649,6 @@ const clearGoogleAuthIntentUrl = () => {
   url.searchParams.delete('auth');
   url.searchParams.delete('return');
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-};
-
-const buildGoogleAuthBrowserUrl = (route = {}) => {
-  const returnState = normalizeWorkspaceRoute(route, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
-  const url = new URL(window.location.origin);
-  url.searchParams.set('auth', 'google');
-  url.searchParams.set('return', returnState.view);
-  url.searchParams.set('tab', returnState.activeTab);
-  url.searchParams.set('editorTab', returnState.editorTab);
-  return url.toString();
 };
 
 const createGoogleProvider = () => {
@@ -687,6 +671,10 @@ const createGoogleProvider = () => {
             const [authError, setAuthError] = useState('');
             const [authPanelOpen, setAuthPanelOpen] = useState(false);
             const [authBusy, setAuthBusy] = useState(false);
+            const [keepLoggedIn, setKeepLoggedIn] = useState(() => safeLocalGet(rememberLoginStorageKey) !== 'false');
+            const [authRedirectPending, setAuthRedirectPending] = useState(() => (
+                Boolean(safeSessionGet(authRedirectStartedStorageKey) || safeLocalGet(authRedirectStartedStorageKey) || getGoogleAuthIntent())
+            ));
             const [guestMode, setGuestMode] = useState(() => {
                 return safeLocalGet(guestModeStorageKey) === 'true';
             });
@@ -1435,6 +1423,21 @@ const createGoogleProvider = () => {
                 editorTab
             }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
 
+            const applyAuthPersistence = async (remember = keepLoggedIn) => {
+                safeLocalSet(rememberLoginStorageKey, remember ? 'true' : 'false');
+                if (!isFirebaseConfigured || !auth || !FirebaseSDK.setPersistence) return;
+                const persistence = remember
+                    ? FirebaseSDK.browserLocalPersistence
+                    : FirebaseSDK.browserSessionPersistence;
+                await FirebaseSDK.setPersistence(auth, persistence);
+            };
+
+            useEffect(() => {
+                applyAuthPersistence(keepLoggedIn).catch((error) => {
+                    console.error('Auth persistence could not be updated.', error);
+                });
+            }, [keepLoggedIn]);
+
             const syncCurrentAccount = async (signedInUser) => {
                 if (!isFirebaseConfigured || !signedInUser?.email) return;
                 const emailKey = normalizeEmail(signedInUser.email);
@@ -1485,25 +1488,38 @@ const createGoogleProvider = () => {
 
             const startGoogleRedirect = async (returnRoute = { view: 'dashboard' }) => {
                 const provider = createGoogleProvider();
+                await applyAuthPersistence(keepLoggedIn);
+                setAuthRedirectPending(true);
                 saveAuthReturnState(returnRoute);
-                await FirebaseSDK.signInWithRedirect(auth, provider);
+                try {
+                    await FirebaseSDK.signInWithRedirect(auth, provider);
+                } catch (error) {
+                    setAuthRedirectPending(false);
+                    throw error;
+                }
             };
 
             useEffect(() => {
                 const initAuth = async () => {
                     try {
                         if (isFirebaseConfigured) {
+                            await applyAuthPersistence(keepLoggedIn);
                             const googleAuthIntent = getGoogleAuthIntent();
                             const redirectWasStarted = Boolean(safeSessionGet(authRedirectStartedStorageKey) || safeLocalGet(authRedirectStartedStorageKey));
+                            if (redirectWasStarted || googleAuthIntent) setAuthRedirectPending(true);
                             if (!publicSlug) {
-                                await FirebaseSDK.getRedirectResult(auth).catch((error) => {
+                                let redirectResult = null;
+                                redirectResult = await FirebaseSDK.getRedirectResult(auth).catch((error) => {
                                     console.error(error);
                                     setAuthError(error.message || 'Google sign-in could not finish.');
+                                    setAuthRedirectPending(false);
+                                    return null;
                                 });
                                 if (redirectWasStarted) {
                                     safeSessionRemove(authRedirectStartedStorageKey);
                                     safeLocalRemove(authRedirectStartedStorageKey);
                                     clearGoogleAuthIntentUrl();
+                                    if (!auth.currentUser && !redirectResult?.user) setAuthRedirectPending(false);
                                 } else if (googleAuthIntent && !auth.currentUser) {
                                     await startGoogleRedirect(googleAuthIntent);
                                     return;
@@ -1533,8 +1549,11 @@ const createGoogleProvider = () => {
                         if (!u) {
                             setWorkspaceAccess([]);
                             setActiveWorkspaceOwnerId('');
+                            const redirectStillStarting = Boolean(safeSessionGet(authRedirectStartedStorageKey) || safeLocalGet(authRedirectStartedStorageKey) || getGoogleAuthIntent());
+                            setAuthRedirectPending(redirectStillStarting);
                             return;
                         }
+                        setAuthRedirectPending(false);
                         setGuestMode(false);
                         safeLocalRemove(guestModeStorageKey);
                         const authReturnState = getAuthReturnState();
@@ -1553,10 +1572,10 @@ const createGoogleProvider = () => {
             }, [publicSlug]);
 
             useEffect(() => {
-                if (isFirebaseConfigured && !publicSlug && !loading && view === 'dashboard' && !user && !guestMode) {
+                if (isFirebaseConfigured && !publicSlug && !loading && view === 'dashboard' && !user && !guestMode && !authRedirectPending) {
                     setView('landing');
                 }
-            }, [view, user, publicSlug, guestMode, loading]);
+            }, [view, user, publicSlug, guestMode, loading, authRedirectPending]);
 
             useEffect(() => {
                 if (!publicSlug) return;
@@ -2049,6 +2068,7 @@ const createGoogleProvider = () => {
                 setAuthError('');
                 setAuthBusy(true);
                 try {
+                    await applyAuthPersistence(keepLoggedIn);
                     if (authMode === 'signup') {
                         await FirebaseSDK.createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
                     } else {
@@ -2075,23 +2095,11 @@ const createGoogleProvider = () => {
                 setAuthBusy(true);
                 try {
                     const returnRoute = getCurrentAuthReturnRoute();
-                    if (shouldOpenGoogleAuthInBrowser()) {
-                        saveAuthReturnState(returnRoute);
-                        const browserAuthUrl = buildGoogleAuthBrowserUrl(returnRoute);
-                        const opened = window.open(browserAuthUrl, '_blank', 'noopener,noreferrer');
-                        if (opened) {
-                            try { opened.opener = null; } catch {}
-                            setAuthBusy(false);
-                            showToast('Google sign-in opened in your browser.');
-                            return;
-                        }
-                        window.location.assign(browserAuthUrl);
-                        return;
-                    }
                     if (shouldUseRedirectGoogleAuth()) {
                         await startGoogleRedirect(returnRoute);
                         return;
                     }
+                    await applyAuthPersistence(keepLoggedIn);
                     const provider = createGoogleProvider();
                     await FirebaseSDK.signInWithPopup(auth, provider);
                     setGuestMode(false);
@@ -2122,14 +2130,32 @@ const createGoogleProvider = () => {
                 }
             };
             const handleSignOut = async () => {
-                if (isFirebaseConfigured && user) {
-                    await FirebaseSDK.signOut(auth);
+                setAuthBusy(true);
+                try {
+                    if (isFirebaseConfigured && user) {
+                        await FirebaseSDK.signOut(auth);
+                    }
+                    showToast(isGuestWorkspace ? 'Guest mode closed.' : 'Signed out.');
+                } catch (error) {
+                    console.error(error);
+                    showToast('Sign out could not finish. Please try again.');
+                    return;
+                } finally {
+                    setAuthBusy(false);
                 }
+                clearAuthReturnState();
+                setAuthRedirectPending(false);
                 setGuestMode(false);
                 safeLocalRemove(guestModeStorageKey);
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
+                saveWorkspaceRoute({ view: 'landing', activeTab: 'overview', editorTab: 'themes' });
                 setView('landing');
+                setActiveTab('overview');
+                if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+                }
             };
 
             const handleBookingComplete = async (formData, date, time, status, dateKey) => {
@@ -2280,11 +2306,26 @@ const createGoogleProvider = () => {
                         <button type="button" onClick={handleGoogleAuth} disabled={authBusy} className="w-full h-12 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 disabled:cursor-wait">
                             <Globe size={16}/> {googleAuthLabel}
                         </button>
-                        {shouldOpenGoogleAuthInBrowser() && (
+                        {shouldUseRedirectGoogleAuth() && (
                             <p className="mt-3 text-xs leading-relaxed text-neutral-500">
-                                Homescreen mode opens Google in your browser so saved Google accounts are available.
+                                On mobile, Google opens securely and brings you back to this workspace.
                             </p>
                         )}
+                        <label className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 cursor-pointer">
+                            <span>
+                                <span className="block text-[10px] font-bold uppercase tracking-widest text-black">Keep me logged in</span>
+                                <span className="block text-xs text-neutral-500 mt-1">Remember this device for smoother return visits.</span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={keepLoggedIn}
+                                onChange={(event) => setKeepLoggedIn(event.target.checked)}
+                                className="sr-only"
+                            />
+                            <span className={`relative h-7 w-12 rounded-full transition-colors ${keepLoggedIn ? 'bg-black' : 'bg-neutral-200'}`}>
+                                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${keepLoggedIn ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </span>
+                        </label>
                         <button type="button" onClick={openGuestDashboard} className="mt-3 w-full h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-[#39FF14]/20 hover:brightness-95 transition-all">
                             <Eye size={16}/> Browse As Guest
                         </button>
@@ -2933,11 +2974,11 @@ const createGoogleProvider = () => {
                                         <div className="lg:col-span-5 bg-black text-white p-6 md:p-8 flex flex-col justify-between gap-10">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-16 h-16 rounded-lg bg-white text-black flex items-center justify-center overflow-hidden font-bold text-2xl shadow-xl">
-                                                    {user?.photoURL ? <img src={user.photoURL} alt="Account avatar" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || 'A')}
+                                                    {user?.photoURL ? <img src={user.photoURL} alt="Account avatar" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || (isGuestWorkspace ? 'G' : 'A'))}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/35 mb-2">Signed In As</p>
-                                                    <p className="text-xl font-bold tracking-tight truncate">{user?.displayName || user?.email || 'Admin User'}</p>
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/35 mb-2">{isGuestWorkspace ? 'Browsing As' : 'Signed In As'}</p>
+                                                    <p className="text-xl font-bold tracking-tight truncate">{user?.displayName || user?.email || (isGuestWorkspace ? 'Guest Workspace' : 'Admin User')}</p>
                                                 </div>
                                             </div>
                                             <div>
@@ -2949,11 +2990,11 @@ const createGoogleProvider = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Account Email</p>
-                                                    <p className="text-sm font-bold text-black break-all">{user?.email || 'Admin User'}</p>
+                                                    <p className="text-sm font-bold text-black break-all">{user?.email || (isGuestWorkspace ? 'Guest mode' : 'Admin User')}</p>
                                                 </div>
                                                 <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Account ID</p>
-                                                    <p className="text-sm font-bold text-black break-all">{user?.uid || 'BUILD-BOOKING-001'}</p>
+                                                    <p className="text-sm font-bold text-black break-all">{user?.uid || (isGuestWorkspace ? 'LOCAL-GUEST' : 'BUILD-BOOKING-001')}</p>
                                                 </div>
                                                 <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Business</p>
@@ -2966,6 +3007,51 @@ const createGoogleProvider = () => {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                                    <section className="lg:col-span-7 bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-12 h-12 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
+                                                    <ShieldCheck size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-300 mb-2">Device Session</p>
+                                                    <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">Keep me logged in</h3>
+                                                    <p className="text-sm text-neutral-500 leading-relaxed mt-2 max-w-xl">Use this on trusted devices so Google and email sign-in return cleanly to the workspace you were using.</p>
+                                                </div>
+                                            </div>
+                                            <label className="inline-flex items-center gap-3 rounded-full bg-neutral-50 border border-neutral-100 p-1.5 cursor-pointer shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={keepLoggedIn}
+                                                    onChange={(event) => setKeepLoggedIn(event.target.checked)}
+                                                    className="sr-only"
+                                                />
+                                                <span className={`relative h-10 w-16 rounded-full transition-colors ${keepLoggedIn ? 'bg-black' : 'bg-neutral-200'}`}>
+                                                    <span className={`absolute top-1 h-8 w-8 rounded-full bg-white shadow-lg transition-transform ${keepLoggedIn ? 'translate-x-7' : 'translate-x-1'}`} />
+                                                </span>
+                                                <span className="pr-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                                                    {keepLoggedIn ? 'On' : 'Off'}
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </section>
+
+                                    <section className="lg:col-span-5 bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-300 mb-3">Account Control</p>
+                                        <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">{isGuestWorkspace ? 'Exit guest mode' : 'Sign out safely'}</h3>
+                                        <p className="text-sm text-neutral-500 leading-relaxed mt-2 mb-5">{isGuestWorkspace ? 'Close the local guest workspace and return to the public home screen.' : 'End this session and return to the home screen without leaving stale login redirects behind.'}</p>
+                                        <button
+                                            type="button"
+                                            onClick={handleSignOut}
+                                            disabled={authBusy}
+                                            className="w-full h-12 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                        >
+                                            <X size={14}/> {isGuestWorkspace ? 'Exit Guest' : 'Sign Out'}
+                                        </button>
+                                    </section>
                                 </div>
 
                                 <div data-tour="profile-business-info" className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-[0_25px_80px_-65px_rgba(0,0,0,0.75)]">
