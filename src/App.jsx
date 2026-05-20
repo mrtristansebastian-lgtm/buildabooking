@@ -2095,10 +2095,6 @@ const createGoogleProvider = () => {
                 setAuthBusy(true);
                 try {
                     const returnRoute = getCurrentAuthReturnRoute();
-                    if (shouldUseRedirectGoogleAuth()) {
-                        await startGoogleRedirect(returnRoute);
-                        return;
-                    }
                     await applyAuthPersistence(keepLoggedIn);
                     const provider = createGoogleProvider();
                     await FirebaseSDK.signInWithPopup(auth, provider);
