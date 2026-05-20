@@ -144,6 +144,7 @@ body {
             transform: translate3d(-4%, 1%, 0) rotate(-2deg);
             animation: native-feature-wall-wave var(--native-accent-duration) var(--native-accent-easing) infinite;
             pointer-events: none;
+            display: none;
         }
 
         .native-feature-card,
