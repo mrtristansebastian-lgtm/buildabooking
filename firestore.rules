@@ -29,6 +29,17 @@ service cloud.firestore {
       return isOwner(userId) || (hasStaffAccess(appId, userId) && staffRole(appId, userId) == 'admin');
     }
 
+    function validPublicBookingCreate(appId, userId) {
+      return request.resource.data.source == 'public-booking-page' &&
+        request.resource.data.workspaceSlug is string &&
+        request.resource.data.ownerId == userId &&
+        request.resource.data.clientName is string &&
+        request.resource.data.clientPhone is string &&
+        request.resource.data.clientEmail is string &&
+        exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(request.resource.data.workspaceSlug)) &&
+        get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(request.resource.data.workspaceSlug)).data.ownerId == userId;
+    }
+
     match /artifacts/{appId}/accounts/{accountId} {
       allow read, create, update: if signedIn() && request.auth.uid == accountId;
       allow delete: if false;
@@ -62,8 +73,7 @@ service cloud.firestore {
 
     match /artifacts/{appId}/users/{userId}/bookings/{bookingId} {
       allow read, update, delete: if canStaff(appId, userId);
-      allow create: if canStaff(appId, userId) ||
-        (signedIn() && request.resource.data.source == 'public-booking-page');
+      allow create: if canStaff(appId, userId) || validPublicBookingCreate(appId, userId);
     }
 
     match /artifacts/{appId}/public/data/workspaces/{slug} {
@@ -76,9 +86,10 @@ service cloud.firestore {
         canAdmin(appId, resource.data.ownerId);
 
       match /bookingSubmissions/{bookingId} {
-        allow create: if signedIn() &&
-          request.resource.data.source == 'public-booking-page' &&
-          request.resource.data.workspaceSlug == slug;
+        allow create: if request.resource.data.source == 'public-booking-page' &&
+          request.resource.data.workspaceSlug == slug &&
+          exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)) &&
+          request.resource.data.ownerId == get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)).data.ownerId;
         allow read, update, delete: if false;
       }
     }

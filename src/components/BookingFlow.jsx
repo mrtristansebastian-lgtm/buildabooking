@@ -31,6 +31,8 @@ const normalizeWebsite = (value = '') => {
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
             const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', whatsappOptIn: false });
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [submitError, setSubmitError] = useState('');
             const [isInitialLoading, setIsInitialLoading] = useState(settings.features?.loadingScreen);
             const [openFaq, setOpenFaq] = useState(null);
 
@@ -161,17 +163,30 @@ const normalizeWebsite = (value = '') => {
                 }
             ].filter(Boolean) : [];
 
-            const handleAction = () => {
+            const handleAction = async () => {
                 if (isPreview) { onInspect('copy'); return; }
                 if ((selectedTime || isWaitlistMode) && formData.name && formData.phone && formData.email) {
-                    onComplete(
-                        { ...formData, whatsappOptIn: Boolean(settings.features?.whatsappUpdates && formData.whatsappOptIn) },
-                        activeDate.full,
-                        isWaitlistMode ? 'Waitlist' : selectedTime,
-                        isWaitlistMode ? 'waitlist' : 'pending',
-                        activeDate.localDateStr
-                    );
-                    setStep(2);
+                    setIsSubmitting(true);
+                    setSubmitError('');
+                    try {
+                        const completed = await onComplete(
+                            { ...formData, whatsappOptIn: Boolean(settings.features?.whatsappUpdates && formData.whatsappOptIn) },
+                            activeDate.full,
+                            isWaitlistMode ? 'Waitlist' : selectedTime,
+                            isWaitlistMode ? 'waitlist' : 'pending',
+                            activeDate.localDateStr
+                        );
+                        if (completed === false) {
+                            setSubmitError('Booking could not be sent. Please try again.');
+                            return;
+                        }
+                        setStep(2);
+                    } catch (error) {
+                        console.error(error);
+                        setSubmitError('Booking could not be sent. Please try again.');
+                    } finally {
+                        setIsSubmitting(false);
+                    }
                 }
             };
 
@@ -534,9 +549,12 @@ const normalizeWebsite = (value = '') => {
                                     </span>
                                 </label>
                             )}
-                            <button onClick={handleAction} disabled={(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(!(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
+                            {submitError && (
+                                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>
+                            )}
+                            <button onClick={handleAction} disabled={(isSubmitting || !(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(isSubmitting || !(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out"></div>
-                                <span className="relative z-10">{isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span> 
+                                <span className="relative z-10">{isSubmitting ? 'Sending Request' : isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span>
                                 <ArrowRight size={20} className="relative z-10 transition-transform duration-500 group-hover:translate-x-3" />
                             </button>
                             {settings.features?.socialProof && (

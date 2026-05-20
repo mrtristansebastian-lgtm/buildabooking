@@ -12,7 +12,7 @@ import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
 import { getLocalDateStr } from './utils/dates';
-import { prepareOnboardingSettings } from './utils/onboarding';
+import { buildBookingSlug, prepareOnboardingSettings } from './utils/onboarding';
 import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_PALETTE_FILTERS, ensureReadableTextColor } from './utils/theme';
 
 const OnboardingShowroom = lazy(() => (
@@ -853,13 +853,19 @@ const createGoogleProvider = () => {
                         id,
                         name: booking.clientName || 'Unnamed Client',
                         phone: booking.clientPhone || '',
+                        email: booking.clientEmail || '',
                         birthday: booking.clientBirthday || '',
+                        whatsappOptIn: Boolean(booking.clientWhatsappOptIn),
+                        whatsappNumber: booking.clientWhatsappNumber || '',
                         source: 'booking',
                         bookings: []
                     };
                     existing.name = existing.name || booking.clientName || 'Unnamed Client';
                     existing.phone = existing.phone || booking.clientPhone || '';
+                    existing.email = existing.email || booking.clientEmail || '';
                     existing.birthday = existing.birthday || booking.clientBirthday || '';
+                    existing.whatsappOptIn = existing.whatsappOptIn || Boolean(booking.clientWhatsappOptIn);
+                    existing.whatsappNumber = existing.whatsappNumber || booking.clientWhatsappNumber || '';
                     existing.bookings.push(booking);
                     clients.set(id, existing);
                 });
@@ -876,6 +882,10 @@ const createGoogleProvider = () => {
 
                     return {
                         ...client,
+                        email: client.email || history[0]?.clientEmail || '',
+                        birthday: client.birthday || history[0]?.clientBirthday || '',
+                        whatsappOptIn: Boolean(client.whatsappOptIn || history.some(booking => booking.clientWhatsappOptIn)),
+                        whatsappNumber: client.whatsappNumber || history.find(booking => booking.clientWhatsappNumber)?.clientWhatsappNumber || '',
                         bookings: history,
                         bookingCount,
                         lastBooking: history[0] || null,
@@ -896,7 +906,7 @@ const createGoogleProvider = () => {
                         id,
                         name: record.name || bookingProfile?.name || 'Unnamed Client',
                         phone: record.phone || bookingProfile?.phone || '',
-                        email: record.email || '',
+                        email: record.email || bookingProfile?.email || '',
                         birthday: record.birthday || bookingProfile?.birthday || '',
                         notes: record.notes || '',
                         avatar: record.avatar || '',
@@ -1527,8 +1537,7 @@ const createGoogleProvider = () => {
                                     clearGoogleAuthIntentUrl();
                                 }
                             }
-                            if (initialAuthToken) await FirebaseSDK.signInWithCustomToken(auth, initialAuthToken);
-                            else if (publicSlug) await FirebaseSDK.signInAnonymously(auth);
+                            if (!publicSlug && initialAuthToken) await FirebaseSDK.signInWithCustomToken(auth, initialAuthToken);
                         } else setLoading(false);
                     } catch (err) {
                         const message = err?.code === 'auth/configuration-not-found'
@@ -1661,8 +1670,23 @@ const createGoogleProvider = () => {
                 }
                 showToast("Publishing updates...");
                 try {
-                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'), nextSettings);
-                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', nextSettings.slug), { ...nextSettings, ownerId: workspaceOwnerId, updatedAt: Date.now() });
+                    const publicSlug = buildBookingSlug(nextSettings.slug || nextSettings.brandName);
+                    const settingsToPublish = {
+                        ...nextSettings,
+                        slug: publicSlug,
+                        publishedAt: nextSettings.publishedAt || Date.now(),
+                        updatedAt: Date.now()
+                    };
+                    if (publicSlug !== settings.slug) {
+                        setSettings(prev => ({ ...prev, slug: publicSlug }));
+                    }
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'), settingsToPublish);
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug), {
+                        ...settingsToPublish,
+                        ownerId: workspaceOwnerId,
+                        ownerEmail: user?.email || '',
+                        workspaceName: settingsToPublish.brandName || 'Build A Booking Workspace'
+                    });
                     showToast(successMessage);
                     return true;
                 } catch (err) {
@@ -2176,21 +2200,27 @@ const createGoogleProvider = () => {
 
                 if (!isFirebaseConfigured || !user) {
                     setBookings(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...prev]);
-                    return;
+                    return true;
                 }
                 try {
                     await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
                         ...bookingRecord
                     });
-                } catch (err) { console.error(err); }
+                    return true;
+                } catch (err) {
+                    console.error(err);
+                    showToast('Booking could not be saved.');
+                    return false;
+                }
             };
 
             const handlePublicBookingComplete = async (formData, date, time, status, dateKey) => {
                 if (!publicWorkspace?.ownerId) {
                     showToast('Booking page is missing an owner.');
-                    return;
+                    return false;
                 }
                 const bookingRecord = {
+                    ownerId: publicWorkspace.ownerId,
                     clientName: formData.name,
                     clientPhone: formData.phone,
                     clientEmail: formData.email || '',
@@ -2207,6 +2237,7 @@ const createGoogleProvider = () => {
                     status,
                     source: 'public-booking-page',
                     workspaceSlug: publicSlug,
+                    workspaceName: publicWorkspace.workspaceName || publicWorkspace.brandName || '',
                     timestamp: Date.now(),
                     createdAt: FirebaseSDK.serverTimestamp()
                 };
@@ -2214,9 +2245,11 @@ const createGoogleProvider = () => {
                 try {
                     await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'bookings'), bookingRecord);
                     await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug, 'bookingSubmissions'), bookingRecord);
+                    return true;
                 } catch (error) {
                     console.error(error);
                     showToast('Booking could not be submitted.');
+                    return false;
                 }
             };
 
@@ -2373,7 +2406,7 @@ const createGoogleProvider = () => {
                 }
 
                 return (
-                    <div className="h-screen w-screen overflow-hidden" style={{ backgroundColor: publicWorkspace.backgroundColor || '#ffffff' }}>
+                    <div className="h-screen w-screen overflow-x-hidden overflow-y-auto" style={{ backgroundColor: publicWorkspace.backgroundColor || '#ffffff' }}>
                         <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} />
                     </div>
                 );
