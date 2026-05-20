@@ -122,6 +122,11 @@ const normalizeWebsite = (value = '') => {
                 color: settings.bodyColor || '#666666',
                 backgroundColor: settings.backgroundColor || '#ffffff'
             };
+            const nativeAccent = Boolean(settings.nativeAccent);
+            const nativeAccentFillClass = nativeAccent ? 'booking-gradient-accent' : '';
+            const nativeAccentButtonClass = nativeAccent ? 'booking-gradient-button' : '';
+            const nativeAccentBorderClass = nativeAccent ? 'booking-gradient-border' : '';
+            const nativeAccentCardClass = nativeAccent ? 'booking-gradient-card' : '';
 
             const inspectClass = isPreview ? "cursor-pointer hover:ring-1 hover:ring-[#39FF14] hover:ring-offset-4 rounded transition-all duration-300 group/inspect relative" : "";
             const logoDisplay = useMemo(() => {
@@ -321,7 +326,7 @@ const normalizeWebsite = (value = '') => {
             if (!activeDate) return <div className="h-full w-full flex items-center justify-center font-bold text-xl opacity-20">No Availability</div>;
 
             return (
-                <div className="w-full h-full flex flex-col transition-all duration-1000 select-none pb-12" style={dynamicStyles}>
+                <div className={`w-full h-full flex flex-col transition-all duration-1000 select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''}`} style={dynamicStyles}>
                 {step === 1 && (
                     <div className="animate-in fade-in slide-in-from-bottom-20 duration-1000 min-h-full flex flex-col p-6 md:p-12 relative z-10">
                     
@@ -332,7 +337,7 @@ const normalizeWebsite = (value = '') => {
                             style={{ justifyContent: pageJustify }}
                             onClick={() => isPreview && onInspect('visuals')}
                         >
-                            <div className="w-12 h-[2px]" style={{ backgroundColor: settings.primaryColor }} />
+                            <div className={`w-12 h-[2px] ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
                             <span
                                 className="font-bold uppercase tracking-[0.6em] opacity-40"
                                 style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
@@ -402,7 +407,7 @@ const normalizeWebsite = (value = '') => {
                                 </span>
                             )}
                             {settings.features?.location && (
-                                <a href={settings.features.location} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80" style={{ backgroundColor: settings.primaryColor + '20', color: settings.primaryColor }}>
+                                <a href={settings.features.location} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80 ${nativeAccent ? 'booking-gradient-chip' : ''}`} style={{ backgroundColor: settings.primaryColor + '20', color: settings.primaryColor }}>
                                     <MapPin size={12} /> Get Directions
                                 </a>
                             )}
@@ -421,7 +426,7 @@ const normalizeWebsite = (value = '') => {
                                         {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
                                     </h4>
                                     {settings.features?.firstAvailable && (
-                                        <button onClick={handleFirstAvailable} className="px-3 py-1 text-[8px] font-bold uppercase tracking-widest rounded-full transition-all" style={{ backgroundColor: settings.primaryColor, color: settings.buttonTextColor || '#000', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>First Available</button>
+                                        <button onClick={handleFirstAvailable} className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest rounded-full transition-all ${nativeAccentButtonClass}`} style={{ backgroundColor: settings.primaryColor, color: settings.buttonTextColor || '#000', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>First Available</button>
                                     )}
                                 </div>
                             </div>
@@ -436,10 +441,10 @@ const normalizeWebsite = (value = '') => {
                                 {dates.map((d, i) => {
                                 const isActive = selectedDateIdx === i;
                                 return (
-                                    <button key={i} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'}`} style={getDateSlotStyle(isActive)}>
+                                    <button key={i} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'} ${nativeAccent && isActive ? `${nativeAccentCardClass} ${nativeAccentBorderClass}` : ''}`} style={getDateSlotStyle(isActive)}>
                                         <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] transition-all`}>{d.dayName}</span>
                                         <span className={`text-3xl md:text-4xl font-bold tracking-tighter transition-all`}>{d.dayNum}</span>
-                                        {dateStyle === 'minimal' && isActive && <div className="absolute -bottom-3 w-10 h-[2px] rounded-full" style={{ backgroundColor: settings.primaryColor }} />}
+                                        {dateStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 w-10 h-[2px] rounded-full ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
                                     </button>
                                 );
                                 })}
@@ -458,7 +463,7 @@ const normalizeWebsite = (value = '') => {
                         
                         {availableTimesForActiveDate.length === 0 ? (
                             isWaitlistMode ? (
-                                <div className="p-8 border border-dashed rounded-lg text-center" style={{ borderColor: settings.primaryColor }}>
+                                <div className={`p-8 border border-dashed rounded-lg text-center ${nativeAccentBorderClass}`} style={{ borderColor: settings.primaryColor }}>
                                     <Bell size={24} className="mx-auto mb-4" style={{ color: settings.primaryColor }} />
                                     <p className="text-sm font-bold mb-2" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>Standby List Active</p>
                                     <p className="text-xs opacity-60">Enter your details below. We'll notify you instantly if a slot opens.</p>
@@ -471,10 +476,10 @@ const normalizeWebsite = (value = '') => {
                                 {availableTimesForActiveDate.map((t) => {
                                 const isActive = selectedTime === t;
                                 return (
-                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''}`} style={getTimeSlotStyle(isActive)}>
+                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''} ${nativeAccent && isActive && timeSlotStyle !== 'minimal' ? nativeAccentBorderClass : ''}`} style={getTimeSlotStyle(isActive)}>
                                         <div className="flex items-center justify-center relative w-full">
                                             <span className={`text-lg md:text-xl font-bold tracking-tighter transition-all duration-500 ${isActive && timeSlotStyle === 'minimal' ? '-translate-y-1 scale-110' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{t}</span>
-                                            {timeSlotStyle === 'minimal' && isActive && <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: settings.primaryColor }} />}
+                                            {timeSlotStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
                                         </div>
                                     </button>
                                 );
@@ -576,7 +581,7 @@ const normalizeWebsite = (value = '') => {
                                         className="sr-only"
                                     />
                                     <span
-                                        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all"
+                                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all ${formData.whatsappOptIn ? nativeAccentFillClass : ''}`}
                                         style={{
                                             backgroundColor: formData.whatsappOptIn ? (settings.primaryColor || '#39FF14') : 'transparent',
                                             borderColor: formData.whatsappOptIn ? (settings.primaryColor || '#39FF14') : `${settings.headingColor || '#000000'}35`,
@@ -598,7 +603,7 @@ const normalizeWebsite = (value = '') => {
                             {submitError && (
                                 <p className="mb-4 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>
                             )}
-                            <button onClick={handleAction} disabled={(isSubmitting || !canSubmitBooking) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(isSubmitting || !canSubmitBooking) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
+                            <button onClick={handleAction} disabled={(isSubmitting || !canSubmitBooking) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(isSubmitting || !canSubmitBooking) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${nativeAccentButtonClass} ${inspectClass}`} style={getActionButtonStyle()}>
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out"></div>
                                 <span className="relative z-10">{isSubmitting ? 'Sending Request' : isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span>
                                 <ArrowRight size={20} className="relative z-10 transition-transform duration-500 group-hover:translate-x-3" />

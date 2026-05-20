@@ -867,6 +867,7 @@ const createGoogleProvider = () => {
                 dateBgColor: 'transparent', dateTextColor: '#666666', dateActiveBgColor: 'transparent', dateActiveTextColor: '#000000',
                 buttonTextColor: '#000000', 
                 fontFamily: 'inter', 
+                nativeAccent: true,
                 headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '',
                 brandNameSize: 76, brandNameFontFamily: '',
                 taglineSize: 9, taglineFontFamily: '',
@@ -2222,6 +2223,7 @@ const createGoogleProvider = () => {
                     setSettings(prev => ({
                         ...prev, 
                         ...theme,
+                        nativeAccent: Boolean(theme.nativeAccent),
                         dateStyle: theme.availabilityStyle || prev.dateStyle || 'minimal',
                         timeSlotStyle: theme.availabilityStyle || prev.timeSlotStyle || 'minimal',
                         headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '' // reset overrides on theme change
