@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "health": "node scripts/health-check.mjs",
+    "check": "npm run build && node scripts/health-check.mjs",
+    "smoke": "npm run check"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

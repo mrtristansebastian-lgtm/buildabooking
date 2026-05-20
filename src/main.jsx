@@ -7,7 +7,9 @@ import './styles.css';
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <App />
+      <main id="app-shell" className="min-h-screen">
+        <App />
+      </main>
     </AppErrorBoundary>
   </React.StrictMode>
 );

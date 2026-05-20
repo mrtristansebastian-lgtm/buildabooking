@@ -1,5 +1,3 @@
-import emailjs from '@emailjs/browser';
-
 export const EMAIL_TEMPLATE_KEYS = ['confirmed', 'review', 'waitlist', 'runningLate'];
 
 export const createDefaultEmailConfig = () => ({
@@ -90,6 +88,7 @@ export const sendClientEmail = async ({ communications, settings, booking, templ
   }
 
   const params = buildEmailParams({ settings, communications, booking, templateKey, extra });
+  const { default: emailjs } = await import('@emailjs/browser');
   await emailjs.send(config.serviceId, templateId, params, { publicKey: config.publicKey });
   return { ok: true };
 };

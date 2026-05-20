@@ -2,8 +2,6 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
-import { BusinessCalendar } from './components/BusinessCalendar';
-import { BookingFlow } from './components/BookingFlow';
 import { BuildABookingBrand } from './components/BuildABookingBrand';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
@@ -18,6 +16,23 @@ import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBac
 const OnboardingShowroom = lazy(() => (
   import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
 ));
+
+const BusinessCalendar = lazy(() => (
+  import('./components/BusinessCalendar').then((module) => ({ default: module.BusinessCalendar }))
+));
+
+const BookingFlow = lazy(() => (
+  import('./components/BookingFlow').then((module) => ({ default: module.BookingFlow }))
+));
+
+const LazySectionFallback = ({ label = 'Loading workspace' }) => (
+  <div className="min-h-[320px] w-full bg-white flex items-center justify-center text-center">
+    <div>
+      <BuildABookingBrand className="w-48 max-w-[70vw] mx-auto mb-6 animate-subtle-pulse" />
+      <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-300">{label}</p>
+    </div>
+  </div>
+);
 
 const getPublicBookingSlug = () => {
   const url = new URL(window.location.href);
@@ -1515,6 +1530,14 @@ const createGoogleProvider = () => {
             }, [activeTab]);
 
             useEffect(() => {
+                if (typeof window === 'undefined') return;
+                if (publicSlug || activeTab === 'editor') {
+                    window.__loadBuildABookingFonts?.();
+                    window.dispatchEvent(new Event('build-a-booking:load-fonts'));
+                }
+            }, [activeTab, publicSlug]);
+
+            useEffect(() => {
                 if (publicSlug || loading) return;
                 const route = saveWorkspaceRoute({ view, activeTab, editorTab });
                 if (typeof window === 'undefined' || window.location.search.includes('auth=google')) return;
@@ -1533,6 +1556,32 @@ const createGoogleProvider = () => {
                 }
                 saveWorkspaceRoute(nextRoute);
             };
+
+            useEffect(() => {
+                if (publicSlug || loading || typeof window === 'undefined') return;
+
+                const syncRouteFromLocation = () => {
+                    if (window.location.search.includes('auth=google')) return;
+                    const nextRoute = getWorkspaceRouteFromUrl();
+                    if (!nextRoute) return;
+
+                    saveWorkspaceRoute(nextRoute);
+                    setView(currentView => currentView === nextRoute.view ? currentView : nextRoute.view);
+                    if (nextRoute.view === 'dashboard') {
+                        setActiveTab(currentTab => currentTab === nextRoute.activeTab ? currentTab : nextRoute.activeTab);
+                        if (nextRoute.activeTab === 'editor') {
+                            setEditorTab(currentEditorTab => currentEditorTab === nextRoute.editorTab ? currentEditorTab : nextRoute.editorTab);
+                        }
+                    }
+                };
+
+                window.addEventListener('hashchange', syncRouteFromLocation);
+                window.addEventListener('popstate', syncRouteFromLocation);
+                return () => {
+                    window.removeEventListener('hashchange', syncRouteFromLocation);
+                    window.removeEventListener('popstate', syncRouteFromLocation);
+                };
+            }, [publicSlug, loading]);
 
             const getCurrentAuthReturnRoute = () => normalizeWorkspaceRoute({
                 view: 'dashboard',
@@ -2515,8 +2564,8 @@ const createGoogleProvider = () => {
                     return (
                         <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-6">
                             <div className="max-w-md text-center">
-                                <div className="inline-flex rounded-lg bg-white px-4 py-3 mx-auto mb-8">
-                                    <BuildABookingBrand className="w-56 max-w-full" />
+                                <div className="inline-flex mx-auto mb-8">
+                                    <BuildABookingBrand className="w-56 max-w-full" variant="light" />
                                 </div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/40 mb-4">Booking Page</p>
                                 <h1 className="text-4xl font-bold tracking-tight mb-4">Page unavailable</h1>
@@ -2528,7 +2577,9 @@ const createGoogleProvider = () => {
 
                 return (
                     <div className="h-screen w-screen overflow-x-hidden overflow-y-auto" style={{ backgroundColor: publicWorkspace.backgroundColor || '#ffffff' }}>
-                        <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} />
+                        <Suspense fallback={<LazySectionFallback label="Loading booking page" />}>
+                            <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} />
+                        </Suspense>
                     </div>
                 );
             }
@@ -3352,7 +3403,9 @@ const createGoogleProvider = () => {
 
                     {activeTab === 'business' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
-                             <BusinessCalendar settings={settings} setSettings={setSettings} onSave={saveSettings} showToast={showToast} bookings={visibleBookings} />
+                            <Suspense fallback={<LazySectionFallback label="Loading schedule" />}>
+                                <BusinessCalendar settings={settings} setSettings={setSettings} onSave={saveSettings} showToast={showToast} bookings={visibleBookings} />
+                            </Suspense>
                         </div>
                     )}
 
@@ -4661,7 +4714,9 @@ const createGoogleProvider = () => {
                             <div className="absolute top-8 right-8 z-50 flex items-center gap-2 px-4 py-2 bg-black/10 backdrop-blur-md rounded-full text-[9px] font-bold uppercase tracking-[0.2em] opacity-0 group-hover/simulator:opacity-100 transition-opacity pointer-events-none text-black">
                                 <MousePointerClick size={12} /> Design Inspector Live
                             </div>
-                            <BookingFlow key={previewKey} settings={settings} isPreview={true} onInspect={handleInspect} onComplete={handleBookingComplete} />
+                            <Suspense fallback={<LazySectionFallback label="Loading preview" />}>
+                                <BookingFlow key={previewKey} settings={settings} isPreview={true} onInspect={handleInspect} onComplete={handleBookingComplete} />
+                            </Suspense>
                             </div>
                         </div>
                         </div>
