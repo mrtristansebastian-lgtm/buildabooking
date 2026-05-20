@@ -250,6 +250,131 @@ const COLOR_COLLECTIONS = [
     }
 ];
 
+const INDUSTRY_THEME_PROFILES = {
+    'all-industries': {
+        id: 'all-industries',
+        label: '',
+        recipe: ['modern', 'editorial', 'minimal', 'night', 'luxe', 'tech', 'commerce', 'organic', 'bold', 'handmade'],
+        styleTags: []
+    },
+    beauty: {
+        id: 'beauty',
+        label: 'Beauty',
+        recipe: ['luxe', 'editorial', 'minimal', 'modern', 'organic', 'handmade', 'commerce', 'night', 'bold', 'tech'],
+        fonts: { modern: 'manrope', minimal: 'figtree', bold: 'syne', tech: 'space-grotesk' },
+        styleTags: ['luxury', 'editorial'],
+        surfaceByStyle: { bold: 'cream', tech: 'ice' }
+    },
+    wellness: {
+        id: 'wellness',
+        label: 'Wellness',
+        recipe: ['organic', 'minimal', 'modern', 'editorial', 'handmade', 'luxe', 'commerce', 'tech', 'night', 'bold'],
+        fonts: { modern: 'dm-sans', minimal: 'figtree', tech: 'space-grotesk', bold: 'plus-jakarta' },
+        styleTags: ['organic', 'minimal'],
+        buttonStyle: 'pill'
+    },
+    fitness: {
+        id: 'fitness',
+        label: 'Fitness',
+        recipe: ['bold', 'tech', 'night', 'modern', 'commerce', 'minimal', 'editorial', 'luxe', 'organic', 'handmade'],
+        fonts: { bold: 'unbounded', tech: 'space-grotesk', modern: 'plus-jakarta', commerce: 'montserrat', minimal: 'ibm-plex-sans' },
+        styleTags: ['bold', 'modern'],
+        availabilityStyle: 'solid',
+        buttonStyle: 'sharp',
+        surfaceByStyle: { organic: 'impact', handmade: 'soft', luxe: 'dark' }
+    },
+    healthcare: {
+        id: 'healthcare',
+        label: 'Healthcare',
+        recipe: ['minimal', 'modern', 'tech', 'organic', 'commerce', 'editorial', 'luxe', 'handmade', 'night', 'bold'],
+        fonts: { modern: 'inter', minimal: 'public-sans', tech: 'ibm-plex-sans', organic: 'source-sans-3' },
+        styleTags: ['minimal', 'modern'],
+        availabilityStyle: 'solid'
+    },
+    consulting: {
+        id: 'consulting',
+        label: 'Consulting',
+        recipe: ['modern', 'minimal', 'tech', 'editorial', 'luxe', 'commerce', 'night', 'organic', 'bold', 'handmade'],
+        fonts: { modern: 'plus-jakarta', minimal: 'inter', editorial: 'newsreader', tech: 'ibm-plex-mono' },
+        styleTags: ['modern', 'minimal']
+    },
+    creative: {
+        id: 'creative',
+        label: 'Creative',
+        recipe: ['editorial', 'bold', 'modern', 'luxe', 'handmade', 'tech', 'night', 'minimal', 'organic', 'commerce'],
+        fonts: { editorial: 'newsreader', bold: 'syne', modern: 'space-grotesk', handmade: 'kalam' },
+        styleTags: ['editorial', 'bold']
+    },
+    events: {
+        id: 'events',
+        label: 'Events',
+        recipe: ['night', 'bold', 'luxe', 'editorial', 'modern', 'commerce', 'tech', 'minimal', 'organic', 'handmade'],
+        fonts: { night: 'space-grotesk', bold: 'unbounded', luxe: 'cinzel', modern: 'manrope' },
+        styleTags: ['night', 'bold'],
+        buttonStyle: 'sharp'
+    },
+    food: {
+        id: 'food',
+        label: 'Food',
+        recipe: ['organic', 'commerce', 'editorial', 'handmade', 'modern', 'luxe', 'minimal', 'bold', 'night', 'tech'],
+        fonts: { organic: 'spectral', handmade: 'kalam', editorial: 'lora', commerce: 'montserrat' },
+        styleTags: ['organic', 'commerce']
+    },
+    trades: {
+        id: 'trades',
+        label: 'Trades',
+        recipe: ['commerce', 'bold', 'modern', 'tech', 'minimal', 'night', 'organic', 'editorial', 'luxe', 'handmade'],
+        fonts: { commerce: 'montserrat', bold: 'oswald', tech: 'ibm-plex-mono', modern: 'public-sans' },
+        styleTags: ['commerce', 'bold'],
+        availabilityStyle: 'solid'
+    },
+    education: {
+        id: 'education',
+        label: 'Education',
+        recipe: ['handmade', 'minimal', 'modern', 'tech', 'organic', 'commerce', 'editorial', 'bold', 'luxe', 'night'],
+        fonts: { handmade: 'kalam', minimal: 'nunito-sans', modern: 'source-sans-3', tech: 'ibm-plex-mono' },
+        styleTags: ['handmade', 'modern']
+    },
+    retail: {
+        id: 'retail',
+        label: 'Retail',
+        recipe: ['commerce', 'luxe', 'modern', 'bold', 'editorial', 'minimal', 'organic', 'tech', 'night', 'handmade'],
+        fonts: { commerce: 'montserrat', luxe: 'marcellus', modern: 'manrope', bold: 'syne' },
+        styleTags: ['commerce', 'luxury']
+    },
+    hospitality: {
+        id: 'hospitality',
+        label: 'Hospitality',
+        recipe: ['luxe', 'editorial', 'organic', 'modern', 'minimal', 'commerce', 'night', 'handmade', 'bold', 'tech'],
+        fonts: { luxe: 'marcellus', editorial: 'newsreader', organic: 'spectral', modern: 'manrope' },
+        styleTags: ['luxury', 'editorial']
+    },
+    property: {
+        id: 'property',
+        label: 'Property',
+        recipe: ['minimal', 'modern', 'editorial', 'luxe', 'tech', 'organic', 'commerce', 'night', 'bold', 'handmade'],
+        fonts: { minimal: 'inter', modern: 'plus-jakarta', editorial: 'newsreader', tech: 'ibm-plex-mono' },
+        styleTags: ['minimal', 'modern']
+    },
+    finance: {
+        id: 'finance',
+        label: 'Finance',
+        recipe: ['minimal', 'modern', 'tech', 'luxe', 'editorial', 'commerce', 'night', 'organic', 'bold', 'handmade'],
+        fonts: { minimal: 'ibm-plex-sans', modern: 'inter', tech: 'ibm-plex-mono', luxe: 'marcellus' },
+        styleTags: ['minimal', 'tech'],
+        availabilityStyle: 'outline',
+        buttonStyle: 'sharp'
+    },
+    technology: {
+        id: 'technology',
+        label: 'Technology',
+        recipe: ['tech', 'modern', 'night', 'minimal', 'bold', 'commerce', 'editorial', 'luxe', 'organic', 'handmade'],
+        fonts: { tech: 'ibm-plex-mono', modern: 'space-grotesk', night: 'space-grotesk', bold: 'unbounded' },
+        styleTags: ['tech', 'modern'],
+        buttonStyle: 'sharp'
+    }
+};
+
 const NATIVE_THEME = {
     id: 'build-a-booking-native',
     name: 'Build A Booking Native',
@@ -308,35 +433,135 @@ const bestTextFor = (background) => (
     colorContrastRatio('#000000', background) >= colorContrastRatio('#FFFFFF', background) ? '#000000' : '#FFFFFF'
 );
 
-const resolveSurface = (collection, archetype) => {
-    if (archetype.surface === 'dark') return collection.dark;
-    if (archetype.surface === 'warm') return collection.warm;
-    if (archetype.surface === 'cream') return collection.cream;
-    if (archetype.surface === 'wash') return collection.wash;
-    if (archetype.surface === 'soft') return collection.pale;
-    if (archetype.surface === 'ice') return collection.id === 'neutral' ? '#F8FAFC' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.62);
-    if (archetype.surface === 'impact') return collection.id === 'neutral' ? '#F4F4F5' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.35);
-    if (archetype.surface === 'paper') return collection.id === 'neutral' ? '#FFFFFC' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.72);
+const getIndustryProfile = (industryId = 'all-industries') => (
+    INDUSTRY_THEME_PROFILES[industryId] || INDUSTRY_THEME_PROFILES['all-industries']
+);
+
+const getStyleArchetype = (styleId) => (
+    STYLE_ARCHETYPES.find(archetype => archetype.id === styleId) || STYLE_ARCHETYPES[0]
+);
+
+const getIndustryRecipe = (profile, styleId = 'all-styles') => {
+    const selectedStyle = styleId && styleId !== 'all-styles' ? [styleId] : [];
+    const orderedIds = unique([...selectedStyle, ...(profile.recipe || []), ...STYLE_ARCHETYPES.map(archetype => archetype.id)]);
+    return orderedIds.slice(0, 10).map(getStyleArchetype);
+};
+
+const createPaletteVariant = (collection, variant) => {
+    if (variant === 'bright') {
+        return {
+            ...collection,
+            id: collection.id,
+            label: `${collection.label} Lift`,
+            variantId: 'lift',
+            variantLabel: 'Lift',
+            accent: mixHexColors(collection.accent, '#FFFFFF', 0.12),
+            accentSoft: mixHexColors(collection.accentSoft, '#FFFFFF', 0.22),
+            pale: mixHexColors(collection.pale, '#FFFFFF', 0.36),
+            wash: mixHexColors(collection.wash, '#FFFFFF', 0.28)
+        };
+    }
+
+    if (variant === 'deep') {
+        return {
+            ...collection,
+            id: collection.id,
+            label: `${collection.label} Depth`,
+            variantId: 'depth',
+            variantLabel: 'Depth',
+            accent: mixHexColors(collection.accent, '#000000', 0.12),
+            accentSoft: mixHexColors(collection.accentSoft, collection.accent, 0.16),
+            heading: mixHexColors(collection.heading, '#000000', 0.08),
+            dark: mixHexColors(collection.dark, collection.accent, 0.08),
+            darkPanel: mixHexColors(collection.darkPanel, collection.accent, 0.1)
+        };
+    }
+
+    return collection;
+};
+
+const getPaletteCollections = (paletteId = 'all') => {
+    if (paletteId === 'dark') {
+        return {
+            collections: COLOR_COLLECTIONS.map(collection => ({
+                ...collection,
+                label: `${collection.label} Noir`,
+                variantId: 'noir',
+                variantLabel: 'Noir'
+            })),
+            focused: false,
+            forceDark: true
+        };
+    }
+
+    if (paletteId && paletteId !== 'all') {
+        const base = COLOR_COLLECTIONS.find(collection => collection.id === paletteId);
+        if (base) {
+            return {
+                collections: [base, createPaletteVariant(base, 'bright'), createPaletteVariant(base, 'deep')],
+                focused: true,
+                forceDark: false
+            };
+        }
+        return { collections: [], focused: true, forceDark: false };
+    }
+
+    return { collections: COLOR_COLLECTIONS, focused: false, forceDark: false };
+};
+
+const sortCollectionsByDetectedPalette = (collections, detectedPalette) => {
+    if (!detectedPalette) return collections;
+    return [...collections].sort((a, b) => {
+        if (a.id === detectedPalette && b.id !== detectedPalette) return -1;
+        if (b.id === detectedPalette && a.id !== detectedPalette) return 1;
+        return 0;
+    });
+};
+
+const shouldIncludeNativeTheme = ({ industry, palette, style }) => (
+    (!industry || industry === 'all-industries' || industry === 'technology' || industry === 'consulting' || industry === 'creative')
+    && (!palette || palette === 'all' || palette === 'neutral')
+    && (!style || style === 'all-styles' || style === 'modern' || style === 'minimal')
+);
+
+const resolveSurface = (collection, archetype, profile, forceDark = false) => {
+    const surface = forceDark ? 'dark' : (profile?.surfaceByStyle?.[archetype.id] || archetype.surface);
+    if (surface === 'dark') return collection.dark;
+    if (surface === 'warm') return collection.warm;
+    if (surface === 'cream') return collection.cream;
+    if (surface === 'wash') return collection.wash;
+    if (surface === 'soft') return collection.pale;
+    if (surface === 'ice') return collection.id === 'neutral' ? '#F8FAFC' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.62);
+    if (surface === 'impact') return collection.id === 'neutral' ? '#F4F4F5' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.35);
+    if (surface === 'paper') return collection.id === 'neutral' ? '#FFFFFC' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.72);
     return collection.background;
 };
 
-const createTheme = (collection, archetype) => {
-    const isDark = archetype.surface === 'dark';
-    const backgroundColor = resolveSurface(collection, archetype);
+const createTheme = (collection, archetype, options = {}) => {
+    const profile = options.profile || getIndustryProfile();
+    const surface = options.forceDark ? 'dark' : (profile.surfaceByStyle?.[archetype.id] || archetype.surface);
+    const availabilityStyle = profile.availabilityByStyle?.[archetype.id] || profile.availabilityStyle || archetype.availabilityStyle;
+    const buttonStyle = profile.buttonByStyle?.[archetype.id] || profile.buttonStyle || archetype.buttonStyle;
+    const isDark = surface === 'dark';
+    const backgroundColor = resolveSurface(collection, archetype, profile, options.forceDark);
     const headingColor = isDark ? collection.darkHeading : collection.heading;
     const bodyColor = isDark ? collection.darkBody : collection.body;
     const slotBgColor = isDark
         ? collection.darkPanel
-        : archetype.availabilityStyle === 'minimal'
+        : availabilityStyle === 'minimal'
             ? 'transparent'
-            : (archetype.surface === 'white' ? '#F8FAFC' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.46));
-    const activeDateBg = archetype.availabilityStyle === 'minimal'
+            : (surface === 'white' ? '#F8FAFC' : mixHexColors(collection.accentSoft, '#FFFFFF', 0.46));
+    const activeDateBg = availabilityStyle === 'minimal'
         ? 'transparent'
         : (isDark ? collection.darkPanel : mixHexColors(collection.accentSoft, '#FFFFFF', 0.3));
+    const isIndustrySpecific = profile.id && profile.id !== 'all-industries';
+    const paletteVariantId = options.variantId || collection.variantId || '';
+    const paletteVariantLabel = options.variantLabel || collection.variantLabel || '';
+    const collectionName = `${collection.label}${paletteVariantLabel && !collection.label.includes(paletteVariantLabel) ? ` ${paletteVariantLabel}` : ''}`;
 
     return {
-        id: `${slugify(collection.label)}-${archetype.id}`,
-        name: `${collection.label} ${archetype.label}`,
+        id: `${isIndustrySpecific ? `${profile.id}-` : ''}${slugify(collection.label)}-${archetype.id}${paletteVariantId ? `-${paletteVariantId}` : ''}`,
+        name: `${isIndustrySpecific ? `${profile.label} ` : ''}${collectionName} ${archetype.label}`,
         primaryColor: collection.accent,
         backgroundColor,
         headingColor,
@@ -346,25 +571,21 @@ const createTheme = (collection, archetype) => {
         dateBgColor: 'transparent',
         dateTextColor: bodyColor,
         dateActiveBgColor: activeDateBg,
-        dateActiveTextColor: archetype.availabilityStyle === 'minimal' ? collection.accent : headingColor,
+        dateActiveTextColor: availabilityStyle === 'minimal' ? collection.accent : headingColor,
         buttonTextColor: bestTextFor(collection.accent),
-        buttonStyle: archetype.buttonStyle,
-        fontFamily: archetype.fontFamily,
-        availabilityStyle: archetype.availabilityStyle,
+        buttonStyle,
+        fontFamily: profile.fonts?.[archetype.id] || archetype.fontFamily,
+        availabilityStyle,
         palette: collection.id,
-        styleTags: unique(archetype.styles),
-        industryTags: unique([...archetype.industries, ...collection.industries.slice(0, 2)]),
+        styleTags: unique([...archetype.styles, ...(profile.styleTags || [])]),
+        industryTags: unique([
+            isIndustrySpecific ? profile.id : '',
+            ...(archetype.industries || []),
+            ...(collection.industries || []).slice(0, 2)
+        ]),
         nativeAccent: false
     };
 };
-
-const generatedThemes = COLOR_COLLECTIONS.flatMap((collection) => {
-    const archetypes = collection.id === 'neutral' ? STYLE_ARCHETYPES.slice(1) : STYLE_ARCHETYPES;
-    const themes = archetypes.map((archetype) => createTheme(collection, archetype));
-    return collection.id === 'neutral' ? [NATIVE_THEME, ...themes] : themes;
-});
-
-const RAW_PRESET_THEMES = generatedThemes.slice(0, 80);
 
 const resolvePalette = (theme) => {
     if (theme.palette) return theme.palette;
@@ -469,4 +690,30 @@ const polishPresetTheme = (theme) => {
     };
 };
 
-export const PRESET_THEMES = RAW_PRESET_THEMES.map(polishPresetTheme);
+export const generateThemeCollection = ({
+    industry = 'all-industries',
+    palette = 'all',
+    style = 'all-styles',
+    detectedPalette = ''
+} = {}) => {
+    const profile = getIndustryProfile(industry);
+    const recipe = getIndustryRecipe(profile, style);
+    const palettePlan = getPaletteCollections(palette);
+    const collections = sortCollectionsByDetectedPalette(palettePlan.collections, palette === 'all' ? detectedPalette : '');
+    const generated = collections.flatMap(collection => (
+        recipe.map(archetype => createTheme(collection, archetype, {
+            profile,
+            forceDark: palettePlan.forceDark,
+            variantId: collection.variantId,
+            variantLabel: collection.variantLabel
+        }))
+    ));
+    const generatedLimit = palettePlan.focused ? 30 : 80;
+    const withNativeTheme = shouldIncludeNativeTheme({ industry, palette, style })
+        ? [NATIVE_THEME, ...generated]
+        : generated;
+
+    return withNativeTheme.slice(0, generatedLimit).map(polishPresetTheme);
+};
+
+export const PRESET_THEMES = generateThemeCollection();

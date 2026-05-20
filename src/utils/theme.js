@@ -78,9 +78,9 @@ export const hexToHsl = (hex) => {
         ];
 
         export const THEME_FILTER_GROUPS = [
-            { id: 'palette', name: 'Palette', eyebrow: 'Browse By Palette', filters: THEME_PALETTE_FILTERS },
-            { id: 'industry', name: 'Industry', eyebrow: 'Browse By Industry', filters: THEME_INDUSTRY_FILTERS },
-            { id: 'style', name: 'Style', eyebrow: 'Browse By Style', filters: THEME_STYLE_FILTERS }
+            { id: 'industry', name: 'Industry', eyebrow: 'Start With Industry', filters: THEME_INDUSTRY_FILTERS },
+            { id: 'palette', name: 'Palette', eyebrow: 'Refine By Palette', filters: THEME_PALETTE_FILTERS },
+            { id: 'style', name: 'Style', eyebrow: 'Guide By Style', filters: THEME_STYLE_FILTERS }
         ];
 
         export const normalizeHexColor = (color, fallback = '#000000') => {

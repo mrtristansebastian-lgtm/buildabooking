@@ -5,7 +5,7 @@ import {
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
-import { PRESET_THEMES } from './data/themes';
+import { PRESET_THEMES, generateThemeCollection } from './data/themes';
 import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
@@ -65,6 +65,85 @@ const defaultFaqItems = [
   { q: 'How do I know my booking is confirmed?', a: 'You will see a confirmation on this page and receive a message when the business approves your request.' },
   { q: 'Can I join a waitlist if the day is full?', a: 'Yes. If waitlist is enabled, you can leave your details and the business can contact you when a slot opens.' }
 ];
+
+const themePaletteLabel = (paletteId) => (
+  THEME_FILTER_GROUPS.find(group => group.id === 'palette')?.filters.find(filter => filter.id === paletteId)?.name || 'brand'
+);
+
+const rgbToHsl = (red, green, blue) => {
+  let r = red / 255;
+  let g = green / 255;
+  let b = blue / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2;
+  let hue = 0;
+  let saturation = 0;
+
+  if (max !== min) {
+    const delta = max - min;
+    saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    if (max === r) hue = (g - b) / delta + (g < b ? 6 : 0);
+    if (max === g) hue = (b - r) / delta + 2;
+    if (max === b) hue = (r - g) / delta + 4;
+    hue *= 60;
+  }
+
+  return { hue, saturation: saturation * 100, lightness: lightness * 100 };
+};
+
+const paletteIdFromHsl = ({ hue, saturation, lightness }) => {
+  if (saturation < 16 || lightness < 10 || lightness > 94) return 'neutral';
+  if (hue >= 345 || hue < 15) return 'red';
+  if (hue >= 15 && hue < 38) return 'orange';
+  if (hue >= 38 && hue < 75) return 'yellow';
+  if (hue >= 75 && hue < 175) return 'green';
+  if (hue >= 175 && hue < 255) return 'blue';
+  if (hue >= 255 && hue < 295) return 'purple';
+  return 'pink';
+};
+
+const detectPaletteFromImageSource = (source) => new Promise((resolve) => {
+  if (!source || typeof window === 'undefined') {
+    resolve('');
+    return;
+  }
+
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      const size = 56;
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0, size, size);
+      const pixels = context.getImageData(0, 0, size, size).data;
+      const buckets = {};
+
+      for (let index = 0; index < pixels.length; index += 16) {
+        const alpha = pixels[index + 3];
+        if (alpha < 160) continue;
+        const red = pixels[index];
+        const green = pixels[index + 1];
+        const blue = pixels[index + 2];
+        const hsl = rgbToHsl(red, green, blue);
+        if (hsl.lightness < 8 || hsl.lightness > 96) continue;
+        const palette = paletteIdFromHsl(hsl);
+        const weight = Math.max(1, hsl.saturation) * (palette === 'neutral' ? 0.3 : 1);
+        buckets[palette] = (buckets[palette] || 0) + weight;
+      }
+
+      const [winner] = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0] || [];
+      resolve(winner || 'neutral');
+    } catch (error) {
+      resolve('');
+    }
+  };
+  image.onerror = () => resolve('');
+  image.src = source;
+});
 
 const editorPreviewFrames = {
   desktop: {
@@ -795,10 +874,12 @@ const createGoogleProvider = () => {
             const [activeTab, setActiveTab] = useState(initialWorkspaceRoute.activeTab);
             const [dashboardPeriod, setDashboardPeriod] = useState('today');
             const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
-            const [themeFilterGroup, setThemeFilterGroup] = useState('palette');
+            const [themeFilterGroup, setThemeFilterGroup] = useState('industry');
             const [themeFilters, setThemeFilters] = useState({ palette: 'all', industry: 'all-industries', style: 'all-styles' });
             const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
             const [themeBatchLoading, setThemeBatchLoading] = useState(false);
+            const [detectedThemePalette, setDetectedThemePalette] = useState('');
+            const [paletteDetecting, setPaletteDetecting] = useState(false);
             const [device, setDevice] = useState('desktop'); 
             const [previewKey, setPreviewKey] = useState(0); 
             const [scale, setScale] = useState(1);
@@ -1334,23 +1415,37 @@ const createGoogleProvider = () => {
             const collectsClientEmail = settings.features?.collectClientEmail !== false;
             const collectsClientNotes = Boolean(settings.features?.collectClientNotes);
 
+            const themeGenerationInputs = useMemo(() => ({
+                industry: themeFilters.industry || 'all-industries',
+                palette: themeFilters.palette || 'all',
+                style: themeFilters.style || 'all-styles',
+                detectedPalette: detectedThemePalette
+            }), [themeFilters.industry, themeFilters.palette, themeFilters.style, detectedThemePalette]);
+
             const activeThemeFilterGroup = useMemo(() => (
                 THEME_FILTER_GROUPS.find(group => group.id === themeFilterGroup) || THEME_FILTER_GROUPS[0]
             ), [themeFilterGroup]);
             const activeThemeFilterId = themeFilters[activeThemeFilterGroup.id] || activeThemeFilterGroup.filters[0].id;
+
+            const visibleThemes = useMemo(() => (
+                generateThemeCollection(themeGenerationInputs)
+            ), [themeGenerationInputs]);
+
             const themeFilterOptions = useMemo(() => (
                 activeThemeFilterGroup.filters
-                    .map(filter => ({ ...filter, count: PRESET_THEMES.filter(theme => filter.match(theme)).length }))
+                    .map(filter => ({
+                        ...filter,
+                        count: generateThemeCollection({
+                            ...themeGenerationInputs,
+                            [activeThemeFilterGroup.id]: filter.id
+                        }).length
+                    }))
                     .filter(filter => filter.count > 0)
-            ), [activeThemeFilterGroup]);
+            ), [activeThemeFilterGroup, themeGenerationInputs]);
 
             const activeThemeFilter = useMemo(() => (
                 activeThemeFilterGroup.filters.find(filter => filter.id === activeThemeFilterId) || activeThemeFilterGroup.filters[0]
             ), [activeThemeFilterGroup, activeThemeFilterId]);
-
-            const visibleThemes = useMemo(() => (
-                PRESET_THEMES.filter(theme => activeThemeFilter.match(theme))
-            ), [activeThemeFilter]);
 
             const visibleThemeCards = useMemo(() => (
                 visibleThemes.slice(0, themeDisplayLimit)
@@ -1365,7 +1460,7 @@ const createGoogleProvider = () => {
                 window.clearTimeout(themeBatchTimerRef.current);
                 setThemeBatchLoading(false);
                 setThemeDisplayLimit(isMobileEditorRuntime ? 12 : 60);
-            }, [activeThemeFilterId, themeFilterGroup, isMobileEditorRuntime]);
+            }, [activeThemeFilterId, themeFilterGroup, isMobileEditorRuntime, themeGenerationInputs]);
 
             const loadMoreThemes = () => {
                 if (!hasMoreThemes || themeBatchLoading) return;
@@ -1379,6 +1474,44 @@ const createGoogleProvider = () => {
 
             const setActiveThemeFilter = (filterId) => {
                 setThemeFilters(prev => ({ ...prev, [activeThemeFilterGroup.id]: filterId }));
+            };
+
+            useEffect(() => {
+                const source = settings.logo || settings.bannerImage || '';
+                let cancelled = false;
+
+                if (!source) {
+                    setDetectedThemePalette('');
+                    return () => { cancelled = true; };
+                }
+
+                detectPaletteFromImageSource(source).then((palette) => {
+                    if (!cancelled) setDetectedThemePalette(palette || '');
+                });
+
+                return () => { cancelled = true; };
+            }, [settings.logo, settings.bannerImage]);
+
+            const handleAutoDetectThemePalette = async () => {
+                const source = settings.logo || settings.bannerImage || '';
+                if (!source) {
+                    showToast('Upload a logo or banner first, then I can read the palette.');
+                    return;
+                }
+
+                setPaletteDetecting(true);
+                const detected = await detectPaletteFromImageSource(source);
+                setPaletteDetecting(false);
+
+                if (!detected) {
+                    showToast('I could not read enough color from that image yet.');
+                    return;
+                }
+
+                setDetectedThemePalette(detected);
+                setThemeFilters(prev => ({ ...prev, palette: detected }));
+                setThemeFilterGroup('palette');
+                showToast(`${themePaletteLabel(detected)} palette detected from your brand media.`);
             };
 
             const backendSkin = settings.backendSkin || {};
@@ -2235,7 +2368,7 @@ const createGoogleProvider = () => {
             };
 
             const applyTheme = (themeId) => {
-                const theme = PRESET_THEMES.find(t => t.id === themeId);
+                const theme = visibleThemes.find(t => t.id === themeId) || PRESET_THEMES.find(t => t.id === themeId);
                 if(theme) {
                     setSettings(prev => ({
                         ...prev, 
@@ -4365,8 +4498,8 @@ const createGoogleProvider = () => {
                                 <div className="space-y-12 animate-in fade-in duration-700">
                                     <div data-tour="editor-theme-library">
                                         <div className="flex items-center justify-between gap-4 mb-6">
-                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Designer Theme Library</label>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">{visibleThemes.length} / {PRESET_THEMES.length}</span>
+                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Industry Theme Engine</label>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">{visibleThemes.length} generated</span>
                                         </div>
                                         <div className="mb-7">
                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -4386,6 +4519,15 @@ const createGoogleProvider = () => {
                                                     })}
                                                 </div>
                                                 <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleAutoDetectThemePalette}
+                                                        disabled={paletteDetecting}
+                                                        className="h-8 px-3 rounded-full border border-neutral-100 bg-white text-black text-[9px] font-bold uppercase tracking-widest shadow-sm hover:border-black transition-all disabled:cursor-wait disabled:text-neutral-400 flex items-center gap-2"
+                                                    >
+                                                        <Pipette size={13} />
+                                                        {paletteDetecting ? 'Reading' : detectedThemePalette ? `${themePaletteLabel(detectedThemePalette)} Detected` : 'Auto Palette'}
+                                                    </button>
                                                     <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">{activeThemeFilter?.hint}</p>
                                                     <div className="flex items-center gap-1.5">
                                                         <button type="button" onClick={() => scrollThemePaletteRail(-1)} title="Previous filters" className="w-8 h-8 rounded-full bg-white border border-neutral-100 text-neutral-400 hover:text-black hover:border-neutral-300 shadow-sm flex items-center justify-center transition-all">
