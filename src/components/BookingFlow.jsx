@@ -440,8 +440,11 @@ const normalizeWebsite = (value = '') => {
                             <div className={`flex gap-3 md:gap-4 overflow-x-auto h-[180px] md:h-[200px] pt-4 px-2 snap-x ${isPreview ? 'cursor-pointer' : ''} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`} onClick={() => isPreview && onInspect('visuals')}>
                                 {dates.map((d, i) => {
                                 const isActive = selectedDateIdx === i;
+                                const nativeDateClass = nativeAccent && isActive
+                                    ? (dateStyle === 'solid' ? nativeAccentButtonClass : `${nativeAccentCardClass} ${nativeAccentBorderClass}`)
+                                    : '';
                                 return (
-                                    <button key={i} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'} ${nativeAccent && isActive ? `${nativeAccentCardClass} ${nativeAccentBorderClass}` : ''}`} style={getDateSlotStyle(isActive)}>
+                                    <button key={i} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'} ${nativeDateClass}`} style={getDateSlotStyle(isActive)}>
                                         <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] transition-all`}>{d.dayName}</span>
                                         <span className={`text-3xl md:text-4xl font-bold tracking-tighter transition-all`}>{d.dayNum}</span>
                                         {dateStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 w-10 h-[2px] rounded-full ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
@@ -475,8 +478,11 @@ const normalizeWebsite = (value = '') => {
                             <div className={`grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => isPreview && onInspect('visuals')}>
                                 {availableTimesForActiveDate.map((t) => {
                                 const isActive = selectedTime === t;
+                                const nativeTimeClass = nativeAccent && isActive
+                                    ? (timeSlotStyle === 'solid' ? nativeAccentButtonClass : nativeAccentBorderClass)
+                                    : '';
                                 return (
-                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''} ${nativeAccent && isActive && timeSlotStyle !== 'minimal' ? nativeAccentBorderClass : ''}`} style={getTimeSlotStyle(isActive)}>
+                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''} ${nativeTimeClass}`} style={getTimeSlotStyle(isActive)}>
                                         <div className="flex items-center justify-center relative w-full">
                                             <span className={`text-lg md:text-xl font-bold tracking-tighter transition-all duration-500 ${isActive && timeSlotStyle === 'minimal' ? '-translate-y-1 scale-110' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{t}</span>
                                             {timeSlotStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}

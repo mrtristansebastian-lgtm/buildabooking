@@ -862,9 +862,9 @@ const createGoogleProvider = () => {
             const [settings, setSettings] = useState({
                 slug: 'studio-noir', brandName: 'Studio Noir',
                 welcomeMessage: 'Reserve your private session.', tagline: 'Atelier 7B / Private',
-                primaryColor: '#39FF14', headingColor: '#000000', bodyColor: '#666666', backgroundColor: '#ffffff',
-                slotBgColor: '#f5f5f5', slotTextColor: '#000000',
-                dateBgColor: 'transparent', dateTextColor: '#666666', dateActiveBgColor: 'transparent', dateActiveTextColor: '#000000',
+                primaryColor: '#755CFF', headingColor: '#000000', bodyColor: '#666666', backgroundColor: '#ffffff',
+                slotBgColor: '#F8FAFC', slotTextColor: '#000000',
+                dateBgColor: 'transparent', dateTextColor: '#666666', dateActiveBgColor: '#EEF7FF', dateActiveTextColor: '#000000',
                 buttonTextColor: '#000000', 
                 fontFamily: 'inter', 
                 nativeAccent: true,
@@ -872,7 +872,7 @@ const createGoogleProvider = () => {
                 brandNameSize: 76, brandNameFontFamily: '',
                 taglineSize: 9, taglineFontFamily: '',
                 welcomeSize: 20, welcomeFontFamily: '',
-                buttonStyle: 'pill', availabilityStyle: 'minimal', dateStyle: 'minimal', timeSlotStyle: 'minimal', actionButtonStyle: 'solid',
+                buttonStyle: 'pill', availabilityStyle: 'solid', dateStyle: 'solid', timeSlotStyle: 'solid', actionButtonStyle: 'solid',
                 faqStyle: 'minimal', faqBgColor: 'transparent', faqBorderColor: '#00000020', faqTextColor: '', faqAnswerColor: '', faqFontFamily: '',
                 socialIconStyle: 'outline', socialIconBgColor: 'transparent', socialIconColor: '', socialIconTextColor: '',
                 dateLabel: 'Which day are you looking to book ?', timeLabel: 'Lets see what time works', buttonText: 'Book Now', confirmButtonText: 'Confirm Booking', 
@@ -889,6 +889,23 @@ const createGoogleProvider = () => {
             useEffect(() => {
                 settingsRef.current = settings;
             }, [settings]);
+
+            useEffect(() => {
+                setSettings(prev => {
+                    if (!prev.nativeAccent || normalizeHexColor(prev.primaryColor, '#000000') !== '#39FF14') return prev;
+                    return {
+                        ...prev,
+                        primaryColor: '#755CFF',
+                        slotBgColor: '#F8FAFC',
+                        dateActiveBgColor: '#EEF7FF',
+                        buttonTextColor: '#050505',
+                        availabilityStyle: 'solid',
+                        dateStyle: 'solid',
+                        timeSlotStyle: 'solid',
+                        actionButtonStyle: 'solid'
+                    };
+                });
+            }, []);
 
             const [bookings, setBookings] = useState([]);
             const [staffList, setStaffList] = useState([{id: 'owner', name: 'Admin', color: '#39FF14'}]);
@@ -2224,8 +2241,8 @@ const createGoogleProvider = () => {
                         ...prev, 
                         ...theme,
                         nativeAccent: Boolean(theme.nativeAccent),
-                        dateStyle: theme.availabilityStyle || prev.dateStyle || 'minimal',
-                        timeSlotStyle: theme.availabilityStyle || prev.timeSlotStyle || 'minimal',
+                        dateStyle: theme.dateStyle || theme.availabilityStyle || prev.dateStyle || 'minimal',
+                        timeSlotStyle: theme.timeSlotStyle || theme.availabilityStyle || prev.timeSlotStyle || 'minimal',
                         headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '' // reset overrides on theme change
                     }));
                 }
@@ -4409,13 +4426,16 @@ const createGoogleProvider = () => {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[560px] overflow-y-auto pr-2 pb-4 no-scrollbar">
-                                            {visibleThemeCards.map(t => (
-                                                <button data-theme-card key={t.id} onClick={() => applyTheme(t.id)} className="group relative min-h-[230px] p-6 rounded-lg border transition-all overflow-hidden text-left flex flex-col justify-between hover:-translate-y-0.5" style={{ backgroundColor: t.backgroundColor, borderColor: (t.headingColor || '#000') + '15', boxShadow: settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor ? `0 0 0 2px ${t.primaryColor}, 0 22px 45px rgba(0,0,0,0.12)` : '0 4px 15px rgba(0,0,0,0.05)' }}>
-                                                    <div className="absolute inset-x-0 top-0 h-1 opacity-90" style={{ backgroundColor: t.primaryColor }} />
+                                            {visibleThemeCards.map(t => {
+                                                const isNativeTheme = Boolean(t.nativeAccent);
+                                                const isSelectedTheme = settings.nativeAccent === t.nativeAccent && settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor && settings.fontFamily === t.fontFamily;
+                                                return (
+                                                <button data-theme-card key={t.id} onClick={() => applyTheme(t.id)} className={`group relative min-h-[230px] p-6 rounded-lg border transition-all overflow-hidden text-left flex flex-col justify-between hover:-translate-y-0.5 ${isNativeTheme ? 'native-theme-card-preview' : ''}`} style={{ backgroundColor: t.backgroundColor, borderColor: isNativeTheme ? 'rgba(117,92,255,0.28)' : (t.headingColor || '#000') + '15', boxShadow: isSelectedTheme ? (isNativeTheme ? '0 0 0 2px rgba(117,92,255,0.55), 0 22px 45px rgba(20,167,255,0.14)' : `0 0 0 2px ${t.primaryColor}, 0 22px 45px rgba(0,0,0,0.12)`) : '0 4px 15px rgba(0,0,0,0.05)' }}>
+                                                    <div className={`absolute inset-x-0 top-0 h-1 opacity-90 ${isNativeTheme ? 'native-theme-accent-bar' : ''}`} style={isNativeTheme ? undefined : { backgroundColor: t.primaryColor }} />
                                                     <div className="flex items-center justify-between w-full mb-6">
                                                         <span className="text-[9px] font-bold uppercase tracking-widest truncate max-w-[70%]" style={{ color: t.bodyColor }}>{t.name}</span>
                                                         <div className="flex gap-1.5 shrink-0">
-                                                            <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/5" style={{ backgroundColor: t.primaryColor }} />
+                                                            <div className={`w-3.5 h-3.5 rounded-full shadow-sm border border-black/5 ${isNativeTheme ? 'native-theme-swatch' : ''}`} style={isNativeTheme ? undefined : { backgroundColor: t.primaryColor }} />
                                                             <div className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/5" style={{ backgroundColor: t.headingColor }} />
                                                         </div>
                                                     </div>
@@ -4423,18 +4443,25 @@ const createGoogleProvider = () => {
                                                     <div className="space-y-4 w-full">
                                                         <h4 className="text-3xl font-bold tracking-tighter" style={{ color: t.headingColor, fontFamily: getFontFamily(t.fontFamily) }}>Aa Bb</h4>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="h-7 px-3 rounded-full text-[8px] font-bold uppercase tracking-widest flex items-center" style={{ backgroundColor: t.dateActiveBgColor === 'transparent' ? 'transparent' : t.dateActiveBgColor, color: t.dateActiveTextColor, border: `1px solid ${t.primaryColor}33` }}>Tue 19</span>
+                                                            <span className={`h-7 px-3 rounded-full text-[8px] font-bold uppercase tracking-widest flex items-center ${isNativeTheme ? 'native-theme-soft-pill' : ''}`} style={isNativeTheme ? { color: '#050505', border: '1px solid transparent' } : { backgroundColor: t.dateActiveBgColor === 'transparent' ? 'transparent' : t.dateActiveBgColor, color: t.dateActiveTextColor, border: `1px solid ${t.primaryColor}33` }}>Tue 19</span>
                                                             <span className="h-7 px-3 rounded-full text-[8px] font-bold uppercase tracking-widest flex items-center" style={{ color: t.bodyColor, border: `1px solid ${t.bodyColor}20` }}>FAQ</span>
                                                         </div>
                                                         
                                                         <div className="flex gap-2 w-full pt-2">
-                                                            <div className="h-8 flex-1 flex items-center justify-center text-[8px] font-bold shadow-sm" style={{ 
+                                                            <div className={`h-8 flex-1 flex items-center justify-center text-[8px] font-bold shadow-sm ${isNativeTheme ? 'native-theme-soft-slot' : ''}`} style={isNativeTheme ? {
+                                                                color: t.headingColor,
+                                                                borderRadius: t.buttonStyle === 'pill' ? '12px' : '4px',
+                                                                border: '1px solid transparent'
+                                                            } : { 
                                                                 backgroundColor: t.availabilityStyle === 'solid' ? t.slotBgColor : (t.availabilityStyle === 'outline' ? 'transparent' : 'transparent'), 
                                                                 color: t.availabilityStyle === 'minimal' ? t.headingColor : t.slotTextColor, 
                                                                 borderRadius: t.buttonStyle === 'pill' ? '12px' : '4px', 
                                                                 border: t.availabilityStyle === 'outline' ? `1px solid ${t.primaryColor}50` : 'none' 
                                                             }}>12:00</div>
-                                                            <div className="h-8 flex-1 flex items-center justify-center text-[8px] font-bold uppercase tracking-widest shadow-md" style={{ 
+                                                            <div className={`h-8 flex-1 flex items-center justify-center text-[8px] font-bold uppercase tracking-widest shadow-md ${isNativeTheme ? 'native-theme-action' : ''}`} style={isNativeTheme ? {
+                                                                color: '#050505',
+                                                                borderRadius: t.buttonStyle === 'pill' ? '99px' : '4px'
+                                                            } : { 
                                                                 backgroundColor: t.primaryColor, 
                                                                 color: t.buttonTextColor || '#000', 
                                                                 borderRadius: t.buttonStyle === 'pill' ? '99px' : '4px' 
@@ -4447,7 +4474,7 @@ const createGoogleProvider = () => {
                                                         </div>
                                                     </div>
                                                 </button>
-                                            ))}
+                                            );})}
                                         </div>
                                         {hasMoreThemes && (
                                             <button
