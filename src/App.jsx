@@ -798,6 +798,7 @@ const createGoogleProvider = () => {
             const [themeFilterGroup, setThemeFilterGroup] = useState('palette');
             const [themeFilters, setThemeFilters] = useState({ palette: 'all', industry: 'all-industries', style: 'all-styles' });
             const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
+            const [themeBatchLoading, setThemeBatchLoading] = useState(false);
             const [device, setDevice] = useState('desktop'); 
             const [previewKey, setPreviewKey] = useState(0); 
             const [scale, setScale] = useState(1);
@@ -808,6 +809,9 @@ const createGoogleProvider = () => {
             const [isCompactEditorViewport, setIsCompactEditorViewport] = useState(false);
             const [isMobileRuntime, setIsMobileRuntime] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches
+            ));
+            const [isPortraitMobileRuntime, setIsPortraitMobileRuntime] = useState(() => (
+                typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
             ));
             const [mobileNavCollapsed, setMobileNavCollapsed] = useState(false);
             const [bookingFilter, setBookingFilter] = useState('all');
@@ -824,6 +828,7 @@ const createGoogleProvider = () => {
             const compactViewportRef = useRef(false);
             const settingsRef = useRef(null);
             const onboardingDraftSaveTimerRef = useRef(0);
+            const themeBatchTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
             const toastTimerRef = useRef(null);
             
@@ -835,12 +840,14 @@ const createGoogleProvider = () => {
 
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
+            useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
 
             useEffect(() => {
                 if (typeof window === 'undefined') return undefined;
 
                 const updateMobileRuntime = () => {
                     setIsMobileRuntime(window.matchMedia('(max-width: 767px)').matches);
+                    setIsPortraitMobileRuntime(window.matchMedia('(max-width: 767px) and (orientation: portrait)').matches);
                 };
 
                 updateMobileRuntime();
@@ -1333,11 +1340,24 @@ const createGoogleProvider = () => {
 
             const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
             const hasMoreThemes = themeDisplayLimit < visibleThemes.length;
-            const nextThemeBatchSize = isMobileEditorRuntime ? 18 : 48;
+            const nextThemeBatchSize = isMobileEditorRuntime ? 12 : 48;
+            const shouldMountEditorPreview = activeTab === 'editor' && !isPortraitMobileRuntime;
 
             useEffect(() => {
-                setThemeDisplayLimit(isMobileEditorRuntime ? 24 : 60);
+                window.clearTimeout(themeBatchTimerRef.current);
+                setThemeBatchLoading(false);
+                setThemeDisplayLimit(isMobileEditorRuntime ? 12 : 60);
             }, [activeThemeFilterId, themeFilterGroup, isMobileEditorRuntime]);
+
+            const loadMoreThemes = () => {
+                if (!hasMoreThemes || themeBatchLoading) return;
+                setThemeBatchLoading(true);
+                window.clearTimeout(themeBatchTimerRef.current);
+                themeBatchTimerRef.current = window.setTimeout(() => {
+                    setThemeDisplayLimit(limit => Math.min(visibleThemes.length, limit + nextThemeBatchSize));
+                    setThemeBatchLoading(false);
+                }, isMobileEditorRuntime ? 140 : 70);
+            };
 
             const setActiveThemeFilter = (filterId) => {
                 setThemeFilters(prev => ({ ...prev, [activeThemeFilterGroup.id]: filterId }));
@@ -1471,7 +1491,7 @@ const createGoogleProvider = () => {
             };
 
             useEffect(() => {
-                if (activeTab !== 'editor') return undefined;
+                if (activeTab !== 'editor' || !shouldMountEditorPreview) return undefined;
 
                 let frameRequest = 0;
                 const updateScale = () => {
@@ -1524,7 +1544,7 @@ const createGoogleProvider = () => {
                     resizeObserver?.disconnect();
                     window.removeEventListener('resize', updateScale); 
                 };
-            }, [device, activeTab, sidebarCollapsed, editorCollapsed, mobileNavCollapsed]);
+            }, [device, activeTab, sidebarCollapsed, editorCollapsed, mobileNavCollapsed, shouldMountEditorPreview]);
 
             useEffect(() => {
                 if (activeTab !== 'editor') return;
@@ -4430,10 +4450,16 @@ const createGoogleProvider = () => {
                                         {hasMoreThemes && (
                                             <button
                                                 type="button"
-                                                onClick={() => setThemeDisplayLimit(limit => Math.min(visibleThemes.length, limit + nextThemeBatchSize))}
-                                                className="mt-4 w-full h-12 rounded-lg border border-neutral-200 bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors"
+                                                onClick={loadMoreThemes}
+                                                disabled={themeBatchLoading}
+                                                className="mt-4 w-full h-12 rounded-lg border border-neutral-200 bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors disabled:cursor-wait disabled:text-neutral-400 flex items-center justify-center gap-3"
                                             >
-                                                Load More Themes ({visibleThemes.length - visibleThemeCards.length} left)
+                                                {themeBatchLoading && (
+                                                    <span className="brand-loader-dot" aria-hidden="true">
+                                                        <BuildABookingMark className="w-4 h-4" />
+                                                    </span>
+                                                )}
+                                                {themeBatchLoading ? 'Loading Themes' : `Load More Themes (${visibleThemes.length - visibleThemeCards.length} left)`}
                                             </button>
                                         )}
                                     </div>
@@ -4806,12 +4832,20 @@ const createGoogleProvider = () => {
                             </div>
 
                             <div className="flex-1 overflow-y-auto no-scrollbar relative group/simulator" style={{ backgroundColor: settings.backgroundColor }}>
-                            <div className="absolute top-8 right-8 z-50 flex items-center gap-2 px-4 py-2 bg-black/10 backdrop-blur-md rounded-full text-[9px] font-bold uppercase tracking-[0.2em] opacity-0 group-hover/simulator:opacity-100 transition-opacity pointer-events-none text-black">
-                                <MousePointerClick size={12} /> Design Inspector Live
-                            </div>
-                            <Suspense fallback={<LazySectionFallback label="Loading preview" />}>
-                                <BookingFlow key={previewKey} settings={settings} isPreview={true} onInspect={handleInspect} onComplete={handleBookingComplete} />
-                            </Suspense>
+                            {shouldMountEditorPreview ? (
+                                <>
+                                <div className="absolute top-8 right-8 z-50 flex items-center gap-2 px-4 py-2 bg-black/10 backdrop-blur-md rounded-full text-[9px] font-bold uppercase tracking-[0.2em] opacity-0 group-hover/simulator:opacity-100 transition-opacity pointer-events-none text-black">
+                                    <MousePointerClick size={12} /> Design Inspector Live
+                                </div>
+                                <Suspense fallback={<LazySectionFallback label="Loading preview" />}>
+                                    <BookingFlow key={previewKey} settings={settings} isPreview={true} onInspect={handleInspect} onComplete={handleBookingComplete} />
+                                </Suspense>
+                                </>
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center">
+                                    <BrandLoader label="Preview paused on portrait" />
+                                </div>
+                            )}
                             </div>
                         </div>
                         </div>

@@ -74,6 +74,27 @@ body {
             to { transform: rotate(360deg); }
         }
 
+        .brand-loader-dot {
+            position: relative;
+            width: 1.7rem;
+            height: 1.7rem;
+            border-radius: 999px;
+            display: inline-grid;
+            place-items: center;
+            background: #ffffff;
+            box-shadow: inset 0 0 0 1px rgba(228, 231, 236, 0.9);
+        }
+
+        .brand-loader-dot::before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            border: 2px solid rgba(228, 231, 236, 0.85);
+            border-top-color: #050505;
+            animation: brand-loader-spin 0.75s linear infinite;
+        }
+
         @property --native-accent-x {
             syntax: '<percentage>';
             inherits: true;
