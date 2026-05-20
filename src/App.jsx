@@ -514,8 +514,113 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
 });
 
 const guestModeStorageKey = 'build-a-booking-guest-mode';
+const workspaceRouteStorageKey = 'build-a-booking-workspace-route';
 const authRedirectStorageKey = 'build-a-booking-auth-return';
+const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
+const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'clients', 'staff', 'profile'];
+const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
+
+const safeJsonParse = (value, fallback = null) => {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizeWorkspaceRoute = (route = {}, fallback = {}) => {
+  const source = route || {};
+  const nextView = source.view === 'dashboard' || source.return === 'dashboard' || source.returnTarget === 'dashboard'
+    ? 'dashboard'
+    : fallback.view || 'landing';
+  const nextActiveTab = workspaceTabIds.includes(source.activeTab || source.tab)
+    ? (source.activeTab || source.tab)
+    : fallback.activeTab || 'overview';
+  const nextEditorTab = editorTabIds.includes(source.editorTab)
+    ? source.editorTab
+    : fallback.editorTab || 'themes';
+
+  return {
+    view: nextView,
+    activeTab: nextView === 'dashboard' ? nextActiveTab : 'overview',
+    editorTab: nextEditorTab,
+    timestamp: Number(source.timestamp) || Date.now()
+  };
+};
+
+const getWorkspaceRouteFromUrl = () => {
+  if (typeof window === 'undefined') return null;
+  const url = new URL(window.location.href);
+  const dashboardHashMatch = url.hash.match(/^#\/dashboard(?:\/([a-z-]+))?/i);
+  const returnTarget = url.searchParams.get('return');
+  const tabParam = url.searchParams.get('tab');
+  const editorTabParam = url.searchParams.get('editorTab');
+
+  if (url.searchParams.get('auth') === 'google') {
+    return normalizeWorkspaceRoute({
+      view: returnTarget === 'dashboard' ? 'dashboard' : 'landing',
+      activeTab: tabParam,
+      editorTab: editorTabParam
+    }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  }
+
+  if (dashboardHashMatch) {
+    return normalizeWorkspaceRoute({
+      view: 'dashboard',
+      activeTab: dashboardHashMatch[1],
+      editorTab: editorTabParam || url.searchParams.get('editor')
+    }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  }
+
+  return null;
+};
+
+const getSavedWorkspaceRoute = () => (
+  normalizeWorkspaceRoute(safeJsonParse(safeLocalGet(workspaceRouteStorageKey)), { view: 'landing', activeTab: 'overview', editorTab: 'themes' })
+);
+
+const getInitialWorkspaceRoute = () => {
+  if (typeof window === 'undefined' || getPublicBookingSlug()) {
+    return { view: 'landing', activeTab: 'overview', editorTab: 'themes', timestamp: Date.now() };
+  }
+  return getWorkspaceRouteFromUrl() || getSavedWorkspaceRoute();
+};
+
+const saveWorkspaceRoute = (route) => {
+  const normalized = normalizeWorkspaceRoute(route);
+  safeLocalSet(workspaceRouteStorageKey, JSON.stringify(normalized));
+  return normalized;
+};
+
+const saveAuthReturnState = (route) => {
+  const normalized = normalizeWorkspaceRoute(route, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  const payload = JSON.stringify(normalized);
+  safeSessionSet(authRedirectStorageKey, normalized.view);
+  safeSessionSet(authRedirectStateStorageKey, payload);
+  safeLocalSet(authRedirectStateStorageKey, payload);
+  safeSessionSet(authRedirectStartedStorageKey, String(Date.now()));
+  safeLocalSet(authRedirectStartedStorageKey, String(Date.now()));
+  saveWorkspaceRoute(normalized);
+  return normalized;
+};
+
+const getAuthReturnState = () => {
+  const stored = safeJsonParse(safeSessionGet(authRedirectStateStorageKey)) || safeJsonParse(safeLocalGet(authRedirectStateStorageKey));
+  if (stored) return normalizeWorkspaceRoute(stored, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  const legacyTarget = safeSessionGet(authRedirectStorageKey);
+  if (legacyTarget) return normalizeWorkspaceRoute({ view: legacyTarget }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  return getGoogleAuthIntent();
+};
+
+const clearAuthReturnState = () => {
+  safeSessionRemove(authRedirectStorageKey);
+  safeSessionRemove(authRedirectStateStorageKey);
+  safeLocalRemove(authRedirectStateStorageKey);
+  safeSessionRemove(authRedirectStartedStorageKey);
+  safeLocalRemove(authRedirectStartedStorageKey);
+};
 
 const shouldUseRedirectGoogleAuth = () => {
   if (typeof window === 'undefined') return false;
@@ -535,7 +640,12 @@ const shouldOpenGoogleAuthInBrowser = () => shouldUseRedirectGoogleAuth() && isS
 const getGoogleAuthIntent = () => {
   if (typeof window === 'undefined') return '';
   const url = new URL(window.location.href);
-  return url.searchParams.get('auth') === 'google' ? (url.searchParams.get('return') || 'dashboard') : '';
+  if (url.searchParams.get('auth') !== 'google') return null;
+  return normalizeWorkspaceRoute({
+    view: url.searchParams.get('return') === 'dashboard' ? 'dashboard' : 'landing',
+    activeTab: url.searchParams.get('tab'),
+    editorTab: url.searchParams.get('editorTab')
+  }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
 };
 
 const clearGoogleAuthIntentUrl = () => {
@@ -547,10 +657,13 @@ const clearGoogleAuthIntentUrl = () => {
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 };
 
-const buildGoogleAuthBrowserUrl = () => {
+const buildGoogleAuthBrowserUrl = (route = {}) => {
+  const returnState = normalizeWorkspaceRoute(route, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
   const url = new URL(window.location.origin);
   url.searchParams.set('auth', 'google');
-  url.searchParams.set('return', 'dashboard');
+  url.searchParams.set('return', returnState.view);
+  url.searchParams.set('tab', returnState.activeTab);
+  url.searchParams.set('editorTab', returnState.editorTab);
   return url.toString();
 };
 
@@ -562,11 +675,12 @@ const createGoogleProvider = () => {
 
 // --- Main App Component ---
         export default function App() {
+            const [initialWorkspaceRoute] = useState(getInitialWorkspaceRoute);
             const [user, setUser] = useState(null);
             const [workspaceAccess, setWorkspaceAccess] = useState([]);
             const [activeWorkspaceOwnerId, setActiveWorkspaceOwnerId] = useState('');
             const [accessLoading, setAccessLoading] = useState(false);
-            const [view, setView] = useState('landing');
+            const [view, setView] = useState(initialWorkspaceRoute.view);
             const [loading, setLoading] = useState(true);
             const [authMode, setAuthMode] = useState('signin');
             const [authForm, setAuthForm] = useState({ email: '', password: '' });
@@ -580,9 +694,9 @@ const createGoogleProvider = () => {
             const [publicWorkspace, setPublicWorkspace] = useState(null);
             const [publicLoading, setPublicLoading] = useState(false);
             const [publicError, setPublicError] = useState('');
-            const [activeTab, setActiveTab] = useState('overview'); 
+            const [activeTab, setActiveTab] = useState(initialWorkspaceRoute.activeTab);
             const [dashboardPeriod, setDashboardPeriod] = useState('today');
-            const [editorTab, setEditorTab] = useState('themes'); 
+            const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
             const [themePalette, setThemePalette] = useState('all');
             const [device, setDevice] = useState('desktop'); 
             const [previewKey, setPreviewKey] = useState(0); 
@@ -1295,6 +1409,32 @@ const createGoogleProvider = () => {
                 }
             }, [activeTab]);
 
+            useEffect(() => {
+                if (publicSlug || loading) return;
+                const route = saveWorkspaceRoute({ view, activeTab, editorTab });
+                if (typeof window === 'undefined' || window.location.search.includes('auth=google')) return;
+                const nextHash = route.view === 'dashboard' ? `#/dashboard/${route.activeTab}` : '';
+                if (window.location.hash !== nextHash) {
+                    window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+                }
+            }, [publicSlug, loading, view, activeTab, editorTab]);
+
+            const applyWorkspaceRoute = (route = {}) => {
+                const nextRoute = normalizeWorkspaceRoute(route, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+                setView(nextRoute.view);
+                if (nextRoute.view === 'dashboard') {
+                    setActiveTab(nextRoute.activeTab);
+                    if (nextRoute.activeTab === 'editor') setEditorTab(nextRoute.editorTab || 'themes');
+                }
+                saveWorkspaceRoute(nextRoute);
+            };
+
+            const getCurrentAuthReturnRoute = () => normalizeWorkspaceRoute({
+                view: 'dashboard',
+                activeTab: view === 'dashboard' ? activeTab : 'overview',
+                editorTab
+            }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+
             const syncCurrentAccount = async (signedInUser) => {
                 if (!isFirebaseConfigured || !signedInUser?.email) return;
                 const emailKey = normalizeEmail(signedInUser.email);
@@ -1343,10 +1483,9 @@ const createGoogleProvider = () => {
                 }
             };
 
-            const startGoogleRedirect = async (returnTarget = 'dashboard') => {
+            const startGoogleRedirect = async (returnRoute = { view: 'dashboard' }) => {
                 const provider = createGoogleProvider();
-                safeSessionSet(authRedirectStorageKey, returnTarget);
-                safeSessionSet(authRedirectStartedStorageKey, String(Date.now()));
+                saveAuthReturnState(returnRoute);
                 await FirebaseSDK.signInWithRedirect(auth, provider);
             };
 
@@ -1355,7 +1494,7 @@ const createGoogleProvider = () => {
                     try {
                         if (isFirebaseConfigured) {
                             const googleAuthIntent = getGoogleAuthIntent();
-                            const redirectWasStarted = Boolean(safeSessionGet(authRedirectStartedStorageKey));
+                            const redirectWasStarted = Boolean(safeSessionGet(authRedirectStartedStorageKey) || safeLocalGet(authRedirectStartedStorageKey));
                             if (!publicSlug) {
                                 await FirebaseSDK.getRedirectResult(auth).catch((error) => {
                                     console.error(error);
@@ -1363,15 +1502,17 @@ const createGoogleProvider = () => {
                                 });
                                 if (redirectWasStarted) {
                                     safeSessionRemove(authRedirectStartedStorageKey);
+                                    safeLocalRemove(authRedirectStartedStorageKey);
                                     clearGoogleAuthIntentUrl();
                                 } else if (googleAuthIntent && !auth.currentUser) {
                                     await startGoogleRedirect(googleAuthIntent);
                                     return;
+                                } else if (googleAuthIntent && auth.currentUser) {
+                                    clearGoogleAuthIntentUrl();
                                 }
                             }
                             if (initialAuthToken) await FirebaseSDK.signInWithCustomToken(auth, initialAuthToken);
                             else if (publicSlug) await FirebaseSDK.signInAnonymously(auth);
-                            else setLoading(false);
                         } else setLoading(false);
                     } catch (err) {
                         const message = err?.code === 'auth/configuration-not-found'
@@ -1396,10 +1537,11 @@ const createGoogleProvider = () => {
                         }
                         setGuestMode(false);
                         safeLocalRemove(guestModeStorageKey);
-                        if (safeSessionGet(authRedirectStorageKey) === 'dashboard') {
-                            safeSessionRemove(authRedirectStorageKey);
+                        const authReturnState = getAuthReturnState();
+                        if (authReturnState?.view === 'dashboard') {
+                            applyWorkspaceRoute(authReturnState);
+                            clearAuthReturnState();
                             setAuthPanelOpen(false);
-                            setView('dashboard');
                             showToast('Signed in with Google');
                         }
                         if (!publicSlug) {
@@ -1411,10 +1553,10 @@ const createGoogleProvider = () => {
             }, [publicSlug]);
 
             useEffect(() => {
-                if (isFirebaseConfigured && !publicSlug && view === 'dashboard' && !user && !guestMode) {
+                if (isFirebaseConfigured && !publicSlug && !loading && view === 'dashboard' && !user && !guestMode) {
                     setView('landing');
                 }
-            }, [view, user, publicSlug, guestMode]);
+            }, [view, user, publicSlug, guestMode, loading]);
 
             useEffect(() => {
                 if (!publicSlug) return;
@@ -1878,6 +2020,13 @@ const createGoogleProvider = () => {
                 setAuthPanelOpen(true);
                 setAuthError('');
             };
+            const openSignupOrDashboard = () => {
+                if (!isFirebaseConfigured || user) {
+                    setView('dashboard');
+                    return;
+                }
+                openAuthPanel('signup');
+            };
             const openAuthPanel = (mode = 'signin') => {
                 setAuthMode(mode);
                 setAuthError('');
@@ -1888,7 +2037,7 @@ const createGoogleProvider = () => {
                 safeLocalSet(guestModeStorageKey, 'true');
                 setAuthPanelOpen(false);
                 setAuthError('');
-                setView('dashboard');
+                applyWorkspaceRoute({ view: 'dashboard', activeTab: view === 'dashboard' ? activeTab : 'overview', editorTab });
                 showToast('Guest workspace opened.');
             };
             const handleAuthSubmit = async (event) => {
@@ -1908,7 +2057,7 @@ const createGoogleProvider = () => {
                     setGuestMode(false);
                     safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
-                    setView('dashboard');
+                    applyWorkspaceRoute(getCurrentAuthReturnRoute());
                     showToast(authMode === 'signup' ? 'Account created' : 'Signed in');
                 } catch (error) {
                     console.error(error);
@@ -1925,17 +2074,22 @@ const createGoogleProvider = () => {
                 setAuthError('');
                 setAuthBusy(true);
                 try {
+                    const returnRoute = getCurrentAuthReturnRoute();
                     if (shouldOpenGoogleAuthInBrowser()) {
-                        const opened = window.open(buildGoogleAuthBrowserUrl(), '_blank');
+                        saveAuthReturnState(returnRoute);
+                        const browserAuthUrl = buildGoogleAuthBrowserUrl(returnRoute);
+                        const opened = window.open(browserAuthUrl, '_blank', 'noopener,noreferrer');
                         if (opened) {
                             try { opened.opener = null; } catch {}
                             setAuthBusy(false);
                             showToast('Google sign-in opened in your browser.');
                             return;
                         }
+                        window.location.assign(browserAuthUrl);
+                        return;
                     }
                     if (shouldUseRedirectGoogleAuth()) {
-                        await startGoogleRedirect('dashboard');
+                        await startGoogleRedirect(returnRoute);
                         return;
                     }
                     const provider = createGoogleProvider();
@@ -1943,13 +2097,13 @@ const createGoogleProvider = () => {
                     setGuestMode(false);
                     safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
-                    setView('dashboard');
+                    applyWorkspaceRoute(returnRoute);
                     showToast('Signed in with Google');
                 } catch (error) {
                     console.error(error);
                     if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported'].includes(error?.code)) {
                         try {
-                            await startGoogleRedirect('dashboard');
+                            await startGoogleRedirect(getCurrentAuthReturnRoute());
                             return;
                         } catch (redirectError) {
                             console.error(redirectError);
@@ -2108,11 +2262,9 @@ const createGoogleProvider = () => {
 
             const googleAuthLabel = authBusy
                 ? 'Connecting...'
-                : shouldOpenGoogleAuthInBrowser()
-                    ? 'Open Google In Browser'
-                    : authMode === 'signup'
-                        ? 'Sign Up With Google'
-                        : 'Continue With Google';
+                : authMode === 'signup'
+                    ? 'Sign Up With Google'
+                    : 'Continue With Google';
 
             const authDialog = authPanelOpen && (
                 <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -2199,10 +2351,10 @@ const createGoogleProvider = () => {
                         <div className="flex items-center cursor-pointer" onClick={() => setView('landing')}>
                           <BuildABookingBrand className="w-[156px] md:w-[188px] h-auto" />
                         </div>
-                        <div className="flex items-center gap-3 md:gap-6">
-                          <button onClick={() => openAuthPanel('signin')} className="hidden md:block text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
+                        <div className="flex items-center gap-2 md:gap-6">
+                          <button onClick={() => openAuthPanel('signin')} className="block text-[11px] md:text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
                           <button onClick={openGuestDashboard} className="hidden sm:block h-10 px-4 rounded-full bg-white border border-neutral-200 text-black font-bold text-[11px] hover:border-black transition-colors">Guest Mode</button>
-                          <button onClick={openDashboard} className="h-10 px-4 md:px-6 rounded-full bg-[#39FF14] text-black font-bold text-[11px] md:text-xs hover:scale-105 transition-transform shadow-lg shadow-[#39FF14]/20">Get Started</button>
+                          <button onClick={openSignupOrDashboard} className="h-10 px-3 md:px-6 rounded-full bg-[#39FF14] text-black font-bold text-[10px] md:text-xs hover:scale-105 transition-transform shadow-lg shadow-[#39FF14]/20">Get Started</button>
                         </div>
                       </div>
                     </nav>
@@ -2225,8 +2377,8 @@ const createGoogleProvider = () => {
                       </p>
                       
                       <div className="flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 w-full md:w-auto">
-                        <button onClick={openDashboard} className="h-14 px-10 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20 flex items-center gap-2 w-full md:w-auto justify-center">
-                          Start Building Free <ArrowRight size={16} />
+                        <button onClick={openSignupOrDashboard} className="h-14 px-10 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20 flex items-center gap-2 w-full md:w-auto justify-center">
+                          Start Building Now <ArrowRight size={16} />
                         </button>
                         <button onClick={openGuestDashboard} className="h-14 px-10 rounded-full bg-white text-black border border-neutral-200 font-bold text-sm hover:border-black transition-colors flex items-center gap-2 w-full md:w-auto justify-center">
                           Browse Dashboard <Eye size={16} />
@@ -2318,7 +2470,7 @@ const createGoogleProvider = () => {
                       <div className="flex flex-col items-center max-w-3xl mx-auto">
                         <h2 className="text-4xl md:text-7xl font-bold tracking-tighter mb-8 text-black leading-[0.95] md:leading-[0.9]">Ready to upgrade your booking flow?</h2>
                         <p className="text-xl text-neutral-500 font-medium mb-10">Build a booking experience that feels clean, premium, easy for you to manage, and effortless for clients to use.</p>
-                        <button onClick={openDashboard} className="h-16 px-12 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20">
+                        <button onClick={openSignupOrDashboard} className="h-16 px-12 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20">
                           Build Your Booking Flow
                         </button>
                       </div>
@@ -2440,6 +2592,21 @@ const createGoogleProvider = () => {
                     {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
                 </button>
 
+                {isGuestWorkspace && (
+                    <div className="mobile-guest-auth-cta md:hidden fixed left-3 right-3 bottom-[5.35rem] z-[130] rounded-2xl border border-neutral-200 bg-white/95 backdrop-blur-xl shadow-2xl shadow-black/10 p-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1 px-2">
+                            <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-neutral-400">Guest Mode</p>
+                            <p className="text-xs font-bold text-black truncate">Save this workspace</p>
+                        </div>
+                        <button type="button" onClick={() => openAuthPanel('signin')} className="h-10 px-3 rounded-xl bg-neutral-100 text-black text-[9px] font-bold uppercase tracking-widest">
+                            Sign In
+                        </button>
+                        <button type="button" onClick={() => openAuthPanel('signup')} className="h-10 px-3 rounded-xl bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-[#39FF14]/20">
+                            Sign Up
+                        </button>
+                    </div>
+                )}
+
                 <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] bg-white/95 backdrop-blur-xl border-t border-neutral-200 shadow-[0_-16px_40px_-30px_rgba(0,0,0,0.45)] transition-all duration-500 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-bottom-nav-collapsed' : ''}`}>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 py-3 justify-around">
                         {navItems.map(item => {
@@ -2461,7 +2628,7 @@ const createGoogleProvider = () => {
                     </div>
                 </nav>
 
-                <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden pb-20 md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
+                <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden ${isGuestWorkspace ? 'pb-36' : 'pb-20'} md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
                     {activeTab === 'overview' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <header className="mb-6 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
