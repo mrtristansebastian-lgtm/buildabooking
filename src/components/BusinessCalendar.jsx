@@ -9,6 +9,10 @@ import { getLocalDateStr } from '../utils/dates';
             const [isAddingSlot, setIsAddingSlot] = useState(false);
             const [newSlotTime, setNewSlotTime] = useState('18:00');
             const [scheduleStatsPeriod, setScheduleStatsPeriod] = useState('month');
+            const [calendarViewMode, setCalendarViewMode] = useState(() => (
+                typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'week' : 'month'
+            ));
+            const [hidePastDays, setHidePastDays] = useState(false);
             const defaultTimes = Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
             const todayStr = getLocalDateStr(new Date());
             const monthLookup = {
@@ -188,6 +192,86 @@ import { getLocalDateStr } from '../utils/dates';
             const selectedCapacity = selectedConfig?.available ? selectedConfig.times.length : 0;
             const selectedOpenSlots = expandedDate && expandedDate >= todayStr && selectedConfig?.available ? Math.max(0, selectedCapacity - selectedDayBookings.reserved) : 0;
             const selectedBookingRate = selectedCapacity ? Math.min(100, Math.round((selectedDayBookings.reserved / selectedCapacity) * 100)) : 0;
+            const calendarAnchorDate = expandedDate ? dateFromKey(expandedDate) : new Date();
+            const calendarWeekStart = addDaysToDate(calendarAnchorDate, -((calendarAnchorDate.getDay() + 6) % 7));
+            const calendarWeekEnd = addDaysToDate(calendarWeekStart, 6);
+            const calendarWindowLabel = calendarViewMode === 'month'
+                ? currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                : calendarViewMode === 'week'
+                    ? `${formatCompactDate(calendarWeekStart)} - ${formatCompactDate(calendarWeekEnd)}`
+                    : selectedDateLabel;
+            const calendarTitle = calendarViewMode === 'month' ? 'Monthly Calendar' : calendarViewMode === 'week' ? 'Week Schedule' : 'Day Schedule';
+            const calendarDescription = calendarViewMode === 'month'
+                ? 'Open, close, and tune each day from one calm workspace.'
+                : calendarViewMode === 'week'
+                    ? 'Manage the current week without carrying the whole month around.'
+                    : 'Focus on one day, its slots, and its booking capacity.';
+            const calendarHeaderLabels = calendarViewMode === 'day'
+                ? [calendarAnchorDate.toLocaleDateString('en-US', { weekday: 'short' })]
+                : calendarViewMode === 'week'
+                    ? getDateRange(calendarWeekStart, calendarWeekEnd)
+                        .filter(dateStr => !hidePastDays || dateStr >= todayStr)
+                        .map(dateStr => dateFromKey(dateStr).toLocaleDateString('en-US', { weekday: 'short' }))
+                    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const calendarDisplayDays = useMemo(() => {
+                if (calendarViewMode === 'day') {
+                    const dayKey = hidePastDays && expandedDate < todayStr ? todayStr : expandedDate;
+                    return [dayKey || todayStr];
+                }
+
+                if (calendarViewMode === 'week') {
+                    const visibleWeek = getDateRange(calendarWeekStart, calendarWeekEnd).filter(dateStr => !hidePastDays || dateStr >= todayStr);
+                    return visibleWeek.length ? visibleWeek : [todayStr];
+                }
+
+                return daysInMonth.map(dateStr => {
+                    if (!dateStr) return null;
+                    if (hidePastDays && dateStr < todayStr) return null;
+                    return dateStr;
+                });
+            }, [calendarViewMode, expandedDate, hidePastDays, todayStr, daysInMonth, calendarWeekStart, calendarWeekEnd]);
+            const calendarGridClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-7' : 'grid-cols-7';
+            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-7' : 'grid-cols-7';
+            const calendarFrameClass = calendarViewMode === 'month' ? 'min-w-0 md:min-w-[560px] xl:min-w-0' : 'min-w-0';
+            const calendarCellSizeClass = calendarViewMode === 'day'
+                ? 'min-h-[150px] md:min-h-[180px]'
+                : calendarViewMode === 'week'
+                    ? 'min-h-[116px] md:min-h-[128px]'
+                    : 'min-h-[92px] md:min-h-[120px]';
+
+            const setCalendarScope = (mode) => {
+                setCalendarViewMode(mode);
+                if (mode !== 'month') {
+                    const today = new Date();
+                    setExpandedDate(todayStr);
+                    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+                }
+            };
+
+            const toggleHidePastDays = () => {
+                const nextValue = !hidePastDays;
+                setHidePastDays(nextValue);
+                if (nextValue && expandedDate < todayStr) {
+                    const today = new Date();
+                    setExpandedDate(todayStr);
+                    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+                }
+            };
+
+            const moveCalendarWindow = (direction) => {
+                if (calendarViewMode === 'month') {
+                    const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1);
+                    if (hidePastDays && new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0) < dateFromKey(todayStr)) return;
+                    setCurrentMonth(nextMonth);
+                    return;
+                }
+
+                const nextDate = addDaysToDate(calendarAnchorDate, direction * (calendarViewMode === 'week' ? 7 : 1));
+                const nextDateKey = getLocalDateStr(nextDate);
+                if (hidePastDays && nextDateKey < todayStr) return;
+                setExpandedDate(nextDateKey);
+                setCurrentMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+            };
 
             const scheduleInsight = useMemo(() => {
                 const anchorDate = expandedDate ? dateFromKey(expandedDate) : new Date();
@@ -330,27 +414,55 @@ import { getLocalDateStr } from '../utils/dates';
                             <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-5 bg-white">
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
-                                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Monthly Calendar</h3>
-                                    <p className="text-sm text-neutral-500 mt-1">Open, close, and tune each day from one calm workspace.</p>
+                                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">{calendarTitle}</h3>
+                                    <p className="text-sm text-neutral-500 mt-1">{calendarDescription}</p>
                                 </div>
-                                <div className="schedule-month-switcher flex items-center gap-2 bg-neutral-50 p-1.5 rounded-lg border border-neutral-100 w-fit shadow-sm">
-                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center"><ChevronLeft size={18}/></button>
-                                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] min-w-[158px] text-center text-black">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                    <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center"><ChevronRight size={18}/></button>
+                                <div className="flex flex-col gap-3 w-full md:w-auto md:items-end">
+                                    <div className="schedule-month-switcher flex items-center gap-2 bg-neutral-50 p-1.5 rounded-lg border border-neutral-100 w-full md:w-fit shadow-sm">
+                                        <button onClick={() => moveCalendarWindow(-1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronLeft size={18}/></button>
+                                        <span className="text-[11px] font-bold uppercase tracking-[0.2em] min-w-0 md:min-w-[158px] flex-1 text-center text-black">{calendarWindowLabel}</span>
+                                        <button onClick={() => moveCalendarWindow(1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronRight size={18}/></button>
+                                    </div>
+                                    <div className="schedule-calendar-toolbar flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                                        <div className="schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                            {['month', 'week', 'day'].map(mode => (
+                                                <button
+                                                    key={mode}
+                                                    type="button"
+                                                    aria-pressed={calendarViewMode === mode}
+                                                    onClick={() => setCalendarScope(mode)}
+                                                    className={`h-9 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex-1 sm:flex-none ${calendarViewMode === mode ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                >
+                                                    {mode}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            aria-pressed={hidePastDays}
+                                            onClick={toggleHidePastDays}
+                                            className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
+                                        >
+                                            <span className={`w-5 h-5 rounded-full border flex items-center justify-center ${hidePastDays ? 'bg-[#39FF14] border-transparent text-black' : 'bg-neutral-50 border-neutral-200'}`}>
+                                                {hidePastDays && <Check size={11}/>}
+                                            </span>
+                                            Hide past
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="p-4 md:p-6 overflow-x-auto no-scrollbar bg-gradient-to-b from-white to-neutral-50/60">
-                                <div className="min-w-[560px] xl:min-w-0">
-                                <div className="grid grid-cols-7 gap-2 md:gap-3 mb-3 rounded-lg bg-white/75 border border-neutral-100 px-2 py-3">
-                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+                                <div className={calendarFrameClass}>
+                                <div className={`calendar-week-heading ${calendarViewMode === 'month' ? 'grid' : 'hidden sm:grid'} ${calendarHeaderClass} gap-2 md:gap-3 mb-3 rounded-lg bg-white/75 border border-neutral-100 px-2 py-3`}>
+                                    {calendarHeaderLabels.map((d) => (
                                         <div key={d} className="text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-neutral-300">{d}</div>
                                     ))}
                                 </div>
 
-                                <div className="grid grid-cols-7 gap-2 md:gap-3">
-                                    {daysInMonth.map((dateStr, i) => {
-                                        if (!dateStr) return <div key={`empty-${i}`} className="min-h-[92px] md:min-h-[120px] rounded-lg bg-white/35 border border-neutral-100/70" />;
+                                <div className={`schedule-calendar-grid grid ${calendarGridClass} gap-2 md:gap-3`}>
+                                    {calendarDisplayDays.map((dateStr, i) => {
+                                        if (!dateStr) return <div key={`empty-${i}`} className={`${calendarCellSizeClass} rounded-lg bg-white/35 border border-neutral-100/70`} />;
                                         const dayNum = Number(dateStr.split('-')[2]);
                                         const config = getDayConfig(dateStr);
                                         const isSelected = expandedDate === dateStr;
@@ -378,7 +490,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         setExpandedDate(dateStr);
                                                     }
                                                 }}
-                                                className={`schedule-day-cell group relative min-h-[92px] md:min-h-[120px] rounded-lg border transition-all duration-500 flex flex-col p-2.5 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.012]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
+                                                className={`schedule-day-cell group relative ${calendarCellSizeClass} rounded-lg border transition-all duration-500 flex flex-col p-2.5 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.012]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
                                             >
                                                 {!isPastDay && (
                                                     <button
@@ -393,6 +505,11 @@ import { getLocalDateStr } from '../utils/dates';
                                                     >
                                                         {config.available ? <Check size={10}/> : <X size={10}/>}
                                                     </button>
+                                                )}
+                                                {calendarViewMode !== 'month' && (
+                                                    <p className="mb-2 pr-7 text-[8px] font-bold uppercase tracking-[0.24em] text-neutral-400">
+                                                        {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                    </p>
                                                 )}
                                                 <div className="flex items-start justify-between gap-1 mb-2 pr-6">
                                                     <span className={`metric-value text-xl md:text-[22px] font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
