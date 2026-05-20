@@ -77,6 +77,10 @@ export const sendClientEmail = async ({ communications, settings, booking, templ
   const templateId = getEmailTemplateId(communications, templateKey);
   const clientEmail = booking?.clientEmail || booking?.email;
 
+  if (booking?.notificationChannels?.email === false) {
+    return { ok: false, skipped: true, reason: 'Client email updates are off for this booking' };
+  }
+
   if (!clientEmail) {
     return { ok: false, skipped: true, reason: 'Missing client email' };
   }

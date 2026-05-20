@@ -11,6 +11,11 @@ const clampNumber = (value, min, max, fallback) => {
     return Math.min(max, Math.max(min, parsed));
 };
 
+const getOptionalLetterSpacing = (value, min, max) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    return `${clampNumber(value, min, max, 0)}px`;
+};
+
 const getAlign = (value) => alignments.includes(value) ? value : 'left';
 const getVisualStyle = (value, fallback = 'minimal') => visualStyles.includes(value) ? value : fallback;
 const getBlockMargins = (align) => ({
@@ -30,7 +35,7 @@ const normalizeWebsite = (value = '') => {
             const [step, setStep] = useState(1);
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
-            const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', whatsappOptIn: false });
+            const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', whatsappOptIn: false });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [submitError, setSubmitError] = useState('');
             const [isInitialLoading, setIsInitialLoading] = useState(settings.features?.loadingScreen);
@@ -78,6 +83,26 @@ const normalizeWebsite = (value = '') => {
             }, [activeDate, settings.schedule, settings.availableTimes]);
 
             const isWaitlistMode = availableTimesForActiveDate.length === 0 && settings.features?.waitlist;
+            const collectClientPhone = settings.features?.collectClientPhone !== false;
+            const collectClientEmail = settings.features?.collectClientEmail !== false;
+            const collectClientNotes = Boolean(settings.features?.collectClientNotes);
+            const whatsappOptInEnabled = Boolean(settings.features?.whatsappUpdates && collectClientPhone);
+            const detailsReady = Boolean(
+                formData.name &&
+                (!collectClientPhone || formData.phone) &&
+                (!collectClientEmail || formData.email)
+            );
+            const canSubmitBooking = Boolean((selectedTime || isWaitlistMode) && detailsReady);
+
+            useEffect(() => {
+                setFormData(prev => ({
+                    ...prev,
+                    phone: collectClientPhone ? prev.phone : '',
+                    email: collectClientEmail ? prev.email : '',
+                    note: collectClientNotes ? prev.note : '',
+                    whatsappOptIn: whatsappOptInEnabled ? prev.whatsappOptIn : false
+                }));
+            }, [collectClientEmail, collectClientNotes, collectClientPhone, whatsappOptInEnabled]);
 
             const handleFirstAvailable = (e) => {
                 e.stopPropagation();
@@ -128,6 +153,8 @@ const normalizeWebsite = (value = '') => {
                 size: clampNumber(settings.welcomeSize, 13, 32, 20),
                 font: settings.welcomeFontFamily || settings.bodyFontFamily || settings.fontFamily
             };
+            const headingLetterSpacing = getOptionalLetterSpacing(settings.headingLetterSpacing, -4, 8);
+            const subtextLetterSpacing = getOptionalLetterSpacing(settings.subtextLetterSpacing, -1, 6);
             const dateStyle = getVisualStyle(settings.dateStyle || settings.availabilityStyle, 'minimal');
             const timeSlotStyle = getVisualStyle(settings.timeSlotStyle || settings.availabilityStyle, 'minimal');
             const actionButtonStyle = getVisualStyle(settings.actionButtonStyle, 'solid');
@@ -165,12 +192,18 @@ const normalizeWebsite = (value = '') => {
 
             const handleAction = async () => {
                 if (isPreview) { onInspect('copy'); return; }
-                if ((selectedTime || isWaitlistMode) && formData.name && formData.phone && formData.email) {
+                if (canSubmitBooking) {
                     setIsSubmitting(true);
                     setSubmitError('');
                     try {
                         const completed = await onComplete(
-                            { ...formData, whatsappOptIn: Boolean(settings.features?.whatsappUpdates && formData.whatsappOptIn) },
+                            {
+                                ...formData,
+                                phone: collectClientPhone ? formData.phone : '',
+                                email: collectClientEmail ? formData.email : '',
+                                note: collectClientNotes ? formData.note : '',
+                                whatsappOptIn: Boolean(whatsappOptInEnabled && formData.whatsappOptIn)
+                            },
                             activeDate.full,
                             isWaitlistMode ? 'Waitlist' : selectedTime,
                             isWaitlistMode ? 'waitlist' : 'pending',
@@ -302,7 +335,7 @@ const normalizeWebsite = (value = '') => {
                             <div className="w-12 h-[2px]" style={{ backgroundColor: settings.primaryColor }} />
                             <span
                                 className="font-bold uppercase tracking-[0.6em] opacity-40"
-                                style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment }}
+                                style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
                             >
                                 {settings.tagline}
                             </span>
@@ -335,6 +368,7 @@ const normalizeWebsite = (value = '') => {
                                 color: settings.headingColor,
                                 fontFamily: getFontFamily(brandText.font),
                                 fontSize: `${brandText.size}px`,
+                                ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}),
                                 textAlign: pageAlignment,
                                 overflowWrap: 'anywhere',
                                 ...getBlockMargins(pageAlignment)
@@ -349,6 +383,7 @@ const normalizeWebsite = (value = '') => {
                                 color: settings.bodyColor,
                                 fontFamily: getFontFamily(welcomeText.font),
                                 fontSize: `${welcomeText.size}px`,
+                                ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}),
                                 textAlign: pageAlignment,
                                 ...getBlockMargins(pageAlignment)
                             }}
@@ -382,7 +417,7 @@ const normalizeWebsite = (value = '') => {
                             <div className={`flex flex-col ${pageItems} ${pageTextClass}`}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>01 // {settings.dateLabel || "Which day?"}</h3>
                                 <div className="flex flex-wrap items-center gap-4" style={{ justifyContent: pageJustify }}>
-                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
+                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                         {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
                                     </h4>
                                     {settings.features?.firstAvailable && (
@@ -416,7 +451,7 @@ const normalizeWebsite = (value = '') => {
                         <section>
                         <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
                             <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>02 // {settings.timeLabel || "Select Time"}</h3>
-                            <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
+                            <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                 {isWaitlistMode ? 'Day Full - Join Waitlist' : 'Available Slots'}
                             </h4>
                         </div>
@@ -452,7 +487,7 @@ const normalizeWebsite = (value = '') => {
                         <section className="pt-10">
                             <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>03 // {settings.detailsHeading || "Your Details"}</h3>
-                                <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
+                                <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                     {isWaitlistMode ? 'Join Standby' : (settings.detailsSubHeading || "Secure Your Slot")}
                                 </h4>
                             </div>
@@ -463,11 +498,13 @@ const normalizeWebsite = (value = '') => {
                                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
                                     <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
                                 </div>
+                                {collectClientPhone && (
                                 <div className="group relative">
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Mobile Number</label>
                                     <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
                                     <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
                                 </div>
+                                )}
                                 {faqItems.length > 0 && (
                                 <div className={`pt-2 ${inspectClass}`} onClick={() => isPreview && onInspect('features')}>
                                     <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-5 opacity-40" style={{ color: settings.bodyColor }}>Questions</h3>
@@ -493,11 +530,20 @@ const normalizeWebsite = (value = '') => {
                                     </div>
                                 </div>
                                 )}
+                                {collectClientEmail && (
                                 <div className="group relative">
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Email Address</label>
                                     <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
                                     <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
                                 </div>
+                                )}
+                                {collectClientNotes && (
+                                <div className="group relative">
+                                    <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity flex justify-between" style={{ color: settings.headingColor }}>Booking Note <span className="opacity-50 lowercase tracking-normal font-normal">Optional</span></label>
+                                    <textarea value={formData.note} onChange={(e) => setFormData({...formData, note: e.target.value})} rows={3} className="w-full bg-transparent text-xl md:text-2xl font-bold outline-none tracking-tight transition-all pb-2 resize-none" style={{ color: settings.headingColor }} />
+                                    <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
+                                </div>
+                                )}
                                 {settings.features?.birthday && (
                                 <div className="group relative">
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity flex justify-between" style={{ color: settings.headingColor }}>Birthday <span className="opacity-50 lowercase tracking-normal font-normal">Optional</span></label>
@@ -509,7 +555,7 @@ const normalizeWebsite = (value = '') => {
                         </section>
 
                         <div className="pt-16 pb-12 mt-auto text-center">
-                            {settings.features?.whatsappUpdates && (
+                            {whatsappOptInEnabled && (
                                 <label
                                     className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${inspectClass}`}
                                     style={{
@@ -552,7 +598,7 @@ const normalizeWebsite = (value = '') => {
                             {submitError && (
                                 <p className="mb-4 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>
                             )}
-                            <button onClick={handleAction} disabled={(isSubmitting || !(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(isSubmitting || !(selectedTime || isWaitlistMode) || !formData.name || !formData.phone || !formData.email) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
+                            <button onClick={handleAction} disabled={(isSubmitting || !canSubmitBooking) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(isSubmitting || !canSubmitBooking) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${inspectClass}`} style={getActionButtonStyle()}>
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out"></div>
                                 <span className="relative z-10">{isSubmitting ? 'Sending Request' : isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span>
                                 <ArrowRight size={20} className="relative z-10 transition-transform duration-500 group-hover:translate-x-3" />
@@ -600,10 +646,10 @@ const normalizeWebsite = (value = '') => {
                         </div>
                         <div><p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40" style={{ color: settings.bodyColor }}>Booking Status</p><p className="text-lg font-bold uppercase tracking-[0.2em]" style={{ color: settings.headingColor }}>{isWaitlistMode ? 'Standby' : 'Confirmed'}</p></div>
                     </div>
-                    <h2 className={`text-7xl md:text-[8rem] font-bold mb-10 tracking-tighter leading-[0.8] ${inspectClass}`} style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }} onClick={() => isPreview && onInspect('copy')}>
+                    <h2 className={`text-7xl md:text-[8rem] font-bold mb-10 tracking-tighter leading-[0.8] ${inspectClass}`} style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }} onClick={() => isPreview && onInspect('copy')}>
                         {isWaitlistMode ? "On The List." : (settings.successHeading || "Confirmed!")}
                     </h2>
-                    <p className="opacity-60 text-xl font-light mb-24 max-w-sm leading-relaxed" style={{ color: settings.bodyColor }}>
+                    <p className="opacity-60 text-xl font-light mb-24 max-w-sm leading-relaxed" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
                         {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. We will text you if a slot opens.` : `Access confirmed for ${selectedTime} on ${activeDate.dayNum} ${activeDate.month}.`}
                     </p>
                     <button onClick={() => setStep(1)} className="appearance-none outline-none focus:outline-none text-[10px] font-bold uppercase tracking-[0.6em] opacity-40 hover:opacity-100 transition-all border-b pb-4" style={{ color: settings.bodyColor, borderColor: settings.bodyColor + '40' }}>New Request</button>

@@ -185,6 +185,95 @@ const getIdentityTextSettings = (settings = {}, config) => {
   return { size, font };
 };
 
+const getSpacingControlValue = (settings = {}, key) => {
+  const value = settings[key];
+  if (value === '' || value === null || value === undefined) return 0;
+  return clampNumber(value, -4, 8, 0);
+};
+
+function LetterSpacingControl({ settings, onChange }) {
+  const controls = [
+    {
+      key: 'headingLetterSpacing',
+      label: 'Heading Space',
+      note: 'Business name, section titles, and success headline.',
+      sample: 'Studio Noir',
+      min: -4,
+      max: 8
+    },
+    {
+      key: 'subtextLetterSpacing',
+      label: 'Subtext Space',
+      note: 'Tagline and welcome copy below the heading.',
+      sample: 'Reserve your private session.',
+      min: -1,
+      max: 6
+    }
+  ];
+
+  return (
+    <div className="rounded-lg border border-neutral-100 bg-white p-4 md:p-6 shadow-[0_24px_80px_-72px_rgba(15,23,42,0.75)]">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+        <div>
+          <p className="text-sm font-bold text-black">Master Text Spacing</p>
+          <p className="text-xs text-neutral-400 font-medium mt-1 max-w-xl">A Canva-style letter spacing pass for tighter luxury headings or airy editorial copy.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            onChange('headingLetterSpacing', '');
+            onChange('subtextLetterSpacing', '');
+          }}
+          className="h-9 px-4 rounded-lg bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-neutral-400 hover:text-black hover:bg-white transition-all"
+        >
+          Reset
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {controls.map(control => {
+          const value = getSpacingControlValue(settings, control.key);
+          return (
+            <div key={control.key} className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-black">{control.label}</p>
+                  <p className="text-xs text-neutral-400 font-medium mt-1 leading-relaxed">{control.note}</p>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-white border border-neutral-100 px-2 py-1 rounded-md shrink-0">{value.toFixed(1)}px</span>
+              </div>
+              <div
+                className="h-16 rounded-lg bg-white border border-neutral-100 flex items-center justify-center px-4 text-lg font-bold text-black overflow-hidden"
+                style={{
+                  letterSpacing: `${value}px`,
+                  fontFamily: getFontFamily(control.key === 'headingLetterSpacing'
+                    ? (settings.headingFontFamily || settings.fontFamily)
+                    : (settings.bodyFontFamily || settings.fontFamily))
+                }}
+              >
+                <span className="truncate">{control.sample}</span>
+              </div>
+              <input
+                type="range"
+                min={control.min}
+                max={control.max}
+                step="0.1"
+                value={value}
+                onChange={(event) => onChange(control.key, Number(event.target.value))}
+                className="w-full accent-black mt-4"
+              />
+              <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-neutral-300 mt-1">
+                <span>Tight</span>
+                <span>Airy</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AlignmentButtonGroup({ value, onChange, label = 'Alignment' }) {
   return (
     <div>
@@ -738,7 +827,7 @@ const createGoogleProvider = () => {
                 detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
                 availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
                 schedule: {},
-                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, faqEnabled: false, socialLinks: false, whatsappUpdates: false, location: '', faqs: [] },
+                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, faqEnabled: false, socialLinks: false, whatsappUpdates: false, location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
@@ -856,6 +945,7 @@ const createGoogleProvider = () => {
                         phone: booking.clientPhone || '',
                         email: booking.clientEmail || '',
                         birthday: booking.clientBirthday || '',
+                        notes: booking.clientNote || '',
                         whatsappOptIn: Boolean(booking.clientWhatsappOptIn),
                         whatsappNumber: booking.clientWhatsappNumber || '',
                         source: 'booking',
@@ -865,6 +955,7 @@ const createGoogleProvider = () => {
                     existing.phone = existing.phone || booking.clientPhone || '';
                     existing.email = existing.email || booking.clientEmail || '';
                     existing.birthday = existing.birthday || booking.clientBirthday || '';
+                    existing.notes = existing.notes || booking.clientNote || '';
                     existing.whatsappOptIn = existing.whatsappOptIn || Boolean(booking.clientWhatsappOptIn);
                     existing.whatsappNumber = existing.whatsappNumber || booking.clientWhatsappNumber || '';
                     existing.bookings.push(booking);
@@ -885,6 +976,7 @@ const createGoogleProvider = () => {
                         ...client,
                         email: client.email || history[0]?.clientEmail || '',
                         birthday: client.birthday || history[0]?.clientBirthday || '',
+                        notes: client.notes || history.find(booking => booking.clientNote)?.clientNote || '',
                         whatsappOptIn: Boolean(client.whatsappOptIn || history.some(booking => booking.clientWhatsappOptIn)),
                         whatsappNumber: client.whatsappNumber || history.find(booking => booking.clientWhatsappNumber)?.clientWhatsappNumber || '',
                         bookings: history,
@@ -909,7 +1001,7 @@ const createGoogleProvider = () => {
                         phone: record.phone || bookingProfile?.phone || '',
                         email: record.email || bookingProfile?.email || '',
                         birthday: record.birthday || bookingProfile?.birthday || '',
-                        notes: record.notes || '',
+                        notes: record.notes || bookingProfile?.notes || '',
                         avatar: record.avatar || '',
                         labels: record.labels || [],
                         bookings: bookingProfile?.bookings || [],
@@ -1165,6 +1257,9 @@ const createGoogleProvider = () => {
             ];
             const normalizedComms = normalizeCommunications(communications);
             const whatsappConfig = normalizedComms.whatsapp;
+            const collectsClientPhone = settings.features?.collectClientPhone !== false;
+            const collectsClientEmail = settings.features?.collectClientEmail !== false;
+            const collectsClientNotes = Boolean(settings.features?.collectClientNotes);
 
             const activeThemeFilterGroup = useMemo(() => (
                 THEME_FILTER_GROUPS.find(group => group.id === themeFilterGroup) || THEME_FILTER_GROUPS[0]
@@ -1994,7 +2089,15 @@ const createGoogleProvider = () => {
                     }
                 }));
             };
-            const handleFeatureChange = (key, value) => { setSettings(prev => ({ ...prev, features: { ...prev.features, [key]: value } })); };
+            const handleFeatureChange = (key, value) => {
+                setSettings(prev => {
+                    const nextFeatures = { ...prev.features, [key]: value };
+                    if (key === 'collectClientPhone' && value === false) {
+                        nextFeatures.whatsappUpdates = false;
+                    }
+                    return { ...prev, features: nextFeatures };
+                });
+            };
             const toggleFaqFeature = () => {
                 setSettings(prev => {
                     const enabled = !prev.features?.faqEnabled;
@@ -2196,10 +2299,11 @@ const createGoogleProvider = () => {
                     clientPhone: formData.phone,
                     clientEmail: formData.email || '',
                     clientBirthday: formData.birthday || '',
+                    clientNote: formData.note || '',
                     clientWhatsappOptIn: Boolean(formData.whatsappOptIn),
                     clientWhatsappNumber: formData.whatsappOptIn ? formData.phone : '',
                     notificationChannels: {
-                        email: true,
+                        email: Boolean(formData.email),
                         whatsapp: Boolean(formData.whatsappOptIn)
                     },
                     date,
@@ -2237,10 +2341,11 @@ const createGoogleProvider = () => {
                     clientPhone: formData.phone,
                     clientEmail: formData.email || '',
                     clientBirthday: formData.birthday || '',
+                    clientNote: formData.note || '',
                     clientWhatsappOptIn: Boolean(formData.whatsappOptIn),
                     clientWhatsappNumber: formData.whatsappOptIn ? formData.phone : '',
                     notificationChannels: {
-                        email: true,
+                        email: Boolean(formData.email),
                         whatsapp: Boolean(formData.whatsappOptIn)
                     },
                     date,
@@ -2266,6 +2371,10 @@ const createGoogleProvider = () => {
             };
 
             const sendBookingEmail = async (booking, templateKey, extra = {}) => {
+                if (booking.notificationChannels?.email === false) {
+                    showToast('Client email updates are off for this booking.');
+                    return false;
+                }
                 if (!communications[templateKey]?.active) {
                     showToast(`Turn on the ${templateKey} email first.`);
                     return false;
@@ -2455,7 +2564,7 @@ const createGoogleProvider = () => {
                       </h1>
                       
                       <p className="text-lg md:text-2xl font-medium text-neutral-500 max-w-2xl mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200">
-                        Welcome clients with a polished booking page, then run every request from one calm dashboard built for busy studios, creators, and service businesses.
+                        Give clients a booking page that feels premium from the first click, then manage every request, message, client, and open slot from one clean workspace.
                       </p>
                       
                       <div className="flex flex-col md:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 w-full md:w-auto">
@@ -2471,8 +2580,8 @@ const createGoogleProvider = () => {
                     {/* Bento Grid Features */}
                     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-32">
                       <div className="text-center mb-16 md:mb-24">
-                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tighter mb-6">The tools behind a booking page clients trust.</h2>
-                        <p className="text-neutral-500 font-medium text-lg md:text-xl max-w-2xl mx-auto">Design the page, manage the flow, remember the people, and keep every booking moving without the admin mess.</p>
+                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tighter mb-6">Every tool behind a booking experience clients trust.</h2>
+                        <p className="text-neutral-500 font-medium text-lg md:text-xl max-w-2xl mx-auto">Design the page, control availability, approve requests, message clients, and remember the people behind every booking.</p>
                       </div>
                       
                       <div className="native-feature-wave-list grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2804,6 +2913,7 @@ const createGoogleProvider = () => {
                                     <div className="divide-y divide-neutral-100">
                                         {dashboardPortfolio.activityList.slice(0, 6).map(b => {
                                             const assignedStaff = staffList.find(staff => staff.id === b.staffId);
+                                            const contactSummary = [b.clientPhone, b.clientEmail, b.clientBirthday ? `Bday: ${b.clientBirthday}` : '', b.clientNote ? `Note: ${b.clientNote}` : ''].filter(Boolean).join(' / ');
                                             const statusStyle = b.status === 'confirmed'
                                                 ? 'bg-[#39FF14] text-black'
                                                 : b.status === 'waitlist'
@@ -2820,7 +2930,7 @@ const createGoogleProvider = () => {
                                                                 <h3 className="font-bold text-black truncate">{b.clientName}</h3>
                                                                 {b.noShowHistory && <span className="px-2 py-1 rounded-md bg-red-50 text-red-600 text-[8px] font-bold uppercase tracking-widest">Risk</span>}
                                                             </div>
-                                                            <p className="text-sm text-neutral-500 truncate">{b.clientPhone}{assignedStaff ? ` / ${assignedStaff.name}` : ''}</p>
+                                                            <p className="text-sm text-neutral-500 truncate">{contactSummary || 'No contact details collected'}{assignedStaff ? ` / ${assignedStaff.name}` : ''}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center justify-between md:justify-end gap-4">
@@ -3265,7 +3375,7 @@ const createGoogleProvider = () => {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {[
                                                 ['Workspace alerts', whatsappConfig.enabled ? 'Ready' : 'Off'],
-                                                ['Client opt-in', settings.features?.whatsappUpdates ? 'Shown on page' : 'Hidden'],
+                                                ['Client opt-in', settings.features?.whatsappUpdates && collectsClientPhone ? 'Shown on page' : collectsClientPhone ? 'Hidden' : 'Phone field off'],
                                                 ['API token', 'Server-side only'],
                                                 ['Provider', 'Meta Cloud API']
                                             ].map(item => (
@@ -4182,6 +4292,7 @@ const createGoogleProvider = () => {
                                     <div className="pt-10 border-t border-neutral-50">
                                         <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Typography Engine</label>
                                         <div className="space-y-8">
+                                            <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
                                             {['Sans', 'Serif', 'Display', 'Mono', 'Brush'].map(cat => (
                                                 <div key={cat}>
                                                     <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-4">{cat}</p>
@@ -4284,6 +4395,43 @@ const createGoogleProvider = () => {
                                 <div className="space-y-8 animate-in fade-in duration-700 pb-20">
                                     <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Booking Features</label>
 
+                                    <div className="rounded-lg border border-neutral-100 bg-white overflow-hidden shadow-[0_20px_70px_-65px_rgba(15,23,42,0.7)]">
+                                        <div className="p-4 md:p-6 border-b border-neutral-100">
+                                            <p className="text-sm font-bold text-black">Client Detail Fields</p>
+                                            <p className="text-xs text-neutral-400 font-medium mt-1 max-w-2xl">Choose exactly what clients need to leave before they request a booking. Email and WhatsApp sends only run when the matching contact field is collected.</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 xl:grid-cols-3 divide-y xl:divide-y-0 xl:divide-x divide-neutral-100">
+                                            {[
+                                                { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Used for phone follow-ups and WhatsApp opt-in.', active: collectsClientPhone },
+                                                { key: 'collectClientEmail', icon: Mail, label: 'Email Address', note: 'Used for client email updates and CRM records.', active: collectsClientEmail },
+                                                { key: 'collectClientNotes', icon: MessageSquare, label: 'Client Note', note: 'Adds an optional note field for requests or context.', active: collectsClientNotes }
+                                            ].map(item => {
+                                                const IconCmp = item.icon;
+                                                return (
+                                                    <div key={item.key} className="p-4 md:p-5 flex items-start justify-between gap-4">
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <div className={`w-10 h-10 rounded-lg border flex items-center justify-center shrink-0 ${item.active ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
+                                                                <IconCmp size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-black">{item.label}</p>
+                                                                <p className="text-xs text-neutral-400 font-medium mt-1 leading-relaxed">{item.note}</p>
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={() => handleFeatureChange(item.key, !item.active)} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${item.active ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(item.active)}>
+                                                            <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${item.active ? 'translate-x-6' : ''}`} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {!collectsClientPhone && (
+                                            <div className="border-t border-neutral-100 bg-neutral-50 px-4 md:px-6 py-4">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">WhatsApp client opt-in is off because mobile number collection is off.</p>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="space-y-4">
                                         {[
                                             { key: 'loadingScreen', label: 'Loading Logo Pulse', note: 'Brief branded loading moment before the page appears.' },
@@ -4315,11 +4463,11 @@ const createGoogleProvider = () => {
                                                     <p className="text-xs text-neutral-400 font-medium mt-1 max-w-lg">Adds a client consent checkbox before the booking action button. Actual sends use the WhatsApp setup in Communication Studio.</p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => handleFeatureChange('whatsappUpdates', !settings.features?.whatsappUpdates)} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.whatsappUpdates ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.whatsappUpdates)}>
-                                                <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.whatsappUpdates ? 'translate-x-6' : ''}`} />
+                                            <button disabled={!collectsClientPhone} onClick={() => collectsClientPhone && handleFeatureChange('whatsappUpdates', !settings.features?.whatsappUpdates)} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.whatsappUpdates && collectsClientPhone ? 'bg-[#39FF14]' : 'bg-neutral-200'} ${!collectsClientPhone ? 'opacity-50 cursor-not-allowed' : ''}`} aria-pressed={Boolean(settings.features?.whatsappUpdates && collectsClientPhone)}>
+                                                <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.whatsappUpdates && collectsClientPhone ? 'translate-x-6' : ''}`} />
                                             </button>
                                         </div>
-                                        {settings.features?.whatsappUpdates && (
+                                        {settings.features?.whatsappUpdates && collectsClientPhone && (
                                             <div className="border-t border-neutral-100 bg-white p-4 md:p-6">
                                                 <div className="rounded-lg bg-black text-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                     <div>
@@ -4338,7 +4486,7 @@ const createGoogleProvider = () => {
                                         <div className="p-4 md:p-6 flex items-center justify-between gap-4">
                                             <div>
                                                 <p className="text-sm font-bold text-black">FAQ After Details</p>
-                                                <p className="text-xs text-neutral-400 font-medium mt-1">Shows client questions after name and number, before final contact details.</p>
+                                                <p className="text-xs text-neutral-400 font-medium mt-1">Shows client questions inside the details step, before the final booking action.</p>
                                             </div>
                                             <button onClick={toggleFaqFeature} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.faqEnabled ? 'bg-[#39FF14]' : 'bg-neutral-200'}`} aria-pressed={Boolean(settings.features?.faqEnabled)}>
                                                 <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.faqEnabled ? 'translate-x-6' : ''}`} />
@@ -4590,6 +4738,7 @@ const createGoogleProvider = () => {
                                 ) : bookingRows.map(b => {
                                     const assignedStaff = staffList.find(s => s.id === b.staffId);
                                     const isExampleBooking = Boolean(b.isExample);
+                                    const contactSummary = [b.clientPhone, b.clientEmail, b.clientBirthday ? `Bday: ${b.clientBirthday}` : '', b.clientNote ? `Note: ${b.clientNote}` : ''].filter(Boolean).join(' / ');
                                     const statusStyle = b.status === 'confirmed'
                                         ? 'bg-[#39FF14] text-black'
                                         : b.status === 'waitlist'
@@ -4613,7 +4762,7 @@ const createGoogleProvider = () => {
                                                             {isExampleBooking && <span className="shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Example Only</span>}
                                                             <span className={`shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${statusStyle}`}>{b.status === 'waitlist' ? 'Standby' : b.status}</span>
                                                         </div>
-                                                        <p className="text-sm text-neutral-500 truncate">{isExampleBooking ? 'Preview only - not saved, synced, or counted in stats' : `${b.clientPhone}${b.clientBirthday ? ` / Bday: ${b.clientBirthday}` : ''}`}</p>
+                                                        <p className="text-sm text-neutral-500 truncate">{isExampleBooking ? 'Preview only - not saved, synced, or counted in stats' : contactSummary || 'No contact details collected'}</p>
                                                     </div>
                                                 </div>
 
