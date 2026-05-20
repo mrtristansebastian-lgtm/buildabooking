@@ -326,6 +326,11 @@ body {
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 16px 44px -38px rgba(15, 23, 42, 0.34);
         }
 
+        .schedule-rotate-prompt {
+            display: none;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 46px -38px rgba(15, 23, 42, 0.32);
+        }
+
         .schedule-day-cell {
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 16px 42px -38px rgba(15, 23, 42, 0.44);
         }
@@ -582,6 +587,10 @@ body {
                 padding-right: 0.7rem !important;
             }
 
+            .schedule-forward-days .calendar-week-heading {
+                display: none !important;
+            }
+
             .schedule-calendar-grid.grid-cols-7 {
                 gap: 0.32rem !important;
             }
@@ -651,6 +660,18 @@ body {
 
             .schedule-calendar-card .schedule-slot-pill span:last-child {
                 letter-spacing: 0.04em !important;
+            }
+        }
+
+        @media (max-width: 767px) and (orientation: portrait) {
+            .schedule-mode-month .schedule-rotate-prompt {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+
+            .schedule-mode-month.schedule-forward-days .schedule-calendar-grid {
+                gap: 0.65rem !important;
             }
         }
 

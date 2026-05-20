@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, ShieldCheck, X, XCircle } from 'lucide-react';
+import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, ShieldCheck, X, XCircle } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
@@ -13,6 +13,9 @@ import { getLocalDateStr } from '../utils/dates';
                 typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'week' : 'month'
             ));
             const [hidePastDays, setHidePastDays] = useState(false);
+            const [isMobilePortraitCalendar, setIsMobilePortraitCalendar] = useState(() => (
+                typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
+            ));
             const defaultTimes = Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
             const todayStr = getLocalDateStr(new Date());
             const monthLookup = {
@@ -224,23 +227,41 @@ import { getLocalDateStr } from '../utils/dates';
                     return visibleWeek.length ? visibleWeek : [todayStr];
                 }
 
+                if (hidePastDays) {
+                    const visibleMonthDays = daysInMonth.filter(dateStr => dateStr && dateStr >= todayStr);
+                    return visibleMonthDays.length ? visibleMonthDays : [todayStr];
+                }
+
                 return daysInMonth.map(dateStr => {
                     if (!dateStr) return null;
-                    if (hidePastDays && dateStr < todayStr) return null;
                     return dateStr;
                 });
             }, [calendarViewMode, expandedDate, hidePastDays, todayStr, daysInMonth, calendarWeekStart, calendarWeekEnd]);
-            const calendarGridClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-7' : 'grid-cols-7';
+            const calendarGridClass = calendarViewMode === 'day'
+                ? 'grid-cols-1'
+                : calendarViewMode === 'week'
+                    ? 'grid-cols-2 sm:grid-cols-7'
+                    : hidePastDays
+                        ? 'grid-cols-2 sm:grid-cols-7'
+                        : 'grid-cols-7';
             const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-7' : 'grid-cols-7';
+            const calendarHeaderVisibilityClass = calendarViewMode === 'month'
+                ? (hidePastDays ? 'hidden' : 'grid')
+                : 'hidden sm:grid';
             const calendarFrameClass = calendarViewMode === 'month' ? 'min-w-0 md:min-w-[560px] xl:min-w-0' : 'min-w-0';
             const calendarCellSizeClass = calendarViewMode === 'day'
                 ? 'min-h-[150px] md:min-h-[180px]'
                 : calendarViewMode === 'week'
                     ? 'min-h-[116px] md:min-h-[128px]'
-                    : 'min-h-[92px] md:min-h-[120px]';
+                    : hidePastDays
+                        ? 'min-h-[116px] md:min-h-[128px]'
+                        : 'min-h-[92px] md:min-h-[120px]';
 
             const setCalendarScope = (mode) => {
                 setCalendarViewMode(mode);
+                if (mode === 'month' && isMobilePortraitCalendar) {
+                    setHidePastDays(true);
+                }
                 if (mode !== 'month') {
                     const today = new Date();
                     setExpandedDate(todayStr);
@@ -353,6 +374,25 @@ import { getLocalDateStr } from '../utils/dates';
                 setIsAddingSlot(false);
             }, [expandedDate]);
 
+            useEffect(() => {
+                if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+                const portraitQuery = window.matchMedia('(max-width: 767px) and (orientation: portrait)');
+                const updatePortraitState = () => setIsMobilePortraitCalendar(portraitQuery.matches);
+                updatePortraitState();
+                if (portraitQuery.addEventListener) {
+                    portraitQuery.addEventListener('change', updatePortraitState);
+                    return () => portraitQuery.removeEventListener('change', updatePortraitState);
+                }
+                portraitQuery.addListener?.(updatePortraitState);
+                return () => portraitQuery.removeListener?.(updatePortraitState);
+            }, []);
+
+            useEffect(() => {
+                if (calendarViewMode === 'month' && isMobilePortraitCalendar) {
+                    setHidePastDays(true);
+                }
+            }, [calendarViewMode, isMobilePortraitCalendar]);
+
             return (
                 <div className="w-full max-w-7xl mx-auto pb-32 animate-in fade-in duration-700">
                     <header className="mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
@@ -410,7 +450,7 @@ import { getLocalDateStr } from '../utils/dates';
                     </section>
 
                     <div className="grid grid-cols-1 min-[1400px]:grid-cols-[minmax(0,1fr)_340px] gap-6">
-                        <section data-tour="schedule-calendar" className="saas-card schedule-calendar-card overflow-hidden">
+                        <section data-tour="schedule-calendar" className={`saas-card schedule-calendar-card schedule-mode-${calendarViewMode} ${hidePastDays ? 'schedule-forward-days' : ''} overflow-hidden`}>
                             <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-5 bg-white">
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
@@ -454,7 +494,18 @@ import { getLocalDateStr } from '../utils/dates';
 
                             <div className="p-4 md:p-6 overflow-x-auto no-scrollbar bg-gradient-to-b from-white to-neutral-50/60">
                                 <div className={calendarFrameClass}>
-                                <div className={`calendar-week-heading ${calendarViewMode === 'month' ? 'grid' : 'hidden sm:grid'} ${calendarHeaderClass} gap-2 md:gap-3 mb-3 rounded-lg bg-white/75 border border-neutral-100 px-2 py-3`}>
+                                {calendarViewMode === 'month' && (
+                                    <div className="schedule-rotate-prompt mb-3 rounded-lg border border-neutral-100 bg-white/85 px-3 py-3 text-black">
+                                        <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
+                                            <RefreshCw size={14} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Rotate for full month</p>
+                                            <p className="text-xs font-semibold text-neutral-600 leading-snug">Portrait keeps this as a clean forward list. Turn sideways for the classic calendar grid.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className={`calendar-week-heading ${calendarHeaderVisibilityClass} ${calendarHeaderClass} gap-2 md:gap-3 mb-3 rounded-lg bg-white/75 border border-neutral-100 px-2 py-3`}>
                                     {calendarHeaderLabels.map((d) => (
                                         <div key={d} className="text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-neutral-300">{d}</div>
                                     ))}
@@ -506,7 +557,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         {config.available ? <Check size={10}/> : <X size={10}/>}
                                                     </button>
                                                 )}
-                                                {calendarViewMode !== 'month' && (
+                                                {(calendarViewMode !== 'month' || hidePastDays) && (
                                                     <p className="mb-2 pr-7 text-[8px] font-bold uppercase tracking-[0.24em] text-neutral-400">
                                                         {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                                     </p>
