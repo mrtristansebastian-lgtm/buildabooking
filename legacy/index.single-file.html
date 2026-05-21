@@ -1626,7 +1626,7 @@ const { useState, useEffect, useMemo, useRef, memo } = React;
                     : visibleBookings.filter(b => b.status === bookingFilter)
             ), [bookingFilter, visibleBookings]);
 
-            const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers WhatsApp', 'High Value', 'No-show Risk'];
+            const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers Chat', 'High Value', 'No-show Risk'];
             const buildClientKey = (name, phone) => {
                 const phoneKey = (phone || '').replace(/\D/g, '');
                 const nameKey = (name || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -3003,7 +3003,7 @@ const { useState, useEffect, useMemo, useRef, memo } = React;
                                                         <textarea
                                                             value={clientNoteDraft}
                                                             onChange={(event) => setClientNoteDraft(event.target.value)}
-                                                            placeholder="Example: prefers morning slots, likes WhatsApp reminders, allergic to latex..."
+                                                            placeholder="Example: prefers morning slots, wants app updates, allergic to latex..."
                                                             className="w-full min-h-[190px] bg-neutral-50 border border-neutral-100 rounded-lg p-4 text-sm font-medium outline-none resize-none focus:bg-white focus:border-black transition-colors"
                                                         />
                                                         <button onClick={() => { upsertClientRecord(selectedClient.id, { notes: clientNoteDraft }); showToast("Client notes saved"); }} className="mt-4 w-full h-11 rounded-lg bg-black text-white flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">

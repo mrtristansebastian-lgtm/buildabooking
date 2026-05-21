@@ -97,7 +97,7 @@ const scenes = [
     target: 'email-messages',
     kicker: 'Communication studio',
     title: 'Keep every message ready.',
-    text: 'Email templates and WhatsApp setup live together so client updates stay consistent.'
+    text: 'Client chat, email templates, and booking updates live together so every message stays consistent.'
   },
   {
     id: 'team',

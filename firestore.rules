@@ -29,6 +29,20 @@ service cloud.firestore {
       return isOwner(userId) || (hasStaffAccess(appId, userId) && staffRole(appId, userId) == 'admin');
     }
 
+    function isThreadParticipant(appId, threadData) {
+      return signedIn() &&
+        threadData.ownerId is string &&
+        (
+          canStaff(appId, threadData.ownerId) ||
+          (request.auth.token.email != null && threadData.clientEmail == request.auth.token.email)
+        );
+    }
+
+    function canAccessThread(appId, threadId) {
+      return exists(/databases/$(database)/documents/artifacts/$(appId)/clientThreads/$(threadId)) &&
+        isThreadParticipant(appId, get(/databases/$(database)/documents/artifacts/$(appId)/clientThreads/$(threadId)).data);
+    }
+
     function validPublicBookingCreate(appId, userId) {
       return request.resource.data.source == 'public-booking-page' &&
         request.resource.data.workspaceSlug is string &&
@@ -74,6 +88,35 @@ service cloud.firestore {
     match /artifacts/{appId}/users/{userId}/bookings/{bookingId} {
       allow read, update, delete: if canStaff(appId, userId);
       allow create: if canStaff(appId, userId) || validPublicBookingCreate(appId, userId);
+    }
+
+    match /artifacts/{appId}/clientAccess/{email}/bookings/{bookingId} {
+      allow read: if signedIn() &&
+        (request.auth.token.email == email || (resource.data.ownerId is string && canStaff(appId, resource.data.ownerId)));
+      allow create, update: if signedIn() &&
+        request.resource.data.ownerId is string &&
+        canStaff(appId, request.resource.data.ownerId) &&
+        request.resource.data.clientEmail == email;
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/clientThreads/{threadId} {
+      allow read: if isThreadParticipant(appId, resource.data);
+      allow create: if signedIn() &&
+        request.resource.data.ownerId is string &&
+        (
+          canStaff(appId, request.resource.data.ownerId) ||
+          (request.auth.token.email != null && request.resource.data.clientEmail == request.auth.token.email)
+        );
+      allow update: if isThreadParticipant(appId, resource.data) &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.clientEmail == resource.data.clientEmail;
+      allow delete: if canAdmin(appId, resource.data.ownerId);
+
+      match /messages/{messageId} {
+        allow read, create: if canAccessThread(appId, threadId);
+        allow update, delete: if false;
+      }
     }
 
     match /artifacts/{appId}/public/data/workspaces/{slug} {

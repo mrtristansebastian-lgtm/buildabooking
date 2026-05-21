@@ -8,6 +8,13 @@ const STYLE_ARCHETYPES = [
         id: 'modern',
         label: 'Modern',
         fontFamily: 'plus-jakarta',
+        fontSystem: {
+            heading: 'plus-jakarta',
+            body: 'inter',
+            button: 'space-grotesk',
+            slot: 'plus-jakarta',
+            date: 'plus-jakarta'
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'solid',
         surface: 'clean',
@@ -18,6 +25,15 @@ const STYLE_ARCHETYPES = [
         id: 'editorial',
         label: 'Editorial',
         fontFamily: 'newsreader',
+        fontSystem: {
+            heading: 'newsreader',
+            body: 'source-sans-3',
+            button: 'work-sans',
+            slot: 'source-sans-3',
+            date: 'newsreader',
+            headingSpacing: 0,
+            subtextSpacing: 1
+        },
         buttonStyle: 'sharp',
         availabilityStyle: 'outline',
         surface: 'warm',
@@ -28,6 +44,15 @@ const STYLE_ARCHETYPES = [
         id: 'minimal',
         label: 'Minimal',
         fontFamily: 'figtree',
+        fontSystem: {
+            heading: 'figtree',
+            body: 'dm-sans',
+            button: 'inter',
+            slot: 'figtree',
+            date: 'figtree',
+            headingSpacing: 0,
+            subtextSpacing: 0.5
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'minimal',
         surface: 'white',
@@ -38,6 +63,15 @@ const STYLE_ARCHETYPES = [
         id: 'night',
         label: 'Night',
         fontFamily: 'space-grotesk',
+        fontSystem: {
+            heading: 'space-grotesk',
+            body: 'dm-sans',
+            button: 'jetbrains-mono',
+            slot: 'space-grotesk',
+            date: 'space-grotesk',
+            headingSpacing: 0,
+            subtextSpacing: 1
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'minimal',
         surface: 'dark',
@@ -48,6 +82,15 @@ const STYLE_ARCHETYPES = [
         id: 'luxe',
         label: 'Luxe',
         fontFamily: 'marcellus',
+        fontSystem: {
+            heading: 'marcellus',
+            body: 'manrope',
+            button: 'cinzel',
+            slot: 'manrope',
+            date: 'marcellus',
+            headingSpacing: 1,
+            subtextSpacing: 2
+        },
         buttonStyle: 'sharp',
         availabilityStyle: 'outline',
         surface: 'cream',
@@ -58,6 +101,15 @@ const STYLE_ARCHETYPES = [
         id: 'tech',
         label: 'Tech',
         fontFamily: 'ibm-plex-mono',
+        fontSystem: {
+            heading: 'space-grotesk',
+            body: 'ibm-plex-sans',
+            button: 'ibm-plex-mono',
+            slot: 'ibm-plex-mono',
+            date: 'ibm-plex-mono',
+            headingSpacing: 0,
+            subtextSpacing: 1.5
+        },
         buttonStyle: 'sharp',
         availabilityStyle: 'solid',
         surface: 'ice',
@@ -68,6 +120,15 @@ const STYLE_ARCHETYPES = [
         id: 'commerce',
         label: 'Commerce',
         fontFamily: 'montserrat',
+        fontSystem: {
+            heading: 'montserrat',
+            body: 'dm-sans',
+            button: 'montserrat',
+            slot: 'montserrat',
+            date: 'montserrat',
+            headingSpacing: 0,
+            subtextSpacing: 0
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'solid',
         surface: 'soft',
@@ -78,6 +139,15 @@ const STYLE_ARCHETYPES = [
         id: 'organic',
         label: 'Organic',
         fontFamily: 'spectral',
+        fontSystem: {
+            heading: 'spectral',
+            body: 'source-sans-3',
+            button: 'figtree',
+            slot: 'source-sans-3',
+            date: 'spectral',
+            headingSpacing: 0,
+            subtextSpacing: 0.5
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'minimal',
         surface: 'wash',
@@ -88,6 +158,15 @@ const STYLE_ARCHETYPES = [
         id: 'bold',
         label: 'Bold',
         fontFamily: 'unbounded',
+        fontSystem: {
+            heading: 'unbounded',
+            body: 'manrope',
+            button: 'space-grotesk',
+            slot: 'space-grotesk',
+            date: 'unbounded',
+            headingSpacing: 0,
+            subtextSpacing: 0
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'solid',
         surface: 'impact',
@@ -98,6 +177,15 @@ const STYLE_ARCHETYPES = [
         id: 'handmade',
         label: 'Handmade',
         fontFamily: 'kalam',
+        fontSystem: {
+            heading: 'bricolage',
+            body: 'nunito-sans',
+            button: 'figtree',
+            slot: 'nunito-sans',
+            date: 'bricolage',
+            headingSpacing: 0,
+            subtextSpacing: 1
+        },
         buttonStyle: 'pill',
         availabilityStyle: 'minimal',
         surface: 'paper',
@@ -258,54 +346,86 @@ const INDUSTRY_THEME_PROFILES = {
         id: 'all-industries',
         label: '',
         recipe: ['modern', 'editorial', 'minimal', 'night', 'luxe', 'tech', 'commerce', 'organic', 'bold', 'handmade'],
-        styleTags: []
+        styleTags: [],
+        consultant: 'Balanced booking pages for broad service businesses.'
     },
     beauty: {
         id: 'beauty',
         label: 'Beauty',
         recipe: ['luxe', 'editorial', 'minimal', 'modern', 'organic', 'handmade', 'commerce', 'night', 'bold', 'tech'],
-        fonts: { modern: 'manrope', minimal: 'figtree', bold: 'syne', tech: 'space-grotesk' },
+        fonts: { modern: 'manrope', minimal: 'figtree', bold: 'syne', tech: 'space-grotesk', luxe: 'marcellus', editorial: 'cormorant' },
+        fontSystems: {
+            luxe: { heading: 'marcellus', body: 'manrope', button: 'cinzel', slot: 'manrope', date: 'marcellus', headingSpacing: 1.5 },
+            editorial: { heading: 'cormorant', body: 'manrope', button: 'manrope', slot: 'manrope', date: 'cormorant' },
+            modern: { heading: 'manrope', body: 'dm-sans', button: 'manrope', slot: 'dm-sans', date: 'manrope' }
+        },
         styleTags: ['luxury', 'editorial'],
-        surfaceByStyle: { bold: 'cream', tech: 'ice' }
+        surfaceByStyle: { bold: 'cream', tech: 'ice' },
+        consultant: 'Soft premium surfaces, elegant type, and polished conversion buttons for beauty bookings.'
     },
     wellness: {
         id: 'wellness',
         label: 'Wellness',
         recipe: ['organic', 'minimal', 'modern', 'editorial', 'handmade', 'luxe', 'commerce', 'tech', 'night', 'bold'],
-        fonts: { modern: 'dm-sans', minimal: 'figtree', tech: 'space-grotesk', bold: 'plus-jakarta' },
+        fonts: { organic: 'spectral', modern: 'dm-sans', minimal: 'figtree', tech: 'space-grotesk', bold: 'plus-jakarta' },
+        fontSystems: {
+            organic: { heading: 'spectral', body: 'source-sans-3', button: 'figtree', slot: 'source-sans-3', date: 'spectral' },
+            minimal: { heading: 'figtree', body: 'dm-sans', button: 'figtree', slot: 'dm-sans', date: 'figtree' }
+        },
         styleTags: ['organic', 'minimal'],
-        buttonStyle: 'pill'
+        buttonStyle: 'pill',
+        consultant: 'Calm type, softer spacing, and low-pressure UI for therapy, spa, yoga, and wellness services.'
     },
     fitness: {
         id: 'fitness',
         label: 'Fitness',
         recipe: ['bold', 'tech', 'night', 'modern', 'commerce', 'minimal', 'editorial', 'luxe', 'organic', 'handmade'],
         fonts: { bold: 'unbounded', tech: 'space-grotesk', modern: 'plus-jakarta', commerce: 'montserrat', minimal: 'ibm-plex-sans' },
+        fontSystems: {
+            bold: { heading: 'unbounded', body: 'manrope', button: 'space-grotesk', slot: 'space-grotesk', date: 'unbounded' },
+            tech: { heading: 'space-grotesk', body: 'ibm-plex-sans', button: 'ibm-plex-mono', slot: 'ibm-plex-mono', date: 'space-grotesk' },
+            minimal: { heading: 'ibm-plex-sans', body: 'inter', button: 'ibm-plex-sans', slot: 'ibm-plex-sans', date: 'ibm-plex-sans' }
+        },
         styleTags: ['bold', 'modern'],
         availabilityStyle: 'solid',
         buttonStyle: 'sharp',
-        surfaceByStyle: { organic: 'impact', handmade: 'soft', luxe: 'dark' }
+        surfaceByStyle: { organic: 'impact', handmade: 'soft', luxe: 'dark' },
+        consultant: 'Sharp, energetic booking pages with strong action contrast and athletic typography.'
     },
     healthcare: {
         id: 'healthcare',
         label: 'Healthcare',
         recipe: ['minimal', 'modern', 'tech', 'organic', 'commerce', 'editorial', 'luxe', 'handmade', 'night', 'bold'],
         fonts: { modern: 'inter', minimal: 'public-sans', tech: 'ibm-plex-sans', organic: 'source-sans-3' },
+        fontSystems: {
+            minimal: { heading: 'public-sans', body: 'source-sans-3', button: 'public-sans', slot: 'source-sans-3', date: 'public-sans' },
+            modern: { heading: 'inter', body: 'source-sans-3', button: 'inter', slot: 'source-sans-3', date: 'inter' }
+        },
         styleTags: ['minimal', 'modern'],
-        availabilityStyle: 'solid'
+        availabilityStyle: 'solid',
+        consultant: 'Clear, trustworthy layouts that prioritize readability, confidence, and low friction.'
     },
     consulting: {
         id: 'consulting',
         label: 'Consulting',
         recipe: ['modern', 'minimal', 'tech', 'editorial', 'luxe', 'commerce', 'night', 'organic', 'bold', 'handmade'],
         fonts: { modern: 'plus-jakarta', minimal: 'inter', editorial: 'newsreader', tech: 'ibm-plex-mono' },
-        styleTags: ['modern', 'minimal']
+        fontSystems: {
+            modern: { heading: 'plus-jakarta', body: 'inter', button: 'plus-jakarta', slot: 'inter', date: 'plus-jakarta' },
+            editorial: { heading: 'newsreader', body: 'source-sans-3', button: 'inter', slot: 'source-sans-3', date: 'newsreader' }
+        },
+        styleTags: ['modern', 'minimal'],
+        consultant: 'Premium, direct, professional pages for advisors, coaches, and high-trust services.'
     },
     creative: {
         id: 'creative',
         label: 'Creative',
         recipe: ['editorial', 'bold', 'modern', 'luxe', 'handmade', 'tech', 'night', 'minimal', 'organic', 'commerce'],
         fonts: { editorial: 'newsreader', bold: 'syne', modern: 'space-grotesk', handmade: 'kalam' },
+        fontSystems: {
+            editorial: { heading: 'newsreader', body: 'manrope', button: 'space-grotesk', slot: 'manrope', date: 'newsreader' },
+            bold: { heading: 'syne', body: 'manrope', button: 'space-grotesk', slot: 'space-grotesk', date: 'syne' }
+        },
         styleTags: ['editorial', 'bold']
     },
     events: {
@@ -440,14 +560,44 @@ const getIndustryProfile = (industryId = 'all-industries') => (
     INDUSTRY_THEME_PROFILES[industryId] || INDUSTRY_THEME_PROFILES['all-industries']
 );
 
+const STYLE_ALIASES = {
+    luxury: 'luxe',
+    luxe: 'luxe',
+    all: 'modern',
+    'all-styles': 'modern'
+};
+
+const canonicalStyleId = (styleId = 'modern') => STYLE_ALIASES[styleId] || styleId;
+
 const getStyleArchetype = (styleId) => (
-    STYLE_ARCHETYPES.find(archetype => archetype.id === styleId) || STYLE_ARCHETYPES[0]
+    STYLE_ARCHETYPES.find(archetype => archetype.id === canonicalStyleId(styleId)) || STYLE_ARCHETYPES[0]
 );
 
-const getIndustryRecipe = (profile, styleId = 'all-styles') => {
-    const selectedStyle = styleId && styleId !== 'all-styles' ? [styleId] : [];
+const getIndustryRecipe = (profile, styleId = 'all-styles', detectedStyle = '') => {
+    const selectedStyle = styleId && styleId !== 'all-styles'
+        ? [canonicalStyleId(styleId)]
+        : detectedStyle
+            ? [canonicalStyleId(detectedStyle)]
+            : [];
     const orderedIds = unique([...selectedStyle, ...(profile.recipe || []), ...STYLE_ARCHETYPES.map(archetype => archetype.id)]);
     return orderedIds.slice(0, 10).map(getStyleArchetype);
+};
+
+const getFontSystem = (profile, archetype) => {
+    const profileSystem = profile.fontSystems?.[archetype.id] || profile.fontSystems?.[canonicalStyleId(archetype.id)];
+    const baseSystem = archetype.fontSystem || {};
+    const profileFont = profile.fonts?.[archetype.id] || profile.fonts?.[canonicalStyleId(archetype.id)];
+    const fallback = profileFont || archetype.fontFamily || 'inter';
+
+    return {
+        heading: profileSystem?.heading || baseSystem.heading || fallback,
+        body: profileSystem?.body || baseSystem.body || fallback,
+        button: profileSystem?.button || baseSystem.button || fallback,
+        slot: profileSystem?.slot || baseSystem.slot || profileSystem?.body || baseSystem.body || fallback,
+        date: profileSystem?.date || baseSystem.date || profileSystem?.heading || baseSystem.heading || fallback,
+        headingSpacing: profileSystem?.headingSpacing ?? baseSystem.headingSpacing ?? 0,
+        subtextSpacing: profileSystem?.subtextSpacing ?? baseSystem.subtextSpacing ?? 0
+    };
 };
 
 const createPaletteVariant = (collection, variant) => {
@@ -545,6 +695,7 @@ const createTheme = (collection, archetype, options = {}) => {
     const surface = options.forceDark ? 'dark' : (profile.surfaceByStyle?.[archetype.id] || archetype.surface);
     const availabilityStyle = profile.availabilityByStyle?.[archetype.id] || profile.availabilityStyle || archetype.availabilityStyle;
     const buttonStyle = profile.buttonByStyle?.[archetype.id] || profile.buttonStyle || archetype.buttonStyle;
+    const fontSystem = getFontSystem(profile, archetype);
     const isDark = surface === 'dark';
     const backgroundColor = resolveSurface(collection, archetype, profile, options.forceDark);
     const headingColor = isDark ? collection.darkHeading : collection.heading;
@@ -577,8 +728,18 @@ const createTheme = (collection, archetype, options = {}) => {
         dateActiveTextColor: availabilityStyle === 'minimal' ? collection.accent : headingColor,
         buttonTextColor: bestTextFor(collection.accent),
         buttonStyle,
-        fontFamily: profile.fonts?.[archetype.id] || archetype.fontFamily,
+        fontFamily: fontSystem.body,
+        headingFontFamily: fontSystem.heading,
+        bodyFontFamily: fontSystem.body,
+        buttonFontFamily: fontSystem.button,
+        slotFontFamily: fontSystem.slot,
+        dateFontFamily: fontSystem.date,
+        headingLetterSpacing: fontSystem.headingSpacing,
+        subtextLetterSpacing: fontSystem.subtextSpacing,
         availabilityStyle,
+        dateStyle: profile.dateByStyle?.[archetype.id] || availabilityStyle,
+        timeSlotStyle: profile.timeByStyle?.[archetype.id] || availabilityStyle,
+        actionButtonStyle: profile.actionByStyle?.[archetype.id] || 'solid',
         palette: collection.id,
         styleTags: unique([...archetype.styles, ...(profile.styleTags || [])]),
         industryTags: unique([
@@ -586,6 +747,7 @@ const createTheme = (collection, archetype, options = {}) => {
             ...(archetype.industries || []),
             ...(collection.industries || []).slice(0, 2)
         ]),
+        consultantNote: profile.consultant || '',
         nativeAccent: false
     };
 };
@@ -697,14 +859,15 @@ export const generateThemeCollection = ({
     industry = 'all-industries',
     palette = 'all',
     style = 'all-styles',
-    detectedPalette = ''
+    detectedPalette = '',
+    detectedStyle = ''
 } = {}) => {
-    const cacheKey = `${industry}|${palette}|${style}|${palette === 'all' ? detectedPalette : ''}`;
+    const cacheKey = `${industry}|${palette}|${style}|${palette === 'all' ? detectedPalette : ''}|${style === 'all-styles' ? detectedStyle : ''}`;
     const cached = themeCollectionCache.get(cacheKey);
     if (cached) return cached;
 
     const profile = getIndustryProfile(industry);
-    const recipe = getIndustryRecipe(profile, style);
+    const recipe = getIndustryRecipe(profile, style, detectedStyle);
     const palettePlan = getPaletteCollections(palette);
     const collections = sortCollectionsByDetectedPalette(palettePlan.collections, palette === 'all' ? detectedPalette : '');
     const generated = collections.flatMap(collection => (
@@ -729,3 +892,4 @@ export const generateThemeCollection = ({
 };
 
 export const PRESET_THEMES = generateThemeCollection();
+

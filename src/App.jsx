@@ -27,6 +27,14 @@ const BookingFlow = lazy(() => (
   import('./components/BookingFlow').then((module) => ({ default: module.BookingFlow }))
 ));
 
+const ClientPortal = lazy(() => (
+  import('./components/ClientPortal').then((module) => ({ default: module.ClientPortal }))
+));
+
+const WorkspaceInbox = lazy(() => (
+  import('./components/WorkspaceInbox').then((module) => ({ default: module.WorkspaceInbox }))
+));
+
 const BrandLoader = ({ label = 'Loading workspace', variant = 'dark' }) => (
   <div className="text-center">
     <div className="brand-loader-orbit mx-auto mb-6">
@@ -74,7 +82,7 @@ const legalPages = {
     title: 'Simple product terms',
     body: [
       'Use Build A Booking to create booking pages, manage requests, and communicate with clients responsibly.',
-      'Owners are responsible for accurate business information, client consent, staff access, and any messages sent through connected email or WhatsApp providers.',
+      'Owners are responsible for accurate business information, client consent, staff access, and any messages sent through connected communication providers.',
       'Before paid launch, this section should be replaced with the final legal terms for subscriptions, cancellations, refunds, acceptable use, and support.'
     ]
   },
@@ -187,6 +195,10 @@ const themePaletteLabel = (paletteId) => (
   THEME_FILTER_GROUPS.find(group => group.id === 'palette')?.filters.find(filter => filter.id === paletteId)?.name || 'brand'
 );
 
+const themeStyleLabel = (styleId) => (
+  THEME_FILTER_GROUPS.find(group => group.id === 'style')?.filters.find(filter => filter.id === styleId)?.name || 'Modern'
+);
+
 const rgbToHsl = (red, green, blue) => {
   let r = red / 255;
   let g = green / 255;
@@ -220,9 +232,19 @@ const paletteIdFromHsl = ({ hue, saturation, lightness }) => {
   return 'pink';
 };
 
-const detectPaletteFromImageSource = (source) => new Promise((resolve) => {
+const inferStyleFromBrandSignal = ({ palette, dominantHsl, neutralShare, darkShare, lightShare, vividShare, contrastRange }) => {
+  if (neutralShare > 0.78 && contrastRange > 120) return darkShare > 0.45 ? 'luxury' : 'minimal';
+  if (darkShare > 0.52 && vividShare > 0.12) return palette === 'blue' || palette === 'purple' ? 'tech' : 'night';
+  if (vividShare > 0.42 && dominantHsl?.saturation > 58) return palette === 'yellow' || palette === 'orange' ? 'commerce' : 'bold';
+  if (['green', 'yellow'].includes(palette) && dominantHsl?.saturation < 58) return 'organic';
+  if (['pink', 'red', 'purple'].includes(palette) && lightShare > 0.42) return 'luxury';
+  if (['blue', 'neutral'].includes(palette) && neutralShare > 0.45) return 'modern';
+  return 'modern';
+};
+
+const analyzePaletteFromImageSource = (source) => new Promise((resolve) => {
   if (!source || typeof window === 'undefined') {
-    resolve('');
+    resolve({ palette: '', style: '', confidence: 0, colors: [] });
     return;
   }
 
@@ -231,13 +253,22 @@ const detectPaletteFromImageSource = (source) => new Promise((resolve) => {
   image.onload = () => {
     try {
       const canvas = document.createElement('canvas');
-      const size = 56;
+      const size = 96;
       canvas.width = size;
       canvas.height = size;
       const context = canvas.getContext('2d', { willReadFrequently: true });
       context.drawImage(image, 0, 0, size, size);
       const pixels = context.getImageData(0, 0, size, size).data;
       const buckets = {};
+      const colorSamples = [];
+      let neutralScore = 0;
+      let colorScore = 0;
+      let darkScore = 0;
+      let lightScore = 0;
+      let vividScore = 0;
+      let minLuma = 255;
+      let maxLuma = 0;
+      let sampled = 0;
 
       for (let index = 0; index < pixels.length; index += 16) {
         const alpha = pixels[index + 3];
@@ -245,20 +276,59 @@ const detectPaletteFromImageSource = (source) => new Promise((resolve) => {
         const red = pixels[index];
         const green = pixels[index + 1];
         const blue = pixels[index + 2];
+        const luma = (red * 0.299) + (green * 0.587) + (blue * 0.114);
         const hsl = rgbToHsl(red, green, blue);
-        if (hsl.lightness < 8 || hsl.lightness > 96) continue;
+        if (hsl.lightness < 4 || hsl.lightness > 98) continue;
         const palette = paletteIdFromHsl(hsl);
-        const weight = Math.max(1, hsl.saturation) * (palette === 'neutral' ? 0.3 : 1);
+        const colorWeight = Math.max(1, hsl.saturation) * (palette === 'neutral' ? 0.18 : 1);
+        const contrastWeight = Math.abs(50 - hsl.lightness) / 50;
+        const weight = colorWeight * (1 + contrastWeight * 0.45);
         buckets[palette] = (buckets[palette] || 0) + weight;
+        sampled += 1;
+        minLuma = Math.min(minLuma, luma);
+        maxLuma = Math.max(maxLuma, luma);
+        if (palette === 'neutral') neutralScore += weight;
+        else colorScore += weight;
+        if (hsl.lightness < 26) darkScore += weight;
+        if (hsl.lightness > 76) lightScore += weight;
+        if (hsl.saturation > 52 && hsl.lightness > 18 && hsl.lightness < 82) vividScore += weight;
+        if (palette !== 'neutral') {
+          colorSamples.push({
+            palette,
+            hsl,
+            weight,
+            hex: `#${[red, green, blue].map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()}`
+          });
+        }
       }
 
-      const [winner] = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0] || [];
-      resolve(winner || 'neutral');
+      const sortedBuckets = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
+      const [winner, winnerScore = 0] = sortedBuckets[0] || [];
+      const totalScore = Object.values(buckets).reduce((sum, score) => sum + score, 0) || 1;
+      const dominantSample = colorSamples.sort((a, b) => b.weight - a.weight)[0];
+      const palette = winner || (sampled ? 'neutral' : '');
+      const signal = {
+        palette,
+        style: palette ? inferStyleFromBrandSignal({
+          palette,
+          dominantHsl: dominantSample?.hsl,
+          neutralShare: neutralScore / totalScore,
+          darkShare: darkScore / totalScore,
+          lightShare: lightScore / totalScore,
+          vividShare: vividScore / Math.max(colorScore || totalScore, 1),
+          contrastRange: maxLuma - minLuma
+        }) : '',
+        confidence: Math.min(1, winnerScore / totalScore),
+        colors: colorSamples.slice(0, 4).map(sample => sample.hex),
+        neutralShare: neutralScore / totalScore,
+        contrastRange: maxLuma - minLuma
+      };
+      resolve(signal);
     } catch (error) {
-      resolve('');
+      resolve({ palette: '', style: '', confidence: 0, colors: [] });
     }
   };
-  image.onerror = () => resolve('');
+  image.onerror = () => resolve({ palette: '', style: '', confidence: 0, colors: [] });
   image.src = source;
 });
 
@@ -280,29 +350,12 @@ const getEditorPreviewFrame = (device, compact) => {
 
 const emailMessageKeys = ['confirmed', 'review', 'waitlist', 'runningLate'];
 
-const createDefaultWhatsAppConfig = () => ({
-  enabled: false,
-  clientMessages: false,
-  notifyOwner: true,
-  notifyStaff: false,
-  ownerNumber: '',
-  businessPhoneNumber: '',
-  phoneNumberId: '',
-  businessAccountId: '',
-  templateLanguage: 'en_US',
-  bookingRequestTemplate: 'booking_request_alert',
-  clientConfirmationTemplate: 'booking_confirmation',
-  clientWaitlistTemplate: 'booking_waitlist_update',
-  staffRecipients: []
-});
-
 const createDefaultCommunications = () => ({
   confirmed: { active: true, text: "Your booking request is confirmed! We look forward to seeing you." },
   review: { active: true, text: "Hey! Thanks for coming in today. We'd love it if you could leave a quick review." },
   waitlist: { active: true, text: "A spot just opened up for you! Tap here to claim it." },
   runningLate: { active: true, text: "Running 10-15 mins behind. See you soon!" },
-  emailProvider: createDefaultEmailConfig(),
-  whatsapp: createDefaultWhatsAppConfig()
+  emailProvider: createDefaultEmailConfig()
 });
 
 const normalizeCommunications = (communications = {}) => {
@@ -321,13 +374,6 @@ const normalizeCommunications = (communications = {}) => {
         ...(defaults.emailProvider?.templates || {}),
         ...(communications.emailProvider?.templates || {})
       }
-    },
-    whatsapp: {
-      ...defaults.whatsapp,
-      ...(communications.whatsapp || {}),
-      staffRecipients: Array.isArray(communications.whatsapp?.staffRecipients)
-        ? communications.whatsapp.staffRecipients
-        : []
     }
   };
 };
@@ -853,8 +899,9 @@ const mergeStateIfChanged = (current, incoming) => {
 
 const normalizeWorkspaceRoute = (route = {}, fallback = {}) => {
   const source = route || {};
-  const nextView = source.view === 'dashboard' || source.return === 'dashboard' || source.returnTarget === 'dashboard'
-    ? 'dashboard'
+  const requestedView = source.view || source.return || source.returnTarget;
+  const nextView = ['dashboard', 'client', 'landing'].includes(requestedView)
+    ? requestedView
     : fallback.view || 'landing';
   const nextActiveTab = workspaceTabIds.includes(source.activeTab || source.tab)
     ? (source.activeTab || source.tab)
@@ -875,16 +922,21 @@ const getWorkspaceRouteFromUrl = () => {
   if (typeof window === 'undefined') return null;
   const url = new URL(window.location.href);
   const dashboardHashMatch = url.hash.match(/^#\/dashboard(?:\/([a-z-]+))?/i);
+  const clientHashMatch = url.hash.match(/^#\/client(?:\/portal)?/i);
   const returnTarget = url.searchParams.get('return');
   const tabParam = url.searchParams.get('tab');
   const editorTabParam = url.searchParams.get('editorTab');
 
   if (url.searchParams.get('auth') === 'google') {
     return normalizeWorkspaceRoute({
-      view: returnTarget === 'dashboard' ? 'dashboard' : 'landing',
+      view: ['dashboard', 'client'].includes(returnTarget) ? returnTarget : 'landing',
       activeTab: tabParam,
       editorTab: editorTabParam
     }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  }
+
+  if (clientHashMatch) {
+    return normalizeWorkspaceRoute({ view: 'client' }, { view: 'client', activeTab: 'overview', editorTab: 'themes' });
   }
 
   if (dashboardHashMatch) {
@@ -954,7 +1006,7 @@ const getGoogleAuthIntent = () => {
   const url = new URL(window.location.href);
   if (url.searchParams.get('auth') !== 'google') return null;
   return normalizeWorkspaceRoute({
-    view: url.searchParams.get('return') === 'dashboard' ? 'dashboard' : 'landing',
+    view: ['dashboard', 'client'].includes(url.searchParams.get('return')) ? url.searchParams.get('return') : 'landing',
     activeTab: url.searchParams.get('tab'),
     editorTab: url.searchParams.get('editorTab')
   }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
@@ -1015,6 +1067,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [view, setView] = useState(initialWorkspaceRoute.view);
             const [loading, setLoading] = useState(true);
             const [authMode, setAuthMode] = useState('signin');
+            const [authPersona, setAuthPersona] = useState('owner');
             const [authForm, setAuthForm] = useState({ email: '', password: '' });
             const [authError, setAuthError] = useState('');
             const [authPanelOpen, setAuthPanelOpen] = useState(false);
@@ -1039,6 +1092,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [themeBatchLoading, setThemeBatchLoading] = useState(false);
             const [themeTemplateName, setThemeTemplateName] = useState('');
             const [detectedThemePalette, setDetectedThemePalette] = useState('');
+            const [detectedThemeStyle, setDetectedThemeStyle] = useState('');
             const [paletteDetecting, setPaletteDetecting] = useState(false);
             const [device, setDevice] = useState('desktop'); 
             const [previewKey, setPreviewKey] = useState(0); 
@@ -1227,7 +1281,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                 detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
                 availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
                 schedule: {},
-                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, faqEnabled: false, socialLinks: false, whatsappUpdates: false, location: '', faqs: [] },
+                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
                 themeTemplates: [],
@@ -1350,7 +1404,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const showBookingExample = visibleBookings.length === 0 && bookingFilter === 'all';
             const bookingRows = showBookingExample ? [exampleBooking] : filteredBookings;
 
-            const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers WhatsApp', 'High Value', 'No-show Risk'];
+            const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers Chat', 'High Value', 'No-show Risk'];
             const buildClientKey = (name, phone) => {
                 const phoneKey = (phone || '').replace(/\D/g, '');
                 const nameKey = (name || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -1368,8 +1422,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                         email: booking.clientEmail || '',
                         birthday: booking.clientBirthday || '',
                         notes: booking.clientNote || '',
-                        whatsappOptIn: Boolean(booking.clientWhatsappOptIn),
-                        whatsappNumber: booking.clientWhatsappNumber || '',
                         source: 'booking',
                         bookings: []
                     };
@@ -1378,8 +1430,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                     existing.email = existing.email || booking.clientEmail || '';
                     existing.birthday = existing.birthday || booking.clientBirthday || '';
                     existing.notes = existing.notes || booking.clientNote || '';
-                    existing.whatsappOptIn = existing.whatsappOptIn || Boolean(booking.clientWhatsappOptIn);
-                    existing.whatsappNumber = existing.whatsappNumber || booking.clientWhatsappNumber || '';
                     existing.bookings.push(booking);
                     clients.set(id, existing);
                 });
@@ -1399,8 +1449,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                         email: client.email || history[0]?.clientEmail || '',
                         birthday: client.birthday || history[0]?.clientBirthday || '',
                         notes: client.notes || history.find(booking => booking.clientNote)?.clientNote || '',
-                        whatsappOptIn: Boolean(client.whatsappOptIn || history.some(booking => booking.clientWhatsappOptIn)),
-                        whatsappNumber: client.whatsappNumber || history.find(booking => booking.clientWhatsappNumber)?.clientWhatsappNumber || '',
                         bookings: history,
                         bookingCount,
                         lastBooking: history[0] || null,
@@ -1678,7 +1726,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                 { id: 'profile', icon: User, label: 'Profile' }
             ];
             const normalizedComms = normalizeCommunications(communications);
-            const whatsappConfig = normalizedComms.whatsapp;
             const collectsClientPhone = settings.features?.collectClientPhone !== false;
             const collectsClientEmail = settings.features?.collectClientEmail !== false;
             const collectsClientNotes = Boolean(settings.features?.collectClientNotes);
@@ -1689,8 +1736,9 @@ const signInWithNativeGoogle = async (authInstance) => {
                 industry: themeFilters.industry || 'all-industries',
                 palette: themeFilters.palette || 'all',
                 style: themeFilters.style || 'all-styles',
-                detectedPalette: detectedThemePalette
-            }), [themeFilters.industry, themeFilters.palette, themeFilters.style, detectedThemePalette]);
+                detectedPalette: detectedThemePalette,
+                detectedStyle: detectedThemeStyle
+            }), [themeFilters.industry, themeFilters.palette, themeFilters.style, detectedThemePalette, detectedThemeStyle]);
 
             const industryThemeFilterGroup = useMemo(() => (
                 THEME_FILTER_GROUPS.find(group => group.id === 'industry') || THEME_FILTER_GROUPS[0]
@@ -1701,7 +1749,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const styleThemeFilterGroup = useMemo(() => (
                 THEME_FILTER_GROUPS.find(group => group.id === 'style') || THEME_FILTER_GROUPS[0]
             ), []);
-            const activeThemeFilterId = `${themeGenerationInputs.industry}-${themeGenerationInputs.palette}-${themeGenerationInputs.style}`;
+            const activeThemeFilterId = `${themeGenerationInputs.industry}-${themeGenerationInputs.palette}-${themeGenerationInputs.style}-${themeGenerationInputs.detectedPalette || 'none'}-${themeGenerationInputs.detectedStyle || 'none'}`;
             const shouldRunThemeEngine = activeTab === 'editor' && editorTab === 'themes';
 
             const visibleThemes = useMemo(() => {
@@ -1725,12 +1773,15 @@ const signInWithNativeGoogle = async (authInstance) => {
             const selectedIndustryDescriptor = selectedIndustryFilter.id === 'all-industries' ? 'universal' : selectedIndustryFilter.name.toLowerCase();
             const selectedPalettePhrase = selectedPaletteFilter.id === 'all' ? 'a full color range' : `${selectedPaletteFilter.name.toLowerCase()} colors`;
             const selectedStylePhrase = selectedStyleFilter.id === 'all-styles' ? 'smart design defaults' : `${selectedStyleFilter.name.toLowerCase()} styling`;
+            const brandSignalPhrase = detectedThemePalette
+                ? `${themePaletteLabel(detectedThemePalette)}${detectedThemeStyle ? ` + ${themeStyleLabel(detectedThemeStyle)}` : ''} brand signal`
+                : 'your uploaded brand media';
             const themeBriefSupportText = selectedIndustryFilter.id === 'all-industries'
-                ? 'Pick a business type, then refine the color and style.'
-                : `Explore ${selectedPalettePhrase} with ${selectedStylePhrase}.`;
+                ? 'Start with the business type so the engine can choose the right tone, font system, and booking-page rhythm.'
+                : `The engine builds ${selectedPalettePhrase} with ${selectedStylePhrase}, then tunes fonts, surfaces, buttons, and spacing for ${selectedIndustryDescriptor}.`;
             const themeBriefResultLabel = selectedPaletteFilter.id === 'all'
-                ? `${selectedIndustryDescriptor} looks across the full palette`
-                : `${selectedIndustryDescriptor} looks in ${selectedPaletteFilter.name}`;
+                ? `${selectedIndustryDescriptor} consultant picks across the full palette`
+                : `${selectedIndustryDescriptor} consultant picks in ${selectedPaletteFilter.name}`;
 
             const visibleThemeCards = useMemo(() => (
                 visibleThemes.slice(0, themeDisplayLimit)
@@ -1789,11 +1840,15 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                 if (!source) {
                     setDetectedThemePalette('');
+                    setDetectedThemeStyle('');
                     return () => { cancelled = true; };
                 }
 
-                detectPaletteFromImageSource(source).then((palette) => {
-                    if (!cancelled) setDetectedThemePalette(palette || '');
+                analyzePaletteFromImageSource(source).then((signal) => {
+                    if (!cancelled) {
+                        setDetectedThemePalette(signal.palette || '');
+                        setDetectedThemeStyle(signal.style || '');
+                    }
                 });
 
                 return () => { cancelled = true; };
@@ -1807,17 +1862,22 @@ const signInWithNativeGoogle = async (authInstance) => {
                 }
 
                 setPaletteDetecting(true);
-                const detected = await detectPaletteFromImageSource(source);
+                const detected = await analyzePaletteFromImageSource(source);
                 setPaletteDetecting(false);
 
-                if (!detected) {
+                if (!detected.palette) {
                     showToast('I could not read enough color from that image yet.');
                     return;
                 }
 
-                setDetectedThemePalette(detected);
-                setThemeFilters(prev => ({ ...prev, palette: detected }));
-                showToast(`${themePaletteLabel(detected)} palette detected from your brand media.`);
+                setDetectedThemePalette(detected.palette);
+                setDetectedThemeStyle(detected.style || '');
+                setThemeFilters(prev => ({
+                    ...prev,
+                    palette: detected.palette,
+                    style: prev.style === 'all-styles' && detected.style ? detected.style : prev.style
+                }));
+                showToast(`${themePaletteLabel(detected.palette)} palette${detected.style ? ` and ${themeStyleLabel(detected.style)} styling` : ''} detected from your brand media.`);
             };
 
             const backendSkin = settings.backendSkin || {};
@@ -2069,7 +2129,11 @@ const signInWithNativeGoogle = async (authInstance) => {
                 if (publicSlug || loading) return;
                 const route = saveWorkspaceRoute({ view, activeTab, editorTab });
                 if (typeof window === 'undefined' || window.location.search.includes('auth=google')) return;
-                const nextHash = route.view === 'dashboard' ? `#/dashboard/${route.activeTab}` : '';
+                const nextHash = route.view === 'dashboard'
+                    ? `#/dashboard/${route.activeTab}`
+                    : route.view === 'client'
+                        ? '#/client'
+                        : '';
                 if (window.location.hash !== nextHash) {
                     window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}${nextHash}`);
                 }
@@ -2116,6 +2180,12 @@ const signInWithNativeGoogle = async (authInstance) => {
                 activeTab: view === 'dashboard' ? activeTab : 'overview',
                 editorTab
             }, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+
+            const getAuthReturnRouteForPersona = (persona = authPersona) => (
+                persona === 'client'
+                    ? normalizeWorkspaceRoute({ view: 'client' }, { view: 'client', activeTab: 'overview', editorTab: 'themes' })
+                    : getCurrentAuthReturnRoute()
+            );
 
             const applyAuthPersistence = async (remember = keepLoggedIn) => {
                 safeLocalSet(rememberLoginStorageKey, remember ? 'true' : 'false');
@@ -2263,7 +2333,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                         setGuestMode(false);
                         safeLocalRemove(guestModeStorageKey);
                         const authReturnState = getAuthReturnState();
-                        if (authReturnState?.view === 'dashboard') {
+                        if (authReturnState?.view === 'dashboard' || authReturnState?.view === 'client') {
                             applyWorkspaceRoute(authReturnState);
                             clearAuthReturnState();
                             setAuthPanelOpen(false);
@@ -2695,56 +2765,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                 await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'communications'), normalizedComms);
             };
 
-            const handleWhatsAppConfigChange = (key, value) => {
-                setCommunications(prev => {
-                    const normalized = normalizeCommunications(prev);
-                    return {
-                        ...normalized,
-                        whatsapp: {
-                            ...normalized.whatsapp,
-                            [key]: value
-                        }
-                    };
-                });
-            };
-
-            const updateWhatsAppStaffRecipient = (index, field, value) => {
-                const normalized = normalizeCommunications(communications);
-                const recipients = [...(normalized.whatsapp.staffRecipients || [])];
-                recipients[index] = { ...(recipients[index] || {}), [field]: value };
-                handleWhatsAppConfigChange('staffRecipients', recipients);
-            };
-
-            const addWhatsAppStaffRecipient = () => {
-                const normalized = normalizeCommunications(communications);
-                handleWhatsAppConfigChange('staffRecipients', [
-                    ...(normalized.whatsapp.staffRecipients || []),
-                    { id: `manual-${Date.now()}`, name: '', number: '' }
-                ]);
-            };
-
-            const importTeamWhatsAppRecipients = () => {
-                const normalized = normalizeCommunications(communications);
-                const existingRecipients = normalized.whatsapp.staffRecipients || [];
-                const imported = staffList
-                    .filter(staff => staff.id !== 'owner')
-                    .map(staff => {
-                        const existing = existingRecipients.find(recipient => recipient.id === staff.id || recipient.name === staff.name);
-                        return {
-                            id: staff.id,
-                            name: staff.name || staff.email || 'Team member',
-                            number: existing?.number || staff.whatsappNumber || ''
-                        };
-                    });
-                handleWhatsAppConfigChange('staffRecipients', imported.length ? imported : existingRecipients);
-                showToast(imported.length ? "Team recipients loaded. Add their WhatsApp numbers." : "Add staff first, then import them here.");
-            };
-
-            const removeWhatsAppStaffRecipient = (index) => {
-                const normalized = normalizeCommunications(communications);
-                handleWhatsAppConfigChange('staffRecipients', (normalized.whatsapp.staffRecipients || []).filter((_, idx) => idx !== index));
-            };
-
             const applyTheme = (themeId) => {
                 const theme = visibleThemes.find(t => t.id === themeId) || PRESET_THEMES.find(t => t.id === themeId);
                 if(theme) {
@@ -2755,7 +2775,13 @@ const signInWithNativeGoogle = async (authInstance) => {
                         nativeAccent: Boolean(theme.nativeAccent),
                         dateStyle: theme.dateStyle || theme.availabilityStyle || prev.dateStyle || 'minimal',
                         timeSlotStyle: theme.timeSlotStyle || theme.availabilityStyle || prev.timeSlotStyle || 'minimal',
-                        headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '' // reset overrides on theme change
+                        headingFontFamily: theme.headingFontFamily || '',
+                        bodyFontFamily: theme.bodyFontFamily || '',
+                        buttonFontFamily: theme.buttonFontFamily || '',
+                        slotFontFamily: theme.slotFontFamily || '',
+                        dateFontFamily: theme.dateFontFamily || '',
+                        headingLetterSpacing: theme.headingLetterSpacing ?? prev.headingLetterSpacing,
+                        subtextLetterSpacing: theme.subtextLetterSpacing ?? prev.subtextLetterSpacing
                     }));
                 }
             };
@@ -2824,9 +2850,6 @@ const signInWithNativeGoogle = async (authInstance) => {
             const handleFeatureChange = (key, value) => {
                 setSettings(prev => {
                     const nextFeatures = { ...prev.features, [key]: value };
-                    if (key === 'collectClientPhone' && value === false) {
-                        nextFeatures.whatsappUpdates = false;
-                    }
                     return { ...prev, features: nextFeatures };
                 });
             };
@@ -2907,6 +2930,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                     return;
                 }
                 setAuthMode('signin');
+                setAuthPersona('owner');
                 setAuthPanelOpen(true);
                 setAuthError('');
             };
@@ -2915,16 +2939,24 @@ const signInWithNativeGoogle = async (authInstance) => {
                     setView('dashboard');
                     return;
                 }
-                openAuthPanel('signup');
+                openAuthPanel('signup', 'owner');
             };
-            const openAuthPanel = (mode = 'signin') => {
+            const openAuthPanel = (mode = 'signin', persona = 'owner') => {
                 setAuthMode(mode);
+                setAuthPersona(persona);
                 setAuthError('');
                 setAuthPanelOpen(true);
             };
+            const openClientPortal = () => {
+                if (!isFirebaseConfigured || user) {
+                    applyWorkspaceRoute({ view: 'client' });
+                    return;
+                }
+                openAuthPanel('signin', 'client');
+            };
             const openBillingAction = async (action = 'checkout') => {
                 if (!user || isGuestWorkspace) {
-                    openAuthPanel('signup');
+                    openAuthPanel('signup', 'owner');
                     showToast('Create an account first so billing can attach to your workspace.');
                     return;
                 }
@@ -2972,7 +3004,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                     setGuestMode(false);
                     safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
-                    applyWorkspaceRoute(getCurrentAuthReturnRoute());
+                    applyWorkspaceRoute(getAuthReturnRouteForPersona());
                     showToast(authMode === 'signup' ? 'Account created' : 'Signed in');
                 } catch (error) {
                     console.error(error);
@@ -2989,7 +3021,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                 setAuthError('');
                 setAuthBusy(true);
                 try {
-                    const returnRoute = getCurrentAuthReturnRoute();
+                    const returnRoute = getAuthReturnRouteForPersona();
                     if (isNativeAppRuntime) {
                         await applyAuthPersistence(keepLoggedIn);
                         await signInWithNativeGoogle(auth);
@@ -3018,7 +3050,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                     console.error(error);
                     if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported'].includes(error?.code)) {
                         try {
-                            await startGoogleRedirect(getCurrentAuthReturnRoute());
+                            await startGoogleRedirect(getAuthReturnRouteForPersona());
                             return;
                         } catch (redirectError) {
                             console.error(redirectError);
@@ -3077,11 +3109,9 @@ const signInWithNativeGoogle = async (authInstance) => {
                     clientEmail: formData.email || '',
                     clientBirthday: formData.birthday || '',
                     clientNote: formData.note || '',
-                    clientWhatsappOptIn: Boolean(formData.whatsappOptIn),
-                    clientWhatsappNumber: formData.whatsappOptIn ? formData.phone : '',
                     notificationChannels: {
                         email: Boolean(formData.email),
-                        whatsapp: Boolean(formData.whatsappOptIn)
+                        portal: Boolean(formData.email)
                     },
                     date,
                     dateKey: dateKey || null,
@@ -3119,11 +3149,9 @@ const signInWithNativeGoogle = async (authInstance) => {
                     clientEmail: formData.email || '',
                     clientBirthday: formData.birthday || '',
                     clientNote: formData.note || '',
-                    clientWhatsappOptIn: Boolean(formData.whatsappOptIn),
-                    clientWhatsappNumber: formData.whatsappOptIn ? formData.phone : '',
                     notificationChannels: {
                         email: Boolean(formData.email),
-                        whatsapp: Boolean(formData.whatsappOptIn)
+                        portal: Boolean(formData.email)
                     },
                     date,
                     dateKey: dateKey || null,
@@ -3149,7 +3177,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     clientEmail: bookingRecord.clientEmail,
                                     clientBirthday: bookingRecord.clientBirthday,
                                     clientNote: bookingRecord.clientNote,
-                                    clientWhatsappOptIn: bookingRecord.clientWhatsappOptIn,
                                     date: bookingRecord.date,
                                     dateKey: bookingRecord.dateKey,
                                     time: bookingRecord.time,
@@ -3207,11 +3234,50 @@ const signInWithNativeGoogle = async (authInstance) => {
             };
 
             const updateBooking = async (bookingId, updates) => {
+                const existingBooking = visibleBookings.find(booking => booking.id === bookingId);
                 if (!isFirebaseConfigured || !user) {
                     setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
                     return;
                 }
-                try { await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates); } 
+                try {
+                    await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates);
+                    const threadId = existingBooking?.threadId;
+                    const emailKey = normalizeEmail(existingBooking?.clientEmail);
+                    const portalUpdates = {
+                        ...updates,
+                        updatedAt: FirebaseSDK.serverTimestamp()
+                    };
+                    if (emailKey) {
+                        FirebaseSDK.setDoc(
+                            FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'bookings', bookingId),
+                            {
+                                bookingId,
+                                threadId: threadId || '',
+                                ownerId: workspaceOwnerId,
+                                clientEmail: emailKey,
+                                clientName: existingBooking?.clientName || '',
+                                workspaceSlug: existingBooking?.workspaceSlug || settings.slug || '',
+                                workspaceName: existingBooking?.workspaceName || settings.brandName || '',
+                                date: updates.date ?? existingBooking?.date ?? '',
+                                dateKey: updates.dateKey ?? existingBooking?.dateKey ?? null,
+                                time: updates.time ?? existingBooking?.time ?? '',
+                                status: updates.status ?? existingBooking?.status ?? 'pending',
+                                timestamp: existingBooking?.timestamp || Date.now(),
+                                ...portalUpdates
+                            },
+                            { merge: true }
+                        ).catch(error => console.error('Client portal booking sync failed', error));
+                    }
+                    if (threadId) {
+                        FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', threadId), {
+                            bookingStatus: updates.status ?? existingBooking?.status ?? 'pending',
+                            lastMessage: updates.status ? `Booking status updated to ${updates.status}.` : 'Booking details updated.',
+                            lastMessageAt: FirebaseSDK.serverTimestamp(),
+                            updatedAt: FirebaseSDK.serverTimestamp(),
+                            clientUnread: FirebaseSDK.increment(1)
+                        }).catch(error => console.error('Client thread sync failed', error));
+                    }
+                } 
                 catch (err) { console.error(err); }
             };
 
@@ -3248,6 +3314,20 @@ const signInWithNativeGoogle = async (authInstance) => {
                 await sendBookingEmail(booking, 'review');
             };
 
+            const authPersonaCopy = authPersona === 'client'
+                ? {
+                    eyebrow: 'Client Access',
+                    title: authMode === 'signup' ? 'Create Client Account' : 'Client Sign In',
+                    body: 'Clients can track bookings, request reschedules, get updates, and chat with the place they booked with.',
+                    submit: authMode === 'signup' ? 'Create Client Login' : 'Open Client Portal'
+                }
+                : {
+                    eyebrow: 'Workspace Access',
+                    title: authMode === 'signup' ? 'Create Account' : 'Sign In',
+                    body: 'Owners and invited staff can use the same secure sign-in.',
+                    submit: authMode === 'signup' ? 'Create Workspace' : 'Sign In'
+                };
+
             const googleAuthLabel = authBusy
                 ? 'Connecting...'
                 : authMode === 'signup'
@@ -3259,11 +3339,26 @@ const signInWithNativeGoogle = async (authInstance) => {
                     <form onSubmit={handleAuthSubmit} className="native-auth-panel w-full sm:max-w-md bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-5 sm:p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300 max-h-[calc(100dvh-1rem)] overflow-y-auto">
                         <div className="flex items-start justify-between gap-4 mb-6">
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Workspace Access</p>
-                                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-black">{authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
-                                <p className="text-sm text-neutral-500 mt-2">Owners and invited staff can use the same secure sign-in.</p>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">{authPersonaCopy.eyebrow}</p>
+                                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-black">{authPersonaCopy.title}</h2>
+                                <p className="text-sm text-neutral-500 mt-2">{authPersonaCopy.body}</p>
                             </div>
                             <button type="button" onClick={() => { setAuthPanelOpen(false); setAuthError(''); }} className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center hover:text-black transition-colors shrink-0"><X size={16}/></button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 rounded-full bg-neutral-100 p-1 mb-4">
+                            {[
+                                ['owner', 'Owner / Staff'],
+                                ['client', 'Client']
+                            ].map(([persona, label]) => (
+                                <button
+                                    key={persona}
+                                    type="button"
+                                    onClick={() => setAuthPersona(persona)}
+                                    className={`h-10 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${authPersona === persona ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black'}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                         <button type="button" onClick={handleGoogleAuth} disabled={authBusy} className="w-full h-12 rounded-lg bg-white border border-neutral-200 text-black text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 disabled:cursor-wait">
                             <Globe size={16}/> {googleAuthLabel}
@@ -3288,9 +3383,9 @@ const signInWithNativeGoogle = async (authInstance) => {
                                 <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${keepLoggedIn ? 'translate-x-6' : 'translate-x-1'}`} />
                             </span>
                         </label>
-                        <button type="button" onClick={openGuestDashboard} className="mt-3 w-full h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-[#39FF14]/20 hover:brightness-95 transition-all">
+                        {authPersona !== 'client' && <button type="button" onClick={openGuestDashboard} className="mt-3 w-full h-12 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-[#39FF14]/20 hover:brightness-95 transition-all">
                             <Eye size={16}/> Browse As Guest
-                        </button>
+                        </button>}
                         <div className="flex items-center gap-4 my-5">
                             <div className="h-px bg-neutral-100 flex-1" />
                             <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">or email</span>
@@ -3302,7 +3397,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                         </div>
                         {authError && <p className="mt-4 text-xs font-bold text-red-500 leading-relaxed">{authError}</p>}
                         <button type="submit" disabled={authBusy} className="mt-5 w-full h-12 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-wait">
-                            {authBusy ? 'Please Wait' : authMode === 'signup' ? 'Create Workspace' : 'Sign In'}
+                            {authBusy ? 'Please Wait' : authPersonaCopy.submit}
                         </button>
                         <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthError(''); }} className="mt-4 w-full text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-black transition-colors">
                             {authMode === 'signup' ? 'Already have an account?' : 'Need an account? Create one'}
@@ -3389,9 +3484,41 @@ const signInWithNativeGoogle = async (authInstance) => {
                 return (
                     <div className="h-screen w-screen overflow-x-hidden overflow-y-auto" style={{ backgroundColor: publicWorkspace.backgroundColor || '#ffffff' }}>
                         <Suspense fallback={<LazySectionFallback label="Loading booking page" />}>
-                            <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} />
+                            <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} onInstallApp={handleAddToHomeScreen} />
                         </Suspense>
                     </div>
+                );
+            }
+
+            if (view === 'client') {
+                if (!user) {
+                    return (
+                        <div className="native-ui min-h-screen bg-white text-black flex items-start sm:items-center justify-center px-6 pt-14 pb-10 sm:p-6">
+                            {authDialog}
+                            <div className="max-w-md text-center">
+                                <BuildABookingBrand className="w-52 sm:w-60 mx-auto mb-8 sm:mb-10" />
+                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-4">Client Portal</p>
+                                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 leading-tight">Sign in to stay close to your booking.</h1>
+                                <p className="text-neutral-500 leading-relaxed mb-7 text-base sm:text-lg">Use the same email you booked with to manage updates, request changes, and chat with the business.</p>
+                                <button onClick={() => openAuthPanel('signin', 'client')} className="h-12 px-8 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-black/10">
+                                    Client Sign In
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <Suspense fallback={<LazySectionFallback label="Loading client portal" />}>
+                        <ClientPortal
+                            appId={appId}
+                            db={db}
+                            user={user}
+                            onSignOut={handleSignOut}
+                            onOwnerLogin={() => applyWorkspaceRoute({ view: 'dashboard', activeTab: 'overview', editorTab })}
+                            onInstallApp={handleAddToHomeScreen}
+                        />
+                    </Suspense>
                 );
             }
 
@@ -3405,7 +3532,8 @@ const signInWithNativeGoogle = async (authInstance) => {
                           <BuildABookingBrand className="w-[156px] md:w-[188px] h-auto" />
                         </div>
                         <div className="flex items-center gap-2 md:gap-6">
-                          <button onClick={() => openAuthPanel('signin')} className="block text-[11px] md:text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
+                          <button onClick={() => openAuthPanel('signin', 'owner')} className="block text-[11px] md:text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
+                        <button onClick={openClientPortal} className="hidden md:block text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Client Login</button>
                           <button onClick={openGuestDashboard} className="hidden sm:block h-10 px-4 rounded-full bg-white border border-neutral-200 text-black font-bold text-[11px] hover:border-black transition-colors">Guest Mode</button>
                           <button onClick={openSignupOrDashboard} className="h-10 px-3 md:px-6 rounded-full bg-[#39FF14] text-black font-bold text-[10px] md:text-xs hover:scale-105 transition-transform shadow-lg shadow-[#39FF14]/20">Get Started</button>
                         </div>
@@ -3436,6 +3564,9 @@ const signInWithNativeGoogle = async (authInstance) => {
                         </button>
                         <button onClick={openGuestDashboard} className="h-14 px-10 rounded-full bg-white text-black border border-neutral-200 font-bold text-sm hover:border-black transition-colors flex items-center gap-2 w-full md:w-auto justify-center">
                           Browse Dashboard <Eye size={16} />
+                        </button>
+                        <button onClick={openClientPortal} className="h-14 px-10 rounded-full bg-white text-black border border-neutral-200 font-bold text-sm hover:border-black transition-colors flex items-center gap-2 w-full md:w-auto justify-center">
+                          Client Login <MessageCircle size={16} />
                         </button>
                       </div>
                     </section>
@@ -3474,14 +3605,14 @@ const signInWithNativeGoogle = async (authInstance) => {
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <MessageSquare className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Communication Studio.</h3>
-                          <p className="text-neutral-500 font-medium">Write clean emails, prepare WhatsApp updates, and keep client communication consistent.</p>
+                          <p className="text-neutral-500 font-medium">Chat with clients, prepare updates, and keep every booking conversation tied to the right request.</p>
                         </div>
 
                         {/* Box 5: My Clients (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <Star className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">My Clients.</h3>
-                          <p className="text-neutral-500 font-medium">Build client profiles with notes, labels, photos, and booking history.</p>
+                          <p className="text-neutral-500 font-medium">Build client profiles with notes, labels, photos, messages, and booking history.</p>
                         </div>
             
                         {/* Box 6: Team/Staff (Span 2) */}
@@ -3508,7 +3639,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                 <div className="w-16 h-16 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-black shadow-sm shrink-0"><Layout size={24}/></div>
                                 <div>
                                     <h3 className="text-xl font-bold tracking-tight text-black mb-1">Dashboard.</h3>
-                                    <p className="text-neutral-500 font-medium">See today, requests, booking rate, clients, and schedule health at a glance.</p>
+                                    <p className="text-neutral-500 font-medium">See today, requests, booking rate, clients, messages, and schedule health at a glance.</p>
                                 </div>
                             </div>
                             <button onClick={openGuestDashboard} className="h-14 px-8 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shrink-0 w-full md:w-auto shadow-xl shadow-[#39FF14]/20">
@@ -3606,7 +3737,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                             <div className="mb-6 rounded-lg border border-neutral-100 bg-neutral-50 p-4">
                                 <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Guest Mode</p>
                                 <p className="text-sm font-bold text-black mb-3">Browse every tool with local demo edits.</p>
-                                <button onClick={() => openAuthPanel('signup')} className="h-10 w-full rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
+                                <button onClick={() => openAuthPanel('signup', 'owner')} className="h-10 w-full rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
                                     <ShieldCheck size={14}/> Save For Real
                                 </button>
                             </div>
@@ -3641,7 +3772,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                             )}
                             {isGuestWorkspace ? (
                                 <div className="space-y-2">
-                                    <ProButton onClick={() => openAuthPanel('signin')} variant="neon" className="w-full py-4 text-[10px]">Sign In</ProButton>
+                                    <ProButton onClick={() => openAuthPanel('signin', 'owner')} variant="neon" className="w-full py-4 text-[10px]">Sign In</ProButton>
                                     <ProButton onClick={handleSignOut} variant="outline" className="w-full py-4 text-[10px]">Exit Guest</ProButton>
                                 </div>
                             ) : (
@@ -3662,10 +3793,10 @@ const signInWithNativeGoogle = async (authInstance) => {
                             <p className="text-[8px] font-bold uppercase tracking-[0.22em] text-neutral-400">Guest Mode</p>
                             <p className="text-xs font-bold text-black truncate">Save this workspace</p>
                         </div>
-                        <button type="button" onClick={() => openAuthPanel('signin')} className="h-10 px-3 rounded-xl bg-neutral-100 text-black text-[9px] font-bold uppercase tracking-widest">
+                        <button type="button" onClick={() => openAuthPanel('signin', 'owner')} className="h-10 px-3 rounded-xl bg-neutral-100 text-black text-[9px] font-bold uppercase tracking-widest">
                             Sign In
                         </button>
-                        <button type="button" onClick={() => openAuthPanel('signup')} className="h-10 px-3 rounded-xl bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-[#39FF14]/20">
+                        <button type="button" onClick={() => openAuthPanel('signup', 'owner')} className="h-10 px-3 rounded-xl bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-[#39FF14]/20">
                             Sign Up
                         </button>
                     </div>
@@ -4258,121 +4389,23 @@ const signInWithNativeGoogle = async (authInstance) => {
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
                             <header className="mb-8 md:mb-10">
                                 <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-black">Communication Studio</h2>
-                                <p className="text-neutral-400 font-medium text-lg max-w-3xl">Write client emails, prepare WhatsApp updates, and choose who gets alerted when a new booking request lands.</p>
+                                <p className="text-neutral-400 font-medium text-lg max-w-3xl">Handle client chat, booking updates, reschedules, and email templates from one calm studio.</p>
                             </header>
 
-                            <section data-tour="whatsapp-setup" className="max-w-6xl mb-8 rounded-lg overflow-hidden border border-neutral-200 bg-white text-black shadow-[0_24px_80px_-65px_rgba(15,23,42,0.45)]">
-                                <div className="grid grid-cols-1 xl:grid-cols-12">
-                                    <div className="xl:col-span-5 p-5 sm:p-6 md:p-8 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
-                                        <div className="w-12 h-12 rounded-lg bg-[#39FF14] text-black flex items-center justify-center mb-6 shadow-xl shadow-black/5">
-                                            <MessageCircle size={20} />
-                                        </div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">WhatsApp Setup</p>
-                                        <h3 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Booking alerts where teams actually look.</h3>
-                                        <p className="text-sm text-neutral-500 leading-relaxed mb-6">Use this to prepare owner and staff WhatsApp notifications. Client WhatsApp messages only send when the booking page opt-in is enabled and the client accepts it.</p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {[
-                                                ['Workspace alerts', whatsappConfig.enabled ? 'Ready' : 'Off'],
-                                                ['Client opt-in', settings.features?.whatsappUpdates && collectsClientPhone ? 'Shown on page' : collectsClientPhone ? 'Hidden' : 'Phone field off'],
-                                                ['API token', 'Server-side only'],
-                                                ['Provider', 'Meta Cloud API']
-                                            ].map(item => (
-                                                <div key={item[0]} className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-                                                    <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-1">{item[0]}</p>
-                                                    <p className="text-sm font-bold text-black">{item[1]}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="xl:col-span-7 p-5 sm:p-6 md:p-8 space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            {[
-                                                ['enabled', 'Owner Alerts', 'Notify owner when new bookings land.'],
-                                                ['notifyStaff', 'Staff Alerts', 'Also notify selected staff numbers.'],
-                                                ['clientMessages', 'Client WhatsApps', 'Allow approved client templates later.']
-                                            ].map(([key, label, note]) => (
-                                                <button
-                                                    key={key}
-                                                    type="button"
-                                                    onClick={() => handleWhatsAppConfigChange(key, !whatsappConfig[key])}
-                                                    className={`rounded-lg border p-4 text-left transition-all ${whatsappConfig[key] ? 'bg-black text-white border-black shadow-xl shadow-black/10' : 'bg-neutral-50 text-black border-neutral-200 hover:bg-white hover:border-neutral-300'}`}
-                                                    aria-pressed={Boolean(whatsappConfig[key])}
-                                                >
-                                                    <span className="flex items-center justify-between gap-3 mb-4">
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
-                                                        <span className={`w-10 h-6 rounded-full flex items-center px-1 transition-colors ${whatsappConfig[key] ? 'bg-[#39FF14]' : 'bg-neutral-200'}`}>
-                                                            <span className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${whatsappConfig[key] ? 'translate-x-4' : ''}`} />
-                                                        </span>
-                                                    </span>
-                                                    <span className={`block text-xs leading-relaxed ${whatsappConfig[key] ? 'text-white/60' : 'text-neutral-500'}`}>{note}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Owner WhatsApp Number</p>
-                                                <input type="tel" value={whatsappConfig.ownerNumber || ''} onChange={(e) => handleWhatsAppConfigChange('ownerNumber', e.target.value)} placeholder="+27 82 000 0000" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Business WhatsApp Display Number</p>
-                                                <input type="tel" value={whatsappConfig.businessPhoneNumber || ''} onChange={(e) => handleWhatsAppConfigChange('businessPhoneNumber', e.target.value)} placeholder="+27 21 000 0000" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Phone Number ID</p>
-                                                <input type="text" value={whatsappConfig.phoneNumberId || ''} onChange={(e) => handleWhatsAppConfigChange('phoneNumberId', e.target.value)} placeholder="Meta phone_number_id" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Business Account ID</p>
-                                                <input type="text" value={whatsappConfig.businessAccountId || ''} onChange={(e) => handleWhatsAppConfigChange('businessAccountId', e.target.value)} placeholder="WhatsApp Business Account ID" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Template Language</p>
-                                                <input type="text" value={whatsappConfig.templateLanguage || ''} onChange={(e) => handleWhatsAppConfigChange('templateLanguage', e.target.value)} placeholder="en_US" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2 ml-2">Booking Alert Template</p>
-                                                <input type="text" value={whatsappConfig.bookingRequestTemplate || ''} onChange={(e) => handleWhatsAppConfigChange('bookingRequestTemplate', e.target.value)} placeholder="booking_request_alert" className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:bg-white focus:border-black transition-colors" />
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 md:p-5">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                                                <div>
-                                                    <p className="text-sm font-bold text-black">Staff WhatsApp Recipients</p>
-                                                    <p className="text-xs text-neutral-500 mt-1">Use separate numbers when owner and staff notifications should go to different phones.</p>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button type="button" onClick={importTeamWhatsAppRecipients} className="h-9 px-3 rounded-lg bg-white border border-neutral-200 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-neutral-100 transition-colors">Load Team</button>
-                                                    <button type="button" onClick={addWhatsAppStaffRecipient} className="h-9 px-3 rounded-lg bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest hover:brightness-95 transition-colors flex items-center gap-2"><Plus size={12} /> Add</button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {(whatsappConfig.staffRecipients || []).length === 0 && (
-                                                    <div className="rounded-lg border border-dashed border-neutral-300 bg-white px-4 py-5 text-sm text-neutral-400">No staff WhatsApp recipients yet.</div>
-                                                )}
-                                                {(whatsappConfig.staffRecipients || []).map((recipient, index) => (
-                                                    <div key={recipient.id || index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
-                                                        <input type="text" value={recipient.name || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'name', e.target.value)} placeholder="Staff name" className="h-11 rounded-lg bg-white border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:border-black transition-colors" />
-                                                        <input type="tel" value={recipient.number || ''} onChange={(e) => updateWhatsAppStaffRecipient(index, 'number', e.target.value)} placeholder="+27 72 000 0000" className="h-11 rounded-lg bg-white border border-neutral-200 px-4 text-sm font-bold outline-none text-black placeholder-neutral-400 focus:border-black transition-colors" />
-                                                        <button type="button" onClick={() => removeWhatsAppStaffRecipient(index)} className="h-11 w-11 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors">
-                                                            <Trash2 size={15} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <p className="text-xs text-neutral-500 leading-relaxed rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">Access tokens are intentionally not saved here. They should live in Firebase Functions environment config when the real WhatsApp sender is connected.</p>
-                                            <button type="button" onClick={() => { saveComms(normalizedComms); showToast("WhatsApp setup saved"); }} className="h-11 px-5 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors shrink-0">
-                                                Save WhatsApp Setup
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
+                            <div className="max-w-6xl mb-8">
+                                <Suspense fallback={<LazySectionFallback label="Loading client inbox" />}>
+                                    <WorkspaceInbox
+                                        appId={appId}
+                                        db={db}
+                                        user={user}
+                                        workspaceOwnerId={workspaceOwnerId}
+                                        bookings={visibleBookings}
+                                        updateBooking={updateBooking}
+                                        setActiveTab={setActiveTab}
+                                        showToast={showToast}
+                                    />
+                                </Suspense>
+                            </div>
 
                             <div data-tour="email-messages" className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-6xl">
                                 {[
@@ -4615,7 +4648,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                         <textarea
                                                             value={isExampleClient ? activeClient.notes : clientNoteDraft}
                                                             onChange={(event) => setClientNoteDraft(event.target.value)}
-                                                            placeholder="Example: prefers morning slots, likes WhatsApp reminders, allergic to latex..."
+                                                            placeholder="Example: prefers morning slots, wants app updates, allergic to latex..."
                                                             disabled={isExampleClient}
                                                             className="w-full min-h-[190px] bg-neutral-50 border border-neutral-100 rounded-lg p-4 text-sm font-medium outline-none resize-none focus:bg-white focus:border-black transition-colors disabled:text-neutral-500"
                                                         />
@@ -5133,9 +5166,12 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                     className="h-11 px-4 rounded-full border border-neutral-100 bg-neutral-50 text-black text-[9px] font-bold uppercase tracking-widest shadow-sm hover:border-black hover:bg-white transition-all disabled:cursor-wait disabled:text-neutral-400 flex items-center justify-center gap-2 shrink-0"
                                                 >
                                                     <Pipette size={14} />
-                                                    {paletteDetecting ? 'Reading Brand' : detectedThemePalette ? `${themePaletteLabel(detectedThemePalette)} Detected` : 'Read Logo Colors'}
+                                                    {paletteDetecting ? 'Reading Brand' : detectedThemePalette ? `${themePaletteLabel(detectedThemePalette)} / ${detectedThemeStyle ? themeStyleLabel(detectedThemeStyle) : 'Style'} Detected` : 'Read Logo Colors'}
                                                 </button>
                                             </div>
+                                            <p className="text-xs font-semibold text-neutral-400 -mt-2 mb-5">
+                                                Brand reader checks {brandSignalPhrase}, then lines up the palette with a font and style direction.
+                                            </p>
 
                                             <div className="mb-5">
                                                 <div className="flex items-center justify-between gap-3 mb-3">
@@ -5290,7 +5326,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                     </div>
                                                     
                                                     <div className="space-y-4 w-full">
-                                                        <h4 className="text-3xl font-bold tracking-tighter" style={{ color: t.headingColor, fontFamily: getFontFamily(t.fontFamily) }}>Aa Bb</h4>
+                                                        <h4 className="text-3xl font-bold tracking-tighter" style={{ color: t.headingColor, fontFamily: getFontFamily(t.headingFontFamily || t.fontFamily) }}>Aa Bb</h4>
                                                         <div className="flex items-center gap-2">
                                                             <span className={`h-7 px-3 rounded-full text-[8px] font-bold uppercase tracking-widest flex items-center ${isNativeTheme ? 'native-theme-soft-pill' : ''}`} style={isNativeTheme ? { color: '#050505', border: '1px solid transparent' } : { backgroundColor: t.dateActiveBgColor === 'transparent' ? 'transparent' : t.dateActiveBgColor, color: t.dateActiveTextColor, border: `1px solid ${t.primaryColor}33` }}>Tue 19</span>
                                                             <span className="h-7 px-3 rounded-full text-[8px] font-bold uppercase tracking-widest flex items-center" style={{ color: t.bodyColor, border: `1px solid ${t.bodyColor}20` }}>FAQ</span>
@@ -5451,11 +5487,11 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     <div className="rounded-lg border border-neutral-100 bg-white overflow-hidden shadow-[0_20px_70px_-65px_rgba(15,23,42,0.7)]">
                                         <div className="p-4 md:p-6 border-b border-neutral-100">
                                             <p className="text-sm font-bold text-black">Client Detail Fields</p>
-                                            <p className="text-xs text-neutral-400 font-medium mt-1 max-w-2xl">Choose exactly what clients need to leave before they request a booking. Email and WhatsApp sends only run when the matching contact field is collected.</p>
+                                            <p className="text-xs text-neutral-400 font-medium mt-1 max-w-2xl">Choose exactly what clients need to leave before they request a booking. Email updates and client portal access only run when the matching contact field is collected.</p>
                                         </div>
                                         <div className="grid grid-cols-1 xl:grid-cols-3 divide-y xl:divide-y-0 xl:divide-x divide-neutral-100">
                                             {[
-                                                { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Used for phone follow-ups and WhatsApp opt-in.', active: collectsClientPhone },
+                                                { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Used for phone follow-ups and contact records.', active: collectsClientPhone },
                                                 { key: 'collectClientEmail', icon: Mail, label: 'Email Address', note: 'Used for client email updates and CRM records.', active: collectsClientEmail },
                                                 { key: 'collectClientNotes', icon: MessageSquare, label: 'Client Note', note: 'Adds an optional note field for requests or context.', active: collectsClientNotes }
                                             ].map(item => {
@@ -5478,11 +5514,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                 );
                                             })}
                                         </div>
-                                        {!collectsClientPhone && (
-                                            <div className="border-t border-neutral-100 bg-neutral-50 px-4 md:px-6 py-4">
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">WhatsApp client opt-in is off because mobile number collection is off.</p>
-                                            </div>
-                                        )}
                                     </div>
 
                                     <div className="space-y-4">
@@ -5503,36 +5534,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                 </button>
                                             </div>
                                         ))}
-                                    </div>
-
-                                    <div className="rounded-lg border border-neutral-100 bg-neutral-50 overflow-hidden">
-                                        <div className="p-4 md:p-6 flex items-center justify-between gap-4">
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-11 h-11 rounded-lg bg-white border border-neutral-100 flex items-center justify-center text-black shrink-0">
-                                                    <MessageCircle size={17} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-black">WhatsApp Updates Opt-In</p>
-                                                    <p className="text-xs text-neutral-400 font-medium mt-1 max-w-lg">Adds a client consent checkbox before the booking action button. Actual sends use the WhatsApp setup in Communication Studio.</p>
-                                                </div>
-                                            </div>
-                                            <button disabled={!collectsClientPhone} onClick={() => collectsClientPhone && handleFeatureChange('whatsappUpdates', !settings.features?.whatsappUpdates)} className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors shrink-0 ${settings.features?.whatsappUpdates && collectsClientPhone ? 'bg-[#39FF14]' : 'bg-neutral-200'} ${!collectsClientPhone ? 'opacity-50 cursor-not-allowed' : ''}`} aria-pressed={Boolean(settings.features?.whatsappUpdates && collectsClientPhone)}>
-                                                <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${settings.features?.whatsappUpdates && collectsClientPhone ? 'translate-x-6' : ''}`} />
-                                            </button>
-                                        </div>
-                                        {settings.features?.whatsappUpdates && collectsClientPhone && (
-                                            <div className="border-t border-neutral-100 bg-white p-4 md:p-6">
-                                                <div className="rounded-lg bg-black text-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                    <div>
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#39FF14] mb-2">Booking Page Consent</p>
-                                                        <p className="text-sm text-white/65 leading-relaxed">Clients will be able to accept WhatsApp updates using the mobile number they enter on the booking form.</p>
-                                                    </div>
-                                                    <button type="button" onClick={() => setActiveTab('communications')} className="h-10 px-4 rounded-lg bg-white text-black text-[9px] font-bold uppercase tracking-widest shrink-0">
-                                                        Open Communication Studio
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
 
                                     <div className="rounded-lg border border-neutral-100 bg-neutral-50 overflow-hidden">

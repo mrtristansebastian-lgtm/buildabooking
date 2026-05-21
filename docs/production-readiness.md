@@ -14,16 +14,12 @@ This file tracks the production fixtures now scaffolded in the codebase and the 
 - New booking requests create a queued notification job under `artifacts/{appId}/notificationJobs`.
 - `processNotificationJob` marks jobs as waiting for provider setup until real provider secrets are configured.
 - Email provider to connect: Resend is the recommended production option for branded transactional emails.
-- WhatsApp provider to connect: Meta WhatsApp Cloud API.
+- Client-side updates and conversations now run through the built-in client portal and inbox.
 
 Expected Firebase Functions secrets:
 
 ```bash
 firebase functions:secrets:set RESEND_API_KEY
-firebase functions:secrets:set META_WHATSAPP_ACCESS_TOKEN
-firebase functions:secrets:set WHATSAPP_PHONE_NUMBER_ID
-firebase functions:secrets:set META_APP_SECRET
-firebase functions:secrets:set WHATSAPP_WEBHOOK_VERIFY_TOKEN
 firebase functions:secrets:set STRIPE_SECRET_KEY
 ```
 

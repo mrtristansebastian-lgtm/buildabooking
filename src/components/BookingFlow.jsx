@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Globe, Instagram, MapPin, MessageCircle } from 'lucide-react';
+import { ArrowRight, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Globe, Instagram, MapPin } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
 
@@ -31,11 +31,11 @@ const normalizeWebsite = (value = '') => {
 };
 
 // --- PUBLIC BOOKING ENGINE (WITH NEW EXTENSIONS & SPECIFIC FONTS) ---
-        export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onInspect }) => {
+export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onInspect, onInstallApp }) => {
             const [step, setStep] = useState(1);
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
-            const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', whatsappOptIn: false });
+            const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '' });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [submitError, setSubmitError] = useState('');
             const [isInitialLoading, setIsInitialLoading] = useState(settings.features?.loadingScreen);
@@ -86,7 +86,6 @@ const normalizeWebsite = (value = '') => {
             const collectClientPhone = settings.features?.collectClientPhone !== false;
             const collectClientEmail = settings.features?.collectClientEmail !== false;
             const collectClientNotes = Boolean(settings.features?.collectClientNotes);
-            const whatsappOptInEnabled = Boolean(settings.features?.whatsappUpdates && collectClientPhone);
             const detailsReady = Boolean(
                 formData.name &&
                 (!collectClientPhone || formData.phone) &&
@@ -99,10 +98,9 @@ const normalizeWebsite = (value = '') => {
                     ...prev,
                     phone: collectClientPhone ? prev.phone : '',
                     email: collectClientEmail ? prev.email : '',
-                    note: collectClientNotes ? prev.note : '',
-                    whatsappOptIn: whatsappOptInEnabled ? prev.whatsappOptIn : false
+                    note: collectClientNotes ? prev.note : ''
                 }));
-            }, [collectClientEmail, collectClientNotes, collectClientPhone, whatsappOptInEnabled]);
+            }, [collectClientEmail, collectClientNotes, collectClientPhone]);
 
             const handleFirstAvailable = (e) => {
                 e.stopPropagation();
@@ -206,8 +204,7 @@ const normalizeWebsite = (value = '') => {
                                 ...formData,
                                 phone: collectClientPhone ? formData.phone : '',
                                 email: collectClientEmail ? formData.email : '',
-                                note: collectClientNotes ? formData.note : '',
-                                whatsappOptIn: Boolean(whatsappOptInEnabled && formData.whatsappOptIn)
+                                note: collectClientNotes ? formData.note : ''
                             },
                             activeDate.full,
                             isWaitlistMode ? 'Waitlist' : selectedTime,
@@ -566,48 +563,8 @@ const normalizeWebsite = (value = '') => {
                         </section>
 
                         <div className="pt-16 pb-12 mt-auto text-center">
-                            {whatsappOptInEnabled && (
-                                <label
-                                    className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${inspectClass}`}
-                                    style={{
-                                        borderColor: `${settings.headingColor || '#000000'}18`,
-                                        backgroundColor: `${settings.headingColor || '#000000'}08`
-                                    }}
-                                    onClick={(event) => {
-                                        if (isPreview) {
-                                            event.preventDefault();
-                                            onInspect('features');
-                                        }
-                                    }}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={Boolean(formData.whatsappOptIn)}
-                                        onChange={(e) => setFormData({ ...formData, whatsappOptIn: e.target.checked })}
-                                        className="sr-only"
-                                    />
-                                    <span
-                                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all ${formData.whatsappOptIn ? nativeAccentFillClass : ''}`}
-                                        style={{
-                                            backgroundColor: formData.whatsappOptIn ? (settings.primaryColor || '#39FF14') : 'transparent',
-                                            borderColor: formData.whatsappOptIn ? (settings.primaryColor || '#39FF14') : `${settings.headingColor || '#000000'}35`,
-                                            color: settings.buttonTextColor || '#000000'
-                                        }}
-                                    >
-                                        {formData.whatsappOptIn && <Check size={14} strokeWidth={4} />}
-                                    </span>
-                                    <span className="min-w-0">
-                                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>
-                                            <MessageCircle size={13} /> WhatsApp updates
-                                        </span>
-                                        <span className="mt-1 block text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
-                                            Send booking updates to the mobile number entered above.
-                                        </span>
-                                    </span>
-                                </label>
-                            )}
                             <div
-                                className="mb-5 rounded-2xl border px-4 py-4 text-left"
+                                className="mb-5 rounded-2xl border px-4 py-3.5 md:py-4 text-left"
                                 style={{
                                     borderColor: `${settings.headingColor || '#000000'}12`,
                                     backgroundColor: `${settings.headingColor || '#000000'}05`
@@ -617,8 +574,52 @@ const normalizeWebsite = (value = '') => {
                                     What happens next
                                 </p>
                                 <p className="text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
-                                    Send the request and the business will review it. If contact details are enabled, booking updates will use the email, phone, or WhatsApp choices you provide here.
+                                    Send the request and the business will review it. After that, Build A Booking keeps your updates, reschedule requests, and messages with this business in one simple place.
                                 </p>
+                            </div>
+                            <div
+                                className="mb-5 rounded-2xl border px-4 py-4 text-left"
+                                style={{
+                                    borderColor: `${settings.primaryColor || settings.headingColor || '#000000'}22`,
+                                    backgroundColor: `${settings.primaryColor || settings.headingColor || '#000000'}0A`
+                                }}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <span
+                                        className={`mt-0.5 flex h-8 w-8 md:h-9 md:w-9 shrink-0 items-center justify-center rounded-xl ${nativeAccentFillClass}`}
+                                        style={{ backgroundColor: settings.primaryColor || settings.headingColor || '#000000', color: settings.buttonTextColor || '#000000' }}
+                                    >
+                                        <Bell size={15} />
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block text-[10px] font-extrabold uppercase tracking-[0.26em]" style={{ color: settings.headingColor }}>Your Booking Companion</span>
+                                        <span className="mt-1 block text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
+                                            Add the app or open the client portal to track your booking, get updates, ask for changes, and chat with the place you booked with.
+                                        </span>
+                                    </span>
+                                </div>
+                                {!isPreview && (
+                                    <div className="mt-4 grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => { window.location.href = `${window.location.origin}/#/client`; }}
+                                            className="h-10 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
+                                            style={{ borderColor: `${settings.headingColor || '#000000'}20`, color: settings.headingColor, backgroundColor: settings.backgroundColor || '#ffffff' }}
+                                        >
+                                            Client Portal
+                                        </button>
+                                        {onInstallApp && (
+                                            <button
+                                                type="button"
+                                                onClick={onInstallApp}
+                                                className={`h-10 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5 ${nativeAccentButtonClass}`}
+                                                style={{ backgroundColor: settings.primaryColor || settings.headingColor || '#000000', color: settings.buttonTextColor || '#000000' }}
+                                            >
+                                                Add App
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             {submitError && (
                                 <p className="mb-4 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>
@@ -681,7 +682,7 @@ const normalizeWebsite = (value = '') => {
                         {[
                             ['Saved', 'Your request is in the system.'],
                             ['Reviewed', 'The team can confirm or follow up.'],
-                            ['Updated', 'You receive updates through enabled channels.']
+                            ['App', 'Use Build A Booking to manage updates, reschedules, and chat.']
                         ].map(([title, copy]) => (
                             <div key={title} className="rounded-2xl border p-4" style={{ borderColor: `${settings.headingColor || '#000000'}12`, backgroundColor: `${settings.headingColor || '#000000'}05` }}>
                                 <p className="text-[10px] font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>{title}</p>
@@ -689,6 +690,28 @@ const normalizeWebsite = (value = '') => {
                             </div>
                         ))}
                     </div>
+                    {(formData.email || onInstallApp) && !isPreview && (
+                        <div className="mb-8 flex flex-col sm:flex-row gap-3">
+                            {formData.email && (
+                                <button
+                                    onClick={() => { window.location.href = `${window.location.origin}/#/client`; }}
+                                    className="appearance-none outline-none focus:outline-none px-7 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] border transition-all hover:-translate-y-0.5"
+                                    style={{ borderColor: settings.headingColor + '22', color: settings.headingColor, backgroundColor: settings.headingColor + '05' }}
+                                >
+                                    Open Client Portal
+                                </button>
+                            )}
+                            {onInstallApp && (
+                                <button
+                                    onClick={onInstallApp}
+                                    className="appearance-none outline-none focus:outline-none px-7 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all hover:-translate-y-0.5"
+                                    style={{ color: settings.buttonTextColor || '#000000', backgroundColor: settings.primaryColor || settings.headingColor || '#000000' }}
+                                >
+                                    Add Mobile App
+                                </button>
+                            )}
+                        </div>
+                    )}
                     <button onClick={() => setStep(1)} className="appearance-none outline-none focus:outline-none text-[10px] font-bold uppercase tracking-[0.6em] opacity-40 hover:opacity-100 transition-all border-b pb-4" style={{ color: settings.bodyColor, borderColor: settings.bodyColor + '40' }}>New Request</button>
                     </div>
                 )}

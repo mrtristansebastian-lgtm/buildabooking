@@ -23,6 +23,12 @@ const safeLockId = (dateKey, time) => (
     .slice(0, 120)
 );
 
+const safeThreadId = (ownerId, bookingId) => (
+  `${cleanString(ownerId, 80)}_${cleanString(bookingId, 80)}`
+    .replace(/[^a-zA-Z0-9_-]/g, '-')
+    .slice(0, 160)
+);
+
 exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (request) => {
   const appId = requireString(request.data?.appId, 'App ID', 120);
   const workspaceSlug = requireString(request.data?.workspaceSlug, 'Workspace slug', 120).toLowerCase();
@@ -38,10 +44,9 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   const time = requireString(incoming.time, 'Booking time', 80);
   const allowedStatuses = new Set(['pending', 'confirmed', 'waitlist']);
   const status = allowedStatuses.has(incoming.status) ? incoming.status : 'pending';
-  const clientWhatsappOptIn = Boolean(incoming.clientWhatsappOptIn && clientPhone);
   const notificationChannels = {
     email: Boolean(clientEmail),
-    whatsapp: clientWhatsappOptIn
+    portal: Boolean(clientEmail)
   };
 
   const workspaceRef = db
@@ -68,6 +73,17 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   const notificationRef = db
     .collection('artifacts').doc(appId)
     .collection('notificationJobs').doc();
+  const threadId = safeThreadId(ownerId, bookingRef.id);
+  const threadRef = db
+    .collection('artifacts').doc(appId)
+    .collection('clientThreads').doc(threadId);
+  const initialMessageRef = threadRef.collection('messages').doc();
+  const clientAccessRef = clientEmail
+    ? db
+      .collection('artifacts').doc(appId)
+      .collection('clientAccess').doc(clientEmail)
+      .collection('bookings').doc(bookingRef.id)
+    : null;
   const shouldLockSlot = status !== 'waitlist' && dateKey && time !== 'Waitlist';
   const slotLockRef = shouldLockSlot ? workspaceRef.collection('slotLocks').doc(safeLockId(dateKey, time)) : null;
 
@@ -78,8 +94,6 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     clientEmail,
     clientBirthday,
     clientNote,
-    clientWhatsappOptIn,
-    clientWhatsappNumber: clientWhatsappOptIn ? clientPhone : '',
     notificationChannels,
     date,
     dateKey: dateKey || null,
@@ -88,6 +102,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     source: 'public-booking-page',
     workspaceSlug,
     workspaceName: workspace.workspaceName || workspace.brandName || '',
+    threadId,
     timestamp: Date.now(),
     createdAt: serverTimestamp()
   };
@@ -110,11 +125,56 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
 
     transaction.set(bookingRef, bookingRecord);
     transaction.set(publicSubmissionRef, bookingRecord);
+    if (clientAccessRef) {
+      transaction.set(clientAccessRef, {
+        bookingId: bookingRef.id,
+        threadId,
+        ownerId,
+        clientEmail,
+        clientName,
+        workspaceSlug,
+        workspaceName: bookingRecord.workspaceName,
+        date,
+        dateKey: dateKey || null,
+        time,
+        status,
+        timestamp: bookingRecord.timestamp,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+    transaction.set(threadRef, {
+      ownerId,
+      clientEmail,
+      clientName,
+      bookingId: bookingRef.id,
+      workspaceSlug,
+      workspaceName: bookingRecord.workspaceName,
+      bookingStatus: status,
+      status: 'open',
+      lastMessage: `Booking request received for ${date} at ${time}.`,
+      lastMessageAt: serverTimestamp(),
+      ownerUnread: 1,
+      clientUnread: 0,
+      rescheduleStatus: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    transaction.set(initialMessageRef, {
+      text: `Booking request received for ${date} at ${time}. The business can confirm, reply, or help you reschedule here.`,
+      kind: 'booking-created',
+      bookingId: bookingRef.id,
+      senderId: 'system',
+      senderName: 'Build A Booking',
+      senderRole: 'system',
+      createdAt: serverTimestamp()
+    });
     transaction.set(notificationRef, {
       appId,
       ownerId,
       bookingId: bookingRef.id,
       workspaceSlug,
+      threadId,
       type: 'new-booking-request',
       status: 'queued',
       channels: notificationChannels,
@@ -135,13 +195,12 @@ exports.processNotificationJob = onDocumentCreated({
 
   const job = snap.data() || {};
   const hasEmailProvider = Boolean(process.env.RESEND_API_KEY);
-  const hasWhatsAppProvider = Boolean(process.env.META_WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 
   await snap.ref.set({
-    status: (hasEmailProvider || hasWhatsAppProvider) ? 'ready-for-provider' : 'waiting-for-provider-setup',
+    status: hasEmailProvider ? 'ready-for-provider' : 'waiting-for-provider-setup',
     providerState: {
       email: hasEmailProvider ? 'configured' : 'missing',
-      whatsapp: hasWhatsAppProvider ? 'configured' : 'missing'
+      clientPortal: 'active'
     },
     lastNote: job.type === 'new-booking-request'
       ? 'Booking notification queued. Connect provider secrets to enable sending.'
