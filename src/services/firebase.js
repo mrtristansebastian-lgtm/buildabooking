@@ -14,6 +14,25 @@ export const firebaseConfigStr = runtimeFirebaseConfig || import.meta.env.VITE_F
 export const appId = runtimeAppId || import.meta.env.VITE_APP_ID || 'build-a-booking-v2';
 export const initialAuthToken = runtimeInitialAuthToken || import.meta.env.VITE_INITIAL_AUTH_TOKEN || '';
 
+const getNormalizedFirebaseConfig = () => {
+  const config = JSON.parse(firebaseConfigStr);
+  const isNative = Capacitor?.isNativePlatform?.() || false;
+  if (isNative || typeof window === 'undefined') return config;
+
+  const { hostname, host, protocol } = window.location;
+  const isFirebaseHostingDomain = Boolean(config.projectId) && (
+    hostname === `${config.projectId}.web.app` || hostname === `${config.projectId}.firebaseapp.com`
+  );
+  const isMobileLike = window.matchMedia?.('(max-width: 767px), (pointer: coarse)')?.matches
+    || /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS/i.test(navigator.userAgent || '');
+
+  if (protocol === 'https:' && isFirebaseHostingDomain && isMobileLike) {
+    return { ...config, authDomain: host };
+  }
+
+  return config;
+};
+
 let firebaseApp = null;
 let authInstance = null;
 let dbInstance = null;
@@ -21,7 +40,7 @@ let storageInstance = null;
 
 if (firebaseConfigStr !== '{}') {
   try {
-    firebaseApp = initializeApp(JSON.parse(firebaseConfigStr));
+    firebaseApp = initializeApp(getNormalizedFirebaseConfig());
     if (Capacitor?.isNativePlatform?.()) {
       try {
         authInstance = initializeAuth(firebaseApp, {

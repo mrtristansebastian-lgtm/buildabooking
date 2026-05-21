@@ -939,6 +939,24 @@ const clearGoogleAuthIntentUrl = () => {
   if (!url.searchParams.has('auth')) return;
   url.searchParams.delete('auth');
   url.searchParams.delete('return');
+  url.searchParams.delete('tab');
+  url.searchParams.delete('editorTab');
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+};
+
+const writeGoogleAuthIntentUrl = (route = {}) => {
+  if (typeof window === 'undefined') return;
+  const normalized = normalizeWorkspaceRoute(route, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+  const url = new URL(window.location.href);
+  url.searchParams.set('auth', 'google');
+  url.searchParams.set('return', normalized.view);
+  if (normalized.view === 'dashboard') {
+    url.searchParams.set('tab', normalized.activeTab);
+    url.searchParams.set('editorTab', normalized.editorTab);
+  } else {
+    url.searchParams.delete('tab');
+    url.searchParams.delete('editorTab');
+  }
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 };
 
@@ -2126,11 +2144,14 @@ const signInWithNativeGoogle = async (authInstance) => {
                 const provider = createGoogleProvider();
                 await applyAuthPersistence(keepLoggedIn);
                 setAuthRedirectPending(true);
-                saveAuthReturnState(returnRoute);
+                const savedReturnRoute = saveAuthReturnState(returnRoute);
+                writeGoogleAuthIntentUrl(savedReturnRoute);
                 try {
                     await FirebaseSDK.signInWithRedirect(auth, provider);
                 } catch (error) {
                     setAuthRedirectPending(false);
+                    clearAuthReturnState();
+                    clearGoogleAuthIntentUrl();
                     throw error;
                 }
             };
@@ -2147,7 +2168,14 @@ const signInWithNativeGoogle = async (authInstance) => {
                                 let redirectResult = null;
                                 redirectResult = await FirebaseSDK.getRedirectResult(auth).catch((error) => {
                                     console.error(error);
-                                    setAuthError(error.message || 'Google sign-in could not finish.');
+                                    clearAuthReturnState();
+                                    clearGoogleAuthIntentUrl();
+                                    const message = error?.code === 'auth/unauthorized-domain'
+                                        ? 'Google sign-in needs this domain allowed in Firebase Authentication.'
+                                        : error?.code === 'auth/web-storage-unsupported'
+                                            ? 'Your browser blocked the secure Google return. Try again or turn off private browsing for this site.'
+                                            : error.message || 'Google sign-in could not finish.';
+                                    setAuthError(message);
                                     setAuthRedirectPending(false);
                                     return null;
                                 });
@@ -2155,7 +2183,10 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     safeSessionRemove(authRedirectStartedStorageKey);
                                     safeLocalRemove(authRedirectStartedStorageKey);
                                     clearGoogleAuthIntentUrl();
-                                    if (!auth.currentUser && !redirectResult?.user) setAuthRedirectPending(false);
+                                    if (!auth.currentUser && !redirectResult?.user) {
+                                        clearAuthReturnState();
+                                        setAuthRedirectPending(false);
+                                    }
                                 } else if (googleAuthIntent && !auth.currentUser) {
                                     await startGoogleRedirect(googleAuthIntent);
                                     return;
