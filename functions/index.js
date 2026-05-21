@@ -74,6 +74,10 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   const notificationRef = db
     .collection('artifacts').doc(appId)
     .collection('notificationJobs').doc();
+  const ownerNotificationRef = db
+    .collection('artifacts').doc(appId)
+    .collection('users').doc(ownerId)
+    .collection('notifications').doc();
   const threadId = safeThreadId(ownerId, bookingRef.id);
   const threadRef = db
     .collection('artifacts').doc(appId)
@@ -84,6 +88,12 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       .collection('artifacts').doc(appId)
       .collection('clientAccess').doc(clientEmail)
       .collection('bookings').doc(bookingRef.id)
+    : null;
+  const clientNotificationRef = clientEmail
+    ? db
+      .collection('artifacts').doc(appId)
+      .collection('clientAccess').doc(clientEmail)
+      .collection('notifications').doc()
     : null;
   const shouldLockSlot = status !== 'waitlist' && dateKey && time !== 'Waitlist';
   const slotLockRef = shouldLockSlot ? workspaceRef.collection('slotLocks').doc(safeLockId(dateKey, time)) : null;
@@ -162,6 +172,43 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }, { merge: true });
+    transaction.set(ownerNotificationRef, {
+      audience: 'owner',
+      type: 'booking_request',
+      title: `New booking request from ${clientName}`,
+      body: `${date} at ${time}. Review, confirm, waitlist, or reply from My Bookings.`,
+      ownerId,
+      bookingId: bookingRef.id,
+      threadId,
+      clientName,
+      clientEmail,
+      workspaceSlug,
+      tab: 'bookings',
+      priority: 'high',
+      read: false,
+      createdAtMs: bookingRecord.timestamp,
+      createdAt: serverTimestamp()
+    });
+    if (clientNotificationRef) {
+      transaction.set(clientNotificationRef, {
+        audience: 'client',
+        type: 'booking_received',
+        title: 'Your booking request was sent',
+        body: `${bookingRecord.workspaceName || 'The business'} received your request for ${date} at ${time}. Track it in your client portal.`,
+        ownerId,
+        bookingId: bookingRef.id,
+        threadId,
+        clientName,
+        clientEmail,
+        workspaceSlug,
+        workspaceName: bookingRecord.workspaceName,
+        view: 'bookings',
+        priority: 'normal',
+        read: false,
+        createdAtMs: bookingRecord.timestamp,
+        createdAt: serverTimestamp()
+      });
+    }
     transaction.set(initialMessageRef, {
       text: `Booking request received for ${date} at ${time}. The business can confirm, reply, or help you reschedule here.`,
       kind: 'booking-created',

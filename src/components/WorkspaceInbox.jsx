@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bell, Calendar, Check, MessageCircle, Search, Send, UserRound, Users } from 'lucide-react';
 import * as FirebaseSDK from '../services/firebase';
+import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
 
 const timestampValue = (value) => {
   if (!value) return 0;
@@ -107,6 +108,29 @@ export function WorkspaceInbox({
   );
   const visibleMessages = activeThread?.isExample ? exampleMessages : messages;
 
+  const createClientNotification = async (email, payload) => {
+    const emailKey = notificationEmailKey(email);
+    if (!db || !emailKey) return false;
+    try {
+      await FirebaseSDK.addDoc(
+        FirebaseSDK.collection(db, 'artifacts', appId, 'clientAccess', emailKey, 'notifications'),
+        {
+          ...payload,
+          clientEmail: emailKey,
+          ownerId: payload.ownerId || workspaceOwnerId,
+          audience: 'client',
+          read: false,
+          createdAtMs: payload.createdAtMs || Date.now(),
+          createdAt: FirebaseSDK.serverTimestamp()
+        }
+      );
+      return true;
+    } catch (error) {
+      console.error('Client notification from inbox failed', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (!db || !activeThread?.id || activeThread?.isExample) {
       setMessages([]);
@@ -154,6 +178,18 @@ export function WorkspaceInbox({
         clientUnread: FirebaseSDK.increment(1),
         ownerUnread: 0
       });
+      await createClientNotification(activeThread.clientEmail, makeClientNotification({
+        type: NOTIFICATION_TYPES.NEW_MESSAGE,
+        title: `New message from ${activeThread.workspaceName || 'the business'}`,
+        body: cleanText,
+        ownerId: workspaceOwnerId,
+        booking: linkedBooking || {},
+        bookingId: activeThread.bookingId || '',
+        threadId: activeThread.id,
+        view: 'chats',
+        priority: 'high',
+        metadata: { senderRole: 'owner' }
+      }));
       setDraft('');
     } finally {
       setSending(false);

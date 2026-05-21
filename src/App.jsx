@@ -6,12 +6,22 @@ import {
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
+import { NotificationCenter } from './components/NotificationCenter';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
 import { PRESET_THEMES, generateThemeCollection } from './data/themes';
 import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, functions, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
+import {
+  getBrowserNotificationPermission,
+  makeClientNotification,
+  makeOwnerNotification,
+  notificationEmailKey,
+  requestBrowserNotificationPermission,
+  showBrowserNotification,
+  NOTIFICATION_TYPES
+} from './services/notifications';
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
 import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_FILTER_GROUPS, ensureReadableTextColor } from './utils/theme';
@@ -1133,7 +1143,11 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [legalPanel, setLegalPanel] = useState(null);
+            const [ownerNotifications, setOwnerNotifications] = useState([]);
+            const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
             const toastTimerRef = useRef(null);
+            const ownerNotificationSeenRef = useRef(new Set());
+            const ownerNotificationsReadyRef = useRef(false);
             
             const showToast = (msg) => {
                 window.clearTimeout(toastTimerRef.current);
@@ -1505,6 +1519,97 @@ const signInWithNativeGoogle = async (authInstance) => {
                 enriched: clientDirectory.filter(client => client.notes || client.avatar || client.labels?.length).length
             }), [clientDirectory]);
 
+            const createOwnerNotification = async (payload, options = {}) => {
+                const ownerId = payload?.ownerId || workspaceOwnerId;
+                if (!isFirebaseConfigured || !db || !ownerId) return false;
+                const notification = {
+                    ...payload,
+                    ownerId,
+                    audience: 'owner',
+                    read: Boolean(payload?.read),
+                    createdAtMs: payload?.createdAtMs || Date.now(),
+                    createdAt: FirebaseSDK.serverTimestamp()
+                };
+                try {
+                    const collectionRef = FirebaseSDK.collection(db, 'artifacts', appId, 'users', ownerId, 'notifications');
+                    if (options.id) {
+                        await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', ownerId, 'notifications', options.id), notification, { merge: true });
+                    } else {
+                        await FirebaseSDK.addDoc(collectionRef, notification);
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('Owner notification write failed', error);
+                    return false;
+                }
+            };
+
+            const createClientNotification = async (email, payload, options = {}) => {
+                const emailKey = notificationEmailKey(email || payload?.clientEmail);
+                if (!isFirebaseConfigured || !db || !emailKey) return false;
+                const notification = {
+                    ...payload,
+                    clientEmail: emailKey,
+                    ownerId: payload?.ownerId || workspaceOwnerId,
+                    audience: 'client',
+                    read: Boolean(payload?.read),
+                    createdAtMs: payload?.createdAtMs || Date.now(),
+                    createdAt: FirebaseSDK.serverTimestamp()
+                };
+                try {
+                    const collectionRef = FirebaseSDK.collection(db, 'artifacts', appId, 'clientAccess', emailKey, 'notifications');
+                    if (options.id) {
+                        await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'notifications', options.id), notification, { merge: true });
+                    } else {
+                        await FirebaseSDK.addDoc(collectionRef, notification);
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('Client notification write failed', error);
+                    return false;
+                }
+            };
+
+            const requestOwnerBrowserNotifications = async () => {
+                const permission = await requestBrowserNotificationPermission();
+                setBrowserNotificationPermission(permission);
+                if (permission === 'granted') {
+                    showToast('Browser notifications are on.');
+                    showBrowserNotification({
+                        title: 'Build A Booking alerts are on',
+                        body: 'New bookings, chats, and reminders can now reach this device.',
+                        tag: 'build-a-booking-permission'
+                    });
+                    return;
+                }
+                if (permission === 'denied') showToast('Browser notifications are blocked in this browser.');
+                else showToast('Browser notifications are not supported here.');
+            };
+
+            const markOwnerNotificationRead = async (notificationId) => {
+                if (!notificationId || !isFirebaseConfigured || !db || !workspaceOwnerId) return;
+                setOwnerNotifications(prev => prev.map(item => item.id === notificationId ? { ...item, read: true } : item));
+                await FirebaseSDK.updateDoc(
+                    FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'notifications', notificationId),
+                    { read: true, readAt: FirebaseSDK.serverTimestamp() }
+                ).catch(error => console.error('Notification read update failed', error));
+            };
+
+            const markAllOwnerNotificationsRead = async () => {
+                const unread = ownerNotifications.filter(item => !item.read);
+                if (!unread.length || !isFirebaseConfigured || !db || !workspaceOwnerId) return;
+                setOwnerNotifications(prev => prev.map(item => ({ ...item, read: true })));
+                await Promise.all(unread.slice(0, 40).map(notification => FirebaseSDK.updateDoc(
+                    FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'notifications', notification.id),
+                    { read: true, readAt: FirebaseSDK.serverTimestamp() }
+                ).catch(error => console.error('Notification read update failed', error))));
+            };
+
+            const openOwnerNotification = (notification) => {
+                if (notification?.tab) setActiveTab(notification.tab);
+                if (notification?.editorTab) setEditorTab(notification.editorTab);
+            };
+
             const dashboardPortfolio = useMemo(() => {
                 const today = new Date();
                 const todayKey = getLocalDateStr(today);
@@ -1699,6 +1804,89 @@ const signInWithNativeGoogle = async (authInstance) => {
             useEffect(() => {
                 setClientNoteDraft(selectedClient?.notes || '');
             }, [selectedClient?.id]);
+
+            useEffect(() => {
+                const syncPermission = () => setBrowserNotificationPermission(getBrowserNotificationPermission());
+                syncPermission();
+                window.addEventListener('focus', syncPermission);
+                document.addEventListener('visibilitychange', syncPermission);
+                return () => {
+                    window.removeEventListener('focus', syncPermission);
+                    document.removeEventListener('visibilitychange', syncPermission);
+                };
+            }, []);
+
+            useEffect(() => {
+                if (!isFirebaseConfigured || !db || !user || !workspaceOwnerId || publicSlug) {
+                    setOwnerNotifications([]);
+                    ownerNotificationSeenRef.current = new Set();
+                    ownerNotificationsReadyRef.current = false;
+                    return undefined;
+                }
+                const notificationsQuery = FirebaseSDK.query(
+                    FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'notifications'),
+                    FirebaseSDK.orderBy('createdAtMs', 'desc'),
+                    FirebaseSDK.limit(60)
+                );
+                const unsubscribe = FirebaseSDK.onSnapshot(notificationsQuery, (snap) => {
+                    const nextNotifications = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+                    setOwnerNotifications(nextNotifications);
+
+                    const freshNotifications = nextNotifications.filter(notification => !ownerNotificationSeenRef.current.has(notification.id));
+                    freshNotifications.forEach(notification => ownerNotificationSeenRef.current.add(notification.id));
+                    if (ownerNotificationsReadyRef.current) {
+                        freshNotifications
+                            .filter(notification => !notification.read)
+                            .reverse()
+                            .forEach(notification => {
+                                if (document.visibilityState !== 'visible' || notification.priority === 'high') {
+                                    showBrowserNotification({
+                                        title: notification.title,
+                                        body: notification.body,
+                                        tag: `owner-${notification.id}`,
+                                        url: notification.tab ? `/dashboard/${notification.tab}` : '/dashboard/overview'
+                                    });
+                                }
+                            });
+                    }
+                    ownerNotificationsReadyRef.current = true;
+                }, (error) => console.error('Owner notifications sync failed', error));
+                return () => unsubscribe();
+            }, [user?.uid, workspaceOwnerId, publicSlug]);
+
+            useEffect(() => {
+                if (!isFirebaseConfigured || !db || !user || !workspaceOwnerId || !clientDirectory.length) return;
+                const today = new Date();
+                const todayMonth = today.getMonth() + 1;
+                const todayDay = today.getDate();
+                const year = today.getFullYear();
+
+                const parseBirthday = (birthday = '') => {
+                    const parts = String(birthday || '').match(/\d{1,2}/g);
+                    if (!parts || parts.length < 2) return null;
+                    const first = Number(parts[0]);
+                    const second = Number(parts[1]);
+                    if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
+                    if (first > 12) return { day: first, month: second };
+                    if (second > 12) return { day: second, month: first };
+                    return { month: first, day: second };
+                };
+
+                clientDirectory.forEach(client => {
+                    if (client.isExample || !client.birthday) return;
+                    const parsed = parseBirthday(client.birthday);
+                    if (!parsed || parsed.month !== todayMonth || parsed.day !== todayDay) return;
+                    createOwnerNotification(makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BIRTHDAY_REMINDER,
+                        title: `${client.name}'s birthday is today`,
+                        body: 'A small birthday note can turn a client profile into a relationship.',
+                        ownerId: workspaceOwnerId,
+                        tab: 'clients',
+                        priority: 'normal',
+                        metadata: { clientId: client.id, birthday: client.birthday }
+                    }), { id: `birthday-${year}-${client.id}` });
+                });
+            }, [clientDirectory, db, isFirebaseConfigured, user?.uid, workspaceOwnerId]);
 
             useEffect(() => {
                 if (publicSlug || loading || view !== 'dashboard' || !canSetupWorkspace || isGuestWorkspace) return;
@@ -3139,9 +3327,19 @@ const signInWithNativeGoogle = async (authInstance) => {
                     return true;
                 }
                 try {
-                    await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
+                    const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
                         ...bookingRecord
                     });
+                    await createOwnerNotification(makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+                        title: `New booking request from ${bookingRecord.clientName}`,
+                        body: `${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from My Bookings.`,
+                        ownerId: workspaceOwnerId,
+                        booking: { ...bookingRecord, id: bookingRef.id },
+                        bookingId: bookingRef.id,
+                        tab: 'bookings',
+                        priority: 'high'
+                    }));
                     return true;
                 } catch (err) {
                     console.error(err);
@@ -3292,6 +3490,54 @@ const signInWithNativeGoogle = async (authInstance) => {
                             clientUnread: FirebaseSDK.increment(1)
                         }).catch(error => console.error('Client thread sync failed', error));
                     }
+                    if (emailKey && existingBooking) {
+                        const nextBooking = { ...existingBooking, ...updates, id: bookingId, ownerId: workspaceOwnerId };
+                        const statusChanged = updates.status && updates.status !== existingBooking.status;
+                        const scheduleChanged = (
+                            (updates.date && updates.date !== existingBooking.date) ||
+                            (updates.time && updates.time !== existingBooking.time && updates.time !== 'Waitlist')
+                        );
+                        if (statusChanged) {
+                            const copyByStatus = {
+                                confirmed: {
+                                    type: NOTIFICATION_TYPES.BOOKING_CONFIRMED,
+                                    title: 'Your booking was approved',
+                                    body: `${settings.brandName || nextBooking.workspaceName || 'The business'} confirmed ${nextBooking.date} at ${nextBooking.time}.`
+                                },
+                                declined: {
+                                    type: NOTIFICATION_TYPES.BOOKING_DECLINED,
+                                    title: 'Your booking request was declined',
+                                    body: `${settings.brandName || nextBooking.workspaceName || 'The business'} could not approve that request. Open your portal to chat or request another time.`
+                                },
+                                waitlist: {
+                                    type: NOTIFICATION_TYPES.BOOKING_WAITLIST,
+                                    title: 'You are on the waitlist',
+                                    body: 'You are now on standby. If a slot opens, the business can message you from your booking thread.'
+                                }
+                            };
+                            const copy = copyByStatus[updates.status];
+                            if (copy) {
+                                createClientNotification(emailKey, makeClientNotification({
+                                    ...copy,
+                                    ownerId: workspaceOwnerId,
+                                    booking: nextBooking,
+                                    view: 'bookings',
+                                    priority: updates.status === 'confirmed' ? 'high' : 'normal'
+                                })).catch(() => {});
+                            }
+                        }
+                        if (scheduleChanged) {
+                            createClientNotification(emailKey, makeClientNotification({
+                                type: NOTIFICATION_TYPES.BOOKING_RESCHEDULED,
+                                title: 'Your booking time changed',
+                                body: `${settings.brandName || nextBooking.workspaceName || 'The business'} updated your booking to ${nextBooking.date} at ${nextBooking.time}.`,
+                                ownerId: workspaceOwnerId,
+                                booking: nextBooking,
+                                view: 'bookings',
+                                priority: 'high'
+                            })).catch(() => {});
+                        }
+                    }
                 } 
                 catch (err) { console.error(err); }
             };
@@ -3312,7 +3558,19 @@ const signInWithNativeGoogle = async (authInstance) => {
 
             const sendRunningLateToBooking = async (booking) => {
                 const minutes = prompt(`Minutes late for ${booking.clientName}?`, "15");
-                if (minutes) await sendBookingEmail(booking, 'runningLate', { minutes });
+                if (minutes) {
+                    await sendBookingEmail(booking, 'runningLate', { minutes });
+                    await createClientNotification(booking.clientEmail, makeClientNotification({
+                        type: NOTIFICATION_TYPES.RUNNING_LATE,
+                        title: `${settings.brandName || 'The business'} is running late`,
+                        body: `They are running about ${minutes} minutes behind. Your booking thread stays open for questions.`,
+                        ownerId: workspaceOwnerId,
+                        booking,
+                        view: 'chats',
+                        priority: 'high',
+                        metadata: { minutes }
+                    }));
+                }
             };
 
             const sendWaitlistToBooking = async (booking) => {
@@ -3323,10 +3581,41 @@ const signInWithNativeGoogle = async (authInstance) => {
                     return;
                 }
                 await sendBookingEmail(booking, 'waitlist');
+                await createClientNotification(booking.clientEmail, makeClientNotification({
+                    type: NOTIFICATION_TYPES.BOOKING_WAITLIST,
+                    title: 'A waitlist update is ready',
+                    body: `${settings.brandName || 'The business'} sent a waitlist update. Open your booking thread to keep moving.`,
+                    ownerId: workspaceOwnerId,
+                    booking,
+                    view: 'bookings',
+                    priority: 'normal'
+                }));
             };
 
             const sendReviewToBooking = async (booking) => {
                 await sendBookingEmail(booking, 'review');
+                await createClientNotification(booking.clientEmail, makeClientNotification({
+                    type: NOTIFICATION_TYPES.REVIEW_NUDGE,
+                    title: 'Quick follow-up from your visit',
+                    body: `${settings.brandName || 'The business'} sent a quick thank-you and review request.`,
+                    ownerId: workspaceOwnerId,
+                    booking,
+                    view: 'chats',
+                    priority: 'normal'
+                }));
+            };
+
+            const sendNudgeToBooking = async (booking) => {
+                const sent = await createClientNotification(booking.clientEmail, makeClientNotification({
+                    type: NOTIFICATION_TYPES.BOOKING_NUDGE,
+                    title: 'Your booking needs one quick look',
+                    body: `${settings.brandName || 'The business'} nudged this booking so you can check the latest update or reply.`,
+                    ownerId: workspaceOwnerId,
+                    booking,
+                    view: 'bookings',
+                    priority: 'normal'
+                }));
+                showToast(sent ? `Nudge sent to ${booking.clientName}.` : 'Client portal nudges need a client email.');
             };
 
             const authPersonaCopy = authPersona === 'client'
@@ -3727,6 +4016,18 @@ const signInWithNativeGoogle = async (authInstance) => {
                             }}
                         />
                     </Suspense>
+                )}
+                {user && !publicSlug && (
+                    <NotificationCenter
+                        title="Workspace Alerts"
+                        subtitle="Booking requests, chat messages, client nudges, and birthday reminders."
+                        notifications={ownerNotifications}
+                        permission={browserNotificationPermission}
+                        onRequestPermission={requestOwnerBrowserNotifications}
+                        onMarkRead={markOwnerNotificationRead}
+                        onMarkAllRead={markAllOwnerNotificationsRead}
+                        onOpenNotification={openOwnerNotification}
+                    />
                 )}
 
                 <div className={`dashboard-sidebar hidden md:flex transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex-col relative z-50 shadow-sm ${sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 p-8'}`}>
@@ -5938,6 +6239,12 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                                 className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"
                                                             >
                                                                 <Mail size={14} /> Review
+                                                            </button>
+                                                            <button
+                                                                onClick={() => sendNudgeToBooking(b)}
+                                                                className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"
+                                                            >
+                                                                <Zap size={14} /> Nudge
                                                             </button>
                                                             <button
                                                                 onClick={() => sendWaitlistToBooking(b)}

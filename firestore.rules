@@ -90,6 +90,18 @@ service cloud.firestore {
       allow create: if canStaff(appId, userId) || validPublicBookingCreate(appId, userId);
     }
 
+    match /artifacts/{appId}/users/{userId}/notifications/{notificationId} {
+      allow read, update, delete: if canStaff(appId, userId);
+      allow create: if canStaff(appId, userId) ||
+        (
+          signedIn() &&
+          request.auth.token.email != null &&
+          request.resource.data.ownerId == userId &&
+          request.resource.data.audience == 'owner' &&
+          request.resource.data.clientEmail == request.auth.token.email
+        );
+    }
+
     match /artifacts/{appId}/clientAccess/{email}/bookings/{bookingId} {
       allow read: if signedIn() &&
         (request.auth.token.email == email || (resource.data.ownerId is string && canStaff(appId, resource.data.ownerId)));
@@ -97,6 +109,18 @@ service cloud.firestore {
         request.resource.data.ownerId is string &&
         canStaff(appId, request.resource.data.ownerId) &&
         request.resource.data.clientEmail == email;
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/clientAccess/{email}/notifications/{notificationId} {
+      allow read, update: if signedIn() &&
+        (request.auth.token.email == email || (resource.data.ownerId is string && canStaff(appId, resource.data.ownerId)));
+      allow create: if signedIn() &&
+        request.resource.data.clientEmail == email &&
+        (
+          request.auth.token.email == email ||
+          (request.resource.data.ownerId is string && canStaff(appId, request.resource.data.ownerId))
+        );
       allow delete: if false;
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Bell,
@@ -15,7 +15,16 @@ import {
   UserRound
 } from 'lucide-react';
 import { BuildABookingBrand } from './BuildABookingBrand';
+import { NotificationCenter } from './NotificationCenter';
 import * as FirebaseSDK from '../services/firebase';
+import {
+  getBrowserNotificationPermission,
+  makeOwnerNotification,
+  notificationEmailKey,
+  requestBrowserNotificationPermission,
+  showBrowserNotification,
+  NOTIFICATION_TYPES
+} from '../services/notifications';
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
 
@@ -52,6 +61,10 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const [rescheduleDraft, setRescheduleDraft] = useState({ bookingId: '', date: '', time: '' });
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [browserPermission, setBrowserPermission] = useState(getBrowserNotificationPermission);
+  const notificationSeenRef = useRef(new Set());
+  const notificationsReadyRef = useRef(false);
 
   const exampleBooking = useMemo(() => ({
     id: 'example-client-booking',
@@ -138,6 +151,54 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
     };
   }, [appId, db, emailKey]);
 
+  useEffect(() => {
+    const syncPermission = () => setBrowserPermission(getBrowserNotificationPermission());
+    syncPermission();
+    window.addEventListener('focus', syncPermission);
+    document.addEventListener('visibilitychange', syncPermission);
+    return () => {
+      window.removeEventListener('focus', syncPermission);
+      document.removeEventListener('visibilitychange', syncPermission);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!db || !emailKey) {
+      setNotifications([]);
+      notificationSeenRef.current = new Set();
+      notificationsReadyRef.current = false;
+      return undefined;
+    }
+    const notificationsQuery = FirebaseSDK.query(
+      FirebaseSDK.collection(db, 'artifacts', appId, 'clientAccess', emailKey, 'notifications'),
+      FirebaseSDK.orderBy('createdAtMs', 'desc'),
+      FirebaseSDK.limit(60)
+    );
+    const unsubNotifications = FirebaseSDK.onSnapshot(notificationsQuery, (snap) => {
+      const next = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      setNotifications(next);
+      const fresh = next.filter(notification => !notificationSeenRef.current.has(notification.id));
+      fresh.forEach(notification => notificationSeenRef.current.add(notification.id));
+      if (notificationsReadyRef.current) {
+        fresh
+          .filter(notification => !notification.read)
+          .reverse()
+          .forEach(notification => {
+            if (document.visibilityState !== 'visible' || notification.priority === 'high') {
+              showBrowserNotification({
+                title: notification.title,
+                body: notification.body,
+                tag: `client-${notification.id}`,
+                url: '/client'
+              });
+            }
+          });
+      }
+      notificationsReadyRef.current = true;
+    }, (error) => console.error('Client notifications sync failed', error));
+    return () => unsubNotifications();
+  }, [appId, db, emailKey]);
+
   const activeThread = useMemo(
     () => threadSource.find(thread => thread.id === activeThreadId) || threadSource[0] || null,
     [activeThreadId, threadSource]
@@ -211,10 +272,62 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         clientUnread: 0,
         rescheduleStatus: kind === 'reschedule-request' ? 'requested' : (activeThread.rescheduleStatus || '')
       });
+      if (activeThread.ownerId) {
+        await FirebaseSDK.addDoc(
+          FirebaseSDK.collection(db, 'artifacts', appId, 'users', activeThread.ownerId, 'notifications'),
+          {
+            ...makeOwnerNotification({
+              type: kind === 'reschedule-request' ? NOTIFICATION_TYPES.RESCHEDULE_REQUEST : NOTIFICATION_TYPES.NEW_MESSAGE,
+              title: kind === 'reschedule-request'
+                ? `Reschedule request from ${user.displayName || user.email || 'a client'}`
+                : `New message from ${user.displayName || user.email || 'a client'}`,
+              body: cleanText,
+              ownerId: activeThread.ownerId,
+              booking: activeBooking || {},
+              bookingId: bookingId || activeThread.bookingId || '',
+              threadId: activeThread.id,
+              tab: 'communications',
+              priority: 'high',
+              metadata: { senderRole: 'client', clientEmail: emailKey }
+            }),
+            clientEmail: emailKey,
+            createdAt: FirebaseSDK.serverTimestamp()
+          }
+        ).catch(error => console.error('Owner message notification failed', error));
+      }
       setMessageDraft('');
     } finally {
       setSending(false);
     }
+  };
+
+  const requestClientBrowserNotifications = async () => {
+    const permission = await requestBrowserNotificationPermission();
+    setBrowserPermission(permission);
+  };
+
+  const markClientNotificationRead = async (notificationId) => {
+    if (!notificationId || !db || !emailKey) return;
+    setNotifications(prev => prev.map(item => item.id === notificationId ? { ...item, read: true } : item));
+    await FirebaseSDK.updateDoc(
+      FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'notifications', notificationId),
+      { read: true, readAt: FirebaseSDK.serverTimestamp() }
+    ).catch(error => console.error('Client notification read update failed', error));
+  };
+
+  const markAllClientNotificationsRead = async () => {
+    const unread = notifications.filter(item => !item.read);
+    if (!unread.length || !db || !emailKey) return;
+    setNotifications(prev => prev.map(item => ({ ...item, read: true })));
+    await Promise.all(unread.slice(0, 40).map(notification => FirebaseSDK.updateDoc(
+      FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'notifications', notification.id),
+      { read: true, readAt: FirebaseSDK.serverTimestamp() }
+    ).catch(error => console.error('Client notification read update failed', error))));
+  };
+
+  const openClientNotification = (notification) => {
+    if (notification?.threadId) setActiveThreadId(notification.threadId);
+    if (notification?.view) setActiveView(notification.view);
   };
 
   const openBookingThread = (booking) => {
@@ -505,6 +618,17 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
 
   return (
     <div className="native-ui min-h-screen bg-[#F7F7F5] text-black pb-28 md:pb-0">
+      <NotificationCenter
+        title="Client Alerts"
+        subtitle="Booking approvals, reschedules, running-late notes, and chat replies."
+        notifications={notifications}
+        permission={browserPermission}
+        onRequestPermission={requestClientBrowserNotifications}
+        onMarkRead={markClientNotificationRead}
+        onMarkAllRead={markAllClientNotificationsRead}
+        onOpenNotification={openClientNotification}
+        compact
+      />
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-neutral-200/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 h-16 md:h-20 flex items-center justify-between gap-4">
           <BuildABookingBrand className="w-[154px] md:w-[190px]" />
