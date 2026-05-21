@@ -53,6 +53,53 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+  const exampleBooking = useMemo(() => ({
+    id: 'example-client-booking',
+    threadId: 'example-client-thread',
+    workspaceName: 'Studio Noir',
+    date: 'Thursday, May 28',
+    time: '14:30',
+    status: 'pending',
+    isExample: true
+  }), []);
+
+  const exampleThread = useMemo(() => ({
+    id: 'example-client-thread',
+    workspaceName: 'Studio Noir',
+    clientName: user?.displayName || 'Example Client',
+    clientEmail: emailKey || 'client@example.com',
+    bookingId: 'example-client-booking',
+    bookingStatus: 'pending',
+    lastMessage: 'We received your request. You can chat here or request a new time.',
+    clientUnread: 1,
+    rescheduleStatus: 'open',
+    isExample: true
+  }), [emailKey, user?.displayName]);
+
+  const exampleMessages = useMemo(() => ([
+    {
+      id: 'example-client-system',
+      senderRole: 'system',
+      senderName: 'Booking update',
+      text: 'Example request sent for Thursday, May 28 at 14:30.'
+    },
+    {
+      id: 'example-client-owner',
+      senderRole: 'owner',
+      senderName: 'Studio Noir',
+      text: 'Thanks for booking. We will approve the request shortly. If you need a different time, send it here.'
+    },
+    {
+      id: 'example-client-reply',
+      senderRole: 'client',
+      senderName: user?.displayName || 'You',
+      text: 'Perfect, please keep me posted.'
+    }
+  ]), [user?.displayName]);
+
+  const bookingSource = bookings.length ? bookings : [exampleBooking];
+  const threadSource = threads.length ? threads : [exampleThread];
+
   useEffect(() => {
     if (!db || !emailKey) {
       setLoading(false);
@@ -92,28 +139,29 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   }, [appId, db, emailKey]);
 
   const activeThread = useMemo(
-    () => threads.find(thread => thread.id === activeThreadId) || threads[0] || null,
-    [activeThreadId, threads]
+    () => threadSource.find(thread => thread.id === activeThreadId) || threadSource[0] || null,
+    [activeThreadId, threadSource]
   );
 
   const activeBooking = useMemo(
-    () => bookings.find(booking => booking.id === activeThread?.bookingId) || bookings[0] || null,
-    [activeThread?.bookingId, bookings]
+    () => bookingSource.find(booking => booking.id === activeThread?.bookingId) || bookingSource[0] || null,
+    [activeThread?.bookingId, bookingSource]
   );
+  const visibleMessages = activeThread?.isExample ? exampleMessages : messages;
 
   const filteredThreads = useMemo(() => {
     const cleanSearch = threadSearch.trim().toLowerCase();
-    if (!cleanSearch) return threads;
-    return threads.filter(thread => [
+    if (!cleanSearch) return threadSource;
+    return threadSource.filter(thread => [
       thread.workspaceName,
       thread.clientName,
       thread.lastMessage,
       thread.bookingStatus
     ].some(value => String(value || '').toLowerCase().includes(cleanSearch)));
-  }, [threadSearch, threads]);
+  }, [threadSearch, threadSource]);
 
   useEffect(() => {
-    if (!db || !activeThread?.id) {
+    if (!db || !activeThread?.id || activeThread?.isExample) {
       setMessages([]);
       return undefined;
     }
@@ -138,6 +186,11 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const sendThreadMessage = async ({ text, kind = 'message', bookingId = '' }) => {
     const cleanText = String(text || '').trim();
     if (!cleanText || !db || !activeThread?.id || sending) return;
+    if (activeThread.isExample) {
+      setMessageDraft('');
+      setActiveView('chats');
+      return;
+    }
     setSending(true);
     try {
       const threadRef = FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id);
@@ -166,13 +219,20 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
 
   const openBookingThread = (booking) => {
     if (booking.threadId) setActiveThreadId(booking.threadId);
+    if (booking.isExample) setActiveThreadId(exampleThread.id);
     setRescheduleDraft(prev => ({ ...prev, bookingId: booking.id }));
     setActiveView('chats');
   };
 
   const sendRescheduleRequest = async () => {
-    const booking = bookings.find(item => item.id === rescheduleDraft.bookingId) || activeBooking;
+    const booking = bookingSource.find(item => item.id === rescheduleDraft.bookingId) || activeBooking;
     if (!booking) return;
+    if (booking.isExample) {
+      setActiveThreadId(exampleThread.id);
+      setRescheduleDraft({ bookingId: booking.id, date: '', time: '' });
+      setActiveView('chats');
+      return;
+    }
     if (booking.threadId) setActiveThreadId(booking.threadId);
     const preferredDate = rescheduleDraft.date || 'another available date';
     const preferredTime = rescheduleDraft.time || 'a better time';
@@ -210,10 +270,11 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
               key={thread.id}
               type="button"
               onClick={() => setActiveThreadId(thread.id)}
-              className={`w-full text-left p-4 md:p-5 border-b border-neutral-100 transition-colors ${active ? 'bg-black text-white' : 'hover:bg-white text-black'}`}
+              className={`w-full text-left p-4 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'hover:bg-white text-black'}`}
             >
+              {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
               <div className="flex items-start gap-3">
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold ${active ? 'bg-white text-black' : 'bg-white border border-neutral-100 text-black'}`}>
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold ${active ? 'native-gradient-icon text-black' : 'bg-white border border-neutral-100 text-black'}`}>
                   {(thread.workspaceName || thread.clientName || 'B').charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -221,8 +282,9 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
                     <p className={`font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{thread.workspaceName || thread.clientName || 'Booking chat'}</p>
                     {Number(thread.clientUnread || 0) > 0 && <span className="min-w-5 h-5 rounded-full bg-[#39FF14] text-black text-[9px] font-bold flex items-center justify-center">{thread.clientUnread}</span>}
                   </div>
-                  <p className={`text-xs mt-1 truncate ${active ? 'text-white/50' : 'text-neutral-400'}`}>{thread.clientName || emailKey}</p>
+                  <p className={`text-xs mt-1 truncate ${active ? 'text-white/50' : 'text-neutral-400'}`}>{thread.isExample ? 'Example only - real chats replace this' : thread.clientName || emailKey}</p>
                   <p className={`text-sm mt-3 line-clamp-2 ${active ? 'text-white/65' : 'text-neutral-500'}`}>{thread.lastMessage || 'No messages yet.'}</p>
+                  {thread.isExample && <span className={`inline-flex mt-3 px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${active ? 'bg-white/10 text-white/70' : 'bg-neutral-100 text-neutral-500'}`}>Preview</span>}
                 </div>
               </div>
             </button>
@@ -244,7 +306,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         <>
           <div className="p-4 md:p-5 border-b border-neutral-100 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-full bg-black text-white flex items-center justify-center shrink-0 font-bold">
+              <div className="w-11 h-11 rounded-full native-gradient-icon flex items-center justify-center shrink-0 font-bold">
                 {(activeThread.workspaceName || 'B').charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -252,24 +314,27 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
                 <p className="text-xs text-neutral-400 truncate">{activeBooking ? `${activeBooking.date} / ${activeBooking.time}` : activeThread.clientEmail}</p>
               </div>
             </div>
-            <span className={`px-3 py-1.5 rounded-full border text-[9px] font-bold uppercase tracking-widest ${statusStyles[activeThread.bookingStatus] || statusStyles.pending}`}>
-              {activeThread.bookingStatus || 'open'}
-            </span>
+            <div className="flex flex-wrap justify-end gap-2">
+              {activeThread.isExample && <span className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example</span>}
+              <span className={`px-3 py-1.5 rounded-full border text-[9px] font-bold uppercase tracking-widest ${statusStyles[activeThread.bookingStatus] || statusStyles.pending}`}>
+                {activeThread.bookingStatus || 'open'}
+              </span>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F7F7F5] space-y-3">
-            {messages.map(message => {
+            {visibleMessages.map(message => {
               const mine = message.senderRole === 'client';
               return (
                 <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[84%] rounded-3xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'bg-white border border-neutral-200 text-neutral-500' : 'bg-white text-black border border-neutral-200 rounded-bl-md'}`}>
+                  <div className={`max-w-[84%] rounded-3xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-white border border-neutral-200 text-neutral-500' : 'bg-white text-black border border-neutral-200 rounded-bl-md'}`}>
                     <p className="text-[8px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'Update' : message.senderName || message.senderRole}</p>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                   </div>
                 </div>
               );
             })}
-            {!messages.length && (
+            {!visibleMessages.length && (
               <div className="h-full flex items-center justify-center text-center">
                 <p className="text-sm font-medium text-neutral-400">No messages yet. Start the conversation below.</p>
               </div>
@@ -284,13 +349,13 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
                   onChange={(event) => setRescheduleDraft(prev => ({ ...prev, bookingId: event.target.value }))}
                   className="h-11 rounded-xl bg-white border border-neutral-100 px-3 text-xs font-bold outline-none"
                 >
-                  {bookings.map(booking => <option key={booking.id} value={booking.id}>{booking.date} / {booking.time}</option>)}
+                  {bookingSource.map(booking => <option key={booking.id} value={booking.id}>{booking.date} / {booking.time}{booking.isExample ? ' (example)' : ''}</option>)}
                 </select>
                 <div className="grid grid-cols-2 gap-2">
                   <input value={rescheduleDraft.date} onChange={(event) => setRescheduleDraft(prev => ({ ...prev, date: event.target.value }))} placeholder="New date" className="h-11 rounded-xl bg-white border border-neutral-100 px-3 text-xs font-bold outline-none" />
                   <input value={rescheduleDraft.time} onChange={(event) => setRescheduleDraft(prev => ({ ...prev, time: event.target.value }))} placeholder="New time" className="h-11 rounded-xl bg-white border border-neutral-100 px-3 text-xs font-bold outline-none" />
                 </div>
-                <button onClick={sendRescheduleRequest} disabled={!bookings.length || sending} className="h-11 px-4 rounded-xl bg-white border border-neutral-200 text-[9px] font-bold uppercase tracking-widest hover:border-black disabled:opacity-40">
+                <button onClick={sendRescheduleRequest} disabled={!bookingSource.length || sending} className="h-11 px-4 rounded-xl bg-white border border-neutral-200 text-[9px] font-bold uppercase tracking-widest hover:border-black disabled:opacity-40">
                   Reschedule
                 </button>
               </div>
@@ -303,7 +368,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
                 rows={2}
                 className="flex-1 resize-none rounded-2xl bg-neutral-50 border border-neutral-100 px-4 py-3 text-sm font-medium outline-none focus:bg-white focus:border-black transition-colors"
               />
-              <button onClick={() => sendThreadMessage({ text: messageDraft })} disabled={!messageDraft.trim() || sending} className="h-12 w-12 rounded-2xl bg-black text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+              <button onClick={() => sendThreadMessage({ text: messageDraft })} disabled={!messageDraft.trim() || sending} className="h-12 w-12 rounded-2xl native-gradient-button flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
                 <Send size={17} />
               </button>
             </div>
@@ -322,25 +387,32 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   );
 
   const renderBookings = () => (
-    <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden">
+    <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">
+      <div className="h-1 native-gradient-line" />
       <div className="p-5 md:p-7 border-b border-neutral-100 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Booking Timeline</p>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight">My Bookings</h1>
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight">My <span className="native-accent-text">Bookings</span></h1>
           <p className="text-sm md:text-base text-neutral-500 mt-2">Track upcoming requests, confirmed visits, waitlist spots, and reschedule conversations.</p>
+          {!bookings.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
-        <RefreshCw size={18} className="text-neutral-300" />
+        <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center">
+          <RefreshCw size={18} />
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 md:p-6 bg-neutral-50/60">
-        {bookings.length ? bookings.map(booking => (
-          <article key={booking.id} className="rounded-lg bg-white border border-neutral-100 p-5 shadow-sm">
+        {bookingSource.length ? bookingSource.map(booking => (
+          <article key={booking.id} className="native-stat-card rounded-lg bg-white border border-neutral-100 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-8">
               <div>
                 <span className={`inline-flex px-3 py-1.5 rounded-full border text-[9px] font-bold uppercase tracking-widest ${statusStyles[booking.status] || statusStyles.pending}`}>{booking.status || 'pending'}</span>
+                {booking.isExample && <span className="ml-2 inline-flex px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example</span>}
                 <h3 className="text-2xl font-bold tracking-tight mt-4">{booking.workspaceName || 'Booking'}</h3>
                 <p className="text-sm text-neutral-500 mt-1">{booking.date} / {booking.time}</p>
               </div>
-              <Calendar size={20} className="text-neutral-300" />
+              <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center shrink-0">
+                <Calendar size={18} />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => openBookingThread(booking)} className="h-11 rounded-lg bg-black text-white text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
@@ -388,8 +460,8 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
           ['Needs Update', pendingCount, Bell],
           ['Unread', unreadCount, MessageCircle]
         ].map(([label, value, IconCmp]) => (
-          <div key={label} className="rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center mb-5">
+          <div key={label} className="native-stat-card rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm">
+            <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center mb-5">
               <IconCmp size={17} />
             </div>
             <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-2">{label}</p>
@@ -399,19 +471,19 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       </div>
 
       <div className="xl:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <article className="rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
-          <Smartphone size={20} className="mb-5 text-black" />
+        <article className="native-stat-card rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
+          <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center mb-5"><Smartphone size={18} /></div>
           <h2 className="text-xl font-bold tracking-tight">Keep it one tap away.</h2>
           <p className="text-sm text-neutral-500 mt-2 mb-5">Add the app so booking updates and chats are easy to find after you book.</p>
           {onInstallApp && (
-            <button onClick={onInstallApp} className="w-full h-11 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+            <button onClick={onInstallApp} className="w-full h-11 rounded-full native-gradient-button text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
               <Download size={14} /> Add App
             </button>
           )}
         </article>
 
-        <article className="rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
-          <UserRound size={20} className="mb-5 text-black" />
+        <article className="native-stat-card rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
+          <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center mb-5"><UserRound size={18} /></div>
           <h2 className="text-xl font-bold tracking-tight">Using the owner side?</h2>
           <p className="text-sm text-neutral-500 mt-2 mb-5">Switch to owner login when you need to manage a business workspace.</p>
           <button onClick={onOwnerLogin} className="w-full h-11 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors">
@@ -419,8 +491,8 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
           </button>
         </article>
 
-        <article className="rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
-          <LogOut size={20} className="mb-5 text-black" />
+        <article className="native-stat-card rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
+          <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center mb-5"><LogOut size={18} /></div>
           <h2 className="text-xl font-bold tracking-tight">Account session</h2>
           <p className="text-sm text-neutral-500 mt-2 mb-5">Sign out when you are finished on this device.</p>
           <button onClick={onSignOut} className="w-full h-11 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
@@ -444,7 +516,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
                   key={item.id}
                   type="button"
                   onClick={() => setActiveView(item.id)}
-                  className={`h-10 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${activeView === item.id ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-500 hover:text-black'}`}
+                  className={`h-10 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${activeView === item.id ? 'native-gradient-button shadow-lg' : 'text-neutral-500 hover:text-black'}`}
                 >
                   <IconCmp size={14} /> {item.label}
                 </button>
@@ -459,15 +531,15 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-5 md:py-10">
-        <section className="mb-5 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <section className="mb-5 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4 native-gradient-ring">
           <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-lg bg-black text-white flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
+            <div className="w-11 h-11 rounded-lg native-gradient-icon flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
               {activeView === 'chats' ? <MessageCircle size={18} /> : activeView === 'bookings' ? <BookOpen size={18} /> : <UserRound size={18} />}
             </div>
             <div>
               <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Client App</p>
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
-                {activeView === 'chats' ? 'Chats' : activeView === 'bookings' ? 'My Bookings' : 'My Profile'}
+                {activeView === 'chats' ? <><span className="native-accent-text">Chats</span></> : activeView === 'bookings' ? 'My Bookings' : 'My Profile'}
               </h1>
               <p className="text-sm text-neutral-500 mt-1 max-w-2xl">
                 {activeView === 'chats'
@@ -478,15 +550,16 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
               </p>
             </div>
           </div>
-          {activeView === 'chats' && threads.length > 0 && (
-            <button type="button" onClick={() => setActiveThreadId(threads[0].id)} className="h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
+          {activeView === 'chats' && threadSource.length > 0 && (
+            <button type="button" onClick={() => setActiveThreadId(threadSource[0].id)} className="h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
               Latest Chat <ArrowRight size={13} />
             </button>
           )}
         </section>
 
         {activeView === 'chats' && (
-          <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden">
+          <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">
+            <div className="h-1 native-gradient-line" />
             <div className="grid grid-cols-1 lg:grid-cols-12">
               {renderChatList()}
               {renderChatPane()}
@@ -505,7 +578,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
               key={item.id}
               type="button"
               onClick={() => setActiveView(item.id)}
-              className={`h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-widest transition-all ${activeView === item.id ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-400'}`}
+              className={`h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-widest transition-all ${activeView === item.id ? 'native-gradient-button shadow-lg shadow-black/10' : 'text-neutral-400'}`}
             >
               <IconCmp size={18} />
               {item.label.replace('My ', '')}

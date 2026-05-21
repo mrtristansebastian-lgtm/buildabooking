@@ -34,6 +34,53 @@ export function WorkspaceInbox({
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
+  const exampleThread = useMemo(() => ({
+    id: 'example-support-thread',
+    clientName: 'Example Client',
+    clientEmail: 'client@example.com',
+    workspaceName: 'Studio Noir',
+    lastMessage: 'Could I move my booking to later in the afternoon?',
+    bookingId: 'example-support-booking',
+    bookingStatus: 'pending',
+    ownerUnread: 1,
+    clientUnread: 0,
+    rescheduleStatus: 'requested',
+    isExample: true
+  }), []);
+
+  const exampleBooking = useMemo(() => ({
+    id: 'example-support-booking',
+    clientName: 'Example Client',
+    clientEmail: 'client@example.com',
+    date: 'Thursday, May 28',
+    time: '10:30',
+    status: 'pending',
+    isExample: true
+  }), []);
+
+  const exampleMessages = useMemo(() => ([
+    {
+      id: 'example-system',
+      senderRole: 'system',
+      senderName: 'Booking update',
+      text: 'Example booking request received for Thursday, May 28 at 10:30.'
+    },
+    {
+      id: 'example-client',
+      senderRole: 'client',
+      senderName: 'Example Client',
+      text: 'Hey, could I move this to later in the afternoon if anything is open?'
+    },
+    {
+      id: 'example-owner',
+      senderRole: 'owner',
+      senderName: 'Team',
+      text: 'Absolutely. We can offer 14:30 or place you on the waitlist for 16:00.'
+    }
+  ]), []);
+
+  const threadSource = threads.length ? threads : [exampleThread];
+
   useEffect(() => {
     if (!db || !workspaceOwnerId) return undefined;
     const threadsQuery = FirebaseSDK.query(
@@ -51,16 +98,17 @@ export function WorkspaceInbox({
   }, [appId, db, workspaceOwnerId]);
 
   const activeThread = useMemo(
-    () => threads.find(thread => thread.id === activeThreadId) || threads[0] || null,
-    [activeThreadId, threads]
+    () => threadSource.find(thread => thread.id === activeThreadId) || threadSource[0] || null,
+    [activeThreadId, threadSource]
   );
   const linkedBooking = useMemo(
-    () => bookings.find(booking => booking.id === activeThread?.bookingId) || null,
-    [activeThread?.bookingId, bookings]
+    () => activeThread?.isExample ? exampleBooking : bookings.find(booking => booking.id === activeThread?.bookingId) || null,
+    [activeThread?.bookingId, activeThread?.isExample, bookings, exampleBooking]
   );
+  const visibleMessages = activeThread?.isExample ? exampleMessages : messages;
 
   useEffect(() => {
-    if (!db || !activeThread?.id) {
+    if (!db || !activeThread?.id || activeThread?.isExample) {
       setMessages([]);
       return undefined;
     }
@@ -84,6 +132,11 @@ export function WorkspaceInbox({
   const sendMessage = async (text = draft) => {
     const cleanText = String(text || '').trim();
     if (!cleanText || !db || !activeThread?.id || sending) return;
+    if (activeThread.isExample) {
+      setDraft('');
+      showToast?.('Example preview only. Real replies will send when a client thread exists.');
+      return;
+    }
     setSending(true);
     try {
       await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads', activeThread.id, 'messages'), {
@@ -108,6 +161,10 @@ export function WorkspaceInbox({
   };
 
   const confirmLinkedBooking = async () => {
+    if (activeThread?.isExample) {
+      showToast?.('Example preview only. Real requests can be approved from live threads.');
+      return;
+    }
     if (!linkedBooking) {
       showToast?.('No matching booking found for this thread yet.');
       return;
@@ -127,26 +184,28 @@ export function WorkspaceInbox({
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.ownerUnread || 0), 0);
   const filteredThreads = useMemo(() => {
     const queryText = threadQuery.trim().toLowerCase();
-    if (!queryText) return threads;
-    return threads.filter(thread => [
+    if (!queryText) return threadSource;
+    return threadSource.filter(thread => [
       thread.clientName,
       thread.clientEmail,
       thread.workspaceName,
       thread.lastMessage,
       thread.bookingStatus
     ].some(value => String(value || '').toLowerCase().includes(queryText)));
-  }, [threadQuery, threads]);
+  }, [threadQuery, threadSource]);
 
   return (
-    <section data-tour="client-inbox" className="saas-card overflow-hidden bg-white">
+    <section data-tour="client-inbox" className="saas-card overflow-hidden bg-white native-gradient-ring">
+      <div className="h-1 native-gradient-line" />
       <div className="p-5 md:p-7 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-4">
             <MessageCircle size={13} className="text-black" />
             Support Inbox
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Client conversations, built around bookings.</h2>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Client conversations, <span className="native-accent-text">built around bookings.</span></h2>
           <p className="text-sm md:text-base text-neutral-500 mt-2 max-w-2xl">New requests create a shared support thread so your team can confirm, reschedule, answer questions, and keep context attached to the right booking.</p>
+          {!threads.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
         <div className="grid grid-cols-3 gap-2 min-w-[260px]">
           {[
@@ -154,8 +213,10 @@ export function WorkspaceInbox({
             ['Unread', unreadCount, Bell],
             ['Linked', threads.filter(thread => thread.bookingId).length, Calendar]
           ].map(([label, value, IconCmp]) => (
-            <div key={label} className="rounded-lg border border-neutral-100 bg-neutral-50 p-3">
-              <IconCmp size={14} className="mb-2 text-neutral-400" />
+            <div key={label} className="native-stat-card rounded-lg border border-neutral-100 bg-neutral-50 p-3">
+              <div className="w-8 h-8 native-gradient-icon rounded-lg flex items-center justify-center mb-2">
+                <IconCmp size={14} />
+              </div>
               <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
               <p className="metric-value text-xl font-bold text-black">{value}</p>
             </div>
@@ -184,12 +245,13 @@ export function WorkspaceInbox({
                   key={thread.id}
                   type="button"
                   onClick={() => setActiveThreadId(thread.id)}
-                  className={`w-full text-left p-5 border-b border-neutral-100 transition-colors ${active ? 'bg-black text-white' : 'bg-transparent hover:bg-white text-black'}`}
+                  className={`w-full text-left p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'bg-transparent hover:bg-white text-black'}`}
                 >
+                  {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className={`font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{thread.clientName || 'Client'}</p>
-                      <p className={`text-xs mt-1 truncate ${active ? 'text-white/55' : 'text-neutral-500'}`}>{thread.workspaceName || thread.clientEmail}</p>
+                      <p className={`text-xs mt-1 truncate ${active ? 'text-white/55' : 'text-neutral-500'}`}>{thread.isExample ? 'Example only - live chats replace this' : thread.workspaceName || thread.clientEmail}</p>
                     </div>
                     {Number(thread.ownerUnread || 0) > 0 && <span className="min-w-6 h-6 rounded-full bg-[#39FF14] text-black text-[10px] font-bold flex items-center justify-center">{thread.ownerUnread}</span>}
                   </div>
@@ -198,6 +260,7 @@ export function WorkspaceInbox({
                     <span className={`px-2 py-1 rounded-md border text-[8px] font-bold uppercase tracking-widest ${active ? 'border-white/15 bg-white/10 text-white/70' : statusStyles[thread.bookingStatus] || statusStyles.pending}`}>
                       {thread.bookingStatus || 'pending'}
                     </span>
+                    {thread.isExample && <span className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${active ? 'bg-white/10 text-white/70' : 'bg-neutral-100 text-neutral-500'}`}>Example</span>}
                     {thread.rescheduleStatus === 'requested' && <span className="px-2 py-1 rounded-md bg-violet-50 text-violet-700 text-[8px] font-bold uppercase tracking-widest">Reschedule</span>}
                   </div>
                 </button>
@@ -217,7 +280,7 @@ export function WorkspaceInbox({
             <>
               <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-lg native-gradient-icon flex items-center justify-center shrink-0">
                     <UserRound size={20} />
                   </div>
                   <div className="min-w-0">
@@ -229,18 +292,18 @@ export function WorkspaceInbox({
                   <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-4 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors">
                     Open Bookings
                   </button>
-                  <button onClick={confirmLinkedBooking} className="h-10 px-4 rounded-lg bg-black text-white text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-neutral-800 transition-colors">
+                  <button onClick={confirmLinkedBooking} className="h-10 px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
                     <Check size={13} /> Confirm
                   </button>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white space-y-3">
-                {messages.map(message => {
+                {visibleMessages.map(message => {
                   const mine = message.senderRole === 'owner';
                   return (
                     <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'bg-neutral-50 border border-neutral-100 text-neutral-500' : 'bg-neutral-50 text-black border border-neutral-100 rounded-bl-md'}`}>
+                      <div className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-neutral-50 border border-neutral-100 text-neutral-500' : 'bg-neutral-50 text-black border border-neutral-100 rounded-bl-md'}`}>
                         <p className="text-[9px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'System' : message.senderName || message.senderRole}</p>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                       </div>
@@ -258,7 +321,7 @@ export function WorkspaceInbox({
                     rows={2}
                     className="flex-1 resize-none rounded-lg bg-white border border-neutral-200 px-4 py-3 text-sm font-medium outline-none focus:border-black transition-colors"
                   />
-                  <button onClick={() => sendMessage()} disabled={!draft.trim() || sending} className="h-12 w-12 rounded-lg bg-black text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={() => sendMessage()} disabled={!draft.trim() || sending} className="h-12 w-12 rounded-lg native-gradient-button flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
                     <Send size={17} />
                   </button>
                 </div>

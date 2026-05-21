@@ -10,7 +10,7 @@ import {
   Eye,
   Globe,
   Layers,
-  Mail,
+  MessageCircle,
   MousePointerClick,
   Palette,
   PanelRightOpen,
@@ -91,13 +91,13 @@ const scenes = [
     text: 'Profiles, notes, labels, photos, regulars, first-timers, and booking history stay together.'
   },
   {
-    id: 'email',
+    id: 'support',
     type: 'platform',
     tab: 'communications',
     target: 'client-inbox',
-    kicker: 'Support inbox',
-    title: 'Answer clients in one place.',
-    text: 'Every booking can open a focused support thread for questions, updates, and reschedule requests.'
+    kicker: 'In-house support',
+    title: 'Chat around every booking.',
+    text: 'Every client can get a shared thread for questions, updates, reschedules, and follow-ups without leaving Build A Booking.'
   },
   {
     id: 'team',
@@ -1110,12 +1110,12 @@ function LaunchScene({ generatedLink, canApply, onBack, onFinish }) {
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Next best actions</p>
             <h3 className="text-3xl font-bold tracking-tight mb-4">Make it unmistakably yours.</h3>
-            <p className="text-neutral-500 leading-relaxed mb-6">Start with identity, theme, schedule, and communication. The workspace is ready to guide the rest.</p>
+            <p className="text-neutral-500 leading-relaxed mb-6">Start with identity, theme, schedule, and support. The workspace is ready to guide the rest.</p>
             <div className="space-y-3">
               {[
                 [Palette, 'Choose a theme'],
                 [Calendar, 'Tune availability'],
-                [Mail, 'Set up messages'],
+                [MessageCircle, 'Open support inbox'],
                 [ShieldCheck, 'Invite staff']
               ].map(([Icon, label]) => (
                 <div key={label} className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">

@@ -20,6 +20,10 @@ const OnboardingShowroom = lazy(() => (
   import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
 ));
 
+const OwnerManual = lazy(() => (
+  import('./components/OwnerManual').then((module) => ({ default: module.OwnerManual }))
+));
+
 const BusinessCalendar = lazy(() => (
   import('./components/BusinessCalendar').then((module) => ({ default: module.BusinessCalendar }))
 ));
@@ -1116,6 +1120,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [selectedClientId, setSelectedClientId] = useState(null);
             const [clientNoteDraft, setClientNoteDraft] = useState('');
             const [showOnboarding, setShowOnboarding] = useState(false);
+            const [showOwnerManual, setShowOwnerManual] = useState(false);
             const [onboardingStartScene, setOnboardingStartScene] = useState('intro');
             const containerRef = useRef(null);
             const editorContentRef = useRef(null);
@@ -1346,6 +1351,8 @@ const signInWithNativeGoogle = async (authInstance) => {
                 id: 'example-booking',
                 clientName: 'Example Client',
                 clientPhone: '+27 82 000 0000',
+                clientEmail: 'client@example.com',
+                clientNote: 'Example only. A real client note, app chat, and reschedule request can sit on the record.',
                 clientBirthday: '',
                 date: 'Example date',
                 time: '10:30',
@@ -3709,6 +3716,18 @@ const signInWithNativeGoogle = async (authInstance) => {
                         />
                     </Suspense>
                 )}
+                {showOwnerManual && (
+                    <Suspense fallback={<LazySectionFallback label="Loading manual" />}>
+                        <OwnerManual
+                            onClose={() => setShowOwnerManual(false)}
+                            onNavigate={(targetTab, targetEditorTab) => {
+                                setShowOwnerManual(false);
+                                setActiveTab(targetTab);
+                                if (targetEditorTab) setEditorTab(targetEditorTab);
+                            }}
+                        />
+                    </Suspense>
+                )}
 
                 <div className={`dashboard-sidebar hidden md:flex transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex-col relative z-50 shadow-sm ${sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 p-8'}`}>
                     {!sidebarCollapsed && (
@@ -3840,12 +3859,15 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-black">Dashboard</h1>
                                     <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
                                 </div>
-                                <div className="dashboard-overview-actions grid grid-cols-4 sm:flex sm:flex-row gap-1.5 sm:gap-3">
+                                <div className="dashboard-overview-actions grid grid-cols-5 sm:flex sm:flex-row gap-1.5 sm:gap-3">
                                     <button onClick={() => { setOnboardingStartScene('intro'); setShowOnboarding(true); }} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
                                         <Sparkles size={14}/><span className="sm:hidden">Tour</span><span className="hidden sm:inline">Intro Tour</span>
                                     </button>
                                     <button onClick={() => { setOnboardingStartScene('name'); setShowOnboarding(true); }} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
                                         <ArrowRight size={14}/><span className="sm:hidden">Setup</span><span className="hidden sm:inline">Continue Setup</span>
+                                    </button>
+                                    <button onClick={() => setShowOwnerManual(true)} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
+                                        <BookOpen size={14}/><span className="sm:hidden">Manual</span><span className="hidden sm:inline">Owner Manual</span>
                                     </button>
                                     <button onClick={() => setActiveTab('editor')} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-black text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-800 transition-colors">
                                         <Palette size={14}/><span className="sm:hidden">Edit</span><span className="hidden sm:inline">Edit Page</span>
@@ -4125,9 +4147,14 @@ const signInWithNativeGoogle = async (authInstance) => {
                                         <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-black">Profile</h2>
                                         <p className="text-neutral-500 font-medium text-lg max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
                                     </div>
-                                    <button onClick={() => {saveSettings(); showToast("Profile Updated");}} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
-                                        <Check size={14}/> Save Profile
-                                    </button>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <button onClick={() => setShowOwnerManual(true)} className="h-12 px-7 bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/5 hover:-translate-y-0.5 hover:border-black transition-all flex items-center justify-center gap-2">
+                                            <BookOpen size={14}/> Owner Manual
+                                        </button>
+                                        <button onClick={() => {saveSettings(); showToast("Profile Updated");}} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                                            <Check size={14}/> Save Profile
+                                        </button>
+                                    </div>
                                 </div>
                             </header>
 
@@ -5884,9 +5911,20 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                                                 <div className="xl:col-span-2 flex flex-wrap items-center justify-start xl:justify-end gap-2">
                                                     {isExampleBooking ? (
-                                                        <span className="h-10 px-3 rounded-lg bg-neutral-100 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                                                            Not counted
-                                                        </span>
+                                                        <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2">
+                                                            <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
+                                                                <Calendar size={14} /> Reschedule
+                                                            </button>
+                                                            <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-amber-700 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
+                                                                <Bell size={14} /> Waitlist
+                                                            </button>
+                                                            <button type="button" disabled className="h-10 px-3 rounded-lg native-gradient-button flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
+                                                                <Check size={15} strokeWidth={3} /> Approve
+                                                            </button>
+                                                            <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-red-100 text-red-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
+                                                                <X size={14} strokeWidth={3} /> Deny
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <>
                                                             <button
