@@ -916,10 +916,7 @@ const clearAuthReturnState = () => {
 const shouldUseRedirectGoogleAuth = () => {
   if (typeof window === 'undefined') return false;
   if (Capacitor?.isNativePlatform?.()) return true;
-  const userAgent = navigator.userAgent || '';
-  const isTouchMobile = window.matchMedia?.('(max-width: 767px), (pointer: coarse)')?.matches;
-  const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS/i.test(userAgent);
-  return Boolean(isTouchMobile || isMobileBrowser);
+  return false;
 };
 
 const getGoogleAuthIntent = () => {
@@ -2908,8 +2905,8 @@ const signInWithNativeGoogle = async (authInstance) => {
                 setAuthBusy(true);
                 try {
                     const returnRoute = getCurrentAuthReturnRoute();
-                    await applyAuthPersistence(keepLoggedIn);
                     if (isNativeAppRuntime) {
+                        await applyAuthPersistence(keepLoggedIn);
                         await signInWithNativeGoogle(auth);
                         setGuestMode(false);
                         safeLocalRemove(guestModeStorageKey);
@@ -2924,6 +2921,9 @@ const signInWithNativeGoogle = async (authInstance) => {
                     }
                     const provider = createGoogleProvider();
                     await FirebaseSDK.signInWithPopup(auth, provider);
+                    applyAuthPersistence(keepLoggedIn).catch((persistenceError) => {
+                        console.error('Auth persistence could not be updated after Google sign-in.', persistenceError);
+                    });
                     setGuestMode(false);
                     safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
