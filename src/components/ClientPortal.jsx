@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
+  ArrowLeft,
   Bell,
   BookOpen,
   Calendar,
@@ -59,6 +60,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const [messageDraft, setMessageDraft] = useState('');
   const [threadSearch, setThreadSearch] = useState('');
   const [rescheduleDraft, setRescheduleDraft] = useState({ bookingId: '', date: '', time: '' });
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -209,6 +211,15 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
     [activeThread?.bookingId, bookingSource]
   );
   const visibleMessages = activeThread?.isExample ? exampleMessages : messages;
+  const chatBrandLogo = activeThread?.workspaceLogo || activeBooking?.workspaceLogo || '';
+  const chatStaffName = activeThread?.staffName || activeBooking?.staffName || '';
+  const chatStaffPhoto = activeThread?.staffPhotoURL || activeBooking?.staffPhotoURL || '';
+
+  const openThread = (threadId) => {
+    if (threadId) setActiveThreadId(threadId);
+    setMobileChatOpen(true);
+    setActiveView('chats');
+  };
 
   const filteredThreads = useMemo(() => {
     const cleanSearch = threadSearch.trim().toLowerCase();
@@ -331,10 +342,9 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   };
 
   const openBookingThread = (booking) => {
-    if (booking.threadId) setActiveThreadId(booking.threadId);
-    if (booking.isExample) setActiveThreadId(exampleThread.id);
+    if (booking.threadId) openThread(booking.threadId);
+    if (booking.isExample) openThread(exampleThread.id);
     setRescheduleDraft(prev => ({ ...prev, bookingId: booking.id }));
-    setActiveView('chats');
   };
 
   const sendRescheduleRequest = async () => {
@@ -363,7 +373,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.clientUnread || 0), 0);
 
   const renderChatList = () => (
-    <aside className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-neutral-100 bg-neutral-50/70">
+    <aside className={`${mobileChatOpen ? 'hidden lg:block' : ''} lg:col-span-4 border-b lg:border-b-0 lg:border-r border-neutral-100 bg-neutral-50/70`}>
       <div className="p-4 border-b border-neutral-100 bg-white/80">
         <div className="relative">
           <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
@@ -382,7 +392,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
             <button
               key={thread.id}
               type="button"
-              onClick={() => setActiveThreadId(thread.id)}
+              onClick={() => openThread(thread.id)}
               className={`w-full text-left p-4 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'hover:bg-white text-black'}`}
             >
               {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
@@ -414,17 +424,20 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   );
 
   const renderChatPane = () => (
-    <section className="lg:col-span-8 flex flex-col min-h-[620px] bg-white">
+    <section className={`${mobileChatOpen ? 'fixed inset-0 z-[999]' : 'hidden lg:flex'} lg:col-span-8 flex flex-col min-h-[100dvh] lg:min-h-[620px] bg-white`}>
       {activeThread ? (
         <>
-          <div className="p-4 md:p-5 border-b border-neutral-100 flex items-center justify-between gap-4">
+          <div className="p-3 md:p-5 border-b border-neutral-100 flex items-center justify-between gap-3 bg-white">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-full native-gradient-icon flex items-center justify-center shrink-0 font-bold">
-                {(activeThread.workspaceName || 'B').charAt(0).toUpperCase()}
+              <button type="button" onClick={() => setMobileChatOpen(false)} className="lg:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
+                <ArrowLeft size={18} />
+              </button>
+              <div className="w-11 h-11 rounded-full native-gradient-icon flex items-center justify-center shrink-0 font-bold overflow-hidden">
+                {chatBrandLogo ? <img src={chatBrandLogo} alt="" className="w-full h-full object-cover" /> : (activeThread.workspaceName || 'B').charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <h2 className="text-lg md:text-xl font-bold text-black truncate">{activeThread.workspaceName || 'Booking chat'}</h2>
-                <p className="text-xs text-neutral-400 truncate">{activeBooking ? `${activeBooking.date} / ${activeBooking.time}` : activeThread.clientEmail}</p>
+                <p className="text-xs text-neutral-400 truncate">{chatStaffName ? `${chatStaffName} is helping you` : activeBooking ? `${activeBooking.date} / ${activeBooking.time}` : 'Active support thread'}</p>
               </div>
             </div>
             <div className="flex flex-wrap justify-end gap-2">
@@ -434,6 +447,13 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
               </span>
             </div>
           </div>
+
+          {chatStaffName && (
+            <div className="px-4 py-2 bg-neutral-50 border-b border-neutral-100 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              {chatStaffPhoto ? <img src={chatStaffPhoto} alt="" className="w-5 h-5 rounded-full object-cover" /> : <span className="w-2 h-2 rounded-full native-gradient-line" />}
+              Staff member: {chatStaffName}
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F7F7F5] space-y-3">
             {visibleMessages.map(message => {
@@ -654,18 +674,18 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-5 md:py-10">
-        <section className="mb-5 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4 native-gradient-ring">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-4 md:py-10">
+        <section className="mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-3 md:p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3 native-gradient-ring">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-lg native-gradient-icon flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
               {activeView === 'chats' ? <MessageCircle size={18} /> : activeView === 'bookings' ? <BookOpen size={18} /> : <UserRound size={18} />}
             </div>
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Client App</p>
-              <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
+              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Client App</p>
+              <h1 className="text-xl md:text-4xl font-bold tracking-tight">
                 {activeView === 'chats' ? <><span className="native-accent-text">Chats</span></> : activeView === 'bookings' ? 'My Bookings' : 'My Profile'}
               </h1>
-              <p className="text-sm text-neutral-500 mt-1 max-w-2xl">
+              <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">
                 {activeView === 'chats'
                   ? 'Message the businesses you booked with and keep every update in one thread.'
                   : activeView === 'bookings'
@@ -675,7 +695,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
             </div>
           </div>
           {activeView === 'chats' && threadSource.length > 0 && (
-            <button type="button" onClick={() => setActiveThreadId(threadSource[0].id)} className="h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
+            <button type="button" onClick={() => openThread(threadSource[0].id)} className="h-10 md:h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
               Latest Chat <ArrowRight size={13} />
             </button>
           )}

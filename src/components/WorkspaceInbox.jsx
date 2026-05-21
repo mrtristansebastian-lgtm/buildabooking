@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Calendar, Check, MessageCircle, Search, Send, UserRound, Users } from 'lucide-react';
+import { ArrowLeft, Bell, Calendar, Check, Maximize2, MessageCircle, Minimize2, Search, Send, Users } from 'lucide-react';
 import * as FirebaseSDK from '../services/firebase';
 import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
 
@@ -24,6 +24,7 @@ export function WorkspaceInbox({
   user,
   workspaceOwnerId,
   bookings,
+  staffList = [],
   updateBooking,
   setActiveTab,
   showToast
@@ -34,6 +35,8 @@ export function WorkspaceInbox({
   const [threadQuery, setThreadQuery] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [chatFullscreen, setChatFullscreen] = useState(false);
 
   const exampleThread = useMemo(() => ({
     id: 'example-support-thread',
@@ -107,6 +110,13 @@ export function WorkspaceInbox({
     [activeThread?.bookingId, activeThread?.isExample, bookings, exampleBooking]
   );
   const visibleMessages = activeThread?.isExample ? exampleMessages : messages;
+  const activeStaff = useMemo(() => {
+    const emailKey = notificationEmailKey(user?.email || '');
+    return staffList.find(staff => notificationEmailKey(staff.email || '') === emailKey || staff.uid === user?.uid) || staffList[0] || null;
+  }, [staffList, user?.email, user?.uid]);
+  const assignedStaff = useMemo(() => (
+    linkedBooking?.staffId ? staffList.find(staff => staff.id === linkedBooking.staffId) : null
+  ), [linkedBooking?.staffId, staffList]);
 
   const createClientNotification = async (email, payload) => {
     const emailKey = notificationEmailKey(email);
@@ -167,7 +177,9 @@ export function WorkspaceInbox({
         text: cleanText,
         kind: 'message',
         senderId: user?.uid || workspaceOwnerId,
-        senderName: user?.displayName || user?.email || 'Team',
+        senderName: activeStaff?.name || user?.displayName || user?.email || 'Team',
+        senderPhotoURL: activeStaff?.photoURL || user?.photoURL || '',
+        staffId: activeStaff?.id || '',
         senderRole: 'owner',
         createdAt: FirebaseSDK.serverTimestamp()
       });
@@ -231,68 +243,76 @@ export function WorkspaceInbox({
   }, [threadQuery, threadSource]);
 
   return (
-    <section data-tour="client-inbox" className="saas-card overflow-hidden bg-white native-gradient-ring">
+    <section data-tour="client-inbox" className={`saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
       <div className="h-1 native-gradient-line" />
-      <div className="p-5 md:p-7 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3`}>
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-4">
+          <div className="inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">
             <MessageCircle size={13} className="text-black" />
             Support Inbox
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Client conversations, <span className="native-accent-text">built around bookings.</span></h2>
-          <p className="text-sm md:text-base text-neutral-500 mt-2 max-w-2xl">New requests create a shared support thread so your team can confirm, reschedule, answer questions, and keep context attached to the right booking.</p>
+          <h2 className="text-lg md:text-2xl font-bold tracking-tight text-black">Chats tied to bookings.</h2>
+          <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Confirm, reschedule, and reply with the booking context beside the conversation.</p>
           {!threads.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
-        <div className="grid grid-cols-3 gap-2 min-w-[260px]">
+        <div className="grid grid-cols-3 gap-2 lg:min-w-[250px]">
           {[
             ['Threads', threads.length, MessageCircle],
             ['Unread', unreadCount, Bell],
             ['Linked', threads.filter(thread => thread.bookingId).length, Calendar]
           ].map(([label, value, IconCmp]) => (
-            <div key={label} className="native-stat-card rounded-lg border border-neutral-100 bg-neutral-50 p-3">
-              <div className="w-8 h-8 native-gradient-icon rounded-lg flex items-center justify-center mb-2">
+            <div key={label} className="native-stat-card rounded-lg border border-neutral-100 bg-neutral-50 p-2.5 md:p-3">
+              <div className="w-7 h-7 md:w-8 md:h-8 native-gradient-icon rounded-lg flex items-center justify-center mb-2">
                 <IconCmp size={14} />
               </div>
               <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
-              <p className="metric-value text-xl font-bold text-black">{value}</p>
+              <p className="metric-value text-lg md:text-xl font-bold text-black">{value}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 min-h-[620px]">
-        <aside className="xl:col-span-4 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-neutral-50/45">
-          <div className="p-4 border-b border-neutral-100 bg-white/70">
+      <div className={`grid grid-cols-1 xl:grid-cols-12 ${chatFullscreen ? 'min-h-0 flex-1' : 'min-h-[520px] xl:min-h-[640px]'}`}>
+        <aside className={`${mobileChatOpen ? 'hidden xl:block' : ''} xl:col-span-4 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-neutral-50/45`}>
+          <div className="p-3 md:p-4 border-b border-neutral-100 bg-white/70">
             <div className="relative">
               <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
               <input
                 value={threadQuery}
                 onChange={(event) => setThreadQuery(event.target.value)}
                 placeholder="Search client, email, message"
-                className="w-full h-12 rounded-lg bg-white border border-neutral-200 pl-11 pr-4 text-sm font-bold outline-none focus:border-black transition-colors"
+                className="w-full h-11 md:h-12 rounded-lg bg-white border border-neutral-200 pl-11 pr-4 text-sm font-bold outline-none focus:border-black transition-colors"
               />
             </div>
           </div>
-          <div className="max-h-[360px] xl:max-h-[660px] overflow-y-auto">
+          <div className="max-h-[62vh] xl:max-h-[660px] overflow-y-auto">
             {filteredThreads.length ? filteredThreads.map(thread => {
               const active = activeThread?.id === thread.id;
               return (
                 <button
                   key={thread.id}
                   type="button"
-                  onClick={() => setActiveThreadId(thread.id)}
-                  className={`w-full text-left p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'bg-transparent hover:bg-white text-black'}`}
+                  onClick={() => {
+                    setActiveThreadId(thread.id);
+                    setMobileChatOpen(true);
+                  }}
+                  className={`w-full text-left p-3.5 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'bg-transparent hover:bg-white text-black'}`}
                 >
                   {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className={`font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{thread.clientName || 'Client'}</p>
-                      <p className={`text-xs mt-1 truncate ${active ? 'text-white/55' : 'text-neutral-500'}`}>{thread.isExample ? 'Example only - live chats replace this' : thread.workspaceName || thread.clientEmail}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold ${active ? 'native-gradient-icon text-black' : 'bg-white border border-neutral-100 text-black'}`}>
+                        {(thread.clientName || 'C').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{thread.clientName || 'Client'}</p>
+                        <p className={`text-xs mt-1 truncate ${active ? 'text-white/55' : 'text-neutral-500'}`}>{thread.isExample ? 'Example only - live chats replace this' : thread.workspaceName || thread.clientEmail}</p>
+                      </div>
                     </div>
                     {Number(thread.ownerUnread || 0) > 0 && <span className="min-w-6 h-6 rounded-full bg-[#39FF14] text-black text-[10px] font-bold flex items-center justify-center">{thread.ownerUnread}</span>}
                   </div>
-                  <p className={`text-sm mt-4 line-clamp-2 ${active ? 'text-white/60' : 'text-neutral-500'}`}>{thread.lastMessage || 'No messages yet.'}</p>
-                  <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <p className={`text-sm mt-3 line-clamp-2 ${active ? 'text-white/60' : 'text-neutral-500'}`}>{thread.lastMessage || 'No messages yet.'}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
                     <span className={`px-2 py-1 rounded-md border text-[8px] font-bold uppercase tracking-widest ${active ? 'border-white/15 bg-white/10 text-white/70' : statusStyles[thread.bookingStatus] || statusStyles.pending}`}>
                       {thread.bookingStatus || 'pending'}
                     </span>
@@ -311,30 +331,46 @@ export function WorkspaceInbox({
           </div>
         </aside>
 
-        <div className="xl:col-span-8 flex flex-col min-h-[620px]">
+        <div className={`${mobileChatOpen ? 'fixed inset-0 z-[999] xl:static xl:z-auto' : 'hidden xl:flex'} xl:col-span-8 flex flex-col min-h-[100dvh] xl:min-h-[620px] bg-white`}>
           {activeThread ? (
             <>
-              <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex items-center justify-between gap-3 bg-white">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 rounded-lg native-gradient-icon flex items-center justify-center shrink-0">
-                    <UserRound size={20} />
+                  <button type="button" onClick={() => setMobileChatOpen(false)} className="xl:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
+                    <ArrowLeft size={18} />
+                  </button>
+                  <div className="w-11 h-11 md:w-12 md:h-12 rounded-full native-gradient-icon flex items-center justify-center shrink-0 overflow-hidden font-bold">
+                    {activeThread.clientPhotoURL ? <img src={activeThread.clientPhotoURL} alt="" className="w-full h-full object-cover" /> : (activeThread.clientName || 'C').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-xl font-bold text-black truncate">{activeThread.clientName || 'Client'}</h3>
-                    <p className="text-sm text-neutral-500 truncate">{activeThread.clientEmail}</p>
+                    <h3 className="text-base md:text-xl font-bold text-black truncate">{activeThread.clientName || 'Client'}</h3>
+                    <p className="text-xs md:text-sm text-neutral-500 truncate">
+                      {assignedStaff ? `Assigned to ${assignedStaff.name}` : activeThread.clientEmail || 'Active support thread'}
+                    </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                  <button type="button" onClick={() => setChatFullscreen(value => !value)} className="hidden md:flex h-10 w-10 rounded-lg border border-neutral-200 bg-white items-center justify-center text-black hover:border-black transition-colors">
+                    {chatFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                  </button>
                   <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-4 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors">
                     Open Bookings
                   </button>
-                  <button onClick={confirmLinkedBooking} className="h-10 px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+                  <button onClick={confirmLinkedBooking} className="h-10 px-3 md:px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
                     <Check size={13} /> Confirm
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white space-y-3">
+              {assignedStaff && (
+                <div className="px-4 py-2 bg-neutral-50 border-b border-neutral-100 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: assignedStaff.color || '#39FF14' }} />
+                  {assignedStaff.photoURL ? <img src={assignedStaff.photoURL} alt="" className="w-5 h-5 rounded-full object-cover" /> : null}
+                  Staff member: {assignedStaff.name}
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-[#F7F7F5] space-y-3">
                 {visibleMessages.map(message => {
                   const mine = message.senderRole === 'owner';
                   return (
@@ -348,7 +384,7 @@ export function WorkspaceInbox({
                 })}
               </div>
 
-              <div className="p-4 md:p-5 border-t border-neutral-100 bg-neutral-50/50">
+              <div className="p-3 md:p-5 border-t border-neutral-100 bg-white">
                 <div className="flex items-end gap-2">
                   <textarea
                     value={draft}

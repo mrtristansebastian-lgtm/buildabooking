@@ -1359,6 +1359,19 @@ const signInWithNativeGoogle = async (authInstance) => {
                     ...workspaceAccess
                 ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
             }, [settings.brandName, user, workspaceAccess]);
+            const activeStaffProfile = useMemo(() => {
+                if (!user) return staffList.find(staff => staff.id === 'owner') || null;
+                const emailKey = normalizeEmail(user.email || '');
+                return staffList.find(staff => (
+                    staff.id === activeWorkspaceGrant?.staffId ||
+                    staff.uid === user.uid ||
+                    normalizeEmail(staff.email || '') === emailKey
+                )) || (isWorkspaceOwner ? staffList.find(staff => staff.id === 'owner') : null) || staffList[0] || null;
+            }, [activeWorkspaceGrant?.staffId, isWorkspaceOwner, staffList, user]);
+            const dashboardGreetingName = useMemo(() => {
+                const source = activeStaffProfile?.name || user?.displayName || user?.email?.split('@')[0] || settings.brandName || 'Builder';
+                return String(source).trim().split(/\s+/)[0] || 'Builder';
+            }, [activeStaffProfile?.name, settings.brandName, user?.displayName, user?.email]);
 
             const visibleBookings = bookings;
             const exampleBooking = useMemo(() => ({
@@ -3448,6 +3461,8 @@ const signInWithNativeGoogle = async (authInstance) => {
 
             const updateBooking = async (bookingId, updates) => {
                 const existingBooking = visibleBookings.find(booking => booking.id === bookingId);
+                const nextStaffId = updates.staffId ?? existingBooking?.staffId ?? '';
+                const nextAssignedStaff = nextStaffId ? staffList.find(staff => staff.id === nextStaffId) : null;
                 if (!isFirebaseConfigured || !user) {
                     setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
                     return;
@@ -3471,10 +3486,14 @@ const signInWithNativeGoogle = async (authInstance) => {
                                 clientName: existingBooking?.clientName || '',
                                 workspaceSlug: existingBooking?.workspaceSlug || settings.slug || '',
                                 workspaceName: existingBooking?.workspaceName || settings.brandName || '',
+                                workspaceLogo: existingBooking?.workspaceLogo || settings.logo || '',
                                 date: updates.date ?? existingBooking?.date ?? '',
                                 dateKey: updates.dateKey ?? existingBooking?.dateKey ?? null,
                                 time: updates.time ?? existingBooking?.time ?? '',
                                 status: updates.status ?? existingBooking?.status ?? 'pending',
+                                staffId: nextStaffId,
+                                staffName: nextAssignedStaff?.name || '',
+                                staffPhotoURL: nextAssignedStaff?.photoURL || '',
                                 timestamp: existingBooking?.timestamp || Date.now(),
                                 ...portalUpdates
                             },
@@ -3487,6 +3506,10 @@ const signInWithNativeGoogle = async (authInstance) => {
                             lastMessage: updates.status ? `Booking status updated to ${updates.status}.` : 'Booking details updated.',
                             lastMessageAt: FirebaseSDK.serverTimestamp(),
                             updatedAt: FirebaseSDK.serverTimestamp(),
+                            staffId: nextStaffId,
+                            staffName: nextAssignedStaff?.name || '',
+                            staffPhotoURL: nextAssignedStaff?.photoURL || '',
+                            workspaceLogo: existingBooking?.workspaceLogo || settings.logo || '',
                             clientUnread: FirebaseSDK.increment(1)
                         }).catch(error => console.error('Client thread sync failed', error));
                     }
@@ -4186,7 +4209,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                             <span className="w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_0_4px_rgba(57,255,20,0.14)]" />
                                             Live Workspace
                                         </div>
-                                        <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-none text-black mb-3">{dashboardPortfolio.greeting}, {settings.brandName || 'Builder'}</h2>
+                                        <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-none text-black mb-3">{dashboardPortfolio.greeting}, {dashboardGreetingName}</h2>
                                         <p className="text-neutral-500 text-base md:text-lg leading-relaxed">
                                             {dashboardPortfolio.period.title} / {dashboardPortfolio.period.rangeLabel}. Focus on requests, confirmed work, and available capacity.
                                         </p>
@@ -4716,17 +4739,28 @@ const signInWithNativeGoogle = async (authInstance) => {
                     {activeTab === 'business' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
                             <Suspense fallback={<LazySectionFallback label="Loading schedule" />}>
-                                <BusinessCalendar settings={settings} setSettings={setSettings} onSave={saveSettings} showToast={showToast} bookings={visibleBookings} />
+                                <BusinessCalendar
+                                    settings={settings}
+                                    setSettings={setSettings}
+                                    onSave={saveSettings}
+                                    showToast={showToast}
+                                    bookings={visibleBookings}
+                                    staffList={staffList}
+                                    activeStaffId={activeStaffProfile?.id || 'owner'}
+                                    workspaceRole={workspaceRole}
+                                />
                             </Suspense>
                         </div>
                     )}
 
                     {activeTab === 'communications' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F6F7F9]">
-                            <header className="mb-6 md:mb-8">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Client Support</p>
-                                <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-black">Support Inbox</h2>
-                                <p className="text-neutral-500 font-medium text-lg max-w-3xl">A focused workspace for client chats, booking questions, and reschedule requests. Email opt-in and message settings now live in Editor Features with the rest of the booking-page controls.</p>
+                            <header className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                                <div>
+                                    <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Client Support</p>
+                                    <h2 className="text-3xl md:text-6xl font-bold tracking-tight text-black">Support Inbox</h2>
+                                </div>
+                                <p className="text-sm md:text-base text-neutral-500 font-medium max-w-2xl">Reply to clients, manage reschedules, and keep booking context in one clean thread.</p>
                             </header>
 
                             <div className="max-w-7xl">
@@ -4737,6 +4771,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                         user={user}
                                         workspaceOwnerId={workspaceOwnerId}
                                         bookings={visibleBookings}
+                                        staffList={staffList}
                                         updateBooking={updateBooking}
                                         setActiveTab={setActiveTab}
                                         showToast={showToast}

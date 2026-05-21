@@ -114,6 +114,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     source: 'public-booking-page',
     workspaceSlug,
     workspaceName: workspace.workspaceName || workspace.brandName || '',
+    workspaceLogo: workspace.logo || workspace.businessLogo || '',
     threadId,
     timestamp: Date.now(),
     createdAt: serverTimestamp()
@@ -146,6 +147,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
         clientName,
         workspaceSlug,
         workspaceName: bookingRecord.workspaceName,
+        workspaceLogo: bookingRecord.workspaceLogo,
         date,
         dateKey: dateKey || null,
         time,
@@ -162,6 +164,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       bookingId: bookingRef.id,
       workspaceSlug,
       workspaceName: bookingRecord.workspaceName,
+      workspaceLogo: bookingRecord.workspaceLogo,
       bookingStatus: status,
       status: 'open',
       lastMessage: `Booking request received for ${date} at ${time}.`,

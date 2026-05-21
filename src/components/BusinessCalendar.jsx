@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, ShieldCheck, X, XCircle } from 'lucide-react';
+import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, ShieldCheck, UserRound, Users, X, XCircle } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
-        export const BusinessCalendar = ({ settings, setSettings, onSave, showToast, bookings = [] }) => {
+        export const BusinessCalendar = ({ settings, setSettings, onSave, showToast, bookings = [], staffList = [], activeStaffId = 'owner', workspaceRole = 'owner' }) => {
             const [currentMonth, setCurrentMonth] = useState(new Date());
             const [expandedDate, setExpandedDate] = useState(getLocalDateStr(new Date()));
             const [isAddingSlot, setIsAddingSlot] = useState(false);
             const [newSlotTime, setNewSlotTime] = useState('18:00');
             const [scheduleStatsPeriod, setScheduleStatsPeriod] = useState('month');
+            const initialCalendarId = workspaceRole === 'staff' ? (activeStaffId || 'owner') : 'workspace';
+            const [selectedCalendarId, setSelectedCalendarId] = useState(initialCalendarId);
             const [calendarViewMode, setCalendarViewMode] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'week' : 'month'
             ));
@@ -16,7 +18,31 @@ import { getLocalDateStr } from '../utils/dates';
             const [isMobilePortraitCalendar, setIsMobilePortraitCalendar] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
             ));
-            const defaultTimes = Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
+            useEffect(() => {
+                if (workspaceRole === 'staff' && activeStaffId) setSelectedCalendarId(activeStaffId);
+            }, [activeStaffId, workspaceRole]);
+            const staffCalendarOptions = useMemo(() => {
+                const options = [{ id: 'workspace', name: 'Business Calendar', role: 'Shared', color: '#000000' }];
+                return [
+                    ...options,
+                    ...(staffList || []).map(staff => ({
+                        id: staff.id,
+                        name: staff.name || 'Team member',
+                        role: staff.role === 'owner' ? 'Owner' : staff.role === 'admin' ? 'Admin' : 'Staff',
+                        color: staff.color || '#39FF14',
+                        photoURL: staff.photoURL || ''
+                    }))
+                ].filter((calendar, index, list) => calendar.id && list.findIndex(item => item.id === calendar.id) === index);
+            }, [staffList]);
+            const selectedCalendar = staffCalendarOptions.find(calendar => calendar.id === selectedCalendarId) || staffCalendarOptions[0];
+            const visibleCalendarOptions = workspaceRole === 'staff'
+                ? staffCalendarOptions.filter(calendar => calendar.id === selectedCalendarId)
+                : staffCalendarOptions;
+            const activeStaffCalendar = selectedCalendarId === 'workspace' ? null : (settings.staffCalendars?.[selectedCalendarId] || {});
+            const activeSchedule = selectedCalendarId === 'workspace' ? (settings.schedule || {}) : (activeStaffCalendar?.schedule || {});
+            const defaultTimes = Array.isArray(activeStaffCalendar?.availableTimes)
+                ? activeStaffCalendar.availableTimes
+                : Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
             const todayStr = getLocalDateStr(new Date());
             const monthLookup = {
                 jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
@@ -52,7 +78,7 @@ import { getLocalDateStr } from '../utils/dates';
             }, [currentMonth]);
 
             const getDayConfig = (dateStr) => {
-                const savedConfig = settings.schedule?.[dateStr];
+                const savedConfig = activeSchedule?.[dateStr];
                 return {
                     available: savedConfig?.available ?? true,
                     times: Array.isArray(savedConfig?.times) ? savedConfig.times : [...defaultTimes]
@@ -122,13 +148,33 @@ import { getLocalDateStr } from '../utils/dates';
             };
 
             const updateDateConfig = (dateStr, nextConfig) => {
-                setSettings(prev => ({
-                    ...prev,
-                    schedule: {
-                        ...(prev.schedule || {}),
-                        [dateStr]: nextConfig
+                setSettings(prev => {
+                    if (selectedCalendarId === 'workspace') {
+                        return {
+                            ...prev,
+                            schedule: {
+                                ...(prev.schedule || {}),
+                                [dateStr]: nextConfig
+                            }
+                        };
                     }
-                }));
+                    const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
+                    return {
+                        ...prev,
+                        staffCalendars: {
+                            ...(prev.staffCalendars || {}),
+                            [selectedCalendarId]: {
+                                ...previousCalendar,
+                                staffId: selectedCalendarId,
+                                schedule: {
+                                    ...(previousCalendar.schedule || {}),
+                                    [dateStr]: nextConfig
+                                },
+                                updatedAt: Date.now()
+                            }
+                        }
+                    };
+                });
             };
 
             const toggleDateAvailability = (dateStr) => {
@@ -152,7 +198,24 @@ import { getLocalDateStr } from '../utils/dates';
                         showToast("That slot already exists.");
                         return;
                     }
-                    setSettings(prev => ({ ...prev, availableTimes: [...(prev.availableTimes || []), time].sort() }));
+                    setSettings(prev => {
+                        if (selectedCalendarId === 'workspace') {
+                            return { ...prev, availableTimes: [...(prev.availableTimes || []), time].sort() };
+                        }
+                        const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
+                        return {
+                            ...prev,
+                            staffCalendars: {
+                                ...(prev.staffCalendars || {}),
+                                [selectedCalendarId]: {
+                                    ...previousCalendar,
+                                    staffId: selectedCalendarId,
+                                    availableTimes: [...(Array.isArray(previousCalendar.availableTimes) ? previousCalendar.availableTimes : defaultTimes), time].sort(),
+                                    updatedAt: Date.now()
+                                }
+                            }
+                        };
+                    });
                 });
             };
 
@@ -313,7 +376,7 @@ import { getLocalDateStr } from '../utils/dates';
 
                 const summary = periodDates.reduce((acc, dateStr) => {
                     const config = getDayConfig(dateStr);
-                    const savedConfig = settings.schedule?.[dateStr];
+                    const savedConfig = activeSchedule?.[dateStr];
                     const dayBookings = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
                     const capacity = config.available ? (config.times?.length || 0) : 0;
                     const openSlots = dateStr >= todayStr && config.available ? Math.max(0, capacity - dayBookings.reserved) : 0;
@@ -341,7 +404,7 @@ import { getLocalDateStr } from '../utils/dates';
                     dayStatus,
                     periodName: scheduleStatsPeriod.charAt(0).toUpperCase() + scheduleStatsPeriod.slice(1)
                 };
-            }, [scheduleStatsPeriod, expandedDate, selectedDateLabel, selectedConfig, currentMonth, settings.schedule, settings.availableTimes, bookingsByDate, todayStr]);
+            }, [scheduleStatsPeriod, expandedDate, selectedDateLabel, selectedConfig, currentMonth, activeSchedule, defaultTimes, bookingsByDate, todayStr]);
 
             const scheduleMetricCards = useMemo(() => {
                 if (scheduleStatsPeriod === 'day') {
@@ -410,6 +473,41 @@ import { getLocalDateStr } from '../utils/dates';
                             </button>
                         </div>
                     </header>
+
+                    <section className="saas-card p-3 md:p-4 mb-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center shrink-0">
+                                    <Users size={17} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Calendar Owner</p>
+                                    <h3 className="text-lg font-bold tracking-tight text-black truncate">{selectedCalendar?.name || 'Business Calendar'}</h3>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                {visibleCalendarOptions.map(calendar => {
+                                    const active = selectedCalendarId === calendar.id;
+                                    return (
+                                        <button
+                                            key={calendar.id}
+                                            type="button"
+                                            onClick={() => setSelectedCalendarId(calendar.id)}
+                                            className={`min-w-[150px] h-12 rounded-lg border px-3 flex items-center gap-3 text-left transition-all ${active ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-black'}`}
+                                        >
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold overflow-hidden ${active ? 'native-gradient-icon text-black' : 'bg-neutral-50 border border-neutral-100'}`}>
+                                                {calendar.photoURL ? <img src={calendar.photoURL} alt="" className="w-full h-full object-cover" /> : calendar.id === 'workspace' ? <UserRound size={14} /> : calendar.name.charAt(0).toUpperCase()}
+                                            </span>
+                                            <span className="min-w-0">
+                                                <span className={`block text-sm font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{calendar.name}</span>
+                                                <span className={`block text-[8px] font-bold uppercase tracking-widest truncate ${active ? 'text-white/45' : 'text-neutral-400'}`}>{calendar.role}</span>
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
 
                     <section className="saas-card overflow-hidden mb-6">
                         <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
@@ -519,7 +617,7 @@ import { getLocalDateStr } from '../utils/dates';
                                         const isSelected = expandedDate === dateStr;
                                         const isToday = todayStr === dateStr;
                                         const isPastDay = dateStr < todayStr;
-                                        const isCustom = Boolean(settings.schedule?.[dateStr]);
+                                        const isCustom = Boolean(activeSchedule?.[dateStr]);
                                         const calendarBubble = getCalendarBubble(dateStr, config);
                                         const bubbleClass = {
                                             open: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-white text-black border-neutral-200',
@@ -593,7 +691,7 @@ import { getLocalDateStr } from '../utils/dates';
                                     <div>
                                         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-2">Template</p>
                                         <h3 className="text-xl font-bold tracking-tight text-black">Default Slots</h3>
-                                        <p className="text-sm text-neutral-500 mt-1">New open days start with these times.</p>
+                                        <p className="text-sm text-neutral-500 mt-1">{selectedCalendarId === 'workspace' ? 'New open days start with these times.' : `${selectedCalendar?.name || 'This staff member'} uses these default times.`}</p>
                                     </div>
                                     <button onClick={addDefaultTime} className="w-11 h-11 rounded-lg bg-[#39FF14] text-black flex items-center justify-center hover:scale-105 transition-transform shrink-0 shadow-lg shadow-black/5">
                                         <Plus size={16}/>
@@ -606,7 +704,24 @@ import { getLocalDateStr } from '../utils/dates';
                                                 <Clock size={13} className="text-neutral-400"/>
                                                 {time}
                                             </span>
-                                            <button onClick={() => setSettings(prev => ({...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i)}))} className="text-neutral-300 hover:text-red-500 transition-colors"><X size={13}/></button>
+                                            <button onClick={() => setSettings(prev => {
+                                                if (selectedCalendarId === 'workspace') {
+                                                    return { ...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i) };
+                                                }
+                                                const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
+                                                return {
+                                                    ...prev,
+                                                    staffCalendars: {
+                                                        ...(prev.staffCalendars || {}),
+                                                        [selectedCalendarId]: {
+                                                            ...previousCalendar,
+                                                            staffId: selectedCalendarId,
+                                                            availableTimes: defaultTimes.filter((_, idx) => idx !== i),
+                                                            updatedAt: Date.now()
+                                                        }
+                                                    }
+                                                };
+                                            })} className="text-neutral-300 hover:text-red-500 transition-colors"><X size={13}/></button>
                                         </div>
                                     )) : (
                                         <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 col-span-2">No default slots yet.</p>
