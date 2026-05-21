@@ -9,7 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "health": "node scripts/health-check.mjs",
     "check": "npm run build && node scripts/health-check.mjs",
-    "smoke": "npm run check",
+    "smoke": "npm run check && node scripts/smoke-check.mjs",
     "mobile:assets": "capacitor-assets generate --android --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#000000' --logoSplashScale 0.18",
     "mobile:sync": "npm run build && cap sync",
     "mobile:android": "npm run mobile:sync && cap open android"

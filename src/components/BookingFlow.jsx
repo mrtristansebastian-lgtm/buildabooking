@@ -606,6 +606,20 @@ const normalizeWebsite = (value = '') => {
                                     </span>
                                 </label>
                             )}
+                            <div
+                                className="mb-5 rounded-2xl border px-4 py-4 text-left"
+                                style={{
+                                    borderColor: `${settings.headingColor || '#000000'}12`,
+                                    backgroundColor: `${settings.headingColor || '#000000'}05`
+                                }}
+                            >
+                                <p className="text-[10px] font-extrabold uppercase tracking-[0.28em] mb-2" style={{ color: settings.headingColor }}>
+                                    What happens next
+                                </p>
+                                <p className="text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
+                                    Send the request and the business will review it. If contact details are enabled, booking updates will use the email, phone, or WhatsApp choices you provide here.
+                                </p>
+                            </div>
                             {submitError && (
                                 <p className="mb-4 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>
                             )}
@@ -663,6 +677,18 @@ const normalizeWebsite = (value = '') => {
                     <p className="opacity-60 text-xl font-light mb-24 max-w-sm leading-relaxed" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
                         {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. We will text you if a slot opens.` : `Access confirmed for ${selectedTime} on ${activeDate.dayNum} ${activeDate.month}.`}
                     </p>
+                    <div className="mb-12 grid w-full max-w-lg grid-cols-1 gap-3 md:grid-cols-3">
+                        {[
+                            ['Saved', 'Your request is in the system.'],
+                            ['Reviewed', 'The team can confirm or follow up.'],
+                            ['Updated', 'You receive updates through enabled channels.']
+                        ].map(([title, copy]) => (
+                            <div key={title} className="rounded-2xl border p-4" style={{ borderColor: `${settings.headingColor || '#000000'}12`, backgroundColor: `${settings.headingColor || '#000000'}05` }}>
+                                <p className="text-[10px] font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>{title}</p>
+                                <p className="mt-2 text-xs leading-relaxed opacity-55" style={{ color: settings.bodyColor }}>{copy}</p>
+                            </div>
+                        ))}
+                    </div>
                     <button onClick={() => setStep(1)} className="appearance-none outline-none focus:outline-none text-[10px] font-bold uppercase tracking-[0.6em] opacity-40 hover:opacity-100 transition-all border-b pb-4" style={{ color: settings.bodyColor, borderColor: settings.bodyColor + '40' }}>New Request</button>
                     </div>
                 )}

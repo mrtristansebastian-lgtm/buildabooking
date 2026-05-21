@@ -9,7 +9,7 @@ import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
 import { PRESET_THEMES, generateThemeCollection } from './data/themes';
 import * as FirebaseSDK from './services/firebase';
-import { appId, auth, db, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
+import { appId, auth, db, functions, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
@@ -58,6 +58,36 @@ const logoAlignmentOptions = [
 ];
 
 const textAlignmentOptions = logoAlignmentOptions;
+
+const legalPages = {
+  privacy: {
+    eyebrow: 'Privacy',
+    title: 'Privacy at booking speed',
+    body: [
+      'Build A Booking stores the information needed to run a workspace: account details, booking requests, client contact fields, page settings, and uploaded assets.',
+      'Business owners control their workspace data. Client details are used for booking operations, reminders, follow-ups, and the features each business enables.',
+      'Before production launch, connect your final privacy policy, retention rules, and support contact here so clients and owners know exactly how data is handled.'
+    ]
+  },
+  terms: {
+    eyebrow: 'Terms',
+    title: 'Simple product terms',
+    body: [
+      'Use Build A Booking to create booking pages, manage requests, and communicate with clients responsibly.',
+      'Owners are responsible for accurate business information, client consent, staff access, and any messages sent through connected email or WhatsApp providers.',
+      'Before paid launch, this section should be replaced with the final legal terms for subscriptions, cancellations, refunds, acceptable use, and support.'
+    ]
+  },
+  support: {
+    eyebrow: 'Support',
+    title: 'Need help with your booking flow?',
+    body: [
+      'Use the profile, communication, schedule, and editor sections to keep your workspace ready before publishing.',
+      'For production support, add the official support email, response window, help center, and account recovery process here.',
+      'If something looks wrong, refresh once, check your connection, then contact support with the workspace name and page you were using.'
+    ]
+  }
+};
 const visualStyleOptions = [
   { id: 'minimal', label: 'Minimal' },
   { id: 'outline', label: 'Outline' },
@@ -996,10 +1026,11 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [guestMode, setGuestMode] = useState(() => {
                 return safeLocalGet(guestModeStorageKey) === 'true';
             });
-            const [publicSlug] = useState(getPublicBookingSlug);
+            const [publicSlug, setPublicSlug] = useState(getPublicBookingSlug);
             const [publicWorkspace, setPublicWorkspace] = useState(null);
             const [publicLoading, setPublicLoading] = useState(false);
             const [publicError, setPublicError] = useState('');
+            const [publicReloadKey, setPublicReloadKey] = useState(0);
             const [activeTab, setActiveTab] = useState(initialWorkspaceRoute.activeTab);
             const [dashboardPeriod, setDashboardPeriod] = useState('today');
             const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
@@ -1040,6 +1071,8 @@ const signInWithNativeGoogle = async (authInstance) => {
             const onboardingDraftSaveTimerRef = useRef(0);
             const themeBatchTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
+            const [confirmDialog, setConfirmDialog] = useState(null);
+            const [legalPanel, setLegalPanel] = useState(null);
             const toastTimerRef = useRef(null);
             
             const showToast = (msg) => {
@@ -1051,6 +1084,16 @@ const signInWithNativeGoogle = async (authInstance) => {
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
+
+            useEffect(() => {
+                const syncPublicRoute = () => setPublicSlug(getPublicBookingSlug());
+                window.addEventListener('popstate', syncPublicRoute);
+                window.addEventListener('hashchange', syncPublicRoute);
+                return () => {
+                    window.removeEventListener('popstate', syncPublicRoute);
+                    window.removeEventListener('hashchange', syncPublicRoute);
+                };
+            }, []);
 
             useEffect(() => {
                 if (typeof document === 'undefined') return undefined;
@@ -2248,11 +2291,19 @@ const signInWithNativeGoogle = async (authInstance) => {
                     return;
                 }
 
+                let cancelled = false;
                 setPublicLoading(true);
                 setPublicError('');
+                setPublicWorkspace(null);
                 const workspaceRef = FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug);
+                const timeoutId = window.setTimeout(() => {
+                    if (cancelled) return;
+                    setPublicError('This booking page is taking longer than expected to load. Check your connection and try again.');
+                    setPublicLoading(false);
+                }, 12000);
                 FirebaseSDK.getDoc(workspaceRef)
                     .then((docSnap) => {
+                        if (cancelled) return;
                         if (!docSnap.exists()) {
                             setPublicError('This booking page is not published yet.');
                             setPublicWorkspace(null);
@@ -2261,11 +2312,21 @@ const signInWithNativeGoogle = async (authInstance) => {
                         setPublicWorkspace(docSnap.data());
                     })
                     .catch((error) => {
+                        if (cancelled) return;
                         console.error(error);
                         setPublicError('Could not load this booking page.');
                     })
-                    .finally(() => setPublicLoading(false));
-            }, [publicSlug]);
+                    .finally(() => {
+                        if (cancelled) return;
+                        window.clearTimeout(timeoutId);
+                        setPublicLoading(false);
+                    });
+
+                return () => {
+                    cancelled = true;
+                    window.clearTimeout(timeoutId);
+                };
+            }, [publicSlug, publicReloadKey]);
 
             useEffect(() => {
                 if (publicSlug) return;
@@ -2861,6 +2922,30 @@ const signInWithNativeGoogle = async (authInstance) => {
                 setAuthError('');
                 setAuthPanelOpen(true);
             };
+            const openBillingAction = async (action = 'checkout') => {
+                if (!user || isGuestWorkspace) {
+                    openAuthPanel('signup');
+                    showToast('Create an account first so billing can attach to your workspace.');
+                    return;
+                }
+                if (!functions || !FirebaseSDK.httpsCallable) {
+                    showToast('Billing functions are not connected yet.');
+                    return;
+                }
+                try {
+                    const callableName = action === 'portal' ? 'createBillingPortalSession' : 'createCheckoutSession';
+                    const billingAction = FirebaseSDK.httpsCallable(functions, callableName);
+                    const result = await billingAction({ appId, ownerId: workspaceOwnerId, plan: 'pro' });
+                    if (result?.data?.url) {
+                        window.location.href = result.data.url;
+                        return;
+                    }
+                    showToast(action === 'portal' ? 'Billing portal is ready for Stripe setup.' : 'Checkout is ready for Stripe setup.');
+                } catch (error) {
+                    console.error(error);
+                    showToast(error?.message || 'Billing is not configured yet.');
+                }
+            };
             const openGuestDashboard = () => {
                 setGuestMode(true);
                 safeLocalSet(guestModeStorageKey, 'true');
@@ -3052,6 +3137,41 @@ const signInWithNativeGoogle = async (authInstance) => {
                 };
 
                 try {
+                    if (functions && FirebaseSDK.httpsCallable) {
+                        try {
+                            const createPublicBookingRequest = FirebaseSDK.httpsCallable(functions, 'createPublicBookingRequest');
+                            await createPublicBookingRequest({
+                                appId,
+                                workspaceSlug: publicSlug,
+                                booking: {
+                                    clientName: bookingRecord.clientName,
+                                    clientPhone: bookingRecord.clientPhone,
+                                    clientEmail: bookingRecord.clientEmail,
+                                    clientBirthday: bookingRecord.clientBirthday,
+                                    clientNote: bookingRecord.clientNote,
+                                    clientWhatsappOptIn: bookingRecord.clientWhatsappOptIn,
+                                    date: bookingRecord.date,
+                                    dateKey: bookingRecord.dateKey,
+                                    time: bookingRecord.time,
+                                    status: bookingRecord.status,
+                                    notificationChannels: bookingRecord.notificationChannels
+                                }
+                            });
+                            return true;
+                        } catch (functionError) {
+                            const fallbackCodes = new Set(['functions/not-found', 'functions/unavailable']);
+                            if (!fallbackCodes.has(functionError?.code)) {
+                                console.error(functionError);
+                                if (functionError?.code === 'functions/already-exists') {
+                                    showToast('That time was just requested. Pick another slot.');
+                                } else {
+                                    showToast(functionError?.message || 'Booking could not be submitted.');
+                                }
+                                return false;
+                            }
+                            console.warn('Falling back to direct public booking write until Functions are deployed.', functionError);
+                        }
+                    }
                     await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'bookings'), bookingRecord);
                     await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug, 'bookingSubmissions'), bookingRecord);
                     return true;
@@ -3191,6 +3311,46 @@ const signInWithNativeGoogle = async (authInstance) => {
                 </div>
             );
 
+            const legalDialog = legalPanel && legalPages[legalPanel] && (
+                <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="w-full sm:max-w-lg bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300 max-h-[calc(100dvh-1rem)] overflow-y-auto">
+                        <div className="flex items-start justify-between gap-4 mb-7">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">{legalPages[legalPanel].eyebrow}</p>
+                                <h2 className="text-3xl font-bold tracking-tight text-black">{legalPages[legalPanel].title}</h2>
+                            </div>
+                            <button type="button" onClick={() => setLegalPanel(null)} className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center hover:text-black transition-colors shrink-0"><X size={16}/></button>
+                        </div>
+                        <div className="space-y-4">
+                            {legalPages[legalPanel].body.map((paragraph) => (
+                                <p key={paragraph} className="text-sm leading-relaxed text-neutral-500">{paragraph}</p>
+                            ))}
+                        </div>
+                        <button type="button" onClick={() => setLegalPanel(null)} className="mt-7 h-12 w-full rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            );
+
+            const confirmActionDialog = confirmDialog && (
+                <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="w-full sm:max-w-md bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-6 md:p-7 animate-in fade-in zoom-in-95 duration-300">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">{confirmDialog.eyebrow || 'Confirm Action'}</p>
+                        <h2 className="text-2xl font-bold tracking-tight text-black mb-3">{confirmDialog.title}</h2>
+                        <p className="text-sm leading-relaxed text-neutral-500 mb-6">{confirmDialog.body}</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button type="button" onClick={() => setConfirmDialog(null)} className="h-12 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors">
+                                Cancel
+                            </button>
+                            <button type="button" onClick={() => { const action = confirmDialog.onConfirm; setConfirmDialog(null); action?.(); }} className="h-12 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
+                                {confirmDialog.actionLabel || 'Confirm'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
             const editorPreviewFrame = getEditorPreviewFrame(device, isCompactEditorViewport);
             const editorPreviewFrameClass = device === 'desktop'
                 ? (isCompactEditorViewport ? 'rounded-lg border-[12px]' : 'rounded-lg border-[22px]')
@@ -3213,6 +3373,14 @@ const signInWithNativeGoogle = async (authInstance) => {
                                 <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-white/40 mb-4">Booking Page</p>
                                 <h1 className="text-4xl font-bold tracking-tight mb-4">Page unavailable</h1>
                                 <p className="text-white/55 leading-relaxed">{publicError || 'This booking page is not available yet.'}</p>
+                                <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+                                    <button onClick={() => setPublicReloadKey(key => key + 1)} className="h-12 px-6 rounded-full bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-100 transition-colors">
+                                        Try Again
+                                    </button>
+                                    <button onClick={() => { window.location.href = window.location.origin; }} className="h-12 px-6 rounded-full border border-white/15 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">
+                                        Build A Booking
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     );
@@ -3245,6 +3413,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                     </nav>
 
                     {authDialog}
+                    {legalDialog}
             
                     {/* Hero Section */}
                     <section className="relative pt-32 md:pt-56 pb-20 md:pb-32 px-4 sm:px-6 flex flex-col items-center text-center border-b border-neutral-100">
@@ -3358,6 +3527,13 @@ const signInWithNativeGoogle = async (authInstance) => {
                         <button onClick={openSignupOrDashboard} className="h-16 px-12 rounded-full bg-[#39FF14] text-black font-bold text-sm hover:scale-105 transition-transform shadow-2xl shadow-[#39FF14]/20">
                           Build Your Booking Flow
                         </button>
+                        <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                          <button type="button" onClick={() => setLegalPanel('privacy')} className="hover:text-black transition-colors">Privacy</button>
+                          <span className="h-1 w-1 rounded-full bg-neutral-300" />
+                          <button type="button" onClick={() => setLegalPanel('terms')} className="hover:text-black transition-colors">Terms</button>
+                          <span className="h-1 w-1 rounded-full bg-neutral-300" />
+                          <button type="button" onClick={() => setLegalPanel('support')} className="hover:text-black transition-colors">Support</button>
+                        </div>
                       </div>
                     </section>
                   </div>
@@ -3377,6 +3553,8 @@ const signInWithNativeGoogle = async (authInstance) => {
                     </div>
                 )}
                 {authDialog}
+                {legalDialog}
+                {confirmActionDialog}
                 {showOnboarding && (
                     <Suspense fallback={<LazySectionFallback label="Loading setup" />}>
                         <OnboardingShowroom
@@ -3899,6 +4077,29 @@ const signInWithNativeGoogle = async (authInstance) => {
                                         </button>
                                     </section>
                                 </div>
+
+                                <section className="bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]">
+                                    <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-12 h-12 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
+                                                <Briefcase size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-300 mb-2">Plan & Billing</p>
+                                                <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">Ready for paid plans</h3>
+                                                <p className="text-sm text-neutral-500 leading-relaxed mt-2 max-w-2xl">Stripe checkout and billing portal actions are scaffolded for this workspace. When your price IDs and secret key are connected, these buttons become the upgrade and account management path.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                                            <button type="button" onClick={() => openBillingAction('checkout')} className="h-12 px-6 rounded-full bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest hover:scale-[1.02] transition-transform">
+                                                Upgrade Plan
+                                            </button>
+                                            <button type="button" onClick={() => openBillingAction('portal')} className="h-12 px-6 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors">
+                                                Manage Billing
+                                            </button>
+                                        </div>
+                                    </div>
+                                </section>
 
                                 <div data-tour="profile-business-info" className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-[0_25px_80px_-65px_rgba(0,0,0,0.75)]">
                                     <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
@@ -5071,7 +5272,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[560px] overflow-y-auto pr-2 pb-4 no-scrollbar">
+                                        <div className="theme-card-list grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[560px] overflow-y-auto pr-2 pb-4 no-scrollbar">
                                             {visibleThemeCards.map(t => {
                                                 const isNativeTheme = Boolean(t.nativeAccent);
                                                 const isSelectedTheme = settings.nativeAccent === t.nativeAccent && settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor && settings.fontFamily === t.fontFamily;
@@ -5703,7 +5904,13 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            <button onClick={() => { if(confirm("Permanently remove this booking record?")) deleteBooking(b.id); }} className="h-10 w-10 rounded-lg flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                                            <button onClick={() => setConfirmDialog({
+                                                                eyebrow: 'Booking Record',
+                                                                title: 'Remove this booking?',
+                                                                body: 'This deletes the record from your workspace. Client profiles and other bookings stay untouched.',
+                                                                actionLabel: 'Remove',
+                                                                onConfirm: () => deleteBooking(b.id)
+                                                            })} className="h-10 w-10 rounded-lg flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
                                                                 <Trash2 size={16} />
                                                             </button>
                                                         </>

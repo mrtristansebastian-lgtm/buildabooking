@@ -2,9 +2,10 @@ import { initializeApp } from 'firebase/app';
 import { Capacitor } from '@capacitor/core';
 import { browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword, getAuth, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, initializeAuth, onAuthStateChanged, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
-export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, onAuthStateChanged, onSnapshot, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, updateDoc, uploadBytes };
+export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, httpsCallable, indexedDBLocalPersistence, onAuthStateChanged, onSnapshot, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, updateDoc, uploadBytes };
 
 const runtimeFirebaseConfig = globalThis.__firebase_config;
 const runtimeAppId = globalThis.__app_id;
@@ -18,6 +19,7 @@ let firebaseApp = null;
 let authInstance = null;
 let dbInstance = null;
 let storageInstance = null;
+let functionsInstance = null;
 
 if (firebaseConfigStr !== '{}') {
   try {
@@ -35,6 +37,7 @@ if (firebaseConfigStr !== '{}') {
     }
     dbInstance = getFirestore(firebaseApp);
     storageInstance = getStorage(firebaseApp);
+    functionsInstance = getFunctions(firebaseApp);
   } catch (error) {
     console.error('Firebase failed to initialize. Check VITE_FIREBASE_CONFIG.', error);
   }
@@ -44,4 +47,5 @@ export const app = firebaseApp;
 export const auth = authInstance;
 export const db = dbInstance;
 export const storage = storageInstance;
+export const functions = functionsInstance;
 export const isFirebaseConfigured = Boolean(firebaseApp && authInstance && dbInstance);

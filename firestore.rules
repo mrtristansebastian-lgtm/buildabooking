@@ -92,6 +92,22 @@ service cloud.firestore {
           request.resource.data.ownerId == get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)).data.ownerId;
         allow read, update, delete: if false;
       }
+
+      match /slotLocks/{lockId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /artifacts/{appId}/notificationJobs/{jobId} {
+      allow read: if signedIn() &&
+        resource.data.ownerId is string &&
+        canStaff(appId, resource.data.ownerId);
+      allow create, update, delete: if false;
+    }
+
+    match /artifacts/{appId}/billing/{ownerId}/{document=**} {
+      allow read: if canAdmin(appId, ownerId);
+      allow write: if false;
     }
   }
 }

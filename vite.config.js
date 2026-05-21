@@ -7,6 +7,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('/src/data/themes')) return 'theme-engine';
+          if (id.includes('/src/data/fonts')) return 'font-engine';
+          if (id.includes('/src/components/OnboardingShowroom')) return 'onboarding-tour';
+          if (id.includes('/src/components/BusinessCalendar')) return 'schedule-workspace';
+          if (id.includes('/src/components/BookingFlow')) return 'booking-page';
           if (id.includes('node_modules/firebase')) return 'firebase';
           if (id.includes('node_modules/lucide-react')) return 'icons';
           if (id.includes('node_modules/@emailjs')) return 'email';

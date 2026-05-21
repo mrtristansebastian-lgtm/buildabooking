@@ -1604,6 +1604,13 @@ body {
                 padding: 0.95rem !important;
             }
 
+            .mobile-editor-panel .theme-card-list {
+                max-height: none !important;
+                overflow: visible !important;
+                padding-right: 0 !important;
+                padding-bottom: 4.75rem !important;
+            }
+
             .mobile-editor-panel [data-theme-card] h4 {
                 font-size: 1.55rem !important;
                 line-height: 1 !important;
