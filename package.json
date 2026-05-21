@@ -9,16 +9,25 @@
     "preview": "vite preview --host 127.0.0.1",
     "health": "node scripts/health-check.mjs",
     "check": "npm run build && node scripts/health-check.mjs",
-    "smoke": "npm run check"
+    "smoke": "npm run check",
+    "mobile:assets": "capacitor-assets generate --android --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#000000' --logoSplashScale 0.18",
+    "mobile:sync": "npm run build && cap sync",
+    "mobile:android": "npm run mobile:sync && cap open android"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^8.2.0",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
     "@emailjs/browser": "^4.4.1",
-    "firebase": "^11.6.1",
+    "firebase": "^12.13.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",

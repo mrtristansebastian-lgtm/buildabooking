@@ -1,4 +1,6 @@
 import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
@@ -81,6 +83,70 @@ const pickThemeTemplateSettings = (source = {}) => (
     return template;
   }, {})
 );
+
+const nativeStarterTheme = PRESET_THEMES.find(theme => theme.id === 'build-a-booking-native') || PRESET_THEMES[0];
+const mobileWebEditorThemes = [
+  nativeStarterTheme,
+  {
+    ...nativeStarterTheme,
+    id: 'mobile-web-modern-light',
+    name: 'Modern Light',
+    primaryColor: '#050505',
+    backgroundColor: '#FFFFFF',
+    headingColor: '#050505',
+    bodyColor: '#616672',
+    slotBgColor: '#F5F6F8',
+    slotTextColor: '#050505',
+    dateBgColor: '#F7F7F8',
+    dateTextColor: '#7A808A',
+    dateActiveBgColor: '#050505',
+    dateActiveTextColor: '#FFFFFF',
+    buttonTextColor: '#FFFFFF',
+    buttonStyle: 'pill',
+    fontFamily: 'plus-jakarta',
+    availabilityStyle: 'solid',
+    dateStyle: 'solid',
+    timeSlotStyle: 'solid',
+    actionButtonStyle: 'solid',
+    palette: 'neutral',
+    styleTags: ['modern', 'minimal'],
+    industryTags: ['all'],
+    nativeAccent: false
+  },
+  {
+    ...nativeStarterTheme,
+    id: 'mobile-web-modern-dark',
+    name: 'Modern Dark',
+    primaryColor: '#FFFFFF',
+    backgroundColor: '#050505',
+    headingColor: '#FFFFFF',
+    bodyColor: '#A3A7AF',
+    slotBgColor: '#16171A',
+    slotTextColor: '#FFFFFF',
+    dateBgColor: '#111215',
+    dateTextColor: '#A3A7AF',
+    dateActiveBgColor: '#FFFFFF',
+    dateActiveTextColor: '#050505',
+    buttonTextColor: '#050505',
+    buttonStyle: 'pill',
+    fontFamily: 'space-grotesk',
+    availabilityStyle: 'solid',
+    dateStyle: 'solid',
+    timeSlotStyle: 'solid',
+    actionButtonStyle: 'solid',
+    faqBgColor: '#101114',
+    faqBorderColor: '#24262B',
+    faqTextColor: '#FFFFFF',
+    faqAnswerColor: '#B5BAC4',
+    socialIconBgColor: '#111215',
+    socialIconColor: '#FFFFFF',
+    socialIconTextColor: '#050505',
+    palette: 'neutral',
+    styleTags: ['modern', 'night'],
+    industryTags: ['all'],
+    nativeAccent: false
+  }
+];
 
 const defaultFaqItems = [
   { q: 'How do I know my booking is confirmed?', a: 'You will see a confirmation on this page and receive a message when the business approves your request.' },
@@ -849,6 +915,7 @@ const clearAuthReturnState = () => {
 
 const shouldUseRedirectGoogleAuth = () => {
   if (typeof window === 'undefined') return false;
+  if (Capacitor?.isNativePlatform?.()) return true;
   const userAgent = navigator.userAgent || '';
   const isTouchMobile = window.matchMedia?.('(max-width: 767px), (pointer: coarse)')?.matches;
   const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS/i.test(userAgent);
@@ -881,10 +948,22 @@ const createGoogleProvider = () => {
   return provider;
 };
 
+const signInWithNativeGoogle = async (authInstance) => {
+  const result = await FirebaseAuthentication.signInWithGoogle();
+  const idToken = result?.credential?.idToken;
+  const accessToken = result?.credential?.accessToken;
+  if (!idToken && !accessToken) {
+    throw new Error('Google did not return a usable sign-in token. Check the Android Firebase app setup.');
+  }
+  const credential = FirebaseSDK.GoogleAuthProvider.credential(idToken || null, accessToken || undefined);
+  return FirebaseSDK.signInWithCredential(authInstance, credential);
+};
+
 // --- Main App Component ---
-        export default function App() {
-            const [initialWorkspaceRoute] = useState(getInitialWorkspaceRoute);
-            const [user, setUser] = useState(null);
+          export default function App() {
+            const isNativeAppRuntime = Capacitor?.isNativePlatform?.() || false;
+              const [initialWorkspaceRoute] = useState(getInitialWorkspaceRoute);
+              const [user, setUser] = useState(null);
             const [workspaceAccess, setWorkspaceAccess] = useState([]);
             const [activeWorkspaceOwnerId, setActiveWorkspaceOwnerId] = useState('');
             const [accessLoading, setAccessLoading] = useState(false);
@@ -959,6 +1038,19 @@ const createGoogleProvider = () => {
             useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
 
             useEffect(() => {
+                if (typeof document === 'undefined') return undefined;
+                const root = document.documentElement;
+                root.classList.toggle('capacitor-native', isNativeAppRuntime);
+                if (isNativeAppRuntime) root.dataset.platform = Capacitor.getPlatform?.() || 'native';
+                return () => {
+                    root.classList.remove('capacitor-native');
+                    if (root.dataset.platform === 'android' || root.dataset.platform === 'ios' || root.dataset.platform === 'native') {
+                        delete root.dataset.platform;
+                    }
+                };
+            }, [isNativeAppRuntime]);
+
+            useEffect(() => {
                 if (typeof window === 'undefined') return undefined;
 
                 const mobileQuery = window.matchMedia('(max-width: 767px)');
@@ -993,6 +1085,12 @@ const createGoogleProvider = () => {
                 if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
 
                 const root = document.documentElement;
+                if (isNativeAppRuntime) {
+                    root.classList.remove('app-idle', 'app-hidden');
+                    return () => {
+                        root.classList.remove('app-idle', 'app-hidden');
+                    };
+                }
                 const idleDelay = window.matchMedia('(max-width: 767px)').matches ? 24000 : 45000;
                 let idleTimer = 0;
                 let lastActivityAt = 0;
@@ -1049,7 +1147,7 @@ const createGoogleProvider = () => {
                     window.removeEventListener('pagehide', pauseForPageHide);
                     window.removeEventListener('pageshow', resetIdle);
                 };
-            }, []);
+            }, [isNativeAppRuntime]);
 
             const [settings, setSettings] = useState({
                 slug: 'studio-noir', brandName: 'Studio Noir',
@@ -1526,6 +1624,8 @@ const createGoogleProvider = () => {
             const collectsClientPhone = settings.features?.collectClientPhone !== false;
             const collectsClientEmail = settings.features?.collectClientEmail !== false;
             const collectsClientNotes = Boolean(settings.features?.collectClientNotes);
+            const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
+            const isMobileWebEditorRuntime = !isNativeAppRuntime && isMobileEditorRuntime;
 
             const themeGenerationInputs = useMemo(() => ({
                 industry: themeFilters.industry || 'all-industries',
@@ -1546,9 +1646,10 @@ const createGoogleProvider = () => {
             const activeThemeFilterId = `${themeGenerationInputs.industry}-${themeGenerationInputs.palette}-${themeGenerationInputs.style}`;
             const shouldRunThemeEngine = activeTab === 'editor' && editorTab === 'themes';
 
-            const visibleThemes = useMemo(() => (
-                shouldRunThemeEngine ? generateThemeCollection(themeGenerationInputs) : []
-            ), [shouldRunThemeEngine, themeGenerationInputs]);
+            const visibleThemes = useMemo(() => {
+                if (!shouldRunThemeEngine) return [];
+                return isMobileWebEditorRuntime ? mobileWebEditorThemes : generateThemeCollection(themeGenerationInputs);
+            }, [isMobileWebEditorRuntime, shouldRunThemeEngine, themeGenerationInputs]);
 
             const industryFilterOptions = useMemo(() => (
                 industryThemeFilterGroup.filters
@@ -1596,16 +1697,15 @@ const createGoogleProvider = () => {
                 ? `${currentThemeMatch.name} Template`
                 : `${settings.brandName || 'Custom'} Theme`;
 
-            const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
-            const hasMoreThemes = themeDisplayLimit < visibleThemes.length;
+            const hasMoreThemes = !isMobileWebEditorRuntime && themeDisplayLimit < visibleThemes.length;
             const nextThemeBatchSize = isMobileEditorRuntime ? 8 : 48;
             const shouldMountEditorPreview = activeTab === 'editor' && !isPortraitMobileRuntime;
 
             useEffect(() => {
                 window.clearTimeout(themeBatchTimerRef.current);
                 setThemeBatchLoading(false);
-                setThemeDisplayLimit(isMobileEditorRuntime ? 8 : 60);
-            }, [activeThemeFilterId, isMobileEditorRuntime]);
+                setThemeDisplayLimit(isMobileWebEditorRuntime ? mobileWebEditorThemes.length : isMobileEditorRuntime ? 8 : 60);
+            }, [activeThemeFilterId, isMobileEditorRuntime, isMobileWebEditorRuntime]);
 
             const loadMoreThemes = () => {
                 if (!hasMoreThemes || themeBatchLoading) return;
@@ -2778,6 +2878,19 @@ const createGoogleProvider = () => {
                 try {
                     const returnRoute = getCurrentAuthReturnRoute();
                     await applyAuthPersistence(keepLoggedIn);
+                    if (isNativeAppRuntime) {
+                        await signInWithNativeGoogle(auth);
+                        setGuestMode(false);
+                        safeLocalRemove(guestModeStorageKey);
+                        setAuthPanelOpen(false);
+                        applyWorkspaceRoute(returnRoute);
+                        showToast('Signed in with Google');
+                        return;
+                    }
+                    if (shouldUseRedirectGoogleAuth()) {
+                        await startGoogleRedirect(returnRoute);
+                        return;
+                    }
                     const provider = createGoogleProvider();
                     await FirebaseSDK.signInWithPopup(auth, provider);
                     setGuestMode(false);
@@ -2810,6 +2923,11 @@ const createGoogleProvider = () => {
             const handleSignOut = async () => {
                 setAuthBusy(true);
                 try {
+                    if (isNativeAppRuntime) {
+                        await FirebaseAuthentication.signOut().catch((error) => {
+                            console.warn('Native Firebase sign out skipped.', error);
+                        });
+                    }
                     if (isFirebaseConfigured && user) {
                         await FirebaseSDK.signOut(auth);
                     }
@@ -4735,9 +4853,29 @@ const createGoogleProvider = () => {
                                 <div className="space-y-12 animate-in fade-in duration-700">
                                     <div data-tour="editor-theme-library">
                                         <div className="flex items-center justify-between gap-4 mb-6">
-                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">Industry Theme Engine</label>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">Live Curated</span>
+                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">{isMobileWebEditorRuntime ? 'Mobile Theme Starter' : 'Industry Theme Engine'}</label>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">{isMobileWebEditorRuntime ? 'Focused Mode' : 'Live Curated'}</span>
                                         </div>
+                                        {isMobileWebEditorRuntime && (
+                                            <div className="mb-5 rounded-[24px] border border-neutral-100 bg-white p-4 shadow-[0_22px_64px_rgba(15,23,42,0.06)]">
+                                                <div className="rounded-[20px] bg-black text-white p-5 overflow-hidden relative">
+                                                    <div className="absolute inset-x-0 top-0 h-1 opacity-90" style={{ backgroundImage: 'var(--native-accent-gradient)', backgroundSize: '420% 420%', backgroundPosition: 'var(--native-accent-x) 50%' }} />
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="w-11 h-11 rounded-2xl bg-white text-black flex items-center justify-center shrink-0">
+                                                            <Monitor size={18} />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/40 mb-2">Mobile Web Editor</p>
+                                                            <h3 className="text-2xl font-black tracking-[-0.04em] leading-tight">Fast starter mode.</h3>
+                                                            <p className="text-sm text-white/62 leading-relaxed mt-2">
+                                                                Pick a clean starter theme here, then tune colors, fonts, buttons, and spacing in Visuals. Get the full powerful editing engine experience on the PC website or mobile app for the best view.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {!isMobileWebEditorRuntime && (
                                         <div className="mb-7 rounded-[28px] border border-neutral-100 bg-white p-4 sm:p-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
                                             <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-5">
                                                 <div className="min-w-0">
@@ -4855,6 +4993,7 @@ const createGoogleProvider = () => {
                                                 <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-300">Built from your theme brief</p>
                                             </div>
                                         </div>
+                                        )}
                                         <div className="mb-5 rounded-[24px] border border-neutral-100 bg-white p-4 sm:p-5 shadow-[0_24px_70px_rgba(15,23,42,0.05)]">
                                             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                                 <div className="min-w-0">

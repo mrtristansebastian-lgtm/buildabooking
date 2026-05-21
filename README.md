@@ -8,7 +8,19 @@ Vite + React app for the Build A Booking builder and booking-page experience.
 npm run dev
 npm run build
 npm run preview
+npm run mobile:sync
+npm run mobile:android
 ```
+
+## Mobile App Prep
+
+Capacitor is configured so the same React app can be wrapped for Android and iOS later.
+
+- Android can be generated and tested on Windows with Android Studio.
+- iOS is configured, but final iOS builds require macOS/Xcode.
+- Store subscriptions should stay on the website; the mobile apps can focus on sign in and workspace management.
+
+See `docs/mobile-app.md` for the free setup path and month-end publishing checklist.
 
 ## Firebase Setup
 

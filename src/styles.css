@@ -115,8 +115,8 @@ body {
         }
 
         :root.app-idle {
-            --native-accent-duration: 72s;
-            --native-beam-duration: 42s;
+            --native-accent-duration: 24s;
+            --native-beam-duration: 12s;
         }
 
         :root.app-hidden {
@@ -403,8 +403,6 @@ body {
         :root.app-hidden .native-home,
         :root.app-hidden .native-booking-theme,
         :root.app-hidden .native-theme-card-preview,
-        :root.app-idle .native-feature-card::before,
-        :root.app-idle .native-ui .native-stat-card::before,
         :root.app-hidden .native-feature-card::before,
         :root.app-hidden .native-feature-card::after,
         :root.app-hidden .native-ui .native-stat-card::before,
@@ -412,11 +410,6 @@ body {
         :root.app-hidden .native-booking-theme .booking-gradient-card::before,
         :root.app-hidden .native-home-nav::after {
             animation-play-state: paused !important;
-        }
-
-        :root.app-idle .native-feature-card::before,
-        :root.app-idle .native-ui .native-stat-card::before {
-            opacity: 0 !important;
         }
 
         .native-feature-hero-card {
@@ -640,30 +633,8 @@ body {
                 transform: none !important;
             }
 
-            .native-theme-card-preview,
-            .native-theme-card-preview::before {
-                animation: none !important;
-            }
-
-            .native-theme-card-preview::before {
-                opacity: 0.05 !important;
-                filter: blur(14px) saturate(1.04) !important;
-            }
-
-            .native-feature-card::before,
-            .native-ui .native-stat-card::before {
-                animation: none !important;
-                opacity: 0 !important;
-            }
-
-            .native-feature-card::after,
-            .native-ui .native-stat-card::after {
-                animation-duration: 32s !important;
-                opacity: 0.18;
-            }
-
-            .native-feature-card,
-            .native-ui .native-stat-card {
+            :root:not(.capacitor-native) .native-feature-card,
+            :root:not(.capacitor-native) .native-ui .native-stat-card {
                 content-visibility: auto;
                 contain: layout paint style;
                 contain-intrinsic-size: 185px;
@@ -671,21 +642,52 @@ body {
                 -webkit-backdrop-filter: none !important;
             }
 
-            :root.app-idle .native-ui,
-            :root.app-idle .native-home,
-            :root.app-idle .native-booking-theme {
-                animation-duration: 96s !important;
-            }
-
-            :root.app-idle .native-feature-card::after,
-            :root.app-idle .native-ui .native-stat-card::after {
-                animation-duration: 120s !important;
-                opacity: 0.1;
-            }
-
             :root.app-idle .native-booking-theme .booking-gradient-card::before {
-                opacity: 0.06 !important;
-                filter: blur(8px) saturate(1.04) !important;
+                opacity: var(--native-beam-peak) !important;
+                filter: blur(14px) saturate(1.18) !important;
+            }
+
+            :root.capacitor-native {
+                --native-accent-duration: 24s;
+                --native-beam-duration: 12s;
+            }
+
+            :root.capacitor-native .native-theme-card-preview,
+            :root.capacitor-native .native-theme-card-preview::before {
+                animation: native-accent-sync var(--native-accent-duration) var(--native-accent-easing) infinite !important;
+            }
+
+            :root.capacitor-native .native-theme-card-preview::before {
+                opacity: 0.08 !important;
+                filter: blur(22px) saturate(1.1) !important;
+            }
+
+            :root.capacitor-native .native-feature-card::before,
+            :root.capacitor-native .native-ui .native-stat-card::before {
+                animation: native-panel-beam var(--native-beam-duration) cubic-bezier(0.45, 0, 0.2, 1) infinite !important;
+                animation-delay: var(--feature-wave-delay, var(--stat-wave-delay, 0s)) !important;
+                opacity: 0;
+                filter: blur(14px) saturate(1.22) !important;
+            }
+
+            :root.capacitor-native .native-feature-card::after,
+            :root.capacitor-native .native-ui .native-stat-card::after {
+                animation: native-panel-border-beam var(--native-beam-duration) cubic-bezier(0.45, 0, 0.2, 1) infinite !important;
+                animation-delay: var(--feature-wave-delay, var(--stat-wave-delay, 0s)) !important;
+                opacity: 0.32;
+            }
+
+            :root.capacitor-native .native-booking-theme .booking-gradient-card::before {
+                opacity: var(--native-beam-peak) !important;
+                filter: blur(14px) saturate(1.18) !important;
+            }
+
+            :root:not(.capacitor-native) .mobile-editor-shell [data-theme-card],
+            :root:not(.capacitor-native) .mobile-editor-shell .native-theme-card-preview,
+            :root:not(.capacitor-native) .mobile-editor-shell .booking-gradient-card {
+                contain: layout paint style;
+                content-visibility: auto;
+                box-shadow: 0 12px 32px -28px rgba(15, 23, 42, 0.3) !important;
             }
 
             .dashboard-main > div:not(.mobile-editor-shell) {
@@ -933,6 +935,18 @@ body {
             .schedule-mode-month.schedule-forward-days .schedule-calendar-grid {
                 gap: 0.65rem !important;
             }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            :root:not(.capacitor-native) .mobile-editor-shell [data-theme-card],
+            :root:not(.capacitor-native) .mobile-editor-shell .native-theme-card-preview,
+            :root:not(.capacitor-native) .mobile-editor-shell .booking-gradient-card {
+                contain: layout paint style;
+                content-visibility: auto;
+                transition: border-color 180ms ease, box-shadow 180ms ease !important;
+                transform: none !important;
+            }
+
         }
 
         .backend-skin {

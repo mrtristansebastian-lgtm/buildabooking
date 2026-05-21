@@ -1,9 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword, getAuth, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword, getAuth, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, initializeAuth, onAuthStateChanged, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
-export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, onSnapshot, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, updateDoc, uploadBytes };
+export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, onAuthStateChanged, onSnapshot, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, updateDoc, uploadBytes };
 
 const runtimeFirebaseConfig = globalThis.__firebase_config;
 const runtimeAppId = globalThis.__app_id;
@@ -21,7 +22,17 @@ let storageInstance = null;
 if (firebaseConfigStr !== '{}') {
   try {
     firebaseApp = initializeApp(JSON.parse(firebaseConfigStr));
-    authInstance = getAuth(firebaseApp);
+    if (Capacitor?.isNativePlatform?.()) {
+      try {
+        authInstance = initializeAuth(firebaseApp, {
+          persistence: indexedDBLocalPersistence
+        });
+      } catch {
+        authInstance = getAuth(firebaseApp);
+      }
+    } else {
+      authInstance = getAuth(firebaseApp);
+    }
     dbInstance = getFirestore(firebaseApp);
     storageInstance = getStorage(firebaseApp);
   } catch (error) {
