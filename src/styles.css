@@ -647,6 +647,29 @@ body {
             box-shadow: 0 28px 90px -68px rgba(15, 23, 42, 0.42);
         }
 
+        .schedule-calendar-command {
+            box-shadow: inset 0 -1px 0 rgba(229, 231, 235, 0.78);
+        }
+
+        .schedule-compact-stat {
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 46px -42px rgba(15, 23, 42, 0.38);
+        }
+
+        .schedule-calendar-scroll-zone {
+            max-height: clamp(25rem, 54vh, 42rem);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-gutter: stable;
+        }
+
+        .schedule-detail-row {
+            align-items: stretch;
+        }
+
+        .schedule-detail-row > .saas-card {
+            height: 100%;
+        }
+
         .schedule-month-switcher {
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 16px 44px -36px rgba(15, 23, 42, 0.34);
         }
@@ -663,6 +686,15 @@ body {
 
         .schedule-day-cell {
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 16px 42px -38px rgba(15, 23, 42, 0.44);
+        }
+
+        .schedule-calendar-grid {
+            align-items: stretch;
+        }
+
+        .schedule-calendar-grid .schedule-day-cell,
+        .schedule-calendar-grid .schedule-day-agenda-card {
+            min-width: 0;
         }
 
         .schedule-day-cell:hover {
@@ -724,36 +756,6 @@ body {
                 var(--native-accent-button-gradient) !important;
             background-size: 100% 100%, 420% 420% !important;
             background-position: 0 0, var(--native-accent-x) 50% !important;
-        }
-
-        @media (min-width: 1400px) {
-            .schedule-mode-month.schedule-forward-days {
-                display: flex;
-                flex-direction: column;
-                min-height: 100%;
-            }
-
-            .schedule-mode-month.schedule-forward-days > div:last-child {
-                flex: 1;
-                display: flex;
-            }
-
-            .schedule-mode-month.schedule-forward-days > div:last-child > div {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                min-height: 0;
-            }
-
-            .schedule-mode-month.schedule-forward-days .schedule-calendar-grid {
-                flex: 1;
-                grid-auto-rows: minmax(0, 1fr);
-                min-height: 0;
-            }
-
-            .schedule-mode-month.schedule-forward-days .schedule-day-cell {
-                min-height: 0;
-            }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -2041,10 +2043,26 @@ body {
         }
 
         .native-ui.dashboard-dark .schedule-calendar-card > div:nth-child(2),
-        .native-ui.dashboard-dark .schedule-calendar-card .bg-gradient-to-b {
+        .native-ui.dashboard-dark .schedule-calendar-card .bg-gradient-to-b,
+        .native-ui.dashboard-dark .schedule-calendar-scroll-zone {
             background-color: #101114 !important;
             background-image: linear-gradient(180deg, #101114, #0b0c10) !important;
             color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-command,
+        .native-ui.dashboard-dark .schedule-compact-stat,
+        .native-ui.dashboard-dark .schedule-side-panel,
+        .native-ui.dashboard-dark .schedule-selected-panel {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-scope-toggle,
+        .native-ui.dashboard-dark .schedule-month-switcher {
+            background: #17191d !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
         }
 
         .native-ui.dashboard-dark .schedule-calendar-card .calendar-week-heading,

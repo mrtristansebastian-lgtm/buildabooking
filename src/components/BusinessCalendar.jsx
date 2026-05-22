@@ -451,33 +451,24 @@ import { getLocalDateStr } from '../utils/dates';
                     return dateStr;
                 });
             }, [calendarViewMode, expandedDate, hidePastDays, todayStr, daysInMonth, calendarWeekStart, calendarWeekEnd]);
-            const visibleCalendarDayCount = calendarDisplayDays.filter(Boolean).length;
             const isForwardMonthBoard = calendarViewMode === 'month' && hidePastDays;
             const calendarGridClass = calendarViewMode === 'day'
                 ? 'grid-cols-1'
                 : calendarViewMode === 'week'
-                    ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-7'
-                    : isForwardMonthBoard
-                        ? visibleCalendarDayCount <= 5
-                            ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'
-                            : visibleCalendarDayCount <= 10
-                                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'
-                                : visibleCalendarDayCount <= 14
-                                    ? 'grid-cols-2 sm:grid-cols-4 md:grid-cols-7'
-                                    : 'grid-cols-2 sm:grid-cols-5 md:grid-cols-7'
-                        : 'grid-cols-7';
-            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-7' : 'grid-cols-7';
-            const calendarHeaderVisibilityClass = calendarViewMode === 'month'
-                ? (isForwardMonthBoard ? 'hidden' : 'grid')
-                : 'hidden sm:grid';
-            const calendarFrameClass = calendarViewMode === 'month' && !isForwardMonthBoard ? 'min-w-0 md:min-w-[560px] xl:min-w-0' : 'min-w-0';
+                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'
+                    : hidePastDays
+                        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
+                        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7';
+            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7';
+            const calendarHeaderVisibilityClass = 'hidden';
+            const calendarFrameClass = 'min-w-0';
             const calendarCellSizeClass = calendarViewMode === 'day'
                 ? 'min-h-[420px] md:min-h-[460px]'
                 : calendarViewMode === 'week'
-                    ? 'min-h-[116px] md:min-h-[220px] xl:min-h-[250px]'
+                    ? 'min-h-[132px] md:min-h-[220px] xl:min-h-[260px]'
                     : isForwardMonthBoard
-                        ? 'min-h-[132px] md:min-h-[210px] xl:min-h-[235px]'
-                        : 'min-h-[92px] md:min-h-[120px]';
+                        ? 'min-h-[132px] md:min-h-[220px] xl:min-h-[260px]'
+                        : 'min-h-[132px] md:min-h-[200px] xl:min-h-[230px]';
 
             const setSchedulePeriod = (period) => {
                 setScheduleStatsPeriod(period);
@@ -691,75 +682,71 @@ import { getLocalDateStr } from '../utils/dates';
                         )}
                     </section>
 
-                    <section className="saas-card overflow-hidden mb-6">
-                        <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Schedule Pulse</p>
-                                <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">{scheduleInsight.periodName} Stats</h3>
-                                <p className="text-sm text-neutral-500 mt-1">{scheduleInsight.label}</p>
-                            </div>
-                            <div className="flex bg-neutral-100 p-1.5 rounded-lg border border-neutral-200 w-full sm:w-fit">
-                                {['day', 'week', 'month'].map(period => (
-                                    <button
-                                        key={period}
-                                        onClick={() => setSchedulePeriod(period)}
-                                        className={`flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
-                                    >
-                                        {period}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="native-stat-grid grid grid-cols-1 sm:grid-cols-2">
-                            {scheduleMetricCards.map((item, index) => {
-                                const IconCmp = item.icon;
-                                return (
-                                    <div key={item.label} className={`native-stat-card p-5 md:p-6 border-neutral-100 bg-white text-black ${index > 0 ? 'sm:border-l' : ''}`}>
-                                        <div className="flex items-start justify-between gap-4 mb-8">
-                                            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-neutral-100 text-black">
-                                                <IconCmp size={17}/>
-                                            </div>
-                                            <span className="max-w-[170px] text-right leading-tight text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-500">{item.hint}</span>
+                    <div className="space-y-6">
+                        <section data-tour="schedule-calendar" className={`saas-card schedule-calendar-card schedule-mode-${calendarViewMode} ${hidePastDays ? 'schedule-forward-days' : ''} overflow-hidden`}>
+                            <div className="schedule-calendar-command p-5 md:p-6 border-b border-neutral-100 bg-white">
+                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
+                                        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">{calendarTitle}</h3>
+                                        <p className="text-sm text-neutral-500 mt-1">{calendarDescription}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-3 w-full lg:w-auto lg:items-end">
+                                        <div className="schedule-scope-toggle flex bg-neutral-100 p-1.5 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                            {['day', 'week', 'month'].map(period => (
+                                                <button
+                                                    key={period}
+                                                    onClick={() => setSchedulePeriod(period)}
+                                                    className={`flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                >
+                                                    {period}
+                                                </button>
+                                            ))}
                                         </div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-2 text-neutral-400">{item.label}</p>
-                                        <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight leading-none">{item.value}</p>
+                                        <div className="schedule-calendar-toolbar flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                                            <div className="schedule-month-switcher flex items-center gap-2 bg-neutral-50 p-1.5 rounded-lg border border-neutral-100 w-full sm:w-fit shadow-sm">
+                                                <button onClick={() => moveCalendarWindow(-1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronLeft size={18}/></button>
+                                                <span className="text-[11px] font-bold uppercase tracking-[0.2em] min-w-0 sm:min-w-[158px] flex-1 text-center text-black">{calendarWindowLabel}</span>
+                                                <button onClick={() => moveCalendarWindow(1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronRight size={18}/></button>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                aria-pressed={hidePastDays}
+                                                onClick={toggleHidePastDays}
+                                                className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
+                                            >
+                                                <span className={`w-5 h-5 rounded-full border flex items-center justify-center ${hidePastDays ? 'bg-[#39FF14] border-transparent text-black' : 'bg-neutral-50 border-neutral-200'}`}>
+                                                    {hidePastDays && <Check size={11}/>}
+                                                </span>
+                                                Hide past
+                                            </button>
+                                        </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-
-                    <div className="grid grid-cols-1 min-[1400px]:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start min-[1400px]:items-stretch">
-                        <section data-tour="schedule-calendar" className={`saas-card schedule-calendar-card schedule-mode-${calendarViewMode} ${hidePastDays ? 'schedule-forward-days' : ''} ${calendarViewMode === 'day' ? 'min-[1400px]:col-span-2' : ''} overflow-hidden`}>
-                            <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-5 bg-white">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
-                                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">{calendarTitle}</h3>
-                                    <p className="text-sm text-neutral-500 mt-1">{calendarDescription}</p>
                                 </div>
-                                <div className="flex flex-col gap-3 w-full md:w-auto md:items-end">
-                                    <div className="schedule-month-switcher flex items-center gap-2 bg-neutral-50 p-1.5 rounded-lg border border-neutral-100 w-full md:w-fit shadow-sm">
-                                        <button onClick={() => moveCalendarWindow(-1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronLeft size={18}/></button>
-                                        <span className="text-[11px] font-bold uppercase tracking-[0.2em] min-w-0 md:min-w-[158px] flex-1 text-center text-black">{calendarWindowLabel}</span>
-                                        <button onClick={() => moveCalendarWindow(1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronRight size={18}/></button>
-                                    </div>
-                                    <div className="schedule-calendar-toolbar flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                                        <button
-                                            type="button"
-                                            aria-pressed={hidePastDays}
-                                            onClick={toggleHidePastDays}
-                                            className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
-                                        >
-                                            <span className={`w-5 h-5 rounded-full border flex items-center justify-center ${hidePastDays ? 'bg-[#39FF14] border-transparent text-black' : 'bg-neutral-50 border-neutral-200'}`}>
-                                                {hidePastDays && <Check size={11}/>}
-                                            </span>
-                                            Hide past
-                                        </button>
-                                    </div>
+                                <div className="schedule-compact-stats grid grid-cols-1 sm:grid-cols-2 gap-2 mt-5">
+                                    {scheduleMetricCards.map((item) => {
+                                        const IconCmp = item.icon;
+                                        return (
+                                            <div key={item.label} className="native-stat-card schedule-compact-stat rounded-lg border border-neutral-100 bg-white px-4 py-3 text-black">
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-neutral-100 text-black shrink-0">
+                                                            <IconCmp size={16}/>
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-400 truncate">{item.label}</p>
+                                                            <p className="text-xs font-semibold text-neutral-500 truncate">{item.hint}</p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="metric-value text-2xl md:text-3xl font-black tracking-tight leading-none">{item.value}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            <div className="p-4 md:p-6 overflow-x-auto no-scrollbar bg-gradient-to-b from-white to-neutral-50/60">
+                            <div className="schedule-calendar-scroll-zone p-4 md:p-6 no-scrollbar bg-gradient-to-b from-white to-neutral-50/60">
                                 <div className={calendarFrameClass}>
                                 {calendarViewMode === 'month' && (
                                     <div className="schedule-rotate-prompt mb-3 rounded-lg border border-neutral-100 bg-white/85 px-3 py-3 text-black">
@@ -1040,7 +1027,7 @@ import { getLocalDateStr } from '../utils/dates';
                             </div>
                         </section>
 
-                        <aside className="space-y-6">
+                        <div className="schedule-detail-row grid grid-cols-1 xl:grid-cols-2 gap-6">
                             <section className="saas-card schedule-side-panel p-5">
                                 <div className="flex items-start justify-between gap-4 mb-5">
                                     <div>
@@ -1116,14 +1103,26 @@ import { getLocalDateStr } from '../utils/dates';
                                         <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black leading-none">{selectedDateLabel}</h3>
                                     </div>
                                     {selectedConfig && (
-                                        <button
-                                            onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, available: !selectedConfig.available })}
-                                            disabled={!canEditSelectedCalendar}
-                                            className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${!canEditSelectedCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : selectedConfig.available ? 'bg-[#39FF14] text-black shadow-lg shadow-black/5' : 'bg-red-50 text-red-600'}`}
-                                        >
-                                            {selectedConfig.available ? <CheckCircle2 size={14}/> : <XCircle size={14}/>}
-                                            {selectedConfig.available ? 'Open' : 'Closed'}
-                                        </button>
+                                        <div className="flex flex-wrap justify-end gap-2">
+                                            {calendarViewMode !== 'day' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSchedulePeriod('day')}
+                                                    className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-black text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all hover:border-black"
+                                                >
+                                                    <CalendarCheck size={14}/>
+                                                    View Day
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, available: !selectedConfig.available })}
+                                                disabled={!canEditSelectedCalendar}
+                                                className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${!canEditSelectedCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : selectedConfig.available ? 'bg-[#39FF14] text-black shadow-lg shadow-black/5' : 'bg-red-50 text-red-600'}`}
+                                            >
+                                                {selectedConfig.available ? <CheckCircle2 size={14}/> : <XCircle size={14}/>}
+                                                {selectedConfig.available ? 'Open' : 'Closed'}
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
@@ -1205,7 +1204,7 @@ import { getLocalDateStr } from '../utils/dates';
                                     </div>
                                 )}
                             </section>
-                        </aside>
+                        </div>
                     </div>
                 </div>
             );
