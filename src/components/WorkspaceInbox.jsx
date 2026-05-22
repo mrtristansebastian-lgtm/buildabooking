@@ -471,7 +471,7 @@ export function WorkspaceInbox({
 
   return (
     <>
-    <section data-tour="client-inbox" className={`saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
+    <section data-tour="client-inbox" className={`support-inbox-card saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
       <div className="h-1 native-gradient-line" />
       <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} border-b border-neutral-100 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4`}>
         <div className="max-w-3xl">
@@ -501,7 +501,7 @@ export function WorkspaceInbox({
       </div>
 
       <div className={`grid grid-cols-1 xl:grid-cols-12 ${chatFullscreen ? 'min-h-0 flex-1' : 'min-h-[520px] xl:min-h-[640px]'}`}>
-        <aside className={`${mobileChatOpen ? 'hidden xl:block' : ''} xl:col-span-4 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-neutral-50/45`}>
+        <aside className={`support-thread-list ${mobileChatOpen ? 'hidden xl:block' : ''} xl:col-span-4 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-neutral-50/45`}>
           <div className="p-3 md:p-4 border-b border-neutral-100 bg-white/70">
             <div className="relative">
               <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
@@ -560,10 +560,10 @@ export function WorkspaceInbox({
           </div>
         </aside>
 
-        <div className={`${mobileChatOpen ? 'fixed inset-0 z-[999] xl:static xl:z-auto' : 'hidden xl:flex'} xl:col-span-8 flex flex-col min-h-[100dvh] xl:min-h-[620px] bg-white`}>
+        <div className={`support-chat-panel ${mobileChatOpen ? 'fixed inset-0 z-[999] xl:static xl:z-auto' : 'hidden xl:flex'} xl:col-span-8 flex flex-col min-h-[100dvh] xl:min-h-[620px] bg-white`}>
           {activeThread ? (
             <>
-              <div className="p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
+              <div className="support-chat-header p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
                 <div className="flex items-center gap-3 min-w-0">
                   <button type="button" onClick={() => setMobileChatOpen(false)} className="xl:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
                     <ArrowLeft size={18} />
@@ -598,7 +598,7 @@ export function WorkspaceInbox({
               </div>
 
               {(linkedBooking || assignedStaff) && (
-                <div className="px-3 md:px-5 py-2.5 bg-neutral-50 border-b border-neutral-100">
+                <div className="support-chat-meta px-3 md:px-5 py-2.5 bg-neutral-50 border-b border-neutral-100">
                   <div className="grid grid-cols-3 gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
                     <div className="rounded-lg bg-white border border-neutral-100 px-3 py-2 min-w-0">
                       <p>Booking</p>
@@ -616,15 +616,16 @@ export function WorkspaceInbox({
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-[#F7F7F5] space-y-3">
+              <div className="support-chat-canvas flex-1 overflow-y-auto p-3 md:p-6 bg-[#F7F7F5] space-y-3">
                 {visibleMessages.map(message => {
                   const mine = message.senderRole === 'owner';
                   const proposal = getMessageProposal(message);
                   const pendingProposal = proposal && isPendingProposal(proposal) && ['reschedule-request', 'reschedule-offer', 'reschedule-counter'].includes(message.kind);
                   const ownerCanRespond = pendingProposal && proposal.requestedBy !== 'owner';
+                  const messageTone = mine ? 'support-message-owner' : message.senderRole === 'system' ? 'support-message-system' : 'support-message-client';
                   return (
                     <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-neutral-50 border border-neutral-100 text-neutral-500' : 'bg-neutral-50 text-black border border-neutral-100 rounded-bl-md'}`}>
+                      <div className={`support-message-bubble ${messageTone} max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-neutral-50 border border-neutral-100 text-neutral-500' : 'bg-neutral-50 text-black border border-neutral-100 rounded-bl-md'}`}>
                         <p className="text-[9px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'System' : message.senderName || message.senderRole}</p>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                         {proposal && (
@@ -669,7 +670,7 @@ export function WorkspaceInbox({
                 })}
               </div>
 
-              <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:p-5 border-t border-neutral-100 bg-white">
+              <div className="support-chat-composer p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:p-5 border-t border-neutral-100 bg-white">
                 <div className="flex items-end gap-2">
                   <textarea
                     value={draft}

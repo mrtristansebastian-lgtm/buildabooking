@@ -2034,3 +2034,122 @@ body {
         .native-ui.dashboard-dark .hover\:text-black:hover {
             color: #f8fafc !important;
         }
+
+        .native-ui.dashboard-dark .divide-y > :not([hidden]):hover {
+            background-color: #17191d !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card > div:nth-child(2),
+        .native-ui.dashboard-dark .schedule-calendar-card .bg-gradient-to-b {
+            background-color: #101114 !important;
+            background-image: linear-gradient(180deg, #101114, #0b0c10) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .calendar-week-heading,
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-rotate-prompt {
+            background: #0b0c10 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-cell,
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-agenda-card {
+            background-color: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 48px -42px rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-selected {
+            background:
+                linear-gradient(180deg, rgba(16,17,20,0.98), rgba(10,11,14,0.98)) padding-box,
+                var(--native-accent-gradient) border-box !important;
+            background-size: auto, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-slot-pill:not(.bg-\[\#39FF14\]) {
+            background: #0b0c10 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list > div,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-header,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-meta,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-composer {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: #e5e7eb !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-canvas {
+            background: linear-gradient(180deg, #f8fafc, #ffffff) !important;
+            color: #050505 !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list button {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: #e5e7eb !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list button:hover {
+            background: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel .text-black,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list .text-black,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel .text-neutral-950,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel .text-neutral-900 {
+            color: #050505 !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel .text-neutral-600,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel .text-neutral-500,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list .text-neutral-600,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list .text-neutral-500 {
+            color: #64748b !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-bubble {
+            box-shadow: 0 14px 38px -32px rgba(15, 23, 42, 0.55) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-owner {
+            background-color: #eefcff !important;
+            background-image:
+                linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.18)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            color: #050505 !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-client {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border: 1px solid #e5e7eb !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-system {
+            background: #eef6ff !important;
+            color: #64748b !important;
+            border: 1px solid #dbeafe !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-bubble :where(*) {
+            color: inherit !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] input,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] textarea {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: #d4d4d8 !important;
+        }
