@@ -828,6 +828,12 @@ function ColorFontControl({ settings, item, onChange }) {
 }
 
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const cleanFirestoreIdPart = (value = '') => (
+    String(value || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 80) || 'item'
+);
+const buildSupportThreadId = (ownerId = '', bookingId = '') => (
+    `${cleanFirestoreIdPart(ownerId)}_${cleanFirestoreIdPart(bookingId)}`
+);
 
 const safeStorageGet = (storage, key) => {
   try {
@@ -1143,6 +1149,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [clientSearch, setClientSearch] = useState('');
             const [selectedClientId, setSelectedClientId] = useState(null);
             const [clientNoteDraft, setClientNoteDraft] = useState('');
+            const [clientMobileView, setClientMobileView] = useState('directory');
             const [activeProfileSection, setActiveProfileSection] = useState('');
             const [showOnboarding, setShowOnboarding] = useState(false);
             const [showOwnerManual, setShowOwnerManual] = useState(false);
@@ -1158,6 +1165,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [runningLateDialog, setRunningLateDialog] = useState(null);
+            const [supportThreadFocus, setSupportThreadFocus] = useState(null);
             const [legalPanel, setLegalPanel] = useState(null);
             const [ownerNotifications, setOwnerNotifications] = useState([]);
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
@@ -2995,6 +3003,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 upsertClientRecord(id, { name, phone, email, birthday, labels });
                 setSelectedClientId(id);
+                if (isMobileRuntime) setClientMobileView('profile');
                 form.reset();
                 showToast(existingClient ? "Client profile updated" : "Client added");
             };
@@ -3607,6 +3616,74 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
                 try { await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId)); } 
                 catch (err) { console.error(err); }
+            };
+
+            const openBookingChat = async (booking) => {
+                if (booking?.isExample) {
+                    showToast('Example preview only. Live bookings open the linked client chat.');
+                    return;
+                }
+                if (!booking?.id) {
+                    showToast('This booking is missing its record ID.');
+                    return;
+                }
+                const emailKey = normalizeEmail(booking.clientEmail || '');
+                if (!emailKey) {
+                    showToast('Add a client email before opening an in-app chat thread.');
+                    return;
+                }
+
+                const threadId = booking.threadId || buildSupportThreadId(workspaceOwnerId, booking.id);
+
+                if (isFirebaseConfigured && user && db && workspaceOwnerId) {
+                    try {
+                        const threadRef = FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', threadId);
+                        const threadSnap = await FirebaseSDK.getDoc(threadRef);
+                        if (!threadSnap.exists()) {
+                            const assignedStaff = booking.staffId ? staffList.find(staff => staff.id === booking.staffId) : null;
+                            await FirebaseSDK.setDoc(threadRef, {
+                                ownerId: workspaceOwnerId,
+                                clientEmail: emailKey,
+                                clientName: booking.clientName || 'Client',
+                                bookingId: booking.id,
+                                workspaceSlug: booking.workspaceSlug || settings.slug || '',
+                                workspaceName: booking.workspaceName || settings.brandName || '',
+                                workspaceLogo: booking.workspaceLogo || settings.logo || '',
+                                bookingStatus: booking.status || 'pending',
+                                status: 'open',
+                                lastMessage: `Booking chat opened for ${booking.date || 'this booking'} at ${booking.time || 'the requested time'}.`,
+                                lastMessageAt: FirebaseSDK.serverTimestamp(),
+                                ownerUnread: 0,
+                                clientUnread: 0,
+                                rescheduleStatus: '',
+                                staffId: booking.staffId || '',
+                                staffName: assignedStaff?.name || '',
+                                staffPhotoURL: assignedStaff?.photoURL || '',
+                                createdAt: FirebaseSDK.serverTimestamp(),
+                                updatedAt: FirebaseSDK.serverTimestamp()
+                            }, { merge: true });
+                            await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads', threadId, 'messages'), {
+                                text: `Support thread opened for ${booking.date || 'this booking'} at ${booking.time || 'the requested time'}. The team can reply, reschedule, or send updates here.`,
+                                kind: 'booking-linked',
+                                bookingId: booking.id,
+                                senderId: 'system',
+                                senderName: 'Build A Booking',
+                                senderRole: 'system',
+                                createdAt: FirebaseSDK.serverTimestamp()
+                            });
+                        }
+                        if (!booking.threadId) {
+                            await updateBooking(booking.id, { threadId });
+                        }
+                    } catch (error) {
+                        console.error('Could not open booking chat', error);
+                        showToast('Could not open that client chat yet.');
+                        return;
+                    }
+                }
+
+                setSupportThreadFocus({ threadId, bookingId: booking.id, requestId: Date.now() });
+                setActiveTab('communications');
             };
 
             const approveBooking = async (booking) => {
@@ -5108,6 +5185,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         staffList={staffList}
                                         updateBooking={updateBooking}
                                         setActiveTab={setActiveTab}
+                                        focusTarget={supportThreadFocus}
                                         showToast={showToast}
                                     />
                                 </Suspense>
@@ -5122,7 +5200,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">My Clients</h2>
                                     <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Profiles are built from bookings automatically, with space for notes, labels, photos, and manual walk-ins.</p>
                                 </div>
-                                <button onClick={() => { saveClients(clientRecords); showToast("Client book saved"); }} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto">
+                                <button onClick={() => { saveClients(clientRecords); showToast("Client book saved"); }} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-black text-white text-[10px] md:text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto">
                                     <Check size={15}/> Save Client Book
                                 </button>
                             </header>
@@ -5136,22 +5214,43 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 ].map(metric => {
                                     const IconCmp = metric.icon;
                                     return (
-                                        <div key={metric.label} className="saas-card native-stat-card p-5">
-                                            <div className="flex items-start justify-between mb-7">
-                                                <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">{metric.hint}</span>
+                                        <div key={metric.label} className="saas-card native-stat-card p-3 md:p-5">
+                                            <div className="flex items-start justify-between mb-3 md:mb-7">
+                                                <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={16}/></div>
+                                                <span className="hidden md:inline-flex text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">{metric.hint}</span>
                                             </div>
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400 mb-2">{metric.label}</p>
-                                            <p className="metric-value text-3xl font-bold tracking-tight text-black">{metric.value}</p>
+                                            <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.18em] md:tracking-[0.25em] text-neutral-400 mb-1 md:mb-2">{metric.label}</p>
+                                            <p className="metric-value text-2xl md:text-3xl font-bold tracking-tight text-black">{metric.value}</p>
                                         </div>
                                     );
                                 })}
                             </div>
 
+                            <div className="md:hidden mb-4 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-sm grid grid-cols-3 gap-1">
+                                {[
+                                    { id: 'directory', label: 'Directory', icon: Users },
+                                    { id: 'profile', label: 'File', icon: User },
+                                    { id: 'add', label: 'Add', icon: UserPlus }
+                                ].map(item => {
+                                    const IconCmp = item.icon;
+                                    const active = clientMobileView === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            type="button"
+                                            onClick={() => setClientMobileView(item.id)}
+                                            className={`h-10 rounded-md text-[9px] font-bold uppercase tracking-[0.14em] flex items-center justify-center gap-2 transition-all ${active ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-400 hover:text-black'}`}
+                                        >
+                                            <IconCmp size={14} /> {item.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                                <section className="xl:col-span-5 space-y-6">
-                                    <div data-tour="clients-directory" className="saas-card overflow-hidden">
-                                        <div className="p-5 md:p-6 border-b border-neutral-100">
+                                <section className={`xl:col-span-5 space-y-4 md:space-y-6 ${clientMobileView === 'directory' || clientMobileView === 'add' ? '' : 'hidden md:block'}`}>
+                                    <div data-tour="clients-directory" className={`saas-card overflow-hidden ${clientMobileView === 'add' ? 'hidden md:block' : ''}`}>
+                                        <div className="p-4 md:p-6 border-b border-neutral-100">
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                                                 <div>
                                                     <h3 className="text-lg font-bold tracking-tight text-black">Client Directory</h3>
@@ -5169,11 +5268,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     value={clientSearch}
                                                     onChange={(event) => setClientSearch(event.target.value)}
                                                     placeholder="Search name, phone, label"
-                                                    className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg pl-11 pr-4 text-sm font-bold outline-none text-black focus:bg-white focus:border-black transition-colors"
+                                                    className="w-full h-10 md:h-12 bg-neutral-50 border border-neutral-100 rounded-lg pl-11 pr-4 text-sm font-bold outline-none text-black focus:bg-white focus:border-black transition-colors"
                                                 />
                                             </div>
                                         </div>
-                                        <div className="max-h-[640px] overflow-y-auto divide-y divide-neutral-100">
+                                        <div className="max-h-[58vh] md:max-h-[640px] overflow-y-auto divide-y divide-neutral-100">
                                             {displayClients.length === 0 ? (
                                                 <div className="p-12 text-center">
                                                     <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-400"><Users size={22}/></div>
@@ -5186,22 +5285,25 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 return (
                                                     <button
                                                         key={client.id}
-                                                        onClick={() => { if (!client.isExample) setSelectedClientId(client.id); }}
-                                                        className={`w-full text-left p-5 transition-all ${isActive ? 'bg-black text-white' : 'hover:bg-neutral-50 text-black'}`}
+                                                        onClick={() => {
+                                                            if (!client.isExample) setSelectedClientId(client.id);
+                                                            if (isMobileRuntime) setClientMobileView('profile');
+                                                        }}
+                                                        className={`w-full text-left p-3 md:p-5 transition-all ${isActive ? 'bg-black text-white' : 'hover:bg-neutral-50 text-black'}`}
                                                     >
-                                                        <div className="flex items-start gap-4">
-                                                            <div className={`w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center font-bold text-xl shrink-0 ${isActive ? 'bg-white text-black' : 'bg-neutral-100 text-black'}`}>
+                                                        <div className="flex items-start gap-3 md:gap-4">
+                                                            <div className={`w-11 h-11 md:w-14 md:h-14 rounded-lg overflow-hidden flex items-center justify-center font-bold text-base md:text-xl shrink-0 ${isActive ? 'bg-white text-black' : 'bg-neutral-100 text-black'}`}>
                                                                 {client.avatar ? <img src={client.avatar} className="w-full h-full object-cover" /> : (client.name || '?').charAt(0)}
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="flex items-start justify-between gap-3 mb-1">
-                                                                    <h4 className="text-lg font-bold tracking-tight truncate">{client.name}</h4>
+                                                                    <h4 className="text-base md:text-lg font-bold tracking-tight truncate">{client.name}</h4>
                                                                     <span className={`metric-value text-sm font-bold shrink-0 ${isActive ? 'text-[#39FF14]' : 'text-black'}`}>{client.isExample ? 'Example' : client.bookingCount}</span>
                                                                 </div>
-                                                                <p className={`text-sm truncate mb-3 ${isActive ? 'text-white/55' : 'text-neutral-500'}`}>{client.isExample ? 'Preview only - not saved or counted' : client.phone || client.email || 'Manual profile'}</p>
-                                                                <div className="flex flex-wrap gap-2">
+                                                                <p className={`text-xs md:text-sm truncate mb-2 md:mb-3 ${isActive ? 'text-white/55' : 'text-neutral-500'}`}>{client.isExample ? 'Preview only - not saved or counted' : client.phone || client.email || 'Manual profile'}</p>
+                                                                <div className="flex flex-wrap gap-1.5 md:gap-2">
                                                                     {allLabels.map(label => (
-                                                                        <span key={label} className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${isActive ? 'bg-white/10 text-white' : label === 'Regular' || label === 'VIP' ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-500'}`}>{label}</span>
+                                                                        <span key={label} className={`px-2 py-1 rounded-md text-[7px] md:text-[8px] font-bold uppercase tracking-widest ${isActive ? 'bg-white/10 text-white' : label === 'Regular' || label === 'VIP' ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-500'}`}>{label}</span>
                                                                     ))}
                                                                 </div>
                                                             </div>
@@ -5212,7 +5314,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </div>
                                     </div>
 
-                                    <section className="saas-panel p-5 md:p-6">
+                                    <section className={`saas-panel p-4 md:p-6 ${clientMobileView === 'add' ? '' : 'hidden md:block'}`}>
                                         <div className="flex items-start justify-between gap-4 mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold tracking-tight text-black">Add Client</h3>
@@ -5253,23 +5355,39 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     </section>
                                 </section>
 
-                                <section className="xl:col-span-7 space-y-6">
+                                <section className={`xl:col-span-7 space-y-4 md:space-y-6 ${clientMobileView === 'profile' ? '' : 'hidden md:block'}`}>
                                     {activeClient ? (() => {
                                         const allLabels = Array.from(new Set([...(activeClient.autoLabels || []), ...(activeClient.labels || [])]));
                                         const isExampleClient = Boolean(activeClient.isExample);
                                         return (
                                             <>
-                                                <div className="saas-card p-5 md:p-6 overflow-hidden relative">
+                                                <div className="md:hidden flex items-center justify-between gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setClientMobileView('directory')}
+                                                        className="h-10 px-4 rounded-lg bg-white border border-neutral-200 text-[10px] font-bold uppercase tracking-widest text-black flex items-center gap-2"
+                                                    >
+                                                        <ChevronLeft size={15} /> Directory
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setClientMobileView('add')}
+                                                        className="h-10 px-4 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
+                                                    >
+                                                        <Plus size={14} /> Add
+                                                    </button>
+                                                </div>
+                                                <div className="saas-card p-4 md:p-6 overflow-hidden relative">
                                                     <div className="absolute top-0 left-0 right-0 h-1 bg-[#39FF14]" />
-                                                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-8">
-                                                        <div className="flex items-start gap-5 min-w-0">
+                                                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5 md:gap-6 mb-5 md:mb-8">
+                                                        <div className="flex items-start gap-4 md:gap-5 min-w-0">
                                                             <div className="relative shrink-0">
-                                                                <div className="w-24 h-24 rounded-lg bg-black text-[#39FF14] overflow-hidden flex items-center justify-center text-4xl font-bold shadow-inner">
+                                                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-lg bg-black text-[#39FF14] overflow-hidden flex items-center justify-center text-2xl md:text-4xl font-bold shadow-inner">
                                                                     {activeClient.avatar ? <img src={activeClient.avatar} className="w-full h-full object-cover" /> : activeClient.name.charAt(0)}
                                                                 </div>
                                                                 {!isExampleClient && (
-                                                                    <label className="absolute -right-2 -bottom-2 w-10 h-10 rounded-lg bg-white border border-neutral-200 shadow-xl flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors" title="Upload profile picture">
-                                                                        <Camera size={16} />
+                                                                    <label className="absolute -right-2 -bottom-2 w-9 h-9 md:w-10 md:h-10 rounded-lg bg-white border border-neutral-200 shadow-xl flex items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors" title="Upload profile picture">
+                                                                        <Camera size={15} />
                                                                         <input type="file" accept="image/*" className="hidden" onChange={(event) => {
                                                                             handleClientAvatarUpload(activeClient.id, event.target.files[0]);
                                                                             event.target.value = '';
@@ -5279,11 +5397,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             </div>
                                                             <div className="min-w-0 pt-1">
                                                                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                                    <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-black truncate">{activeClient.name}</h3>
+                                                                    <h3 className="text-2xl md:text-4xl font-bold tracking-tight text-black truncate">{activeClient.name}</h3>
                                                                     {isExampleClient && <span className="px-2.5 py-1 rounded-md bg-black text-white text-[9px] font-bold uppercase tracking-widest">Example Only</span>}
                                                                     {activeClient.autoLabels?.includes('Regular') && <span className="px-2.5 py-1 rounded-md bg-[#39FF14] text-black text-[9px] font-bold uppercase tracking-widest">Regular</span>}
                                                                 </div>
-                                                                <p className="text-sm text-neutral-500 mb-4">{isExampleClient ? 'Visual example only - not saved, synced, or counted in stats' : activeClient.bookingCount ? `${activeClient.bookingCount} booking${activeClient.bookingCount === 1 ? '' : 's'} on file` : 'Manual client profile'}</p>
+                                                                <p className="text-xs md:text-sm text-neutral-500 mb-3 md:mb-4">{isExampleClient ? 'Visual example only - not saved, synced, or counted in stats' : activeClient.bookingCount ? `${activeClient.bookingCount} booking${activeClient.bookingCount === 1 ? '' : 's'} on file` : 'Manual client profile'}</p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {allLabels.map(label => (
                                                                         <span key={label} className={`px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-widest ${label === 'Regular' || label === 'VIP' ? 'bg-[#39FF14] text-black' : label === 'No-show Risk' ? 'bg-red-50 text-red-600' : 'bg-neutral-100 text-neutral-500'}`}>{label}</span>
@@ -6580,6 +6698,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
                                                                 <Calendar size={14} /> Reschedule
                                                             </button>
+                                                            <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
+                                                                <MessageCircle size={14} /> Chat
+                                                            </button>
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-amber-700 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
                                                                 <Bell size={14} /> Waitlist
                                                             </button>
@@ -6592,6 +6713,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         </div>
                                                     ) : (
                                                         <>
+                                                            <button
+                                                                onClick={() => openBookingChat(b)}
+                                                                className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black hover:border-black transition-all"
+                                                            >
+                                                                <MessageCircle size={14} /> Chat
+                                                            </button>
                                                             <button
                                                                 onClick={() => sendRunningLateToBooking(b)}
                                                                 className="h-10 px-3 rounded-lg bg-black text-white flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all"

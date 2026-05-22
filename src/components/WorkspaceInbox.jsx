@@ -27,6 +27,7 @@ export function WorkspaceInbox({
   staffList = [],
   updateBooking,
   setActiveTab,
+  focusTarget,
   showToast
 }) {
   const [threads, setThreads] = useState([]);
@@ -124,6 +125,18 @@ export function WorkspaceInbox({
     document.documentElement.classList.toggle('support-chat-open', mobileChatOpen);
     return () => document.documentElement.classList.remove('support-chat-open');
   }, [mobileChatOpen]);
+
+  useEffect(() => {
+    if (!focusTarget?.requestId) return;
+    const match = threadSource.find(thread => (
+      (focusTarget.threadId && thread.id === focusTarget.threadId) ||
+      (focusTarget.bookingId && thread.bookingId === focusTarget.bookingId)
+    ));
+    if (!match) return;
+    setActiveThreadId(match.id);
+    setThreadQuery('');
+    setMobileChatOpen(true);
+  }, [focusTarget?.requestId, focusTarget?.threadId, focusTarget?.bookingId, threadSource]);
 
   const createClientNotification = async (email, payload) => {
     const emailKey = notificationEmailKey(email);

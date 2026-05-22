@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, ShieldCheck, UserRound, Users, X, XCircle } from 'lucide-react';
+import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, ShieldCheck, Users, X, XCircle } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
@@ -35,34 +35,44 @@ import { getLocalDateStr } from '../utils/dates';
             useEffect(() => {
                 if (workspaceRole === 'staff' && activeStaffId) setSelectedCalendarId(activeStaffId);
             }, [activeStaffId, workspaceRole]);
-            const staffMembersForCoverage = useMemo(() => (
-                (staffList || []).filter(staff => staff?.id && staff.accessEnabled !== false)
-            ), [staffList]);
+            const getStaffDisplayName = (staff = {}) => staff.name || staff.displayName || staff.email?.split('@')[0] || 'Team member';
+            const getStaffUsername = (staff = {}) => staff.username || staff.handle || (staff.email ? `@${staff.email.split('@')[0]}` : `${staff.role || 'staff'} calendar`);
+            const getStaffInitials = (name = 'Team member') => name.split(' ').map(part => part.charAt(0)).join('').slice(0, 2).toUpperCase();
+            const staffMembersForCoverage = useMemo(() => {
+                const activeStaff = (staffList || []).filter(staff => staff?.id && staff.accessEnabled !== false);
+                const fallbackStaff = [{ id: activeStaffId || 'owner', name: workspaceRole === 'staff' ? 'My Calendar' : 'Owner', role: workspaceRole === 'staff' ? 'staff' : 'owner', color: '#000000' }];
+                return (activeStaff.length ? activeStaff : fallbackStaff)
+                    .filter((staff, index, list) => staff?.id && list.findIndex(item => item.id === staff.id) === index);
+            }, [activeStaffId, staffList, workspaceRole]);
             const staffCalendarOptions = useMemo(() => {
-                const options = [
-                    { id: 'workspace', name: 'Business Calendar', role: 'Shared', color: '#000000' },
-                    ...(workspaceRole === 'staff' ? [] : [{ id: 'all-staff', name: 'All Staff', role: 'Team coverage', color: '#755CFF' }])
-                ];
                 return [
-                    ...options,
+                    { id: 'workspace', name: 'Business Overview', role: `${staffMembersForCoverage.length} ${staffMembersForCoverage.length === 1 ? 'profile' : 'profiles'}`, color: '#000000', username: 'full business view', icon: 'business' },
                     ...staffMembersForCoverage.map(staff => ({
                         id: staff.id,
-                        name: staff.name || 'Team member',
+                        name: getStaffDisplayName(staff),
                         role: staff.role === 'owner' ? 'Owner' : staff.role === 'admin' ? 'Admin' : 'Staff',
+                        username: getStaffUsername(staff),
                         color: staff.color || '#39FF14',
                         photoURL: staff.photoURL || ''
                     }))
                 ].filter((calendar, index, list) => calendar.id && list.findIndex(item => item.id === calendar.id) === index);
-            }, [staffMembersForCoverage, workspaceRole]);
+            }, [staffMembersForCoverage]);
             const selectedCalendar = staffCalendarOptions.find(calendar => calendar.id === selectedCalendarId) || staffCalendarOptions[0];
-            const visibleCalendarOptions = workspaceRole === 'staff'
-                ? staffCalendarOptions.filter(calendar => calendar.id === selectedCalendarId)
-                : staffCalendarOptions;
+            const visibleCalendarOptions = staffCalendarOptions;
             const isWorkspaceCalendar = selectedCalendarId === 'workspace';
             const isAggregateCalendar = selectedCalendarId === 'all-staff';
             const isSingleStaffCalendar = !isWorkspaceCalendar && !isAggregateCalendar;
             const activeStaffCalendar = isSingleStaffCalendar ? (settings.staffCalendars?.[selectedCalendarId] || {}) : null;
             const activeSchedule = isSingleStaffCalendar ? (activeStaffCalendar?.schedule || {}) : (settings.schedule || {});
+            const canEditSelectedCalendar = !isAggregateCalendar && (workspaceRole !== 'staff' || selectedCalendarId === activeStaffId);
+            const readOnlyCalendarMessage = isWorkspaceCalendar
+                ? 'Business overview is view only for staff. Switch to your own calendar to edit availability.'
+                : 'You can view teammate calendars, but only edit your own availability.';
+            useEffect(() => {
+                if (!staffCalendarOptions.some(calendar => calendar.id === selectedCalendarId)) {
+                    setSelectedCalendarId(workspaceRole === 'staff' ? (activeStaffId || 'workspace') : 'workspace');
+                }
+            }, [activeStaffId, selectedCalendarId, staffCalendarOptions, workspaceRole]);
             const businessDefaultTimes = Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
             const getCalendarDefaultTimes = (calendarId) => {
                 if (calendarId === 'workspace') return businessDefaultTimes;
@@ -201,11 +211,32 @@ import { getLocalDateStr } from '../utils/dates';
                 };
             };
 
-            const updateDateConfig = (dateStr, nextConfig) => {
+            const guardCalendarEdit = () => {
                 if (isAggregateCalendar) {
-                    showToast("Choose Business Calendar or a staff member to edit availability.");
-                    return;
+                    showToast("Choose Business Overview or a staff member to edit availability.");
+                    return false;
                 }
+                if (!canEditSelectedCalendar) {
+                    showToast(readOnlyCalendarMessage);
+                    return false;
+                }
+                return true;
+            };
+
+            const getStaffCoverageForDate = (dateStr) => {
+                if (!dateStr || !staffMembersForCoverage.length) return [];
+                const businessConfig = getCalendarDayConfig('workspace', dateStr);
+                if (!businessConfig.available) return [];
+                const businessTimes = new Set(businessConfig.times || []);
+                return staffMembersForCoverage.filter(staff => {
+                    const staffConfig = getCalendarDayConfig(staff.id, dateStr);
+                    if (!staffConfig.available) return false;
+                    return (staffConfig.times || []).some(time => !businessTimes.size || businessTimes.has(time));
+                });
+            };
+
+            const updateDateConfig = (dateStr, nextConfig) => {
+                if (!guardCalendarEdit()) return;
                 setSettings(prev => {
                     if (isWorkspaceCalendar) {
                         return {
@@ -244,10 +275,7 @@ import { getLocalDateStr } from '../utils/dates';
             };
 
             const saveDefaultTime = () => {
-                if (isAggregateCalendar) {
-                    showToast("Choose Business Calendar or a staff member to add default times.");
-                    return;
-                }
+                if (!guardCalendarEdit()) return;
                 const time = defaultSlotTime?.trim();
                 if (!time) return;
                 if (defaultTimes.includes(time)) {
@@ -290,20 +318,19 @@ import { getLocalDateStr } from '../utils/dates';
             };
 
             const startAddingSlot = () => {
+                if (!guardCalendarEdit()) return;
                 setNewSlotTime(getNextOpenTime(selectedConfig?.times || []));
                 setIsAddingSlot(true);
             };
 
             const startAddingDefaultSlot = () => {
-                if (isAggregateCalendar) {
-                    showToast("Choose Business Calendar or a staff member to add default times.");
-                    return;
-                }
+                if (!guardCalendarEdit()) return;
                 setDefaultSlotTime(getNextOpenTime(defaultTimes));
                 setIsAddingDefaultSlot(true);
             };
 
             const saveNewSlot = () => {
+                if (!guardCalendarEdit()) return;
                 if (!selectedConfig || !expandedDate) return;
                 const time = newSlotTime?.trim();
                 if (!time) return;
@@ -602,71 +629,43 @@ import { getLocalDateStr } from '../utils/dates';
 
                     <section className="saas-card p-3 md:p-4 mb-6">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center shrink-0">
-                                    <Users size={17} />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Team Calendar</p>
-                                    <h3 className="text-lg font-bold tracking-tight text-black truncate">{selectedCalendar?.name || 'Business Calendar'}</h3>
-                                </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Team Calendar</p>
+                                <h3 className="text-lg md:text-xl font-bold tracking-tight text-black truncate">
+                                    {isWorkspaceCalendar ? 'Business Overview' : selectedCalendar?.name || 'My Calendar'}
+                                </h3>
+                                <p className="text-xs text-neutral-500 mt-1">
+                                    {isWorkspaceCalendar
+                                        ? `${staffMembersForCoverage.length} staff ${staffMembersForCoverage.length === 1 ? 'calendar' : 'calendars'} in view`
+                                        : canEditSelectedCalendar ? 'Editing this calendar' : 'View only calendar'}
+                                </p>
                             </div>
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 lg:justify-end">
                                 {visibleCalendarOptions.map(calendar => {
                                     const active = selectedCalendarId === calendar.id;
+                                    const initials = getStaffInitials(calendar.name);
                                     return (
                                         <button
                                             key={calendar.id}
                                             type="button"
                                             onClick={() => setSelectedCalendarId(calendar.id)}
-                                            className={`min-w-[150px] h-12 rounded-lg border px-3 flex items-center gap-3 text-left transition-all ${active ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-black'}`}
+                                            className={`min-w-[156px] h-12 rounded-lg border px-3 flex items-center gap-3 text-left transition-all ${active ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-black'}`}
                                         >
-                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold overflow-hidden ${active ? 'native-gradient-icon text-black' : 'bg-neutral-50 border border-neutral-100'}`}>
-                                                {calendar.photoURL ? <img src={calendar.photoURL} alt="" className="w-full h-full object-cover" /> : calendar.id === 'workspace' ? <UserRound size={14} /> : calendar.name.charAt(0).toUpperCase()}
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold overflow-hidden ${active ? 'native-gradient-icon text-black' : 'bg-neutral-50 border border-neutral-100 text-black'}`}>
+                                                {calendar.photoURL ? <img src={calendar.photoURL} alt="" className="w-full h-full object-cover" /> : calendar.id === 'workspace' ? <Users size={14} /> : initials}
                                             </span>
                                             <span className="min-w-0">
                                                 <span className={`block text-sm font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{calendar.name}</span>
-                                                <span className={`block text-[8px] font-bold uppercase tracking-widest truncate ${active ? 'text-white/45' : 'text-neutral-400'}`}>{calendar.role}</span>
+                                                <span className={`block text-[8px] font-bold uppercase tracking-[0.16em] truncate ${active ? 'text-white/45' : 'text-neutral-400'}`}>{calendar.username || calendar.role}</span>
                                             </span>
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
-                        {workspaceRole !== 'staff' && staffMembersForCoverage.length > 0 && (
-                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
-                                {staffMembersForCoverage.slice(0, 4).map(staff => {
-                                    const dateKey = expandedDate || todayStr;
-                                    const staffConfig = getCalendarDayConfig(staff.id, dateKey);
-                                    const staffBookings = (bookings || []).filter(booking => (
-                                        booking.staffId === staff.id &&
-                                        booking.status !== 'declined' &&
-                                        getBookingDateKey(booking) === dateKey
-                                    )).length;
-                                    const initials = (staff.name || 'Team').split(' ').map(part => part.charAt(0)).join('').slice(0, 2).toUpperCase();
-                                    return (
-                                        <button
-                                            key={staff.id}
-                                            type="button"
-                                            onClick={() => setSelectedCalendarId(staff.id)}
-                                            className="rounded-lg border border-neutral-100 bg-neutral-50/70 p-3 text-left hover:bg-white hover:border-neutral-200 transition-all"
-                                        >
-                                            <div className="flex items-center justify-between gap-3 mb-3">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden shrink-0" style={{ backgroundColor: staff.color || '#000000' }}>
-                                                        {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
-                                                    </span>
-                                                    <span className="text-sm font-bold text-black truncate">{staff.name || 'Team member'}</span>
-                                                </div>
-                                                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${staffConfig.available ? 'bg-[#39FF14]' : 'bg-red-400'}`} />
-                                            </div>
-                                            <div className="flex items-center justify-between gap-3 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
-                                                <span>{staffConfig.available ? `${staffConfig.times.length} slots` : 'Closed'}</span>
-                                                <span>{staffBookings} bookings</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                        {!canEditSelectedCalendar && (
+                            <div className="mt-3 rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 text-xs font-medium text-neutral-500">
+                                {readOnlyCalendarMessage}
                             </div>
                         )}
                     </section>
@@ -781,6 +780,7 @@ import { getLocalDateStr } from '../utils/dates';
                                         const isPastDay = dateStr < todayStr;
                                         const isCustom = Boolean(activeSchedule?.[dateStr]);
                                         const calendarBubble = getCalendarBubble(dateStr, config);
+                                        const staffCoverage = isWorkspaceCalendar ? getStaffCoverageForDate(dateStr) : [];
                                         const bubbleClass = {
                                             open: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-white text-black border-neutral-200',
                                             confirmed: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -826,6 +826,24 @@ import { getLocalDateStr } from '../utils/dates';
                                                                         {isCustom && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Custom</span>}
                                                                         <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${config.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{config.available ? 'Open' : 'Closed'}</span>
                                                                     </div>
+                                                                    {staffCoverage.length > 0 && (
+                                                                        <div className="mt-4 flex items-center gap-2">
+                                                                            <div className="flex -space-x-2">
+                                                                                {staffCoverage.slice(0, 4).map(staff => (
+                                                                                    <span
+                                                                                        key={staff.id}
+                                                                                        className="w-7 h-7 rounded-full border-2 border-white bg-neutral-100 text-[9px] font-black text-black flex items-center justify-center overflow-hidden shadow-sm"
+                                                                                        title={getStaffDisplayName(staff)}
+                                                                                    >
+                                                                                        {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                            <span className="text-[10px] font-bold text-neutral-500">
+                                                                                {staffCoverage.length} covering this day
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
 
@@ -973,6 +991,24 @@ import { getLocalDateStr } from '../utils/dates';
                                                 <div className="flex items-start justify-between gap-1 mb-2 pr-6">
                                                     <span className={`metric-value text-xl md:text-[22px] font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
                                                 </div>
+                                                {staffCoverage.length > 0 && (
+                                                    <div className="mb-2 flex items-center gap-1.5">
+                                                        <div className="flex -space-x-1.5">
+                                                            {staffCoverage.slice(0, 3).map(staff => (
+                                                                <span
+                                                                    key={staff.id}
+                                                                    className="w-5 h-5 rounded-full border border-white bg-neutral-100 text-[7px] font-black text-black flex items-center justify-center overflow-hidden shadow-sm"
+                                                                    title={getStaffDisplayName(staff)}
+                                                                >
+                                                                    {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                        <span className="rounded-full bg-neutral-50 border border-neutral-100 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.12em] text-neutral-400">
+                                                            {staffCoverage.length}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <div className="mt-auto space-y-2">
                                                     <div className="min-h-[14px] flex flex-wrap items-center gap-1">
                                                         {isToday && <span className={`rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-widest ${isSelected ? 'bg-black text-white' : 'bg-black text-white'}`}>Today</span>}
@@ -1003,7 +1039,7 @@ import { getLocalDateStr } from '../utils/dates';
                                         <h3 className="text-xl font-bold tracking-tight text-black">Default Slots</h3>
                                         <p className="text-sm text-neutral-500 mt-1">{isAggregateCalendar ? 'Combined from every active staff calendar.' : isWorkspaceCalendar ? 'New open days start with these times.' : `${selectedCalendar?.name || 'This staff member'} uses these default times.`}</p>
                                     </div>
-                                    <button onClick={startAddingDefaultSlot} disabled={isAggregateCalendar} className={`w-11 h-11 rounded-lg flex items-center justify-center transition-transform shrink-0 shadow-lg shadow-black/5 ${isAggregateCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#39FF14] text-black hover:scale-105'}`}>
+                                    <button onClick={startAddingDefaultSlot} disabled={!canEditSelectedCalendar} className={`w-11 h-11 rounded-lg flex items-center justify-center transition-transform shrink-0 shadow-lg shadow-black/5 ${!canEditSelectedCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#39FF14] text-black hover:scale-105'}`}>
                                         <Plus size={16}/>
                                     </button>
                                 </div>
@@ -1037,10 +1073,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                 {time}
                                             </span>
                                             <button onClick={() => {
-                                                if (isAggregateCalendar) {
-                                                    showToast("Choose Business Calendar or a staff member to edit default times.");
-                                                    return;
-                                                }
+                                                if (!guardCalendarEdit()) return;
                                                 setSettings(prev => {
                                                 if (isWorkspaceCalendar) {
                                                     return { ...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i) };
@@ -1059,7 +1092,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                     }
                                                 };
                                             });
-                                            }} className="text-neutral-300 hover:text-red-500 transition-colors"><X size={13}/></button>
+                                            }} disabled={!canEditSelectedCalendar} className={`transition-colors ${canEditSelectedCalendar ? 'text-neutral-300 hover:text-red-500' : 'text-neutral-200 cursor-not-allowed'}`}><X size={13}/></button>
                                         </div>
                                     )) : (
                                         <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 col-span-2">No default slots yet.</p>
@@ -1076,7 +1109,8 @@ import { getLocalDateStr } from '../utils/dates';
                                     {selectedConfig && (
                                         <button
                                             onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, available: !selectedConfig.available })}
-                                            className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${selectedConfig.available ? 'bg-[#39FF14] text-black shadow-lg shadow-black/5' : 'bg-red-50 text-red-600'}`}
+                                            disabled={!canEditSelectedCalendar}
+                                            className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${!canEditSelectedCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : selectedConfig.available ? 'bg-[#39FF14] text-black shadow-lg shadow-black/5' : 'bg-red-50 text-red-600'}`}
                                         >
                                             {selectedConfig.available ? <CheckCircle2 size={14}/> : <XCircle size={14}/>}
                                             {selectedConfig.available ? 'Open' : 'Closed'}
@@ -1088,6 +1122,11 @@ import { getLocalDateStr } from '../utils/dates';
                                     <div className="py-14 text-center text-neutral-400 text-sm font-medium">Pick a date on the calendar.</div>
                                 ) : selectedConfig.available ? (
                                     <>
+                                        {!canEditSelectedCalendar && (
+                                            <div className="mb-5 rounded-lg border border-neutral-100 bg-neutral-50 px-4 py-3 text-xs font-medium text-neutral-500">
+                                                {readOnlyCalendarMessage}
+                                            </div>
+                                        )}
                                         <div className="grid grid-cols-3 gap-2 mb-5">
                                             {[
                                                 { label: 'Booked', value: selectedDayBookings.confirmed },
@@ -1109,7 +1148,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         </span>
                                                         {time}
                                                     </div>
-                                                    <button onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, times: selectedConfig.times.filter(t => t !== time) })} className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-white transition-colors">
+                                                    <button onClick={() => updateDateConfig(expandedDate, { ...selectedConfig, times: selectedConfig.times.filter(t => t !== time) })} disabled={!canEditSelectedCalendar} className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${canEditSelectedCalendar ? 'text-neutral-300 hover:text-red-500 hover:bg-white' : 'text-neutral-200 cursor-not-allowed'}`}>
                                                         <X size={15}/>
                                                     </button>
                                                 </div>
@@ -1144,13 +1183,15 @@ import { getLocalDateStr } from '../utils/dates';
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <button
                                                 onClick={startAddingSlot}
-                                                className="h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10"
+                                                disabled={!canEditSelectedCalendar}
+                                                className={`h-11 rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors shadow-xl shadow-black/10 ${canEditSelectedCalendar ? 'bg-black text-white hover:bg-neutral-800' : 'bg-neutral-100 text-neutral-300 cursor-not-allowed shadow-none'}`}
                                             >
                                                 <Plus size={14}/> Add Slot
                                             </button>
                                             <button
                                                 onClick={() => updateDateConfig(expandedDate, { available: true, times: [...defaultTimes] })}
-                                                className="h-11 rounded-lg border border-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors"
+                                                disabled={!canEditSelectedCalendar}
+                                                className={`h-11 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-colors ${canEditSelectedCalendar ? 'border-neutral-200 hover:bg-neutral-50' : 'border-neutral-100 text-neutral-300 cursor-not-allowed'}`}
                                             >
                                                 Use Defaults
                                             </button>
@@ -1161,7 +1202,7 @@ import { getLocalDateStr } from '../utils/dates';
                                         <XCircle size={28} className="mx-auto mb-3 text-red-500"/>
                                         <p className="text-sm font-bold text-black mb-1">Closed for bookings</p>
                                         <p className="text-sm text-neutral-500 mb-5">Clients will not see this date as available.</p>
-                                        <button onClick={() => updateDateConfig(expandedDate, { available: true, times: [...defaultTimes] })} className="h-11 px-5 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
+                                        <button onClick={() => updateDateConfig(expandedDate, { available: true, times: [...defaultTimes] })} disabled={!canEditSelectedCalendar} className={`h-11 px-5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors ${canEditSelectedCalendar ? 'bg-black text-white hover:bg-neutral-800' : 'bg-neutral-100 text-neutral-300 cursor-not-allowed'}`}>
                                             Reopen Day
                                         </button>
                                     </div>
