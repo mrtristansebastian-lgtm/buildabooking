@@ -151,6 +151,24 @@ export function WorkspaceInbox({
   const assignedStaff = useMemo(() => (
     linkedBooking?.staffId ? staffList.find(staff => staff.id === linkedBooking.staffId) : null
   ), [linkedBooking?.staffId, staffList]);
+  const buildRescheduleProposal = ({ date, time, requestedBy = 'owner', source = 'offer', message = '' }) => ({
+    id: `reschedule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    bookingId: activeThread?.bookingId || linkedBooking?.id || '',
+    date,
+    time,
+    requestedBy,
+    source,
+    status: 'pending',
+    message,
+    createdAtMs: Date.now()
+  });
+  const getMessageProposal = (message = {}) => (
+    message.proposedReschedule ||
+    message.rescheduleProposal ||
+    (String(message.kind || '').startsWith('reschedule') ? activeThread?.proposedReschedule : null)
+  );
+  const isPendingProposal = (proposal = {}) => !['accepted', 'declined', 'cancelled'].includes(String(proposal.status || 'pending'));
+  const formatProposalLabel = (proposal = {}) => [proposal.date, proposal.time].filter(Boolean).join(' at ');
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -215,7 +233,7 @@ export function WorkspaceInbox({
     return () => unsub();
   }, [activeThread?.id, appId, db]);
 
-  const sendMessage = async (text = draft) => {
+  const sendMessage = async (text = draft, extra = {}) => {
     const cleanText = String(text || '').trim();
     if (!cleanText || !db || !activeThread?.id || sending) return;
     if (activeThread.isExample) {
@@ -226,8 +244,9 @@ export function WorkspaceInbox({
     setSending(true);
     try {
       await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads', activeThread.id, 'messages'), {
+        ...extra,
         text: cleanText,
-        kind: 'message',
+        kind: extra.kind || 'message',
         senderId: user?.uid || workspaceOwnerId,
         senderName: activeStaff?.name || user?.displayName || user?.email || 'Team',
         senderPhotoURL: activeStaff?.photoURL || user?.photoURL || '',
@@ -281,7 +300,7 @@ export function WorkspaceInbox({
     showToast?.('Booking confirmed and client thread updated.');
   };
 
-  const offerReschedule = () => {
+  const offerReschedule = (proposal = null) => {
     if (activeThread?.isExample) {
       showToast?.('Example preview only. Live threads can send reschedule options.');
       return;
@@ -293,10 +312,11 @@ export function WorkspaceInbox({
 
     setActionDialog({
       type: 'reschedule',
-      title: 'Offer a new time',
-      eyebrow: 'Reschedule',
-      date: linkedBooking?.date || '',
-      time: linkedBooking?.time || '',
+      title: proposal ? 'Counter with another time' : 'Offer a new time',
+      eyebrow: proposal ? 'Counter offer' : 'Reschedule',
+      requestMode: proposal ? 'counter' : 'offer',
+      date: proposal?.date || linkedBooking?.date || '',
+      time: proposal?.time || linkedBooking?.time || '',
       message: ''
     });
   };
@@ -316,17 +336,77 @@ export function WorkspaceInbox({
 
     const message = String(actionDialog?.message || '').trim()
       || `Reschedule option: ${cleanDate} at ${cleanTime}. Reply here to confirm and we will update your booking.`;
+    const proposal = buildRescheduleProposal({
+      date: cleanDate,
+      time: cleanTime,
+      requestedBy: 'owner',
+      source: actionDialog?.requestMode === 'counter' ? 'counter' : 'offer',
+      message
+    });
 
     if (db && activeThread.id) {
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
-        rescheduleStatus: 'offered',
-        proposedReschedule: { date: cleanDate, time: cleanTime },
+        rescheduleStatus: actionDialog?.requestMode === 'counter' ? 'countered' : 'offered',
+        proposedReschedule: proposal,
         updatedAt: FirebaseSDK.serverTimestamp()
       }).catch(() => {});
     }
-    await sendMessage(message);
+    await sendMessage(message, {
+      kind: actionDialog?.requestMode === 'counter' ? 'reschedule-counter' : 'reschedule-offer',
+      proposedReschedule: proposal
+    });
     setActionDialog(null);
-    showToast?.('Reschedule option sent to the client.');
+    showToast?.(actionDialog?.requestMode === 'counter' ? 'Counter offer sent to the client.' : 'Reschedule option sent to the client.');
+  };
+
+  const acceptRescheduleProposal = async (proposal = {}) => {
+    if (activeThread?.isExample) {
+      showToast?.('Example preview only. Live reschedule requests can be accepted from here.');
+      return;
+    }
+    if (!linkedBooking) {
+      showToast?.('No matching booking found for this reschedule request.');
+      return;
+    }
+    if (!proposal.date || !proposal.time) {
+      showToast?.('This reschedule request is missing a date or time.');
+      return;
+    }
+
+    const nextProposal = { ...proposal, status: 'accepted', acceptedBy: 'owner', decidedAtMs: Date.now() };
+    await updateBooking(linkedBooking.id, { date: proposal.date, time: proposal.time });
+    if (db && activeThread?.id) {
+      await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
+        rescheduleStatus: 'accepted',
+        proposedReschedule: nextProposal,
+        updatedAt: FirebaseSDK.serverTimestamp()
+      }).catch(() => {});
+    }
+    await sendMessage(`Accepted reschedule: ${formatProposalLabel(proposal)}. Your booking has been updated.`, {
+      kind: 'reschedule-accepted',
+      proposedReschedule: nextProposal
+    });
+    showToast?.('Reschedule accepted and booking updated.');
+  };
+
+  const declineRescheduleProposal = async (proposal = {}) => {
+    if (activeThread?.isExample) {
+      showToast?.('Example preview only. Live reschedule requests can be declined from here.');
+      return;
+    }
+    const nextProposal = { ...proposal, status: 'declined', declinedBy: 'owner', decidedAtMs: Date.now() };
+    if (db && activeThread?.id) {
+      await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
+        rescheduleStatus: 'declined',
+        proposedReschedule: nextProposal,
+        updatedAt: FirebaseSDK.serverTimestamp()
+      }).catch(() => {});
+    }
+    await sendMessage(`Declined reschedule: ${formatProposalLabel(proposal)}. Send another option here if you want to keep looking.`, {
+      kind: 'reschedule-declined',
+      proposedReschedule: nextProposal
+    });
+    showToast?.('Reschedule request declined.');
   };
 
   const sendRunningLateUpdate = () => {
@@ -374,7 +454,7 @@ export function WorkspaceInbox({
   })();
 
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.ownerUnread || 0), 0);
-  const needsReplyCount = threads.filter(thread => Number(thread.ownerUnread || 0) > 0 || thread.rescheduleStatus === 'requested').length;
+  const needsReplyCount = threads.filter(thread => Number(thread.ownerUnread || 0) > 0 || ['requested', 'countered'].includes(thread.rescheduleStatus)).length;
   const openRequestCount = threads.filter(thread => ['pending', 'waitlist'].includes(thread.bookingStatus)).length;
   const linkedBookingCount = threads.filter(thread => thread.bookingId).length;
   const filteredThreads = useMemo(() => {
@@ -466,7 +546,7 @@ export function WorkspaceInbox({
                       {thread.bookingStatus || 'pending'}
                     </span>
                     {thread.isExample && <span className="px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Example</span>}
-                    {thread.rescheduleStatus === 'requested' && <span className="px-2 py-1 rounded-md bg-violet-50 text-violet-700 text-[8px] font-bold uppercase tracking-widest">Reschedule</span>}
+                    {['requested', 'countered'].includes(thread.rescheduleStatus) && <span className="px-2 py-1 rounded-md bg-violet-50 text-violet-700 text-[8px] font-bold uppercase tracking-widest">Reschedule</span>}
                   </div>
                 </button>
               );
@@ -539,11 +619,50 @@ export function WorkspaceInbox({
               <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-[#F7F7F5] space-y-3">
                 {visibleMessages.map(message => {
                   const mine = message.senderRole === 'owner';
+                  const proposal = getMessageProposal(message);
+                  const pendingProposal = proposal && isPendingProposal(proposal) && ['reschedule-request', 'reschedule-offer', 'reschedule-counter'].includes(message.kind);
+                  const ownerCanRespond = pendingProposal && proposal.requestedBy !== 'owner';
                   return (
                     <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-neutral-50 border border-neutral-100 text-neutral-500' : 'bg-neutral-50 text-black border border-neutral-100 rounded-bl-md'}`}>
                         <p className="text-[9px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'System' : message.senderName || message.senderRole}</p>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                        {proposal && (
+                          <div className={`mt-3 rounded-xl border p-3 ${mine ? 'bg-white/10 border-white/15 text-white' : 'bg-white border-neutral-200 text-black'}`}>
+                            <p className="text-[8px] font-bold uppercase tracking-[0.16em] opacity-50 mb-2">
+                              {proposal.status === 'accepted' ? 'Reschedule accepted' : proposal.status === 'declined' ? 'Reschedule declined' : proposal.source === 'counter' ? 'Counter offer' : 'Reschedule request'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              <div className={`rounded-lg px-3 py-2 ${mine ? 'bg-white/10' : 'bg-neutral-50'}`}>
+                                <p className="text-[8px] font-bold uppercase tracking-widest opacity-45">Date</p>
+                                <p className="text-xs font-bold mt-1">{proposal.date || 'To confirm'}</p>
+                              </div>
+                              <div className={`rounded-lg px-3 py-2 ${mine ? 'bg-white/10' : 'bg-neutral-50'}`}>
+                                <p className="text-[8px] font-bold uppercase tracking-widest opacity-45">Time</p>
+                                <p className="text-xs font-bold mt-1">{proposal.time || 'To confirm'}</p>
+                              </div>
+                            </div>
+                            {ownerCanRespond ? (
+                              <div className="grid grid-cols-3 gap-2">
+                                <button type="button" onClick={() => acceptRescheduleProposal(proposal)} className="h-9 rounded-lg native-gradient-button text-black text-[8px] font-bold uppercase tracking-widest">
+                                  Accept
+                                </button>
+                                <button type="button" onClick={() => offerReschedule(proposal)} className={`h-9 rounded-lg border text-[8px] font-bold uppercase tracking-widest ${mine ? 'border-white/20 bg-white/10 text-white' : 'border-neutral-200 bg-white text-black'}`}>
+                                  Counter
+                                </button>
+                                <button type="button" onClick={() => declineRescheduleProposal(proposal)} className={`h-9 rounded-lg border text-[8px] font-bold uppercase tracking-widest ${mine ? 'border-white/20 bg-white/10 text-white' : 'border-neutral-200 bg-white text-black'}`}>
+                                  Decline
+                                </button>
+                              </div>
+                            ) : pendingProposal ? (
+                              <p className="text-[10px] font-bold uppercase tracking-widest opacity-45">
+                                {proposal.requestedBy === 'owner' ? 'Waiting for client response' : 'Waiting for your response'}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] font-bold uppercase tracking-widest opacity-45">{proposal.status || 'Closed'}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

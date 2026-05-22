@@ -885,6 +885,8 @@ const createOwnerStaffProfile = (signedInUser, color = '#39FF14') => ({
   uid: signedInUser?.uid || '',
   name: signedInUser?.displayName || 'Workspace Owner',
   email: signedInUser?.email || '',
+  phone: signedInUser?.phoneNumber || '',
+  photoURL: signedInUser?.photoURL || '',
   role: 'owner',
   status: 'connected',
   color
@@ -1334,6 +1336,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
+                accountProfiles: {},
                 themeTemplates: [],
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
                 logo: '', bannerImage: '', address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
@@ -1363,6 +1366,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [bookings, setBookings] = useState([]);
             const [bookingsReady, setBookingsReady] = useState(!isFirebaseConfigured);
             const [staffList, setStaffList] = useState([{id: 'owner', name: 'Admin', color: '#39FF14'}]);
+            const [accountProfileOverride, setAccountProfileOverride] = useState({});
             const [communications, setCommunications] = useState(createDefaultCommunications);
             const bookingPageUrl = useMemo(() => `${window.location.origin}/book/${settings.slug || 'studio'}`, [settings.slug]);
             const referralUrl = useMemo(() => `${window.location.origin}/ref/${user?.uid?.substring(0,6) || '10X'}`, [user?.uid]);
@@ -1390,19 +1394,69 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ...workspaceAccess
                 ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
             }, [settings.brandName, user, workspaceAccess]);
+            const accountProfileKey = useMemo(() => (
+                user?.uid || normalizeEmail(user?.email || '') || (isGuestWorkspace ? 'guest-workspace' : 'local-account')
+            ), [isGuestWorkspace, user?.email, user?.uid]);
+            const fallbackAccountName = useMemo(() => {
+                const source = user?.displayName || user?.email?.split('@')[0] || (isGuestWorkspace ? 'Guest Workspace' : 'Workspace Owner');
+                const parts = String(source || '').trim().split(/\s+/).filter(Boolean);
+                return {
+                    firstName: parts[0] || '',
+                    lastName: parts.slice(1).join(' ')
+                };
+            }, [isGuestWorkspace, user?.displayName, user?.email]);
+            const storedAccountProfile = {
+                ...(settings.accountProfiles?.[accountProfileKey] || {}),
+                ...(accountProfileOverride || {})
+            };
+            const personalProfile = useMemo(() => ({
+                uid: user?.uid || '',
+                firstName: storedAccountProfile.firstName ?? fallbackAccountName.firstName,
+                lastName: storedAccountProfile.lastName ?? fallbackAccountName.lastName,
+                email: storedAccountProfile.email ?? user?.email ?? '',
+                mobile: storedAccountProfile.mobile ?? storedAccountProfile.phone ?? '',
+                photoURL: storedAccountProfile.photoURL ?? user?.photoURL ?? '',
+                updatedAt: storedAccountProfile.updatedAt || 0
+            }), [accountProfileKey, fallbackAccountName.firstName, fallbackAccountName.lastName, settings.accountProfiles, storedAccountProfile.email, storedAccountProfile.firstName, storedAccountProfile.lastName, storedAccountProfile.mobile, storedAccountProfile.phone, storedAccountProfile.photoURL, storedAccountProfile.updatedAt, user?.email, user?.photoURL, user?.uid]);
+            const personalDisplayName = useMemo(() => (
+                [personalProfile.firstName, personalProfile.lastName].filter(Boolean).join(' ').trim() ||
+                user?.displayName ||
+                user?.email?.split('@')[0] ||
+                (isGuestWorkspace ? 'Guest Workspace' : 'Workspace Owner')
+            ), [isGuestWorkspace, personalProfile.firstName, personalProfile.lastName, user?.displayName, user?.email]);
+            const displayStaffList = useMemo(() => {
+                const emailKey = normalizeEmail(user?.email || '');
+                const profileEmailKey = normalizeEmail(personalProfile.email || '');
+                return (staffList || []).map(staff => {
+                    const isCurrentPerson = (
+                        (user?.uid && staff.uid === user.uid) ||
+                        (emailKey && normalizeEmail(staff.email || '') === emailKey) ||
+                        (profileEmailKey && normalizeEmail(staff.email || '') === profileEmailKey) ||
+                        (isWorkspaceOwner && staff.id === 'owner')
+                    );
+                    if (!isCurrentPerson) return staff;
+                    return {
+                        ...staff,
+                        name: personalDisplayName || staff.name,
+                        email: personalProfile.email || staff.email,
+                        phone: personalProfile.mobile || staff.phone || '',
+                        photoURL: personalProfile.photoURL || staff.photoURL || ''
+                    };
+                });
+            }, [isWorkspaceOwner, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL, staffList, user?.email, user?.uid]);
             const activeStaffProfile = useMemo(() => {
-                if (!user) return staffList.find(staff => staff.id === 'owner') || null;
+                if (!user) return displayStaffList.find(staff => staff.id === 'owner') || null;
                 const emailKey = normalizeEmail(user.email || '');
-                return staffList.find(staff => (
+                return displayStaffList.find(staff => (
                     staff.id === activeWorkspaceGrant?.staffId ||
                     staff.uid === user.uid ||
                     normalizeEmail(staff.email || '') === emailKey
-                )) || (isWorkspaceOwner ? staffList.find(staff => staff.id === 'owner') : null) || staffList[0] || null;
-            }, [activeWorkspaceGrant?.staffId, isWorkspaceOwner, staffList, user]);
+                )) || (isWorkspaceOwner ? displayStaffList.find(staff => staff.id === 'owner') : null) || displayStaffList[0] || null;
+            }, [activeWorkspaceGrant?.staffId, displayStaffList, isWorkspaceOwner, user]);
             const dashboardGreetingName = useMemo(() => {
-                const source = activeStaffProfile?.name || user?.displayName || user?.email?.split('@')[0] || settings.brandName || 'Builder';
+                const source = personalDisplayName || activeStaffProfile?.name || user?.displayName || user?.email?.split('@')[0] || settings.brandName || 'Builder';
                 return String(source).trim().split(/\s+/)[0] || 'Builder';
-            }, [activeStaffProfile?.name, settings.brandName, user?.displayName, user?.email]);
+            }, [activeStaffProfile?.name, personalDisplayName, settings.brandName, user?.displayName, user?.email]);
 
             const visibleBookings = bookings;
             const exampleBooking = useMemo(() => ({
@@ -2585,6 +2639,31 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 ]);
             };
 
+            useEffect(() => {
+                let cancelled = false;
+                if (!isFirebaseConfigured || !user?.uid) {
+                    setAccountProfileOverride({});
+                    return undefined;
+                }
+                FirebaseSDK.getDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accounts', user.uid))
+                    .then((docSnap) => {
+                        if (cancelled || !docSnap.exists()) return;
+                        const accountData = docSnap.data();
+                        const savedProfile = accountData.personalProfile || {};
+                        setAccountProfileOverride({
+                            firstName: savedProfile.firstName || accountData.firstName || '',
+                            lastName: savedProfile.lastName || accountData.lastName || '',
+                            email: savedProfile.email || accountData.email || user.email || '',
+                            mobile: savedProfile.mobile || accountData.mobile || accountData.phone || '',
+                            photoURL: savedProfile.photoURL || accountData.photoURL || user.photoURL || ''
+                        });
+                    })
+                    .catch(error => console.error('Account profile load failed', error));
+                return () => {
+                    cancelled = true;
+                };
+            }, [user?.uid, user?.email, user?.photoURL]);
+
             const loadWorkspaceAccess = async (signedInUser) => {
                 if (!isFirebaseConfigured || !signedInUser?.email) {
                     setWorkspaceAccess([]);
@@ -2811,7 +2890,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         const nextStaff = docSnap.data().list || [];
                         setStaffList(prev => areJsonEqual(prev, nextStaff) ? prev : nextStaff);
                     } else if (isWorkspaceOwner) {
-                        const ownerProfile = [createOwnerStaffProfile(user)];
+                        const ownerProfile = [createOwnerStaffProfile({
+                            ...user,
+                            displayName: personalDisplayName,
+                            email: personalProfile.email || user?.email || '',
+                            photoURL: personalProfile.photoURL || user?.photoURL || '',
+                            phoneNumber: personalProfile.mobile || user?.phoneNumber || ''
+                        })];
                         setStaffList(prev => areJsonEqual(prev, ownerProfile) ? prev : ownerProfile);
                     }
                 }, handleSyncError('Staff'));
@@ -2844,7 +2929,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     setBookingsReady(true);
                 });
                 return () => { unsubSettings(); unsubStaff(); unsubComms(); unsubClients(); unsubBookings(); };
-            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug]);
+            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL]);
 
             const publishSettings = async (nextSettings = settings, successMessage = "Booking page published!", options = {}) => {
                 const silent = Boolean(options.silent);
@@ -2869,11 +2954,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         setSettings(prev => ({ ...prev, slug: publicSlug }));
                     }
                     await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'), settingsToPublish);
+                    const { accountProfiles, ...publicSettingsToPublish } = settingsToPublish;
                     await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug), {
-                        ...settingsToPublish,
+                        ...publicSettingsToPublish,
                         ownerId: workspaceOwnerId,
                         ownerEmail: user?.email || '',
-                        workspaceName: settingsToPublish.brandName || 'Build A Booking Workspace'
+                        workspaceName: publicSettingsToPublish.brandName || 'Build A Booking Workspace'
                     });
                     if (!silent) showToast(successMessage);
                     return true;
@@ -3009,7 +3095,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const saveStaff = async (newList, previousList = staffList) => {
                 const normalizedList = newList.map((staff, index) => {
                     if (staff.id === 'owner') {
-                        return { ...staff, ...createOwnerStaffProfile(user, staff.color || '#39FF14'), color: staff.color || '#39FF14', role: 'owner', status: 'connected' };
+                        return {
+                            ...staff,
+                            ...createOwnerStaffProfile({
+                                ...user,
+                                displayName: personalDisplayName,
+                                email: personalProfile.email || user?.email || staff.email || '',
+                                photoURL: personalProfile.photoURL || staff.photoURL || user?.photoURL || '',
+                                phoneNumber: personalProfile.mobile || staff.phone || user?.phoneNumber || ''
+                            }, staff.color || '#39FF14'),
+                            color: staff.color || '#39FF14',
+                            role: 'owner',
+                            status: 'connected'
+                        };
                     }
                     const emailKey = normalizeEmail(staff.email);
                     return {
@@ -3306,6 +3404,99 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const assetRef = FirebaseSDK.ref(storage, `artifacts/${appId}/users/${workspaceOwnerId || user.uid}/${folder}/${Date.now()}-${safeName || 'asset'}`);
                 await FirebaseSDK.uploadBytes(assetRef, file);
                 return FirebaseSDK.getDownloadURL(assetRef);
+            };
+            const updatePersonalProfile = (updates = {}) => {
+                const nextProfile = {
+                    ...personalProfile,
+                    ...updates,
+                    uid: user?.uid || personalProfile.uid || '',
+                    updatedAt: Date.now()
+                };
+                const nextDisplayName = [nextProfile.firstName, nextProfile.lastName].filter(Boolean).join(' ').trim() || personalDisplayName;
+                const emailKey = normalizeEmail(user?.email || '');
+                const profileEmailKey = normalizeEmail(nextProfile.email || '');
+
+                setSettings(prev => ({
+                    ...prev,
+                    accountProfiles: {
+                        ...(prev.accountProfiles || {}),
+                        [accountProfileKey]: nextProfile
+                    }
+                }));
+                setAccountProfileOverride(nextProfile);
+
+                setStaffList(prev => (prev || []).map(staff => {
+                    const isCurrentPerson = (
+                        (user?.uid && staff.uid === user.uid) ||
+                        (emailKey && normalizeEmail(staff.email || '') === emailKey) ||
+                        (profileEmailKey && normalizeEmail(staff.email || '') === profileEmailKey) ||
+                        (isWorkspaceOwner && staff.id === 'owner')
+                    );
+                    if (!isCurrentPerson) return staff;
+                    return {
+                        ...staff,
+                        name: nextDisplayName || staff.name,
+                        email: nextProfile.email || staff.email,
+                        phone: nextProfile.mobile || staff.phone || '',
+                        photoURL: nextProfile.photoURL || staff.photoURL || '',
+                        updatedAt: Date.now()
+                    };
+                }));
+            };
+            const handlePersonalProfilePhotoUpload = async (file) => {
+                if (!file) return;
+                try {
+                    showToast('Uploading profile photo...');
+                    const url = await uploadAsset(file, 'account-avatars');
+                    updatePersonalProfile({ photoURL: url });
+                    showToast('Profile photo updated');
+                } catch (error) {
+                    console.error(error);
+                    showToast('Profile photo upload failed');
+                }
+            };
+            const saveProfileChanges = async () => {
+                const displayName = [personalProfile.firstName, personalProfile.lastName].filter(Boolean).join(' ').trim() || personalDisplayName;
+                const emailKey = normalizeEmail(personalProfile.email || user?.email || '');
+                try {
+                    if (isFirebaseConfigured && user?.uid) {
+                        const accountPayload = {
+                            uid: user.uid,
+                            email: emailKey,
+                            displayName,
+                            firstName: personalProfile.firstName || '',
+                            lastName: personalProfile.lastName || '',
+                            mobile: personalProfile.mobile || '',
+                            phone: personalProfile.mobile || '',
+                            photoURL: personalProfile.photoURL || '',
+                            personalProfile: {
+                                ...personalProfile,
+                                email: emailKey,
+                                updatedAt: Date.now()
+                            },
+                            updatedAt: Date.now()
+                        };
+                        await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accounts', user.uid), accountPayload, { merge: true });
+                        if (emailKey) {
+                            await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accountLookup', emailKey), accountPayload, { merge: true });
+                        }
+                    }
+
+                    if (canManageWorkspace) {
+                        await publishSettings(settings, 'Profile updated.', { silent: true });
+                    } else if (!isFirebaseConfigured) {
+                        setSettings(settings);
+                    }
+
+                    if (canManageTeam) {
+                        await saveStaff(displayStaffList, staffList);
+                    }
+
+                    showToast('Profile updated.');
+                } catch (error) {
+                    console.error(error);
+                    showToast('Profile could not be saved.');
+                }
             };
             const handleSettingImageUpload = async (key, file, folder) => {
                 if (!file) return;
@@ -4015,7 +4206,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         accessToken,
                         bookings: visibleBookings,
                         settings,
-                        staffList,
+                        staffList: displayStaffList,
                         calendarId,
                         durationMinutes: Number(settings.defaultBookingDurationMinutes) || 60
                     });
@@ -4967,7 +5158,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         <button onClick={() => setShowOwnerManual(true)} className="h-12 px-7 bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/5 hover:-translate-y-0.5 hover:border-black transition-all flex items-center justify-center gap-2">
                                             <BookOpen size={14}/> Owner Manual
                                         </button>
-                                        <button onClick={() => {saveSettings(); showToast("Profile Updated");}} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                                        <button onClick={saveProfileChanges} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
                                             <Check size={14}/> Save Profile
                                         </button>
                                     </div>
@@ -5025,12 +5216,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <div className="grid grid-cols-1 lg:grid-cols-12">
                                         <div className="lg:col-span-5 bg-black text-white p-6 md:p-8 flex flex-col justify-between gap-10">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-16 h-16 rounded-lg bg-white text-black flex items-center justify-center overflow-hidden font-bold text-2xl shadow-xl">
-                                                    {user?.photoURL ? <img src={user.photoURL} alt="Account avatar" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || (isGuestWorkspace ? 'G' : 'A'))}
-                                                </div>
+                                                <label className="relative w-16 h-16 rounded-lg bg-white text-black flex items-center justify-center overflow-hidden font-bold text-2xl shadow-xl cursor-pointer group shrink-0">
+                                                    {personalProfile.photoURL ? <img src={personalProfile.photoURL} alt="Account avatar" className="w-full h-full object-cover" /> : (personalDisplayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || (isGuestWorkspace ? 'G' : 'A'))}
+                                                    <span className="absolute inset-0 bg-black/55 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <Camera size={16} />
+                                                    </span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={(event) => handlePersonalProfilePhotoUpload(event.target.files?.[0])}
+                                                    />
+                                                </label>
                                                 <div className="min-w-0">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/35 mb-2">{isGuestWorkspace ? 'Browsing As' : 'Signed In As'}</p>
-                                                    <p className="text-xl font-bold tracking-tight truncate">{user?.displayName || user?.email || (isGuestWorkspace ? 'Guest Workspace' : 'Admin User')}</p>
+                                                    <p className="text-xl font-bold tracking-tight truncate">{personalDisplayName || (isGuestWorkspace ? 'Guest Workspace' : 'Admin User')}</p>
+                                                    <p className="text-xs text-white/45 mt-1 truncate">{personalProfile.email || 'No contact email yet'}</p>
                                                 </div>
                                             </div>
                                             <div>
@@ -5039,22 +5240,68 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </div>
                                         </div>
                                         <div className="lg:col-span-7 p-5 md:p-8">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
-                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Account Email</p>
-                                                    <p className="text-sm font-bold text-black break-all">{user?.email || (isGuestWorkspace ? 'Guest mode' : 'Admin User')}</p>
+                                            <div className="mb-5 flex items-start justify-between gap-4">
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-300 mb-2">Personal Profile</p>
+                                                    <h3 className="text-2xl font-bold tracking-tight text-black">Your account details</h3>
+                                                    <p className="text-sm text-neutral-500 mt-1">Separate from business details. This is the person behind the workspace.</p>
                                                 </div>
-                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
-                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Account ID</p>
+                                                <label className="hidden sm:flex h-10 px-4 rounded-full bg-neutral-50 border border-neutral-100 text-black text-[10px] font-bold uppercase tracking-widest items-center gap-2 cursor-pointer hover:border-black transition-colors shrink-0">
+                                                    <Camera size={14} /> Photo
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={(event) => handlePersonalProfilePhotoUpload(event.target.files?.[0])}
+                                                    />
+                                                </label>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+                                                    <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 block">First Name</span>
+                                                    <input
+                                                        value={personalProfile.firstName || ''}
+                                                        onChange={(event) => updatePersonalProfile({ firstName: event.target.value })}
+                                                        className="w-full bg-transparent outline-none text-sm font-bold text-black"
+                                                        placeholder="First name"
+                                                    />
+                                                </label>
+                                                <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+                                                    <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 block">Surname</span>
+                                                    <input
+                                                        value={personalProfile.lastName || ''}
+                                                        onChange={(event) => updatePersonalProfile({ lastName: event.target.value })}
+                                                        className="w-full bg-transparent outline-none text-sm font-bold text-black"
+                                                        placeholder="Surname"
+                                                    />
+                                                </label>
+                                                <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+                                                    <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 flex items-center gap-2"><Mail size={12}/> Contact Email</span>
+                                                    <input
+                                                        type="email"
+                                                        value={personalProfile.email || ''}
+                                                        onChange={(event) => updatePersonalProfile({ email: event.target.value })}
+                                                        className="w-full bg-transparent outline-none text-sm font-bold text-black"
+                                                        placeholder="you@email.com"
+                                                    />
+                                                </label>
+                                                <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+                                                    <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 flex items-center gap-2"><Phone size={12}/> Mobile Number</span>
+                                                    <input
+                                                        type="tel"
+                                                        value={personalProfile.mobile || ''}
+                                                        onChange={(event) => updatePersonalProfile({ mobile: event.target.value })}
+                                                        className="w-full bg-transparent outline-none text-sm font-bold text-black"
+                                                        placeholder="+27 ..."
+                                                    />
+                                                </label>
+                                                <div className="rounded-lg bg-white border border-neutral-100 p-4">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2">Account ID</p>
                                                     <p className="text-sm font-bold text-black break-all">{user?.uid || (isGuestWorkspace ? 'LOCAL-GUEST' : 'BUILD-BOOKING-001')}</p>
                                                 </div>
-                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
-                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Business</p>
-                                                    <p className="text-sm font-bold text-black truncate">{settings.brandName || 'Build A Booking workspace'}</p>
-                                                </div>
-                                                <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-5">
-                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-300 mb-3">Booking Page</p>
-                                                    <p className="text-sm font-bold text-black truncate">/{settings.slug || 'studio-noir'}</p>
+                                                <div className="rounded-lg bg-white border border-neutral-100 p-4">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2">Workspace Role</p>
+                                                    <p className="text-sm font-bold text-black capitalize">{workspaceRole}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -5264,7 +5511,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </div>
                                         
                                         <div className="flex justify-end pt-8 border-t border-neutral-50">
-                                            <button onClick={() => {saveSettings(); showToast("Profile Updated");}} className="px-8 py-3 bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+                                            <button onClick={saveProfileChanges} className="px-8 py-3 bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
                                                 <Check size={14}/> Save Profile
                                             </button>
                                         </div>
@@ -5288,7 +5535,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     showToast={showToast}
                                     bookings={visibleBookings}
                                     clientDirectory={clientDirectory}
-                                    staffList={staffList}
+                                    staffList={displayStaffList}
                                     activeStaffId={activeStaffProfile?.id || 'owner'}
                                     workspaceRole={workspaceRole}
                                     googleCalendarState={{
@@ -5333,7 +5580,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         workspaceOwnerId={workspaceOwnerId}
                                         bookings={visibleBookings}
                                         clientDirectory={clientDirectory}
-                                        staffList={staffList}
+                                        staffList={displayStaffList}
                                         updateBooking={updateBooking}
                                         setActiveTab={setActiveTab}
                                         focusTarget={supportThreadFocus}
@@ -5699,10 +5946,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                             <div className="native-stat-grid grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 mb-4 md:mb-6">
                                 {[
-                                    { label: 'Team Members', value: staffList.length, hint: 'Active roster', icon: Users },
-                                    { label: 'Admins', value: staffList.filter(staff => staff.role === 'owner' || staff.role === 'admin').length, hint: 'Full access', icon: ShieldCheck },
-                                    { label: 'Connected', value: staffList.filter(staff => staff.status === 'connected').length, hint: 'Detected accounts', icon: Wifi },
-                                    { label: 'Assignable', value: staffList.filter(staff => staff.id !== 'owner').length, hint: 'Booking staff', icon: Briefcase }
+                                    { label: 'Team Members', value: displayStaffList.length, hint: 'Active roster', icon: Users },
+                                    { label: 'Admins', value: displayStaffList.filter(staff => staff.role === 'owner' || staff.role === 'admin').length, hint: 'Full access', icon: ShieldCheck },
+                                    { label: 'Connected', value: displayStaffList.filter(staff => staff.status === 'connected').length, hint: 'Detected accounts', icon: Wifi },
+                                    { label: 'Assignable', value: displayStaffList.filter(staff => staff.id !== 'owner').length, hint: 'Booking staff', icon: Briefcase }
                                 ].map(metric => {
                                     const IconCmp = metric.icon;
                                     return (
@@ -5725,10 +5972,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             <h3 className="text-lg font-bold tracking-tight text-black">Roster</h3>
                                             <p className="text-sm text-neutral-500">People visible in booking assignment controls.</p>
                                         </div>
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-md">{staffList.length} Active</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-md">{displayStaffList.length} Active</span>
                                     </div>
                                     <div className="p-4 md:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        {staffList.map((staff, index) => {
+                                        {displayStaffList.map((staff, index) => {
                                             const initials = (staff.name || 'Team Member').split(' ').map(part => part.charAt(0)).join('').slice(0, 2).toUpperCase();
                                             const assignedBookings = visibleBookings.filter(b => b.staffId === staff.id).length;
                                             const roleLabel = staff.role === 'admin' ? 'Admin' : staff.role === 'owner' || staff.id === 'owner' ? 'Owner' : 'Staff';
@@ -5833,9 +6080,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </div>
                                         <div className="space-y-3">
                                             {[
-                                                ['Owner profile', staffList.some(staff => staff.id === 'owner') ? 'Ready' : 'Missing'],
-                                                ['Booking dropdown', staffList.length ? 'Connected' : 'Empty'],
-                                                ['Google detection', staffList.some(staff => staff.status === 'connected') ? 'Active' : 'Ready'],
+                                                ['Owner profile', displayStaffList.some(staff => staff.id === 'owner') ? 'Ready' : 'Missing'],
+                                                ['Booking dropdown', displayStaffList.length ? 'Connected' : 'Empty'],
+                                                ['Google detection', displayStaffList.some(staff => staff.status === 'connected') ? 'Active' : 'Ready'],
                                                 ['Staff access rules', isFirebaseConfigured ? 'Live' : 'Demo']
                                             ].map(row => (
                                                 <div key={row[0]} className="flex items-center justify-between gap-4 text-sm">
@@ -6846,7 +7093,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 className="h-10 min-w-[160px] bg-white text-sm font-bold px-3 rounded-lg outline-none border border-neutral-200 focus:border-black transition-colors"
                                                             >
                                                                 <option value="" disabled>Assign staff</option>
-                                                                {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                                {displayStaffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                                             </select>
                                                             {assignedStaff && <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: assignedStaff.color }} />}
                                                         </div>

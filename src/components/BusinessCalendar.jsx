@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, ShieldCheck, Users, X, XCircle } from 'lucide-react';
+import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, RefreshCw, Users, X, XCircle } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
@@ -24,11 +24,9 @@ import { getLocalDateStr } from '../utils/dates';
             const [isAddingDefaultSlot, setIsAddingDefaultSlot] = useState(false);
             const [defaultSlotTime, setDefaultSlotTime] = useState('12:00');
             const [scheduleStatsPeriod, setScheduleStatsPeriod] = useState('month');
+            const calendarViewMode = scheduleStatsPeriod;
             const initialCalendarId = workspaceRole === 'staff' ? (activeStaffId || 'owner') : 'workspace';
             const [selectedCalendarId, setSelectedCalendarId] = useState(initialCalendarId);
-            const [calendarViewMode, setCalendarViewMode] = useState(() => (
-                typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'week' : 'month'
-            ));
             const [hidePastDays, setHidePastDays] = useState(true);
             const [isMobilePortraitCalendar, setIsMobilePortraitCalendar] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
@@ -366,10 +364,6 @@ import { getLocalDateStr } from '../utils/dates';
             const selectedDateLabel = expandedDate
                 ? new Date(`${expandedDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
                 : 'Select a date';
-            const selectedDayBookings = expandedDate ? (bookingsByDate[expandedDate] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 }) : { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
-            const selectedCapacity = selectedConfig?.available ? selectedConfig.times.length : 0;
-            const selectedOpenSlots = expandedDate && expandedDate >= todayStr && selectedConfig?.available ? Math.max(0, selectedCapacity - selectedDayBookings.reserved) : 0;
-            const selectedBookingRate = selectedCapacity ? Math.min(100, Math.round((selectedDayBookings.reserved / selectedCapacity) * 100)) : 0;
             const selectedAgendaDate = calendarViewMode === 'day' && hidePastDays && expandedDate < todayStr ? todayStr : expandedDate;
             const selectedDayBookingList = useMemo(() => {
                 const toMinutes = (time = '') => {
@@ -447,17 +441,17 @@ import { getLocalDateStr } from '../utils/dates';
             const calendarGridClass = calendarViewMode === 'day'
                 ? 'grid-cols-1'
                 : calendarViewMode === 'week'
-                    ? 'grid-cols-2 sm:grid-cols-7'
+                    ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-7'
                     : isForwardMonthBoard
                         ? visibleCalendarDayCount <= 5
-                            ? 'grid-cols-[repeat(auto-fit,minmax(120px,1fr))]'
+                            ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'
                             : visibleCalendarDayCount <= 10
-                                ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5'
+                                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'
                                 : visibleCalendarDayCount <= 14
-                                    ? 'grid-cols-2 sm:grid-cols-4 xl:grid-cols-7'
-                                    : 'grid-cols-2 sm:grid-cols-5 xl:grid-cols-7'
+                                    ? 'grid-cols-2 sm:grid-cols-4 md:grid-cols-7'
+                                    : 'grid-cols-2 sm:grid-cols-5 md:grid-cols-7'
                         : 'grid-cols-7';
-            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-7' : 'grid-cols-7';
+            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-7' : 'grid-cols-7';
             const calendarHeaderVisibilityClass = calendarViewMode === 'month'
                 ? (isForwardMonthBoard ? 'hidden' : 'grid')
                 : 'hidden sm:grid';
@@ -465,17 +459,17 @@ import { getLocalDateStr } from '../utils/dates';
             const calendarCellSizeClass = calendarViewMode === 'day'
                 ? 'min-h-[420px] md:min-h-[460px]'
                 : calendarViewMode === 'week'
-                    ? 'min-h-[116px] md:min-h-[128px]'
+                    ? 'min-h-[116px] md:min-h-[220px] xl:min-h-[250px]'
                     : isForwardMonthBoard
-                        ? 'min-h-[132px] md:min-h-[148px]'
+                        ? 'min-h-[132px] md:min-h-[210px] xl:min-h-[235px]'
                         : 'min-h-[92px] md:min-h-[120px]';
 
-            const setCalendarScope = (mode) => {
-                setCalendarViewMode(mode);
-                if (mode === 'month' && isMobilePortraitCalendar) {
+            const setSchedulePeriod = (period) => {
+                setScheduleStatsPeriod(period);
+                if (period === 'month' && isMobilePortraitCalendar) {
                     setHidePastDays(true);
                 }
-                if (mode !== 'month') {
+                if (period !== 'month' && hidePastDays && expandedDate < todayStr) {
                     const today = new Date();
                     setExpandedDate(todayStr);
                     setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -557,29 +551,21 @@ import { getLocalDateStr } from '../utils/dates';
             }, [scheduleStatsPeriod, expandedDate, selectedDateLabel, selectedConfig, currentMonth, activeSchedule, defaultTimes, bookingsByDate, todayStr]);
 
             const scheduleMetricCards = useMemo(() => {
-                if (scheduleStatsPeriod === 'day') {
-                    return [
-                        { label: 'Day Status', value: scheduleInsight.dayStatus, hint: scheduleInsight.label, icon: scheduleInsight.dayStatus === 'Closed' ? XCircle : CheckCircle2, tone: scheduleInsight.dayStatus === 'Open' ? 'accent' : 'neutral' },
-                        { label: 'Confirmed', value: scheduleInsight.confirmed, hint: `${scheduleInsight.pending} pending`, icon: CalendarCheck, tone: 'light' },
-                        { label: 'Open Slots', value: scheduleInsight.openSlots, hint: `${scheduleInsight.capacity} capacity`, icon: Clock, tone: 'light' },
-                        { label: 'Booking Rate', value: `${scheduleInsight.fillRate}%`, hint: `${scheduleInsight.reserved} reserved`, icon: ShieldCheck, tone: 'dark' }
-                    ];
-                }
-
-                if (scheduleStatsPeriod === 'week') {
-                    return [
-                        { label: 'Confirmed', value: scheduleInsight.confirmed, hint: 'This week', icon: CalendarCheck, tone: 'accent' },
-                        { label: 'Open Slots', value: scheduleInsight.openSlots, hint: 'Capacity left', icon: Clock, tone: 'light' },
-                        { label: 'Open Days', value: `${scheduleInsight.openDays}/${scheduleInsight.totalDays}`, hint: `${scheduleInsight.closedDays} closed`, icon: CheckCircle2, tone: 'light' },
-                        { label: 'Booking Rate', value: `${scheduleInsight.fillRate}%`, hint: `${scheduleInsight.waitlist} waitlist`, icon: ShieldCheck, tone: 'dark' }
-                    ];
-                }
-
                 return [
-                    { label: 'Confirmed', value: scheduleInsight.confirmed, hint: 'This month', icon: CalendarCheck, tone: 'accent' },
-                    { label: 'Open Slots', value: scheduleInsight.openSlots, hint: 'Today forward', icon: Clock, tone: 'light' },
-                    { label: 'Open Days', value: `${scheduleInsight.openDays}/${scheduleInsight.totalDays}`, hint: `${scheduleInsight.closedDays} closed`, icon: CheckCircle2, tone: 'light' },
-                    { label: 'Booking Rate', value: `${scheduleInsight.fillRate}%`, hint: `${scheduleInsight.waitlist} waitlist`, icon: ShieldCheck, tone: 'dark' }
+                    {
+                        label: 'Bookings Confirmed',
+                        value: scheduleInsight.confirmed,
+                        hint: scheduleStatsPeriod === 'day' ? scheduleInsight.label : scheduleInsight.periodName,
+                        icon: CalendarCheck,
+                        tone: 'accent'
+                    },
+                    {
+                        label: 'Total Available Slots',
+                        value: scheduleInsight.openSlots,
+                        hint: `${scheduleInsight.capacity} total capacity`,
+                        icon: Clock,
+                        tone: 'light'
+                    }
                 ];
             }, [scheduleStatsPeriod, scheduleInsight]);
 
@@ -701,7 +687,7 @@ import { getLocalDateStr } from '../utils/dates';
                                 {['day', 'week', 'month'].map(period => (
                                     <button
                                         key={period}
-                                        onClick={() => setScheduleStatsPeriod(period)}
+                                        onClick={() => setSchedulePeriod(period)}
                                         className={`flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
                                     >
                                         {period}
@@ -709,11 +695,11 @@ import { getLocalDateStr } from '../utils/dates';
                                 ))}
                             </div>
                         </div>
-                        <div className="native-stat-grid grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="native-stat-grid grid grid-cols-1 sm:grid-cols-2">
                             {scheduleMetricCards.map((item, index) => {
                                 const IconCmp = item.icon;
                                 return (
-                                    <div key={item.label} className={`native-stat-card p-5 md:p-6 border-neutral-100 bg-white text-black ${index > 0 ? 'xl:border-l' : ''} ${index % 2 === 1 ? 'sm:border-l xl:border-l' : ''} ${index > 1 ? 'sm:border-t xl:border-t-0' : ''}`}>
+                                    <div key={item.label} className={`native-stat-card p-5 md:p-6 border-neutral-100 bg-white text-black ${index > 0 ? 'sm:border-l' : ''}`}>
                                         <div className="flex items-start justify-between gap-4 mb-8">
                                             <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-neutral-100 text-black">
                                                 <IconCmp size={17}/>
@@ -743,19 +729,6 @@ import { getLocalDateStr } from '../utils/dates';
                                         <button onClick={() => moveCalendarWindow(1)} className="w-10 h-10 rounded-md bg-white border border-neutral-100 text-neutral-500 hover:text-black hover:border-neutral-200 transition-colors flex items-center justify-center shrink-0"><ChevronRight size={18}/></button>
                                     </div>
                                     <div className="schedule-calendar-toolbar flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                                        <div className="schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
-                                            {['month', 'week', 'day'].map(mode => (
-                                                <button
-                                                    key={mode}
-                                                    type="button"
-                                                    aria-pressed={calendarViewMode === mode}
-                                                    onClick={() => setCalendarScope(mode)}
-                                                    className={`h-9 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex-1 sm:flex-none ${calendarViewMode === mode ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
-                                                >
-                                                    {mode}
-                                                </button>
-                                            ))}
-                                        </div>
                                         <button
                                             type="button"
                                             aria-pressed={hidePastDays}
@@ -810,10 +783,6 @@ import { getLocalDateStr } from '../utils/dates';
                                         }[calendarBubble.tone];
 
                                         if (calendarViewMode === 'day') {
-                                            const daySummary = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
-                                            const dayCapacity = config.available ? config.times.length : 0;
-                                            const dayOpenSlots = dateStr >= todayStr && config.available ? Math.max(0, dayCapacity - daySummary.reserved) : 0;
-                                            const dayRate = dayCapacity ? Math.min(100, Math.round((daySummary.reserved / dayCapacity) * 100)) : 0;
                                             const unslottedBookings = selectedDayBookingList.filter(booking => !config.times.includes(booking.time));
 
                                             return (
@@ -847,46 +816,34 @@ import { getLocalDateStr } from '../utils/dates';
                                                                         <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${config.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{config.available ? 'Open' : 'Closed'}</span>
                                                                     </div>
                                                                     {staffCoverage.length > 0 && (
-                                                                        <div className="mt-4 flex items-center gap-2">
-                                                                            <div className="flex -space-x-2">
+                                                                        <div className="mt-4">
+                                                                            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400 mb-2">Staff on this day</p>
+                                                                            <div className="flex flex-wrap items-center gap-2">
                                                                                 {staffCoverage.slice(0, 4).map(staff => (
-                                                                                    <span
+                                                                                    <button
                                                                                         key={staff.id}
-                                                                                        className="w-7 h-7 rounded-full border-2 border-white bg-neutral-100 text-[9px] font-black text-black flex items-center justify-center overflow-hidden shadow-sm"
+                                                                                        type="button"
+                                                                                        onClick={() => setSelectedCalendarId(staff.id)}
+                                                                                        className={`h-9 rounded-full border px-2.5 flex items-center gap-2 transition-all ${selectedCalendarId === staff.id ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-black border-neutral-100 hover:border-black'}`}
                                                                                         title={getStaffDisplayName(staff)}
                                                                                     >
-                                                                                        {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
-                                                                                    </span>
+                                                                                        <span className="w-6 h-6 rounded-full bg-neutral-100 text-[8px] font-black text-black flex items-center justify-center overflow-hidden shrink-0">
+                                                                                            {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
+                                                                                        </span>
+                                                                                        <span className="text-[9px] font-bold uppercase tracking-widest max-w-[92px] truncate">{getStaffDisplayName(staff)}</span>
+                                                                                    </button>
                                                                                 ))}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setSelectedCalendarId('workspace')}
+                                                                                    className={`h-9 rounded-full border px-3 text-[9px] font-bold uppercase tracking-widest transition-all ${isWorkspaceCalendar ? 'native-gradient-button text-black border-transparent shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:border-black hover:text-black'}`}
+                                                                                >
+                                                                                    Business
+                                                                                </button>
                                                                             </div>
-                                                                            <span className="text-[10px] font-bold text-neutral-500">
-                                                                                {staffCoverage.length} covering this day
-                                                                            </span>
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-3 gap-2 mb-5">
-                                                                {[
-                                                                    { label: 'Booked', value: daySummary.reserved },
-                                                                    { label: 'Open', value: dayOpenSlots },
-                                                                    { label: 'Rate', value: `${dayRate}%` }
-                                                                ].map(item => (
-                                                                    <div key={item.label} className="rounded-lg border border-neutral-100 bg-neutral-50/80 px-3 py-3">
-                                                                        <p className="metric-value text-xl md:text-2xl font-bold text-black leading-none">{item.value}</p>
-                                                                        <p className="mt-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">{item.label}</p>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-
-                                                            <div className="rounded-lg border border-neutral-100 bg-neutral-50/70 p-3 mt-auto">
-                                                                <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Day Flow</p>
-                                                                <p className="text-sm text-neutral-600 leading-snug">
-                                                                    {selectedDayBookingList.length
-                                                                        ? `${selectedDayBookingList.length} booking ${selectedDayBookingList.length === 1 ? 'record' : 'records'} synced to this calendar.`
-                                                                        : 'No bookings yet. Open slots are ready for clients.'}
-                                                                </p>
                                                             </div>
                                                         </div>
 
@@ -1153,18 +1110,6 @@ import { getLocalDateStr } from '../utils/dates';
                                                 {readOnlyCalendarMessage}
                                             </div>
                                         )}
-                                        <div className="grid grid-cols-3 gap-2 mb-5">
-                                            {[
-                                                { label: 'Booked', value: selectedDayBookings.confirmed },
-                                                { label: 'Open', value: selectedOpenSlots },
-                                                { label: 'Rate', value: `${selectedBookingRate}%` }
-                                            ].map(item => (
-                                                <div key={item.label} className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-3">
-                                                    <p className="metric-value text-lg font-bold text-black leading-none">{item.value}</p>
-                                                    <p className="mt-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">{item.label}</p>
-                                                </div>
-                                            ))}
-                                        </div>
                                         <div className="space-y-2 mb-5 max-h-[292px] overflow-y-auto no-scrollbar pr-1">
                                             {selectedConfig.times.length ? selectedConfig.times.map(time => (
                                                 <div key={time} className="schedule-selected-slot flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-white border border-neutral-200">

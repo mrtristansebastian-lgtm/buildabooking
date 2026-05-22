@@ -13,7 +13,8 @@ import {
   Search,
   Send,
   Smartphone,
-  UserRound
+  UserRound,
+  X
 } from 'lucide-react';
 import { BuildABookingBrand } from './BuildABookingBrand';
 import { NotificationCenter } from './NotificationCenter';
@@ -60,6 +61,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const [messageDraft, setMessageDraft] = useState('');
   const [threadSearch, setThreadSearch] = useState('');
   const [rescheduleDraft, setRescheduleDraft] = useState({ bookingId: '', date: '', time: '' });
+  const [counterDialog, setCounterDialog] = useState(null);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [bookingsReady, setBookingsReady] = useState(false);
@@ -234,6 +236,24 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const chatBrandLogo = activeThread?.workspaceLogo || activeBooking?.workspaceLogo || '';
   const chatStaffName = activeThread?.staffName || activeBooking?.staffName || '';
   const chatStaffPhoto = activeThread?.staffPhotoURL || activeBooking?.staffPhotoURL || '';
+  const buildRescheduleProposal = ({ date, time, requestedBy = 'client', source = 'request', message = '', bookingId = '' }) => ({
+    id: `reschedule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    bookingId: bookingId || activeThread?.bookingId || activeBooking?.id || '',
+    date,
+    time,
+    requestedBy,
+    source,
+    status: 'pending',
+    message,
+    createdAtMs: Date.now()
+  });
+  const getMessageProposal = (message = {}) => (
+    message.proposedReschedule ||
+    message.rescheduleProposal ||
+    (String(message.kind || '').startsWith('reschedule') ? activeThread?.proposedReschedule : null)
+  );
+  const isPendingProposal = (proposal = {}) => !['accepted', 'declined', 'cancelled'].includes(String(proposal.status || 'pending'));
+  const formatProposalLabel = (proposal = {}) => [proposal.date, proposal.time].filter(Boolean).join(' at ');
 
   const openThread = (threadId) => {
     if (threadId) setActiveThreadId(threadId);
@@ -275,7 +295,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
     return () => unsubMessages();
   }, [activeThread?.id, appId, db]);
 
-  const sendThreadMessage = async ({ text, kind = 'message', bookingId = '' }) => {
+  const sendThreadMessage = async ({ text, kind = 'message', bookingId = '', proposedReschedule = null, rescheduleStatus = '' }) => {
     const cleanText = String(text || '').trim();
     if (!cleanText || !db || !activeThread?.id || sending) return;
     if (activeThread.isExample) {
@@ -290,26 +310,30 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         text: cleanText,
         kind,
         bookingId,
+        ...(proposedReschedule ? { proposedReschedule } : {}),
         senderId: user.uid,
         senderName: user.displayName || user.email || 'Client',
         senderRole: 'client',
         createdAt: FirebaseSDK.serverTimestamp()
       });
-      await FirebaseSDK.updateDoc(threadRef, {
+      const threadUpdates = {
         lastMessage: cleanText,
         lastMessageAt: FirebaseSDK.serverTimestamp(),
         updatedAt: FirebaseSDK.serverTimestamp(),
         ownerUnread: FirebaseSDK.increment(1),
-        clientUnread: 0,
-        rescheduleStatus: kind === 'reschedule-request' ? 'requested' : (activeThread.rescheduleStatus || '')
-      });
+        clientUnread: 0
+      };
+      if (proposedReschedule) threadUpdates.proposedReschedule = proposedReschedule;
+      if (rescheduleStatus || kind === 'reschedule-request') threadUpdates.rescheduleStatus = rescheduleStatus || 'requested';
+      await FirebaseSDK.updateDoc(threadRef, threadUpdates);
       if (activeThread.ownerId) {
+        const isRescheduleMessage = String(kind || '').startsWith('reschedule');
         await FirebaseSDK.addDoc(
           FirebaseSDK.collection(db, 'artifacts', appId, 'users', activeThread.ownerId, 'notifications'),
           {
             ...makeOwnerNotification({
-              type: kind === 'reschedule-request' ? NOTIFICATION_TYPES.RESCHEDULE_REQUEST : NOTIFICATION_TYPES.NEW_MESSAGE,
-              title: kind === 'reschedule-request'
+              type: isRescheduleMessage ? NOTIFICATION_TYPES.RESCHEDULE_REQUEST : NOTIFICATION_TYPES.NEW_MESSAGE,
+              title: isRescheduleMessage
                 ? `Reschedule request from ${user.displayName || user.email || 'a client'}`
                 : `New message from ${user.displayName || user.email || 'a client'}`,
               body: cleanText,
@@ -376,16 +400,124 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       setActiveView('chats');
       return;
     }
+    if (!String(rescheduleDraft.date || '').trim() || !String(rescheduleDraft.time || '').trim()) return;
     if (booking.threadId) setActiveThreadId(booking.threadId);
-    const preferredDate = rescheduleDraft.date || 'another available date';
-    const preferredTime = rescheduleDraft.time || 'a better time';
+    const preferredDate = rescheduleDraft.date;
+    const preferredTime = rescheduleDraft.time;
+    const message = `Reschedule request for ${booking.workspaceName || 'booking'}: ${booking.date} at ${booking.time}. Preferred: ${preferredDate} at ${preferredTime}.`;
+    const proposal = buildRescheduleProposal({
+      date: preferredDate,
+      time: preferredTime,
+      requestedBy: 'client',
+      source: 'request',
+      bookingId: booking.id,
+      message
+    });
     await sendThreadMessage({
       kind: 'reschedule-request',
       bookingId: booking.id,
-      text: `Reschedule request for ${booking.workspaceName || 'booking'}: ${booking.date} at ${booking.time}. Preferred: ${preferredDate} at ${preferredTime}.`
+      text: message,
+      proposedReschedule: proposal,
+      rescheduleStatus: 'requested'
     });
     setRescheduleDraft({ bookingId: booking.id, date: '', time: '' });
     setActiveView('chats');
+  };
+
+  const syncAcceptedReschedule = async (proposal = {}) => {
+    const bookingId = proposal.bookingId || activeThread?.bookingId || activeBooking?.id || '';
+    if (!db || !bookingId || !proposal.date || !proposal.time) return;
+    const bookingUpdates = {
+      date: proposal.date,
+      time: proposal.time,
+      updatedAt: FirebaseSDK.serverTimestamp()
+    };
+    if (activeThread?.ownerId) {
+      await FirebaseSDK.updateDoc(
+        FirebaseSDK.doc(db, 'artifacts', appId, 'users', activeThread.ownerId, 'bookings', bookingId),
+        bookingUpdates
+      ).catch(error => console.error('Owner booking reschedule sync failed', error));
+    }
+    if (emailKey) {
+      await FirebaseSDK.setDoc(
+        FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'bookings', bookingId),
+        {
+          bookingId,
+          threadId: activeThread?.id || activeBooking?.threadId || '',
+          ownerId: activeThread?.ownerId || activeBooking?.ownerId || '',
+          clientEmail: emailKey,
+          clientName: activeThread?.clientName || activeBooking?.clientName || user?.displayName || '',
+          workspaceName: activeThread?.workspaceName || activeBooking?.workspaceName || '',
+          workspaceLogo: activeThread?.workspaceLogo || activeBooking?.workspaceLogo || '',
+          status: activeBooking?.status || activeThread?.bookingStatus || 'pending',
+          ...bookingUpdates
+        },
+        { merge: true }
+      ).catch(error => console.error('Client booking reschedule sync failed', error));
+    }
+  };
+
+  const acceptRescheduleProposal = async (proposal = {}) => {
+    if (activeThread?.isExample) return;
+    if (!proposal.date || !proposal.time) return;
+    const nextProposal = { ...proposal, status: 'accepted', acceptedBy: 'client', decidedAtMs: Date.now() };
+    await syncAcceptedReschedule(nextProposal);
+    await sendThreadMessage({
+      kind: 'reschedule-accepted',
+      bookingId: nextProposal.bookingId || activeThread?.bookingId || activeBooking?.id || '',
+      text: `Accepted reschedule: ${formatProposalLabel(nextProposal)}. Thank you.`,
+      proposedReschedule: nextProposal,
+      rescheduleStatus: 'accepted'
+    });
+  };
+
+  const declineRescheduleProposal = async (proposal = {}) => {
+    if (activeThread?.isExample) return;
+    const nextProposal = { ...proposal, status: 'declined', declinedBy: 'client', decidedAtMs: Date.now() };
+    await sendThreadMessage({
+      kind: 'reschedule-declined',
+      bookingId: nextProposal.bookingId || activeThread?.bookingId || activeBooking?.id || '',
+      text: `Declined reschedule: ${formatProposalLabel(nextProposal)}. Can we look at another option?`,
+      proposedReschedule: nextProposal,
+      rescheduleStatus: 'declined'
+    });
+  };
+
+  const openCounterOffer = (proposal = {}) => {
+    if (activeThread?.isExample) {
+      setActiveView('chats');
+      return;
+    }
+    setCounterDialog({
+      date: proposal.date || activeBooking?.date || '',
+      time: proposal.time || activeBooking?.time || '',
+      message: '',
+      proposal
+    });
+  };
+
+  const submitCounterOffer = async () => {
+    const cleanDate = String(counterDialog?.date || '').trim();
+    const cleanTime = String(counterDialog?.time || '').trim();
+    if (!cleanDate || !cleanTime) return;
+    const message = String(counterDialog?.message || '').trim()
+      || `Counter offer: ${cleanDate} at ${cleanTime}. Would this work better?`;
+    const proposal = buildRescheduleProposal({
+      date: cleanDate,
+      time: cleanTime,
+      requestedBy: 'client',
+      source: 'counter',
+      bookingId: counterDialog?.proposal?.bookingId || activeThread?.bookingId || activeBooking?.id || '',
+      message
+    });
+    await sendThreadMessage({
+      kind: 'reschedule-counter',
+      bookingId: proposal.bookingId,
+      text: message,
+      proposedReschedule: proposal,
+      rescheduleStatus: 'countered'
+    });
+    setCounterDialog(null);
   };
 
   const confirmedCount = bookings.filter(booking => booking.status === 'confirmed').length;
@@ -478,11 +610,50 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
           <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F7F7F5] space-y-3">
             {visibleMessages.map(message => {
               const mine = message.senderRole === 'client';
+              const proposal = getMessageProposal(message);
+              const pendingProposal = proposal && isPendingProposal(proposal) && ['reschedule-request', 'reschedule-offer', 'reschedule-counter'].includes(message.kind);
+              const clientCanRespond = pendingProposal && proposal.requestedBy !== 'client';
               return (
                 <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[84%] rounded-3xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-white border border-neutral-200 text-neutral-500' : 'bg-white text-black border border-neutral-200 rounded-bl-md'}`}>
                     <p className="text-[8px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'Update' : message.senderName || message.senderRole}</p>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                    {proposal && (
+                      <div className={`mt-3 rounded-2xl border p-3 ${mine ? 'bg-white/10 border-white/15 text-white' : 'bg-neutral-50 border-neutral-200 text-black'}`}>
+                        <p className="text-[8px] font-bold uppercase tracking-[0.16em] opacity-50 mb-2">
+                          {proposal.status === 'accepted' ? 'Reschedule accepted' : proposal.status === 'declined' ? 'Reschedule declined' : proposal.source === 'counter' ? 'Counter offer' : 'Reschedule option'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <div className={`rounded-xl px-3 py-2 ${mine ? 'bg-white/10' : 'bg-white'}`}>
+                            <p className="text-[8px] font-bold uppercase tracking-widest opacity-45">Date</p>
+                            <p className="text-xs font-bold mt-1">{proposal.date || 'To confirm'}</p>
+                          </div>
+                          <div className={`rounded-xl px-3 py-2 ${mine ? 'bg-white/10' : 'bg-white'}`}>
+                            <p className="text-[8px] font-bold uppercase tracking-widest opacity-45">Time</p>
+                            <p className="text-xs font-bold mt-1">{proposal.time || 'To confirm'}</p>
+                          </div>
+                        </div>
+                        {clientCanRespond ? (
+                          <div className="grid grid-cols-3 gap-2">
+                            <button type="button" onClick={() => acceptRescheduleProposal(proposal)} className="h-9 rounded-xl native-gradient-button text-black text-[8px] font-bold uppercase tracking-widest">
+                              Accept
+                            </button>
+                            <button type="button" onClick={() => openCounterOffer(proposal)} className={`h-9 rounded-xl border text-[8px] font-bold uppercase tracking-widest ${mine ? 'border-white/20 bg-white/10 text-white' : 'border-neutral-200 bg-white text-black'}`}>
+                              Counter
+                            </button>
+                            <button type="button" onClick={() => declineRescheduleProposal(proposal)} className={`h-9 rounded-xl border text-[8px] font-bold uppercase tracking-widest ${mine ? 'border-white/20 bg-white/10 text-white' : 'border-neutral-200 bg-white text-black'}`}>
+                              Decline
+                            </button>
+                          </div>
+                        ) : pendingProposal ? (
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-45">
+                            {proposal.requestedBy === 'client' ? 'Waiting for business response' : 'Waiting for your response'}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-45">{proposal.status || 'Closed'}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -508,7 +679,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
                   <input value={rescheduleDraft.date} onChange={(event) => setRescheduleDraft(prev => ({ ...prev, date: event.target.value }))} placeholder="New date" className="h-11 rounded-xl bg-white border border-neutral-100 px-3 text-xs font-bold outline-none" />
                   <input value={rescheduleDraft.time} onChange={(event) => setRescheduleDraft(prev => ({ ...prev, time: event.target.value }))} placeholder="New time" className="h-11 rounded-xl bg-white border border-neutral-100 px-3 text-xs font-bold outline-none" />
                 </div>
-                <button onClick={sendRescheduleRequest} disabled={!bookingSource.length || sending} className="h-11 px-4 rounded-xl bg-white border border-neutral-200 text-[9px] font-bold uppercase tracking-widest hover:border-black disabled:opacity-40">
+                <button onClick={sendRescheduleRequest} disabled={!bookingSource.length || !rescheduleDraft.date.trim() || !rescheduleDraft.time.trim() || sending} className="h-11 px-4 rounded-xl bg-white border border-neutral-200 text-[9px] font-bold uppercase tracking-widest hover:border-black disabled:opacity-40">
                   Reschedule
                 </button>
               </div>
@@ -750,6 +921,61 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         {activeView === 'bookings' && renderBookings()}
         {activeView === 'profile' && renderProfile()}
       </main>
+
+      {counterDialog && (
+        <div className="fixed inset-0 z-[1200] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full sm:max-w-lg rounded-t-[1.5rem] sm:rounded-[1.25rem] bg-white border border-neutral-100 shadow-2xl p-5 sm:p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Counter offer</p>
+                <h3 className="text-2xl font-bold tracking-tight text-black">Suggest another time</h3>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-500">Send a cleaner option back to the business and keep the reschedule inside this chat.</p>
+              </div>
+              <button type="button" onClick={() => setCounterDialog(null)} className="w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <label className="block">
+                <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Date</span>
+                <input
+                  value={counterDialog.date}
+                  onChange={(event) => setCounterDialog(prev => ({ ...prev, date: event.target.value }))}
+                  placeholder="Friday, May 22"
+                  className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Time</span>
+                <input
+                  value={counterDialog.time}
+                  onChange={(event) => setCounterDialog(prev => ({ ...prev, time: event.target.value }))}
+                  placeholder="14:30"
+                  className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+                />
+              </label>
+            </div>
+            <label className="block mb-5">
+              <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Message</span>
+              <textarea
+                rows={4}
+                value={counterDialog.message}
+                onChange={(event) => setCounterDialog(prev => ({ ...prev, message: event.target.value }))}
+                placeholder={`Counter offer: ${counterDialog.date || 'new date'} at ${counterDialog.time || 'new time'}. Would this work better?`}
+                className="w-full resize-none rounded-lg bg-neutral-50 border border-neutral-100 px-4 py-3 text-sm leading-relaxed text-black outline-none focus:bg-white focus:border-black transition-colors"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setCounterDialog(null)} className="h-12 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
+                Cancel
+              </button>
+              <button type="button" onClick={submitCounterOffer} disabled={sending} className="h-12 rounded-full native-gradient-button text-black text-[10px] font-bold uppercase tracking-[0.12em] disabled:opacity-50 disabled:cursor-wait">
+                {sending ? 'Sending' : 'Send Counter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className={`${mobileChatOpen ? 'hidden' : 'grid'} fixed md:hidden left-3 right-3 bottom-4 z-40 rounded-[1.5rem] bg-white/90 backdrop-blur-xl border border-neutral-200 shadow-2xl shadow-black/10 p-2 grid-cols-3 gap-2`}>
         {navItems.map(item => {
