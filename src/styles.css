@@ -284,6 +284,17 @@ body {
             border-color: rgba(255,255,255,0.12) !important;
         }
 
+        .native-ui.dashboard-dark .native-gradient-button,
+        .native-ui.dashboard-dark .native-gradient-button *,
+        .native-ui.dashboard-dark .native-gradient-icon,
+        .native-ui.dashboard-dark .native-gradient-icon *,
+        .native-ui.dashboard-dark .bg-\[\#39FF14\],
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] *,
+        .native-ui.dashboard-dark .mobile-bottom-nav .bg-\[\#39FF14\],
+        .native-ui.dashboard-dark .mobile-bottom-nav .bg-\[\#39FF14\] * {
+            color: #050505 !important;
+        }
+
         .native-ui.dashboard-dark .native-gradient-ring {
             background:
                 linear-gradient(180deg, rgba(16,17,20,0.98), rgba(10,11,14,0.98)) padding-box,
@@ -1150,7 +1161,7 @@ body {
         }
 
         .native-ui .tracking-widest,
-        .native-ui [class*="tracking-["] {
+        .native-ui [class*="tracking-["]:not([class*="tracking-[-"]) {
             letter-spacing: 0.075em !important;
         }
 
@@ -1986,4 +1997,26 @@ body {
 
         .tour-nav-endpoint {
             animation: tour-nav-endpoint 760ms cubic-bezier(0.2, 0.9, 0.2, 1) 430ms both;
+        }
+
+        /* Final dark-mode contrast guard for light accent surfaces. */
+        .native-ui.dashboard-dark .native-gradient-button,
+        .native-ui.dashboard-dark .native-gradient-button :where(*),
+        .native-ui.dashboard-dark .native-gradient-icon,
+        .native-ui.dashboard-dark .native-gradient-icon :where(*),
+        .native-ui.dashboard-dark .bg-\[\#39FF14\],
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] :where(*),
+        .native-ui.dashboard-dark .mobile-bottom-nav .bg-\[\#39FF14\],
+        .native-ui.dashboard-dark .mobile-bottom-nav .bg-\[\#39FF14\] :where(*),
+        .native-ui.dashboard-dark .mobile-guest-auth-cta,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta :where(*) {
+            color: #050505 !important;
+        }
+
+        .native-ui.dashboard-dark .native-gradient-button svg,
+        .native-ui.dashboard-dark .native-gradient-icon svg,
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] svg,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta svg {
+            color: #050505 !important;
+            stroke: currentColor !important;
         }
