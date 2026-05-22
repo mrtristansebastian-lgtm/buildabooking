@@ -27,6 +27,7 @@ import { getLocalDateStr } from '../utils/dates';
             const calendarViewMode = scheduleStatsPeriod;
             const initialCalendarId = workspaceRole === 'staff' ? (activeStaffId || 'owner') : 'workspace';
             const [selectedCalendarId, setSelectedCalendarId] = useState(initialCalendarId);
+            const [overviewDayFocusStaffId, setOverviewDayFocusStaffId] = useState('workspace');
             const [hidePastDays, setHidePastDays] = useState(true);
             const [isMobilePortraitCalendar, setIsMobilePortraitCalendar] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
@@ -91,6 +92,11 @@ import { getLocalDateStr } from '../utils/dates';
                     setSelectedCalendarId(workspaceRole === 'staff' ? (activeStaffId || 'workspace') : 'workspace');
                 }
             }, [activeStaffId, selectedCalendarId, staffCalendarOptions, workspaceRole]);
+            useEffect(() => {
+                if (!isWorkspaceCalendar && overviewDayFocusStaffId !== 'workspace') {
+                    setOverviewDayFocusStaffId('workspace');
+                }
+            }, [isWorkspaceCalendar, overviewDayFocusStaffId]);
             const businessDefaultTimes = Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
             const getCalendarDefaultTimes = (calendarId) => {
                 if (calendarId === 'workspace') return businessDefaultTimes;
@@ -365,6 +371,15 @@ import { getLocalDateStr } from '../utils/dates';
                 ? new Date(`${expandedDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
                 : 'Select a date';
             const selectedAgendaDate = calendarViewMode === 'day' && hidePastDays && expandedDate < todayStr ? todayStr : expandedDate;
+            const selectedAgendaStaffCoverage = isWorkspaceCalendar && selectedAgendaDate
+                ? getStaffCoverageForDate(selectedAgendaDate)
+                : [];
+            const activeOverviewDayFocusId = isWorkspaceCalendar && selectedAgendaStaffCoverage.some(staff => staff.id === overviewDayFocusStaffId)
+                ? overviewDayFocusStaffId
+                : 'workspace';
+            const selectedAgendaCalendarId = isWorkspaceCalendar && activeOverviewDayFocusId !== 'workspace'
+                ? activeOverviewDayFocusId
+                : selectedCalendarId;
             const selectedDayBookingList = useMemo(() => {
                 const toMinutes = (time = '') => {
                     const match = String(time).match(/^(\d{1,2}):(\d{2})/);
@@ -377,10 +392,10 @@ import { getLocalDateStr } from '../utils/dates';
                     .filter(booking => (
                         booking.dateKeyResolved === selectedAgendaDate &&
                         booking.status !== 'declined' &&
-                        (!isSingleStaffCalendar || booking.staffId === selectedCalendarId)
+                        (selectedAgendaCalendarId === 'workspace' || booking.staffId === selectedAgendaCalendarId)
                     ))
                     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time) || String(a.clientName || '').localeCompare(String(b.clientName || '')));
-            }, [bookings, selectedAgendaDate, selectedCalendarId, isSingleStaffCalendar, todayStr, currentMonth]);
+            }, [bookings, selectedAgendaDate, selectedAgendaCalendarId, todayStr, currentMonth]);
             const selectedDayBookingsByTime = useMemo(() => {
                 return selectedDayBookingList.reduce((groups, booking) => {
                     const timeKey = booking.time || 'Unscheduled';
@@ -783,14 +798,24 @@ import { getLocalDateStr } from '../utils/dates';
                                         }[calendarBubble.tone];
 
                                         if (calendarViewMode === 'day') {
-                                            const unslottedBookings = selectedDayBookingList.filter(booking => !config.times.includes(booking.time));
+                                            const activeDayFocusId = isWorkspaceCalendar && staffCoverage.some(staff => staff.id === overviewDayFocusStaffId)
+                                                ? overviewDayFocusStaffId
+                                                : 'workspace';
+                                            const agendaCalendarId = isWorkspaceCalendar && activeDayFocusId !== 'workspace'
+                                                ? activeDayFocusId
+                                                : selectedCalendarId;
+                                            const agendaConfig = getCalendarDayConfig(agendaCalendarId, dateStr);
+                                            const agendaStaff = activeDayFocusId !== 'workspace'
+                                                ? staffCoverage.find(staff => staff.id === activeDayFocusId)
+                                                : null;
+                                            const unslottedBookings = selectedDayBookingList.filter(booking => !agendaConfig.times.includes(booking.time));
 
                                             return (
                                                 <div
                                                     key={dateStr}
                                                     className={`schedule-day-agenda-card relative ${calendarCellSizeClass} rounded-lg border p-4 md:p-5 overflow-hidden ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent' : 'bg-white border-neutral-200'}`}
                                                 >
-                                                    {!isPastDay && (
+                                                    {!isPastDay && (!isWorkspaceCalendar || activeDayFocusId === 'workspace') && (
                                                         <button
                                                             type="button"
                                                             aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
@@ -813,7 +838,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                                     <div className="mt-3 flex flex-wrap gap-1.5">
                                                                         {isToday && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-black text-white">Today</span>}
                                                                         {isCustom && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Custom</span>}
-                                                                        <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${config.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{config.available ? 'Open' : 'Closed'}</span>
+                                                                        <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${agendaConfig.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{agendaConfig.available ? 'Open' : 'Closed'}</span>
                                                                     </div>
                                                                     {staffCoverage.length > 0 && (
                                                                         <div className="mt-4">
@@ -823,8 +848,8 @@ import { getLocalDateStr } from '../utils/dates';
                                                                                     <button
                                                                                         key={staff.id}
                                                                                         type="button"
-                                                                                        onClick={() => setSelectedCalendarId(staff.id)}
-                                                                                        className={`h-9 rounded-full border px-2.5 flex items-center gap-2 transition-all ${selectedCalendarId === staff.id ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-black border-neutral-100 hover:border-black'}`}
+                                                                                        onClick={() => setOverviewDayFocusStaffId(staff.id)}
+                                                                                        className={`h-9 rounded-full border px-2.5 flex items-center gap-2 transition-all ${activeDayFocusId === staff.id ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-black border-neutral-100 hover:border-black'}`}
                                                                                         title={getStaffDisplayName(staff)}
                                                                                     >
                                                                                         <span className="w-6 h-6 rounded-full bg-neutral-100 text-[8px] font-black text-black flex items-center justify-center overflow-hidden shrink-0">
@@ -835,8 +860,8 @@ import { getLocalDateStr } from '../utils/dates';
                                                                                 ))}
                                                                                 <button
                                                                                     type="button"
-                                                                                    onClick={() => setSelectedCalendarId('workspace')}
-                                                                                    className={`h-9 rounded-full border px-3 text-[9px] font-bold uppercase tracking-widest transition-all ${isWorkspaceCalendar ? 'native-gradient-button text-black border-transparent shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:border-black hover:text-black'}`}
+                                                                                    onClick={() => setOverviewDayFocusStaffId('workspace')}
+                                                                                    className={`h-9 rounded-full border px-3 text-[9px] font-bold uppercase tracking-widest transition-all ${activeDayFocusId === 'workspace' ? 'native-gradient-button text-black border-transparent shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:border-black hover:text-black'}`}
                                                                                 >
                                                                                     Business
                                                                                 </button>
@@ -852,12 +877,13 @@ import { getLocalDateStr } from '../utils/dates';
                                                                 <div className="flex items-center justify-between gap-3 mb-3">
                                                                     <div>
                                                                         <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Slot Timeline</p>
-                                                                        <p className="text-sm font-bold text-black">{config.times.length || 0} times available</p>
+                                                                        <p className="text-sm font-bold text-black">{agendaConfig.times.length || 0} times available</p>
+                                                                        {agendaStaff && <p className="text-[10px] font-semibold text-neutral-400 mt-0.5 truncate">{getStaffDisplayName(agendaStaff)}</p>}
                                                                     </div>
                                                                     <Clock size={16} className="text-neutral-300" />
                                                                 </div>
                                                                 <div className="space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
-                                                                    {config.times.length ? config.times.map(time => {
+                                                                    {agendaConfig.times.length ? agendaConfig.times.map(time => {
                                                                         const timeBookings = selectedDayBookingsByTime[time] || [];
                                                                         const hasBookings = timeBookings.length > 0;
                                                                         return (
