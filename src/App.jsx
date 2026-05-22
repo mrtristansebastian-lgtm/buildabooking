@@ -1197,6 +1197,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [guestMode, setGuestMode] = useState(() => {
                 return safeLocalGet(guestModeStorageKey) === 'true';
             });
+            const [clientGuestMode, setClientGuestMode] = useState(false);
             const [publicSlug, setPublicSlug] = useState(getPublicBookingSlug);
             const [publicWorkspace, setPublicWorkspace] = useState(null);
             const [publicLoading, setPublicLoading] = useState(false);
@@ -2818,6 +2819,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         }
                         setAuthRedirectPending(false);
                         setGuestMode(false);
+                        setClientGuestMode(false);
                         safeLocalRemove(guestModeStorageKey);
                         const authReturnState = getAuthReturnState();
                         if (authReturnState?.view === 'dashboard' || authReturnState?.view === 'client') {
@@ -3566,10 +3568,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const openClientPortal = () => {
                 if (!isFirebaseConfigured || user) {
+                    setClientGuestMode(false);
                     applyWorkspaceRoute({ view: 'client' });
                     return;
                 }
                 openAuthPanel('signin', 'client');
+            };
+            const openClientGuestPortal = () => {
+                setClientGuestMode(true);
+                setAuthPanelOpen(false);
+                setAuthError('');
+                applyWorkspaceRoute({ view: 'client' });
+                showToast('Client preview opened.');
             };
             const openBillingAction = async (action = 'checkout') => {
                 if (!user || isGuestWorkspace) {
@@ -3597,6 +3607,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const openGuestDashboard = () => {
                 setGuestMode(true);
+                setClientGuestMode(false);
                 safeLocalSet(guestModeStorageKey, 'true');
                 setAuthPanelOpen(false);
                 setAuthError('');
@@ -3619,6 +3630,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         await FirebaseSDK.signInWithEmailAndPassword(auth, authForm.email, authForm.password);
                     }
                     setGuestMode(false);
+                    setClientGuestMode(false);
                     safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
                     applyWorkspaceRoute(getAuthReturnRouteForPersona());
@@ -3643,6 +3655,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         await applyAuthPersistence(keepLoggedIn);
                         await signInWithNativeGoogle(auth);
                         setGuestMode(false);
+                        setClientGuestMode(false);
                         safeLocalRemove(guestModeStorageKey);
                         setAuthPanelOpen(false);
                         applyWorkspaceRoute(returnRoute);
@@ -3659,6 +3672,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         console.error('Auth persistence could not be updated after Google sign-in.', persistenceError);
                     });
                     setGuestMode(false);
+                    setClientGuestMode(false);
                     safeLocalRemove(guestModeStorageKey);
                     setAuthPanelOpen(false);
                     applyWorkspaceRoute(returnRoute);
@@ -3707,6 +3721,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 clearAuthReturnState();
                 setAuthRedirectPending(false);
                 setGuestMode(false);
+                setClientGuestMode(false);
                 safeLocalRemove(guestModeStorageKey);
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
@@ -4533,18 +4548,30 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }
 
             if (view === 'client') {
-                if (!user) {
+                const clientPortalUser = user || (clientGuestMode ? {
+                    uid: 'guest-client-preview',
+                    displayName: 'Guest Client',
+                    email: 'client@example.com',
+                    photoURL: ''
+                } : null);
+
+                if (!clientPortalUser) {
                     return (
-                        <div className="native-ui min-h-screen bg-white text-black flex items-start sm:items-center justify-center px-6 pt-14 pb-10 sm:p-6">
+                        <div className={`native-ui min-h-screen flex items-start sm:items-center justify-center px-6 pt-14 pb-10 sm:p-6 ${dashboardThemeMode === 'dark' ? 'dashboard-dark bg-[#050506] text-white' : 'bg-white text-black'}`}>
                             {authDialog}
                             <div className="max-w-md text-center">
-                                <BuildABookingBrand className="w-52 sm:w-60 mx-auto mb-8 sm:mb-10" />
+                                <BuildABookingBrand className="w-52 sm:w-60 mx-auto mb-8 sm:mb-10" variant={dashboardThemeMode === 'dark' ? 'light' : 'dark'} />
                                 <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-4">Client Portal</p>
                                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 leading-tight">Sign in to stay close to your booking.</h1>
                                 <p className="text-neutral-500 leading-relaxed mb-7 text-base sm:text-lg">Use the same email you booked with to manage updates, request changes, and chat with the business.</p>
-                                <button onClick={() => openAuthPanel('signin', 'client')} className="h-12 px-8 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-black/10">
-                                    Client Sign In
-                                </button>
+                                <div className="grid gap-3">
+                                    <button onClick={() => openAuthPanel('signin', 'client')} className="h-12 px-8 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-black/10">
+                                        Client Sign In
+                                    </button>
+                                    <button onClick={openClientGuestPortal} className="h-12 px-8 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-black/5 hover:border-black transition-colors">
+                                        Preview Client Side
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     );
@@ -4554,9 +4581,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     <Suspense fallback={<LazySectionFallback label="Loading client portal" />}>
                         <ClientPortal
                             appId={appId}
-                            db={db}
-                            user={user}
-                            onSignOut={handleSignOut}
+                            db={clientGuestMode ? null : db}
+                            user={clientPortalUser}
+                            themeMode={dashboardThemeMode}
+                            isGuestPreview={clientGuestMode}
+                            onSignOut={clientGuestMode ? () => {
+                                setClientGuestMode(false);
+                                applyWorkspaceRoute({ view: 'landing' });
+                            } : handleSignOut}
                             onOwnerLogin={() => applyWorkspaceRoute({ view: 'dashboard', activeTab: 'overview', editorTab })}
                             onInstallApp={handleAddToHomeScreen}
                         />
@@ -4566,14 +4598,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             if (view === 'landing') {
                 return (
-                  <div className="native-ui native-home min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white overflow-x-hidden">
+                  <div className={`native-ui native-home min-h-screen font-sans selection:bg-black selection:text-white overflow-x-hidden ${dashboardThemeMode === 'dark' ? 'native-home-dark dashboard-dark bg-[#050506] text-white' : 'bg-white text-black'}`}>
                     {/* Navigation */}
                     <nav className="fixed w-full z-50 bg-white/82 backdrop-blur-xl border-b border-neutral-200/50 transition-all native-home-nav">
                       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 h-16 md:h-20 flex items-center justify-between">
                         <div className="flex items-center cursor-pointer" onClick={() => setView('landing')}>
-                          <BuildABookingBrand className="w-[156px] md:w-[188px] h-auto" />
+                          <BuildABookingBrand className="w-[156px] md:w-[188px] h-auto" variant={dashboardThemeMode === 'dark' ? 'light' : 'dark'} />
                         </div>
                         <div className="flex items-center gap-2 md:gap-6">
+                          <button
+                            type="button"
+                            onClick={() => setDashboardThemeMode(mode => (mode === 'dark' ? 'light' : 'dark'))}
+                            className="native-home-theme-toggle h-10 w-10 rounded-full bg-white border border-neutral-200 text-black flex items-center justify-center hover:border-black transition-colors"
+                            aria-label={dashboardThemeMode === 'dark' ? 'Switch home to light mode' : 'Switch home to dark mode'}
+                          >
+                            {dashboardThemeMode === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                          </button>
                           <button onClick={() => openAuthPanel('signin', 'owner')} className="block text-[11px] md:text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Sign In</button>
                         <button onClick={openClientPortal} className="hidden md:block text-sm font-semibold text-neutral-500 hover:text-black transition-colors">Client Login</button>
                           <button onClick={openGuestDashboard} className="hidden sm:block h-10 px-4 rounded-full bg-white border border-neutral-200 text-black font-bold text-[11px] hover:border-black transition-colors">Guest Mode</button>
@@ -4745,6 +4785,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 {showOwnerManual && (
                     <Suspense fallback={<LazySectionFallback label="Loading manual" />}>
                         <OwnerManual
+                            themeMode={dashboardThemeMode}
                             onClose={() => setShowOwnerManual(false)}
                             onNavigate={(targetTab, targetEditorTab) => {
                                 setShowOwnerManual(false);
@@ -6272,7 +6313,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </div>
                                         )}
                                         {!isMobileWebEditorRuntime && (
-                                        <div className="mb-7 rounded-[28px] border border-neutral-100 bg-white p-4 sm:p-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
+                                        <div className="theme-brief-panel mb-7 rounded-[28px] border border-neutral-100 bg-white p-4 sm:p-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)]">
                                             <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-5">
                                                 <div className="min-w-0">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.45em] text-neutral-300 mb-3">Theme Brief</p>
@@ -6340,7 +6381,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 </div>
                                             </div>
 
-                                            <div className="rounded-[26px] border border-neutral-100 bg-neutral-50/70 p-4 sm:p-5">
+                                            <div className="theme-color-direction-panel rounded-[26px] border border-neutral-100 bg-neutral-50/70 p-4 sm:p-5">
                                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                                                     <div>
                                                         <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">2. Color Direction</p>
@@ -6890,7 +6931,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 width: `${editorPreviewFrame.width}px`,
                                 height: `${editorPreviewFrame.height}px`,
                                 transform: `scale(${scale})`,
-                                transformOrigin: isCompactEditorViewport ? 'top center' : 'center center'
+                                transformOrigin: isCompactEditorViewport ? 'top center' : 'center center',
+                                '--booking-preview-input-color': settings.headingColor || '#050505'
                             }}
                             className={`editor-preview-frame transition-all duration-700 ease-out relative flex flex-col shrink-0 bg-white shadow-[0_100px_200px_-50px_rgba(0,0,0,0.15)] border-black overflow-hidden ${editorPreviewFrameClass}`}
                         >

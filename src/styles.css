@@ -2160,3 +2160,252 @@ body {
             color: #f8fafc !important;
             border-color: rgba(255, 255, 255, 0.12) !important;
         }
+
+        /* Dark-mode polish for editor preview, theme engine, manual, profile, client portal, and home. */
+        .native-ui.dashboard-dark .editor-preview-frame input.bg-transparent,
+        .native-ui.dashboard-dark .editor-preview-frame textarea.bg-transparent,
+        .native-ui.dashboard-dark .editor-preview-frame select.bg-transparent {
+            background-color: transparent !important;
+            color: var(--booking-preview-input-color, #050505) !important;
+            border-color: transparent !important;
+        }
+
+        .native-ui.dashboard-dark .editor-preview-frame input.bg-transparent::placeholder,
+        .native-ui.dashboard-dark .editor-preview-frame textarea.bg-transparent::placeholder {
+            color: currentColor !important;
+            opacity: 0.28 !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-device-switcher {
+            background: #101114 !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+            box-shadow: 0 20px 70px -50px rgba(0, 0, 0, 0.95) !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-device-option {
+            color: #cbd5e1 !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-device-option:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.06) !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-device-option.bg-black {
+            background: #050506 !important;
+            color: #ffffff !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-refresh-action,
+        .native-ui.dashboard-dark .desktop-editor-panel-toggle {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .theme-brief-panel,
+        .native-ui.dashboard-dark .theme-color-direction-panel,
+        .native-ui.dashboard-dark .mobile-editor-starter-note {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 28px 90px -64px rgba(0, 0, 0, 0.95) !important;
+        }
+
+        .native-ui.dashboard-dark .theme-color-direction-panel button:not(.bg-black),
+        .native-ui.dashboard-dark .theme-color-direction-panel span.bg-white,
+        .native-ui.dashboard-dark .theme-color-direction-panel .bg-white {
+            background: #17191d !important;
+            color: #cbd5e1 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .theme-color-direction-panel button.bg-black,
+        .native-ui.dashboard-dark .theme-brief-panel button.bg-black {
+            background: #050506 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.16) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-publish-footer {
+            background: rgba(5, 5, 6, 0.94) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f8fafc !important;
+            box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.55) !important;
+        }
+
+        .native-ui.dashboard-dark .profile-section,
+        .native-ui.dashboard-dark .profile-mobile-hub,
+        .native-ui.dashboard-dark .profile-mobile-detail {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .profile-section .bg-white,
+        .native-ui.dashboard-dark .profile-section .bg-neutral-50,
+        .native-ui.dashboard-dark .profile-mobile-hub .bg-white,
+        .native-ui.dashboard-dark .profile-mobile-hub .bg-neutral-50 {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .owner-manual-shell.dashboard-dark header,
+        .owner-manual-shell.dashboard-dark aside,
+        .owner-manual-shell.dashboard-dark article,
+        .owner-manual-shell.dashboard-dark section,
+        .owner-manual-shell.dashboard-dark .bg-white,
+        .owner-manual-shell.dashboard-dark .bg-white\/65,
+        .owner-manual-shell.dashboard-dark .bg-white\/70,
+        .owner-manual-shell.dashboard-dark .bg-white\/92 {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .owner-manual-shell.dashboard-dark .bg-neutral-50,
+        .owner-manual-shell.dashboard-dark .bg-neutral-100 {
+            background: #17191d !important;
+            color: #d1d5db !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .owner-manual-shell.dashboard-dark .bg-black {
+            background: #050506 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .client-portal-shell.dashboard-dark {
+            background: #050506 !important;
+            color: #f8fafc !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-portal-header,
+        .client-portal-shell.dashboard-dark .client-portal-summary,
+        .client-portal-shell.dashboard-dark .client-chat-list,
+        .client-portal-shell.dashboard-dark .client-chat-search,
+        .client-portal-shell.dashboard-dark .client-chat-pane,
+        .client-portal-shell.dashboard-dark .client-chat-pane-header,
+        .client-portal-shell.dashboard-dark .client-chat-composer,
+        .client-portal-shell.dashboard-dark .client-portal-mobile-nav,
+        .client-portal-shell.dashboard-dark section,
+        .client-portal-shell.dashboard-dark article {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-chat-canvas {
+            background:
+                radial-gradient(circle at 18% 6%, rgba(20, 167, 255, 0.08), transparent 34%),
+                linear-gradient(180deg, #0b0c10, #08090b) !important;
+            color: #f8fafc !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-message-bubble {
+            background-image: none !important;
+            box-shadow: 0 18px 54px -42px rgba(0, 0, 0, 0.95) !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-message-client {
+            background: #c9ffe5 !important;
+            color: #050505 !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-message-owner {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-message-system {
+            background: #121a24 !important;
+            color: #cbd5e1 !important;
+            border-color: rgba(147, 197, 253, 0.22) !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-message-bubble :where(*) {
+            color: inherit !important;
+        }
+
+        .client-portal-shell.dashboard-dark .bg-white,
+        .client-portal-shell.dashboard-dark .bg-neutral-50,
+        .client-portal-shell.dashboard-dark .bg-neutral-100 {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .client-portal-shell.dashboard-dark input,
+        .client-portal-shell.dashboard-dark textarea,
+        .client-portal-shell.dashboard-dark select {
+            background: #0b0c10 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-home.native-home-dark {
+            background: #050506 !important;
+            color: #f8fafc !important;
+        }
+
+        .native-home.native-home-dark .native-home-nav,
+        .native-home.native-home-dark .bg-white,
+        .native-home.native-home-dark .bg-white\/82,
+        .native-home.native-home-dark .native-feature-card,
+        .native-home.native-home-dark section,
+        .native-home.native-home-dark footer {
+            background-color: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-home.native-home-dark .native-home-theme-toggle,
+        .native-home.native-home-dark .bg-neutral-50,
+        .native-home.native-home-dark .bg-neutral-100 {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-home.native-home-dark .text-black,
+        .native-home.native-home-dark .text-neutral-950,
+        .native-home.native-home-dark .text-neutral-900,
+        .native-home.native-home-dark .text-neutral-800 {
+            color: #f8fafc !important;
+        }
+
+        .native-home.native-home-dark .text-neutral-700,
+        .native-home.native-home-dark .text-neutral-600,
+        .native-home.native-home-dark .text-neutral-500,
+        .native-home.native-home-dark .text-neutral-400 {
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .native-gradient-button,
+        .native-ui.dashboard-dark .native-gradient-button :where(*),
+        .native-ui.dashboard-dark .native-gradient-icon,
+        .native-ui.dashboard-dark .native-gradient-icon :where(*),
+        .native-ui.dashboard-dark .bg-\[\#39FF14\],
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] :where(*),
+        .native-home.native-home-dark .native-gradient-button,
+        .native-home.native-home-dark .native-gradient-button :where(*),
+        .native-home.native-home-dark .native-gradient-icon,
+        .native-home.native-home-dark .native-gradient-icon :where(*),
+        .native-home.native-home-dark .bg-\[\#39FF14\],
+        .native-home.native-home-dark .bg-\[\#39FF14\] :where(*) {
+            color: #050505 !important;
+        }
+
+        .native-ui.dashboard-dark .native-gradient-button svg,
+        .native-ui.dashboard-dark .native-gradient-icon svg,
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] svg,
+        .native-home.native-home-dark .native-gradient-button svg,
+        .native-home.native-home-dark .native-gradient-icon svg,
+        .native-home.native-home-dark .bg-\[\#39FF14\] svg {
+            color: #050505 !important;
+            stroke: currentColor !important;
+        }

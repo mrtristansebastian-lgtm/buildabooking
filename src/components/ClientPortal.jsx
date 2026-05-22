@@ -57,7 +57,7 @@ const navItems = [
   { id: 'profile', label: 'My Profile', icon: UserRound }
 ];
 
-export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInstallApp }) {
+export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPreview = false, onSignOut, onOwnerLogin, onInstallApp }) {
   const emailKey = normalizeEmail(user?.email);
   const [activeView, setActiveView] = useState('chats');
   const [bookings, setBookings] = useState([]);
@@ -124,7 +124,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
     }
   ]), [user?.displayName]);
 
-  const showExamplePortal = bookingsReady && threadsReady && bookings.length === 0 && threads.length === 0;
+  const showExamplePortal = isGuestPreview || (bookingsReady && threadsReady && bookings.length === 0 && threads.length === 0);
   const bookingSource = bookings.length ? bookings : (showExamplePortal ? [exampleBooking] : []);
   const mergedThreads = useMemo(() => {
     const byId = new Map();
@@ -573,8 +573,8 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.clientUnread || 0), 0);
 
   const renderChatList = () => (
-    <aside className={`${mobileChatOpen ? 'hidden lg:block' : ''} lg:col-span-4 border-b lg:border-b-0 lg:border-r border-neutral-100 bg-neutral-50/70`}>
-      <div className="p-4 border-b border-neutral-100 bg-white/80">
+    <aside className={`client-chat-list ${mobileChatOpen ? 'hidden lg:block' : ''} lg:col-span-4 border-b lg:border-b-0 lg:border-r border-neutral-100 bg-neutral-50/70`}>
+      <div className="client-chat-search p-4 border-b border-neutral-100 bg-white/80">
         <div className="relative">
           <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
           <input
@@ -624,10 +624,10 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   );
 
   const renderChatPane = () => (
-    <section className={`${mobileChatOpen ? 'fixed inset-0 z-[999]' : 'hidden lg:flex'} lg:col-span-8 flex flex-col min-h-[100dvh] lg:min-h-[620px] bg-white`}>
+    <section className={`client-chat-pane ${mobileChatOpen ? 'fixed inset-0 z-[999]' : 'hidden lg:flex'} lg:col-span-8 flex flex-col min-h-[100dvh] lg:min-h-[620px] bg-white`}>
       {activeThread ? (
         <>
-          <div className="p-3 md:p-5 border-b border-neutral-100 flex items-center justify-between gap-3 bg-white">
+          <div className="client-chat-pane-header p-3 md:p-5 border-b border-neutral-100 flex items-center justify-between gap-3 bg-white">
             <div className="flex items-center gap-3 min-w-0">
               <button type="button" onClick={() => setMobileChatOpen(false)} className="lg:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
                 <ArrowLeft size={18} />
@@ -655,7 +655,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F7F7F5] space-y-3">
+          <div className="client-chat-canvas flex-1 overflow-y-auto p-4 md:p-6 bg-[#F7F7F5] space-y-3">
             {visibleMessages.map(message => {
               const mine = message.senderRole === 'client';
               const proposal = getMessageProposal(message);
@@ -663,7 +663,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
               const clientCanRespond = pendingProposal && proposal.requestedBy !== 'client';
               return (
                 <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[84%] rounded-3xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-white border border-neutral-200 text-neutral-500' : 'bg-white text-black border border-neutral-200 rounded-bl-md'}`}>
+                  <div className={`client-message-bubble ${mine ? 'client-message-client bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'client-message-system native-stat-card bg-white border border-neutral-200 text-neutral-500' : 'client-message-owner bg-white text-black border border-neutral-200 rounded-bl-md'} max-w-[84%] rounded-3xl px-4 py-3 shadow-sm`}>
                     <p className="text-[8px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'Update' : message.senderName || message.senderRole}</p>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                     {proposal && (
@@ -713,7 +713,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
             )}
           </div>
 
-          <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-5 border-t border-neutral-100 bg-white space-y-3">
+          <div className="client-chat-composer p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-5 border-t border-neutral-100 bg-white space-y-3">
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
                 <select
@@ -876,7 +876,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   );
 
   return (
-    <div className="native-ui min-h-screen bg-[#F7F7F5] text-black pb-28 md:pb-0">
+    <div className={`native-ui client-portal-shell min-h-screen pb-28 md:pb-0 ${themeMode === 'dark' ? 'dashboard-dark bg-[#050506] text-white' : 'bg-[#F7F7F5] text-black'}`}>
       <NotificationCenter
         title="Client Alerts"
         subtitle="Booking approvals, reschedules, running-late notes, and chat replies."
@@ -888,9 +888,9 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         onOpenNotification={openClientNotification}
         compact
       />
-      <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-neutral-200/70">
+      <header className="client-portal-header sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-neutral-200/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 h-16 md:h-20 flex items-center justify-between gap-4">
-          <BuildABookingBrand className="w-[154px] md:w-[190px]" />
+          <BuildABookingBrand className="w-[154px] md:w-[190px]" variant={themeMode === 'dark' ? 'light' : 'dark'} />
           <div className="hidden md:flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 p-1">
             {navItems.map(item => {
               const IconCmp = item.icon;
@@ -914,7 +914,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-4 md:py-10">
-        <section className="mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 native-gradient-ring">
+        <section className="client-portal-summary mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 native-gradient-ring">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-lg native-gradient-icon flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
               {activeView === 'chats' ? <MessageCircle size={18} /> : activeView === 'bookings' ? <BookOpen size={18} /> : <UserRound size={18} />}
@@ -1025,7 +1025,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         </div>
       )}
 
-      <nav className={`${mobileChatOpen ? 'hidden' : 'grid'} fixed md:hidden left-3 right-3 bottom-4 z-40 rounded-[1.5rem] bg-white/90 backdrop-blur-xl border border-neutral-200 shadow-2xl shadow-black/10 p-2 grid-cols-3 gap-2`}>
+      <nav className={`client-portal-mobile-nav ${mobileChatOpen ? 'hidden' : 'grid'} fixed md:hidden left-3 right-3 bottom-4 z-40 rounded-[1.5rem] bg-white/90 backdrop-blur-xl border border-neutral-200 shadow-2xl shadow-black/10 p-2 grid-cols-3 gap-2`}>
         {navItems.map(item => {
           const IconCmp = item.icon;
           return (

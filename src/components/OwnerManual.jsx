@@ -155,7 +155,7 @@ const manualSections = [
     label: 'Support Inbox',
     kicker: 'In-house chat',
     title: 'Keep booking conversations in one place.',
-    summary: 'Support Inbox replaces scattered WhatsApp-style updates with a shared thread tied to each client and booking.',
+    summary: 'Support Inbox keeps every client update in a shared thread tied to the right booking.',
     icon: MessageCircle,
     target: { tab: 'communications' },
     highlights: [
@@ -198,19 +198,20 @@ const manualSections = [
         title: 'Identity',
         target: { tab: 'editor', editorTab: 'identity' },
         items: [
-          'Upload logo and banner.',
+          'Upload logo and banner that sync with the business profile.',
           'Show, hide, position, and size the booking page logo.',
           'Edit business name, tagline, welcome text, and booking link.',
-          'Turn backend skin on when the owner wants the dashboard to match the booking page.'
+          'Keep page identity clean before tuning themes, visuals, and copy.'
         ]
       },
       {
         title: 'Themes',
         target: { tab: 'editor', editorTab: 'themes' },
         items: [
-          'Choose industry first, then refine by palette and style.',
+          'Choose industry first, then refine by palette direction.',
           'Save a chosen look as a reusable template.',
-          'Use the Build A Booking Native theme when the owner wants the platform brand style.'
+          'Use the Build A Booking Native theme when the owner wants the platform brand style.',
+          'Use logo color reading to pull brand colors into the theme direction.'
         ]
       },
       {
@@ -218,7 +219,7 @@ const manualSections = [
         target: { tab: 'editor', editorTab: 'visuals' },
         items: [
           'Tune calendar style, time slot style, action button style, FAQ style, and social link styling.',
-          'Control typography and spacing so headings and subtext feel intentional.',
+          'Control typography, font personality, and spacing so headings and subtext feel intentional.',
           'Use visuals after choosing a theme to polish the final page.'
         ]
       },
@@ -254,7 +255,7 @@ const manualSections = [
     ],
     tips: [
       'Logo center alignment acts as the master alignment for the booking page layout.',
-      'If backend skin mode is active, the app uses the selected booking page theme instead of the native animated accents.'
+      'Mobile browser keeps the editor lighter. Use the PC site or app for the full theme engine.'
     ]
   },
   {
@@ -334,6 +335,7 @@ const manualSections = [
       { name: 'Save Profile', meaning: 'Stores account and business profile changes.' },
       { name: 'Keep Me Logged In', meaning: 'Keeps the session stable on trusted devices.' },
       { name: 'Sign Out', meaning: 'Ends the session cleanly.' },
+      { name: 'Light / Dark Mode', meaning: 'Switches the owner workspace theme while keeping native accents readable.' },
       { name: 'Upgrade / Manage Billing', meaning: 'Future Stripe hooks for plan and billing control.' },
       { name: 'Copy Affiliate Link', meaning: 'Copies the referral link for recommending Build A Booking.' }
     ],
@@ -357,7 +359,7 @@ const manualSections = [
     icon: UserPlus,
     target: { tab: 'overview' },
     highlights: [
-      'Chats replaces the need for scattered WhatsApp updates.',
+      'Chats keeps client updates, questions, and reschedules inside Build A Booking.',
       'My Bookings shows status, requested time, and reschedule actions.',
       'My Profile keeps client identity and contact details tidy.'
     ],
@@ -490,7 +492,7 @@ const sectionMatchesQuery = (section, query) => {
   return haystack.includes(needle);
 };
 
-export function OwnerManual({ onClose, onNavigate }) {
+export function OwnerManual({ themeMode = 'light', onClose, onNavigate }) {
   const [activeId, setActiveId] = useState('start');
   const [query, setQuery] = useState('');
 
@@ -507,7 +509,7 @@ export function OwnerManual({ onClose, onNavigate }) {
   };
 
   return (
-    <div className="native-ui fixed inset-0 z-[10000] bg-[#F7F7F5] text-black overflow-hidden">
+    <div className={`native-ui owner-manual-shell fixed inset-0 z-[10000] overflow-hidden ${themeMode === 'dark' ? 'dashboard-dark bg-[#050506] text-white' : 'bg-[#F7F7F5] text-black'}`}>
       <div className="absolute inset-x-0 top-0 h-1 native-gradient-line" />
       <header className="relative z-10 bg-white/92 backdrop-blur-xl border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3">

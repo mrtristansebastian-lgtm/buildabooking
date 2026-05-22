@@ -79,7 +79,7 @@ const scenes = [
     target: 'editor-theme-library',
     kicker: 'Live page editor',
     title: 'Make the page feel branded.',
-    text: 'Choose the page theme, then tune the logo, banner, colors, features, and backend skin from one live editor.'
+    text: 'Choose the page theme, then tune the logo, banner, colors, features, and client-facing flow from one live editor.'
   },
   {
     id: 'clients',
