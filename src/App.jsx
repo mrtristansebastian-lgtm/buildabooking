@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState }
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Sun, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -28,7 +28,7 @@ import {
 } from './services/notifications';
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
-import { rgbaFromHex, readableTextFor, normalizeHexColor, mixHexColors, themeBackground, THEME_FILTER_GROUPS, ensureReadableTextColor } from './utils/theme';
+import { normalizeHexColor, THEME_FILTER_GROUPS } from './utils/theme';
 
 const OnboardingShowroom = lazy(() => (
   import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
@@ -217,6 +217,87 @@ const themePaletteLabel = (paletteId) => (
 const themeStyleLabel = (styleId) => (
   THEME_FILTER_GROUPS.find(group => group.id === 'style')?.filters.find(filter => filter.id === styleId)?.name || 'Modern'
 );
+
+const fontStylePresets = [
+  {
+    id: 'modern',
+    label: 'Modern',
+    note: 'Clean SaaS polish',
+    fontFamily: 'inter',
+    headingFontFamily: 'plus-jakarta',
+    bodyFontFamily: 'inter',
+    buttonFontFamily: 'space-grotesk',
+    slotFontFamily: 'plus-jakarta',
+    dateFontFamily: 'plus-jakarta',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 0
+  },
+  {
+    id: 'editorial',
+    label: 'Editorial',
+    note: 'Magazine calm',
+    fontFamily: 'source-sans-3',
+    headingFontFamily: 'newsreader',
+    bodyFontFamily: 'source-sans-3',
+    buttonFontFamily: 'work-sans',
+    slotFontFamily: 'source-sans-3',
+    dateFontFamily: 'newsreader',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 1
+  },
+  {
+    id: 'luxury',
+    label: 'Luxury',
+    note: 'Premium boutique',
+    fontFamily: 'manrope',
+    headingFontFamily: 'marcellus',
+    bodyFontFamily: 'manrope',
+    buttonFontFamily: 'cinzel',
+    slotFontFamily: 'manrope',
+    dateFontFamily: 'marcellus',
+    headingLetterSpacing: 1,
+    subtextLetterSpacing: 2
+  },
+  {
+    id: 'bold',
+    label: 'Bold',
+    note: 'High impact',
+    fontFamily: 'manrope',
+    headingFontFamily: 'unbounded',
+    bodyFontFamily: 'manrope',
+    buttonFontFamily: 'space-grotesk',
+    slotFontFamily: 'space-grotesk',
+    dateFontFamily: 'unbounded',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 0
+  },
+  {
+    id: 'organic',
+    label: 'Organic',
+    note: 'Warm and soft',
+    fontFamily: 'source-sans-3',
+    headingFontFamily: 'spectral',
+    bodyFontFamily: 'source-sans-3',
+    buttonFontFamily: 'figtree',
+    slotFontFamily: 'source-sans-3',
+    dateFontFamily: 'spectral',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 0.5
+  },
+  {
+    id: 'tech',
+    label: 'Tech',
+    note: 'Precise mono',
+    fontFamily: 'ibm-plex-sans',
+    headingFontFamily: 'space-grotesk',
+    bodyFontFamily: 'ibm-plex-sans',
+    buttonFontFamily: 'ibm-plex-mono',
+    slotFontFamily: 'ibm-plex-mono',
+    dateFontFamily: 'ibm-plex-mono',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 1.5
+  }
+];
 
 const rgbToHsl = (red, green, blue) => {
   let r = red / 255;
@@ -1123,13 +1204,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [publicReloadKey, setPublicReloadKey] = useState(0);
             const [activeTab, setActiveTab] = useState(initialWorkspaceRoute.activeTab);
             const [dashboardPeriod, setDashboardPeriod] = useState('today');
+            const [dashboardThemeMode, setDashboardThemeMode] = useState(() => (
+                safeLocalGet('build-a-booking-dashboard-theme') === 'dark' ? 'dark' : 'light'
+            ));
             const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
-            const [themeFilters, setThemeFilters] = useState({ palette: 'all', industry: 'all-industries', style: 'all-styles' });
+            const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
             const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
             const [themeBatchLoading, setThemeBatchLoading] = useState(false);
             const [themeTemplateName, setThemeTemplateName] = useState('');
             const [detectedThemePalette, setDetectedThemePalette] = useState('');
             const [detectedThemeStyle, setDetectedThemeStyle] = useState('');
+            const [customThemeColor, setCustomThemeColor] = useState('#755CFF');
+            const [customThemePaletteOpen, setCustomThemePaletteOpen] = useState(false);
             const [paletteDetecting, setPaletteDetecting] = useState(false);
             const [device, setDevice] = useState('desktop'); 
             const [previewKey, setPreviewKey] = useState(0); 
@@ -1185,6 +1271,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
+            useEffect(() => {
+                safeLocalSet('build-a-booking-dashboard-theme', dashboardThemeMode);
+            }, [dashboardThemeMode]);
             useEffect(() => {
                 if (activeTab !== 'profile') setActiveProfileSection('');
             }, [activeTab]);
@@ -1334,7 +1423,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 staffCalendars: {},
                 googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
                 features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
-                backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
                 accountProfiles: {},
                 themeTemplates: [],
@@ -2153,12 +2241,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const isMobileWebEditorRuntime = !isNativeAppRuntime && isMobileEditorRuntime;
 
             const themeGenerationInputs = useMemo(() => ({
-                industry: themeFilters.industry || 'all-industries',
+                industry: themeFilters.industry || '',
                 palette: themeFilters.palette || 'all',
                 style: themeFilters.style || 'all-styles',
                 detectedPalette: detectedThemePalette,
-                detectedStyle: detectedThemeStyle
-            }), [themeFilters.industry, themeFilters.palette, themeFilters.style, detectedThemePalette, detectedThemeStyle]);
+                detectedStyle: detectedThemeStyle,
+                customColor: customThemeColor
+            }), [themeFilters.industry, themeFilters.palette, themeFilters.style, detectedThemePalette, detectedThemeStyle, customThemeColor]);
 
             const industryThemeFilterGroup = useMemo(() => (
                 THEME_FILTER_GROUPS.find(group => group.id === 'industry') || THEME_FILTER_GROUPS[0]
@@ -2174,34 +2263,44 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const visibleThemes = useMemo(() => {
                 if (!shouldRunThemeEngine) return [];
+                if (!isMobileWebEditorRuntime && !themeGenerationInputs.industry) return [];
                 return isMobileWebEditorRuntime ? mobileWebEditorThemes : generateThemeCollection(themeGenerationInputs);
             }, [isMobileWebEditorRuntime, shouldRunThemeEngine, themeGenerationInputs]);
 
             const industryFilterOptions = useMemo(() => (
-                industryThemeFilterGroup.filters
+                industryThemeFilterGroup.filters.filter(filter => filter.id !== 'all-industries')
             ), [industryThemeFilterGroup]);
             const paletteFilterOptions = useMemo(() => (
-                paletteThemeFilterGroup.filters
+                paletteThemeFilterGroup.filters.filter(filter => !['dark', 'earth'].includes(filter.id))
             ), [paletteThemeFilterGroup]);
             const styleFilterOptions = useMemo(() => (
                 styleThemeFilterGroup.filters
             ), [styleThemeFilterGroup]);
-            const selectedIndustryFilter = industryThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.industry) || industryThemeFilterGroup.filters[0];
+            const selectedIndustryFilter = industryThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.industry) || null;
             const selectedPaletteFilter = paletteThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.palette) || paletteThemeFilterGroup.filters[0];
             const selectedStyleFilter = styleThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.style) || styleThemeFilterGroup.filters[0];
-            const selectedIndustryName = selectedIndustryFilter.id === 'all-industries' ? 'Universal' : selectedIndustryFilter.name;
-            const selectedIndustryDescriptor = selectedIndustryFilter.id === 'all-industries' ? 'universal' : selectedIndustryFilter.name.toLowerCase();
-            const selectedPalettePhrase = selectedPaletteFilter.id === 'all' ? 'a full color range' : `${selectedPaletteFilter.name.toLowerCase()} colors`;
-            const selectedStylePhrase = selectedStyleFilter.id === 'all-styles' ? 'smart design defaults' : `${selectedStyleFilter.name.toLowerCase()} styling`;
+            const selectedIndustryName = selectedIndustryFilter?.name || 'Choose an industry';
+            const selectedIndustryDescriptor = selectedIndustryFilter?.name ? selectedIndustryFilter.name.toLowerCase() : 'your industry';
+            const selectedPaletteName = themeGenerationInputs.palette === 'custom' ? 'Custom' : selectedPaletteFilter.name;
+            const selectedPaletteHint = themeGenerationInputs.palette === 'custom' ? 'Picked By You' : selectedPaletteFilter.hint;
+            const selectedPalettePhrase = themeGenerationInputs.palette === 'custom'
+                ? 'your custom color'
+                : selectedPaletteFilter.id === 'all'
+                    ? 'a full color range'
+                    : `${selectedPaletteFilter.name.toLowerCase()} colors`;
             const brandSignalPhrase = detectedThemePalette
-                ? `${themePaletteLabel(detectedThemePalette)}${detectedThemeStyle ? ` + ${themeStyleLabel(detectedThemeStyle)}` : ''} brand signal`
+                ? `${themePaletteLabel(detectedThemePalette)} brand signal`
                 : 'your uploaded brand media';
-            const themeBriefSupportText = selectedIndustryFilter.id === 'all-industries'
-                ? 'Start with the business type so the engine can choose the right tone, font system, and booking-page rhythm.'
-                : `The engine builds ${selectedPalettePhrase} with ${selectedStylePhrase}, then tunes fonts, surfaces, buttons, and spacing for ${selectedIndustryDescriptor}.`;
-            const themeBriefResultLabel = selectedPaletteFilter.id === 'all'
-                ? `${selectedIndustryDescriptor} consultant picks across the full palette`
-                : `${selectedIndustryDescriptor} consultant picks in ${selectedPaletteFilter.name}`;
+            const themeBriefSupportText = !themeGenerationInputs.industry
+                ? 'Choose the business type first. The engine stays quiet until it knows the world your clients are booking into.'
+                : `Now it builds ${selectedPalettePhrase}, then tunes fonts, surfaces, buttons, and booking rhythm for ${selectedIndustryDescriptor}.`;
+            const themeBriefResultLabel = !themeGenerationInputs.industry
+                ? 'Select an industry to generate custom theme directions'
+                : themeGenerationInputs.palette === 'custom'
+                    ? `${selectedIndustryDescriptor} consultant picks from your custom color`
+                    : selectedPaletteFilter.id === 'all'
+                    ? `${selectedIndustryDescriptor} consultant picks across the full palette`
+                    : `${selectedIndustryDescriptor} consultant picks in ${selectedPaletteName}`;
 
             const visibleThemeCards = useMemo(() => (
                 visibleThemes.slice(0, themeDisplayLimit)
@@ -2248,9 +2347,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const setThemeFilterValue = (groupId, filterId) => {
                 startTransition(() => {
-                    setThemeFilters(prev => (
-                        prev[groupId] === filterId ? prev : { ...prev, [groupId]: filterId }
-                    ));
+                    setThemeFilters(prev => {
+                        if (prev[groupId] === filterId) return prev;
+                        if (groupId === 'industry') return { ...prev, industry: filterId, palette: prev.palette || 'all', style: 'all-styles' };
+                        return { ...prev, [groupId]: filterId };
+                    });
                 });
             };
 
@@ -2294,83 +2395,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setDetectedThemeStyle(detected.style || '');
                 setThemeFilters(prev => ({
                     ...prev,
-                    palette: detected.palette,
-                    style: prev.style === 'all-styles' && detected.style ? detected.style : prev.style
+                    palette: detected.palette
                 }));
-                showToast(`${themePaletteLabel(detected.palette)} palette${detected.style ? ` and ${themeStyleLabel(detected.style)} styling` : ''} detected from your brand media.`);
+                showToast(`${themePaletteLabel(detected.palette)} palette detected from your brand media.`);
             };
-
-            const backendSkin = settings.backendSkin || {};
-            const backendSkinEnabled = Boolean(backendSkin.enabled);
-            const backendSkinMode = backendSkin.mode || 'immersive';
-            const backendSkinShowBranding = backendSkin.showBranding !== false;
-            const backendSkinVars = useMemo(() => {
-                const background = normalizeHexColor(settings.backgroundColor, '#FBFBFB');
-                const heading = normalizeHexColor(settings.headingColor, '#000000');
-                const body = normalizeHexColor(settings.bodyColor, '#666666');
-                const primary = normalizeHexColor(settings.primaryColor, '#39FF14');
-                const slotSurface = settings.slotBgColor === 'transparent'
-                    ? background
-                    : normalizeHexColor(settings.slotBgColor, background);
-                const isDarkBackground = themeBackground({ backgroundColor: background }).l < 45;
-                const surface = backendSkinMode === 'soft'
-                    ? mixHexColors(slotSurface, isDarkBackground ? '#111111' : '#FFFFFF', isDarkBackground ? 0.18 : 0.58)
-                    : slotSurface;
-                const panel = backendSkinMode === 'soft'
-                    ? mixHexColors(background, primary, isDarkBackground ? 0.10 : 0.05)
-                    : mixHexColors(background, surface, 0.42);
-                const input = mixHexColors(surface, background, 0.55);
-                const onHeading = readableTextFor(heading);
-                const onPrimary = ensureReadableTextColor(settings.buttonTextColor, primary, readableTextFor(primary), 4.5);
-                const skinText = ensureReadableTextColor(heading, surface, readableTextFor(surface), 4.5);
-                const skinBgText = ensureReadableTextColor(heading, background, readableTextFor(background), 4.5);
-                const skinPanelText = ensureReadableTextColor(heading, panel, readableTextFor(panel), 4.5);
-                const skinMuted = ensureReadableTextColor(body, surface, skinText, 3.2);
-                const skinBgMuted = ensureReadableTextColor(body, background, skinBgText, 3.2);
-                const primaryText = ensureReadableTextColor(primary, surface, skinText, 3.2);
-
-                return {
-                    '--skin-bg': background,
-                    '--skin-surface': surface,
-                    '--skin-panel': panel,
-                    '--skin-input': input,
-                    '--skin-heading': heading,
-                    '--skin-text': skinText,
-                    '--skin-bg-text': skinBgText,
-                    '--skin-panel-text': skinPanelText,
-                    '--skin-muted': skinMuted,
-                    '--skin-bg-muted': skinBgMuted,
-                    '--skin-primary': primary,
-                    '--skin-primary-text': primaryText,
-                    '--skin-on-primary': onPrimary,
-                    '--skin-on-primary-muted': rgbaFromHex(onPrimary, 0.68),
-                    '--skin-on-heading': onHeading,
-                    '--skin-border': rgbaFromHex(heading, 0.13),
-                    '--skin-shadow': rgbaFromHex(heading, isDarkBackground ? 0.5 : 0.24),
-                    '--skin-primary-soft': rgbaFromHex(primary, 0.22),
-                    '--skin-heading-soft': rgbaFromHex(heading, 0.09),
-                    '--skin-text-soft': rgbaFromHex(skinText, 0.09),
-                    '--skin-on-heading-muted': rgbaFromHex(onHeading, 0.64),
-                    '--skin-on-heading-border': rgbaFromHex(onHeading, 0.16),
-                    '--skin-font-body': getFontFamily(settings.bodyFontFamily || settings.fontFamily),
-                    '--skin-font-heading': getFontFamily(settings.headingFontFamily || settings.fontFamily),
-                    '--skin-font-button': getFontFamily(settings.buttonFontFamily || settings.fontFamily),
-                    '--skin-radius': settings.buttonStyle === 'pill' ? '18px' : '8px'
-                };
-            }, [
-                backendSkinMode,
-                settings.backgroundColor,
-                settings.headingColor,
-                settings.bodyColor,
-                settings.primaryColor,
-                settings.slotBgColor,
-                settings.buttonTextColor,
-                settings.bodyFontFamily,
-                settings.headingFontFamily,
-                settings.buttonFontFamily,
-                settings.fontFamily,
-                settings.buttonStyle
-            ]);
 
             const scrollThemePaletteRail = (direction) => {
                 if (!themePaletteRailRef.current) return;
@@ -3325,6 +3353,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const handleInspect = (tab) => { if (activeTab !== 'editor') setActiveTab('editor'); setEditorCollapsed(false); setEditorTab(tab); };
             const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
+            const applyFontStylePreset = (preset) => {
+                if (!preset) return;
+                setSettings(prev => ({
+                    ...prev,
+                    fontFamily: preset.fontFamily,
+                    headingFontFamily: preset.headingFontFamily,
+                    bodyFontFamily: preset.bodyFontFamily,
+                    buttonFontFamily: preset.buttonFontFamily,
+                    slotFontFamily: preset.slotFontFamily,
+                    dateFontFamily: preset.dateFontFamily,
+                    headingLetterSpacing: preset.headingLetterSpacing,
+                    subtextLetterSpacing: preset.subtextLetterSpacing
+                }));
+                showToast(`${preset.label} font style applied`);
+            };
             const handleLogoDisplayChange = (key, value) => {
                 setSettings(prev => ({
                     ...prev,
@@ -3369,18 +3412,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const removeFaqItem = (index) => handleFeatureChange('faqs', (settings.features?.faqs || []).filter((_, idx) => idx !== index));
             const handleSocialChange = (key, value) => {
                 setSettings(prev => ({ ...prev, socials: { ...(prev.socials || {}), [key]: value } }));
-            };
-            const handleBackendSkinChange = (key, value) => {
-                setSettings(prev => ({
-                    ...prev,
-                    backendSkin: {
-                        enabled: false,
-                        mode: 'immersive',
-                        showBranding: true,
-                        ...(prev.backendSkin || {}),
-                        [key]: value
-                    }
-                }));
             };
             const copyToClipboard = async (value, label = 'Link') => {
                 try {
@@ -3842,7 +3873,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
                 try {
                     await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates);
-                    const threadId = existingBooking?.threadId;
+                    const threadId = updates.threadId ?? existingBooking?.threadId ?? '';
                     const emailKey = normalizeEmail(existingBooking?.clientEmail);
                     const portalUpdates = {
                         ...updates,
@@ -3853,7 +3884,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'bookings', bookingId),
                             {
                                 bookingId,
-                                threadId: threadId || '',
+                                threadId,
                                 ownerId: workspaceOwnerId,
                                 clientEmail: emailKey,
                                 clientName: existingBooking?.clientName || '',
@@ -4684,10 +4715,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             return (
                 <div
-                    className={`flex h-screen bg-[#FBFBFB] text-black overflow-hidden font-sans relative ${backendSkinEnabled ? `backend-skin backend-skin-${backendSkinMode}` : 'native-ui'}`}
-                    style={backendSkinEnabled ? backendSkinVars : undefined}
+                    className={`flex h-screen overflow-hidden font-sans relative native-ui ${dashboardThemeMode === 'dark' ? 'dashboard-dark' : 'dashboard-light'}`}
                 >
-                {backendSkinEnabled && <div className="backend-skin-ambient pointer-events-none absolute inset-0 z-0" />}
                 {/* Global Toast */}
                 {toast && (
                     <div className="native-toast fixed top-4 md:top-10 left-1/2 -translate-x-1/2 z-[9999] max-w-[calc(100vw-2rem)] px-5 md:px-8 py-3 md:py-4 bg-black text-white rounded-2xl md:rounded-full text-[10px] md:text-xs font-bold uppercase tracking-[0.18em] md:tracking-widest leading-relaxed shadow-2xl animate-in slide-in-from-top-10 fade-in duration-500 flex items-center gap-3 text-center">
@@ -4742,7 +4771,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     {!sidebarCollapsed && (
                     <>
                         <div className="flex items-center mb-8 px-2 cursor-pointer group" onClick={() => setView('landing')}>
-                            <BuildABookingBrand className="w-[190px] h-auto transition-transform duration-300 group-hover:scale-[1.02]" />
+                            <BuildABookingBrand className="w-[190px] h-auto transition-transform duration-300 group-hover:scale-[1.02]" variant={dashboardThemeMode === 'dark' ? 'light' : 'dark'} />
                         </div>
                         {user && (
                             <div className="mb-6 rounded-lg border border-neutral-100 bg-neutral-50 p-3">
@@ -4790,22 +4819,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         })}
                         </nav>
                         <div className="mt-auto space-y-4 pt-6 border-t border-neutral-100">
-                            {backendSkinEnabled && backendSkinShowBranding && (
-                                <div className="overflow-hidden rounded-lg border border-neutral-100 bg-neutral-50 shadow-sm">
-                                    {settings.bannerImage && (
-                                        <div className="h-16 bg-cover bg-center opacity-90" style={{ backgroundImage: `url(${settings.bannerImage})` }} />
-                                    )}
-                                    <div className="p-4 flex items-center gap-3">
-                                        <div className="w-11 h-11 rounded-lg overflow-hidden shrink-0 flex items-center justify-center font-bold shadow-sm" style={{ backgroundColor: settings.headingColor, color: readableTextFor(settings.headingColor) }}>
-                                            {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : (settings.brandName?.charAt(0) || 'B')}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Workspace Skin</p>
-                                            <p className="text-sm font-bold text-black truncate">{settings.brandName || 'Business'} Mode</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <button
+                                type="button"
+                                onClick={() => setDashboardThemeMode(mode => mode === 'dark' ? 'light' : 'dark')}
+                                className="w-full h-12 rounded-full border border-neutral-200 bg-white text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors dashboard-theme-switch"
+                                aria-pressed={dashboardThemeMode === 'dark'}
+                            >
+                                {dashboardThemeMode === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                                {dashboardThemeMode === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                            </button>
                             {isGuestWorkspace ? (
                                 <div className="space-y-2">
                                     <ProButton onClick={() => openAuthPanel('signin', 'owner')} variant="neon" className="w-full py-4 text-[10px]">Sign In</ProButton>
@@ -4821,6 +4843,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="desktop-sidebar-toggle hidden md:flex fixed bottom-6 left-6 md:bottom-10 md:left-10 z-[100] w-12 h-12 bg-white border border-neutral-100 rounded-full shadow-2xl items-center justify-center text-neutral-400 hover:text-black transition-all hover:scale-110">
                     {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setDashboardThemeMode(mode => mode === 'dark' ? 'light' : 'dark')}
+                    className="dashboard-theme-floating md:hidden fixed right-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[140] w-11 h-11 rounded-full bg-white border border-neutral-200 shadow-xl shadow-black/10 flex items-center justify-center text-black"
+                    aria-label={dashboardThemeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                    {dashboardThemeMode === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
                 </button>
 
                 {isGuestWorkspace && (
@@ -6212,96 +6243,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         <Share2 size={14}/> Copy Booking Link
                                     </button>
                                     </div>
-                                    <div className="space-y-5 pt-10 border-t border-neutral-50">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div>
-                                            <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-2">Backend Skin</label>
-                                            <p className="text-sm text-neutral-400 font-medium leading-relaxed max-w-md">Match the workspace to this booking page theme.</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleBackendSkinChange('enabled', !backendSkinEnabled)}
-                                            className={`w-16 h-9 rounded-full flex items-center px-1 transition-all shadow-inner ${backendSkinEnabled ? 'bg-black' : 'bg-neutral-200'}`}
-                                            style={backendSkinEnabled ? { backgroundColor: settings.primaryColor } : undefined}
-                                            aria-pressed={backendSkinEnabled}
-                                        >
-                                            <span className={`w-7 h-7 rounded-full bg-white shadow-lg transition-transform ${backendSkinEnabled ? 'translate-x-7' : ''}`} />
-                                        </button>
-                                    </div>
-
-                                    <div
-                                        className={`relative overflow-hidden rounded-lg border p-5 md:p-6 transition-all ${backendSkinEnabled ? 'shadow-2xl' : 'opacity-70'}`}
-                                        style={{
-                                            backgroundColor: settings.backgroundColor || '#FFFFFF',
-                                            color: settings.headingColor || '#000000',
-                                            borderColor: rgbaFromHex(settings.headingColor, 0.16),
-                                            fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily)
-                                        }}
-                                    >
-                                        {settings.bannerImage && (
-                                            <div className="absolute inset-x-0 top-0 h-24 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${settings.bannerImage})` }} />
-                                        )}
-                                        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-                                            <div className="flex items-center gap-4 min-w-0">
-                                                <div
-                                                    className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center font-bold text-xl shrink-0 shadow-xl"
-                                                    style={{ backgroundColor: settings.headingColor || '#000000', color: readableTextFor(settings.headingColor || '#000000') }}
-                                                >
-                                                    {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" /> : (settings.brandName?.charAt(0) || 'B')}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] opacity-50 mb-1">Workspace Preview</p>
-                                                    <h3 className="text-2xl font-bold tracking-tight truncate" style={{ fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{settings.brandName || 'Your Business'}</h3>
-                                                    <p className="text-xs font-bold uppercase tracking-widest opacity-55 truncate">{settings.tagline || 'Booking workspace'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <span className="h-10 px-4 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase tracking-widest" style={{ backgroundColor: settings.primaryColor || '#39FF14', color: settings.buttonTextColor || readableTextFor(settings.primaryColor || '#39FF14') }}>Live Skin</span>
-                                                <span className="h-10 w-10 rounded-lg border flex items-center justify-center" style={{ borderColor: rgbaFromHex(settings.headingColor, 0.18), color: settings.headingColor || '#000000' }}><Palette size={15} /></span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {[
-                                            { id: 'immersive', label: 'Exact Match', note: 'Theme colors and fonts' },
-                                            { id: 'soft', label: 'Soft Match', note: 'Branded but calmer' }
-                                        ].map(option => {
-                                            const isActive = backendSkinMode === option.id;
-                                            return (
-                                                <button
-                                                    key={option.id}
-                                                    type="button"
-                                                    onClick={() => handleBackendSkinChange('mode', option.id)}
-                                                    className={`p-4 rounded-lg border text-left transition-all ${isActive ? 'bg-black text-white border-black shadow-xl' : 'bg-neutral-50 text-black border-transparent hover:border-neutral-200'}`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-3 mb-3">
-                                                        <span className="text-xs font-bold uppercase tracking-widest">{option.label}</span>
-                                                        <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-[#39FF14]' : 'bg-neutral-300'}`} />
-                                                    </div>
-                                                    <p className={`text-xs font-medium ${isActive ? 'text-white/60' : 'text-neutral-400'}`}>{option.note}</p>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => handleBackendSkinChange('showBranding', !backendSkinShowBranding)}
-                                        className={`w-full p-4 rounded-lg border flex items-center justify-between gap-4 transition-all ${backendSkinShowBranding ? 'bg-neutral-50 border-neutral-100 text-black' : 'bg-white border-neutral-100 text-neutral-400'}`}
-                                    >
-                                        <span className="flex items-center gap-3 text-left">
-                                            <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${backendSkinShowBranding ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-400'}`}><Sparkles size={15} /></span>
-                                            <span>
-                                                <span className="block text-sm font-bold">Business identity panel</span>
-                                                <span className="block text-xs font-medium opacity-50">Logo and banner card in the left panel</span>
-                                            </span>
-                                        </span>
-                                        <span className={`w-12 h-7 rounded-full flex items-center px-1 transition-all ${backendSkinShowBranding ? 'bg-[#39FF14]' : 'bg-neutral-200'}`}>
-                                            <span className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${backendSkinShowBranding ? 'translate-x-5' : ''}`} />
-                                        </span>
-                                    </button>
-                                    </div>
                                 </div>
                                 )}
 
@@ -6336,7 +6277,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 <div className="min-w-0">
                                                     <p className="text-[9px] font-bold uppercase tracking-[0.45em] text-neutral-300 mb-3">Theme Brief</p>
                                                     <h3 className="text-2xl sm:text-3xl font-black tracking-[-0.04em] leading-none text-black">
-                                                        {selectedIndustryFilter.id === 'all-industries' ? (
+                                                        {!selectedIndustryFilter ? (
                                                             <>
                                                                 Choose your <span className="native-accent-text">industry first</span>.
                                                             </>
@@ -6355,11 +6296,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     className="h-11 px-4 rounded-full border border-neutral-100 bg-neutral-50 text-black text-[9px] font-bold uppercase tracking-widest shadow-sm hover:border-black hover:bg-white transition-all disabled:cursor-wait disabled:text-neutral-400 flex items-center justify-center gap-2 shrink-0"
                                                 >
                                                     <Pipette size={14} />
-                                                    {paletteDetecting ? 'Reading Brand' : detectedThemePalette ? `${themePaletteLabel(detectedThemePalette)} / ${detectedThemeStyle ? themeStyleLabel(detectedThemeStyle) : 'Style'} Detected` : 'Read Logo Colors'}
+                                                    {paletteDetecting ? 'Reading Brand' : detectedThemePalette ? `${themePaletteLabel(detectedThemePalette)} Detected` : 'Read Logo Colors'}
                                                 </button>
                                             </div>
                                             <p className="text-xs font-semibold text-neutral-400 -mt-2 mb-5">
-                                                Brand reader checks {brandSignalPhrase}, then lines up the palette with a font and style direction.
+                                                Brand reader checks {brandSignalPhrase}, then starts the palette. Font personality now lives in Visuals.
                                             </p>
 
                                             <div className="mb-5">
@@ -6399,50 +6340,54 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                                                <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 p-4">
-                                                    <div className="flex items-center justify-between gap-3 mb-3">
-                                                        <div>
-                                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">2. Color Direction</p>
-                                                            <p className="text-xs font-semibold text-neutral-400 mt-1">{selectedPaletteFilter.hint}</p>
-                                                        </div>
-                                                        <span className="text-[9px] font-bold uppercase tracking-widest text-black bg-white px-3 py-1.5 rounded-full">{selectedPaletteFilter.name}</span>
+                                            <div className="rounded-[26px] border border-neutral-100 bg-neutral-50/70 p-4 sm:p-5">
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                                    <div>
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">2. Color Direction</p>
+                                                        <p className="text-xs font-semibold text-neutral-400 mt-1">{selectedPaletteHint}. Each color creates light and dark-mode directions for the selected industry.</p>
                                                     </div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {paletteFilterOptions.map(palette => {
-                                                            const isActive = themeGenerationInputs.palette === palette.id;
-                                                            return (
-                                                                <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)} className={`h-10 px-3 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${isActive ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:text-black hover:border-neutral-300'}`}>
-                                                                    <span className="flex items-center">
-                                                                        {palette.swatches.slice(0, 3).map((color, i) => (
-                                                                            <span key={color} className={`w-3.5 h-3.5 rounded-full border ${isActive ? 'border-white/30' : 'border-black/10'} ${i > 0 ? '-ml-1' : ''}`} style={{ backgroundColor: color }} />
-                                                                        ))}
-                                                                    </span>
-                                                                    {palette.id === 'all' ? 'Spectrum' : palette.name}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-black bg-white px-3 py-1.5 rounded-full self-start sm:self-auto">{selectedPaletteName}</span>
                                                 </div>
-
-                                                <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 p-4">
-                                                    <div className="flex items-center justify-between gap-3 mb-3">
-                                                        <div>
-                                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">3. Design Style</p>
-                                                            <p className="text-xs font-semibold text-neutral-400 mt-1">{selectedStyleFilter.hint}</p>
-                                                        </div>
-                                                        <span className="text-[9px] font-bold uppercase tracking-widest text-black bg-white px-3 py-1.5 rounded-full">{selectedStyleFilter.id === 'all-styles' ? 'Recommended' : selectedStyleFilter.name}</span>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {styleFilterOptions.map(style => {
-                                                            const isActive = themeGenerationInputs.style === style.id;
-                                                            return (
-                                                                <button key={style.id} type="button" onClick={() => setThemeFilterValue('style', style.id)} className={`h-10 px-3 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${isActive ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:text-black hover:border-neutral-300'}`}>
-                                                                    {style.id === 'all-styles' ? 'Recommended' : style.name}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                <div className="flex flex-wrap items-center gap-2.5">
+                                                    {paletteFilterOptions.map(palette => {
+                                                        const isActive = themeGenerationInputs.palette === palette.id;
+                                                        return (
+                                                            <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)} className={`group h-12 px-3 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${isActive ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:text-black hover:border-neutral-300'}`}>
+                                                                <span className="flex items-center">
+                                                                    {palette.swatches.slice(0, 3).map((color, i) => (
+                                                                        <span key={color} className={`w-5 h-5 rounded-full border ${isActive ? 'border-white/30' : 'border-black/10'} ${i > 0 ? '-ml-1.5' : ''}`} style={{ backgroundColor: color }} />
+                                                                    ))}
+                                                                </span>
+                                                                <span className="hidden sm:inline">{palette.id === 'all' ? 'Spectrum' : palette.name}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setThemeFilterValue('palette', 'custom');
+                                                            setCustomThemePaletteOpen(value => !value);
+                                                        }}
+                                                        className={`h-12 px-3 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${themeGenerationInputs.palette === 'custom' ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-100 hover:text-black hover:border-neutral-300'}`}
+                                                    >
+                                                        <span className="w-5 h-5 rounded-full border border-black/10 shadow-inner" style={{ backgroundColor: customThemeColor }} />
+                                                        <span>Custom</span>
+                                                    </button>
+                                                    {(themeGenerationInputs.palette === 'custom' || customThemePaletteOpen) && (
+                                                        <label className="h-12 pl-3 pr-2 rounded-full border border-neutral-100 bg-white flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                                                            Pick Color
+                                                            <input
+                                                                type="color"
+                                                                value={customThemeColor}
+                                                                onChange={(event) => {
+                                                                    setCustomThemeColor(event.target.value);
+                                                                    setThemeFilterValue('palette', 'custom');
+                                                                }}
+                                                                className="w-8 h-8 rounded-full border-0 bg-transparent p-0 cursor-pointer"
+                                                                aria-label="Choose custom theme color"
+                                                            />
+                                                        </label>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -6498,6 +6443,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             )}
                                         </div>
                                         <div className="theme-card-list grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[560px] overflow-y-auto pr-2 pb-4 no-scrollbar">
+                                            {!isMobileWebEditorRuntime && !themeGenerationInputs.industry && (
+                                                <div className="md:col-span-2 min-h-[260px] rounded-[26px] border border-dashed border-neutral-200 bg-neutral-50/70 flex flex-col items-center justify-center text-center p-8">
+                                                    <div className="w-14 h-14 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center text-black shadow-sm mb-5">
+                                                        <Sparkles size={20} />
+                                                    </div>
+                                                    <h4 className="text-2xl font-black tracking-[-0.04em] text-black">Choose an industry first.</h4>
+                                                    <p className="text-sm text-neutral-400 font-medium max-w-md mt-2">The theme designer will build light and dark theme directions after it knows the business type.</p>
+                                                </div>
+                                            )}
                                             {visibleThemeCards.map(t => {
                                                 const isNativeTheme = Boolean(t.nativeAccent);
                                                 const isSelectedTheme = settings.nativeAccent === t.nativeAccent && settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor && settings.fontFamily === t.fontFamily;
@@ -6646,6 +6600,29 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <div className="pt-6 border-t border-neutral-50">
                                         <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block mb-6">Typography Engine</label>
                                         <div className="space-y-8">
+                                            <div className="rounded-[22px] border border-neutral-100 bg-neutral-50/70 p-4">
+                                                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
+                                                    <div>
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Master Font Style</p>
+                                                        <p className="text-xs text-neutral-400 font-semibold mt-1">Use this after picking a theme to shift the full page into a clearer brand voice.</p>
+                                                    </div>
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest text-black bg-white px-3 py-1.5 rounded-full self-start sm:self-auto">Style System</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                    {fontStylePresets.map(preset => (
+                                                        <button
+                                                            key={preset.id}
+                                                            type="button"
+                                                            onClick={() => applyFontStylePreset(preset)}
+                                                            className="rounded-2xl border border-neutral-100 bg-white p-3 text-left hover:border-black hover:-translate-y-0.5 transition-all"
+                                                        >
+                                                            <span className="block text-base font-black tracking-[-0.04em] text-black" style={{ fontFamily: getFontFamily(preset.headingFontFamily) }}>Aa Bb</span>
+                                                            <span className="block text-[10px] font-bold uppercase tracking-widest text-black mt-2">{preset.label}</span>
+                                                            <span className="block text-[9px] font-bold uppercase tracking-widest text-neutral-300 mt-1">{preset.note}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
                                             <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
                                             {['Sans', 'Serif', 'Display', 'Mono', 'Brush'].map(cat => (
                                                 <div key={cat}>

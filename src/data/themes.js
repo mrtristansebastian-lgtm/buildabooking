@@ -539,6 +539,140 @@ const hueBetweenLocal = (h, start, end) => start <= end ? h >= start && h < end 
 
 const unique = (items) => [...new Set(items.filter(Boolean))];
 
+const INDUSTRY_PROFILE_ALIASES = {
+    hair: {
+        base: 'beauty',
+        label: 'Hair Salon',
+        recipe: ['editorial', 'luxe', 'modern', 'minimal', 'commerce', 'organic', 'bold', 'night', 'handmade', 'tech'],
+        styleTags: ['beauty', 'editorial', 'luxury'],
+        consultant: 'Salon-ready layouts with confident editorial type, polished service rhythm, and strong booking trust.'
+    },
+    barber: {
+        base: 'fitness',
+        label: 'Barber',
+        recipe: ['bold', 'modern', 'night', 'commerce', 'minimal', 'tech', 'editorial', 'luxe', 'organic', 'handmade'],
+        styleTags: ['bold', 'modern'],
+        consultant: 'Sharper grooming pages with strong contrast, clean timing, and appointment-first confidence.'
+    },
+    nails: {
+        base: 'beauty',
+        label: 'Nails',
+        recipe: ['luxe', 'bold', 'editorial', 'modern', 'handmade', 'commerce', 'minimal', 'organic', 'night', 'tech'],
+        styleTags: ['beauty', 'bold', 'luxury'],
+        consultant: 'Expressive but clean nail pages with playful color, premium cards, and social-ready polish.'
+    },
+    'brows-lashes': {
+        base: 'beauty',
+        label: 'Brows & Lashes',
+        recipe: ['minimal', 'luxe', 'editorial', 'modern', 'organic', 'commerce', 'night', 'bold', 'handmade', 'tech'],
+        styleTags: ['luxury', 'minimal'],
+        consultant: 'Detailed, elegant booking pages for precise services where trust and clarity matter.'
+    },
+    waxing: {
+        base: 'beauty',
+        label: 'Waxing',
+        recipe: ['minimal', 'modern', 'organic', 'luxe', 'commerce', 'editorial', 'handmade', 'bold', 'night', 'tech'],
+        styleTags: ['minimal', 'modern'],
+        consultant: 'Clean, fast, low-friction pages for recurring appointments and easy client confidence.'
+    },
+    spa: {
+        base: 'wellness',
+        label: 'Spa & Sauna',
+        recipe: ['organic', 'luxe', 'minimal', 'editorial', 'modern', 'handmade', 'commerce', 'night', 'tech', 'bold'],
+        styleTags: ['organic', 'luxury'],
+        consultant: 'Quiet luxury surfaces, soft spacing, and calm booking patterns for slower premium experiences.'
+    },
+    medspa: {
+        base: 'healthcare',
+        label: 'Medspa',
+        recipe: ['minimal', 'luxe', 'modern', 'editorial', 'tech', 'organic', 'commerce', 'night', 'bold', 'handmade'],
+        styleTags: ['minimal', 'luxury'],
+        consultant: 'Clinical premium pages that balance medical trust with luxury conversion cues.'
+    },
+    massage: {
+        base: 'wellness',
+        label: 'Massage',
+        recipe: ['organic', 'minimal', 'editorial', 'handmade', 'modern', 'luxe', 'commerce', 'night', 'tech', 'bold'],
+        styleTags: ['organic', 'minimal'],
+        consultant: 'Warm, restorative pages with gentle typography and calm time selection.'
+    },
+    'personal-training': {
+        base: 'fitness',
+        label: 'Personal Training',
+        recipe: ['bold', 'tech', 'modern', 'commerce', 'minimal', 'night', 'editorial', 'organic', 'luxe', 'handmade'],
+        styleTags: ['bold', 'modern'],
+        consultant: 'High-energy booking pages for results-driven coaching and recurring training sessions.'
+    },
+    therapy: {
+        base: 'wellness',
+        label: 'Therapy Centre',
+        recipe: ['minimal', 'organic', 'modern', 'editorial', 'handmade', 'luxe', 'tech', 'commerce', 'night', 'bold'],
+        styleTags: ['minimal', 'organic'],
+        consultant: 'Private, calming interfaces that feel trustworthy and easy for sensitive appointments.'
+    },
+    'physical-therapy': {
+        base: 'healthcare',
+        label: 'Physical Therapy',
+        recipe: ['modern', 'minimal', 'tech', 'organic', 'commerce', 'bold', 'editorial', 'luxe', 'night', 'handmade'],
+        styleTags: ['healthcare', 'modern'],
+        consultant: 'Recovery-focused pages with clear status, practical typography, and accessible scheduling.'
+    },
+    'tattoo-piercing': {
+        base: 'creative',
+        label: 'Tattoo & Piercing',
+        recipe: ['night', 'bold', 'editorial', 'tech', 'modern', 'minimal', 'luxe', 'handmade', 'commerce', 'organic'],
+        styleTags: ['bold', 'creative'],
+        consultant: 'Portfolio-friendly pages with edge, contrast, and confident consult flow.'
+    },
+    tanning: {
+        base: 'beauty',
+        label: 'Tanning Studio',
+        recipe: ['commerce', 'luxe', 'modern', 'organic', 'bold', 'editorial', 'minimal', 'handmade', 'night', 'tech'],
+        styleTags: ['commerce', 'beauty'],
+        consultant: 'Bright, glossy booking pages for glow services, packages, and repeat visits.'
+    },
+    pets: {
+        base: 'wellness',
+        label: 'Pet Grooming',
+        recipe: ['handmade', 'organic', 'modern', 'commerce', 'minimal', 'bold', 'editorial', 'luxe', 'tech', 'night'],
+        styleTags: ['friendly', 'organic'],
+        consultant: 'Friendly, approachable pages that make care, timing, and repeat visits feel simple.'
+    },
+    'home-services': {
+        base: 'trades',
+        label: 'Home Services',
+        recipe: ['commerce', 'modern', 'minimal', 'tech', 'bold', 'organic', 'editorial', 'night', 'handmade', 'luxe'],
+        styleTags: ['commerce', 'modern'],
+        consultant: 'Practical service pages built for fast trust, clear availability, and on-site appointments.'
+    },
+    automotive: {
+        base: 'trades',
+        label: 'Automotive',
+        recipe: ['bold', 'tech', 'commerce', 'modern', 'night', 'minimal', 'editorial', 'organic', 'luxe', 'handmade'],
+        styleTags: ['bold', 'tech'],
+        consultant: 'Performance-feeling pages with strong contrast for detailing, repairs, and fitment bookings.'
+    },
+    legal: {
+        base: 'finance',
+        label: 'Legal',
+        recipe: ['minimal', 'editorial', 'modern', 'luxe', 'tech', 'commerce', 'night', 'organic', 'bold', 'handmade'],
+        styleTags: ['minimal', 'editorial'],
+        consultant: 'Serious, readable booking pages for consults where authority and privacy matter.'
+    }
+};
+
+Object.entries(INDUSTRY_PROFILE_ALIASES).forEach(([id, config]) => {
+    const base = INDUSTRY_THEME_PROFILES[config.base] || INDUSTRY_THEME_PROFILES['all-industries'];
+    INDUSTRY_THEME_PROFILES[id] = {
+        ...base,
+        id,
+        label: config.label,
+        recipe: config.recipe || base.recipe,
+        styleTags: unique([...(base.styleTags || []), ...(config.styleTags || [])]),
+        consultant: config.consultant || base.consultant
+    };
+});
+
 const slugify = (value) => value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -630,20 +764,70 @@ const createPaletteVariant = (collection, variant) => {
         };
     }
 
+    if (variant === 'noir') {
+        return {
+            ...collection,
+            id: collection.id,
+            label: `${collection.label} Noir`,
+            variantId: 'noir',
+            variantLabel: 'Noir',
+            forceDark: true,
+            accent: mixHexColors(collection.accent, '#FFFFFF', 0.04),
+            accentSoft: mixHexColors(collection.accentSoft, collection.accent, 0.18),
+            dark: mixHexColors(collection.dark, collection.accent, 0.08),
+            darkPanel: mixHexColors(collection.darkPanel, collection.accent, 0.14)
+        };
+    }
+
     return collection;
 };
 
-const getPaletteCollections = (paletteId = 'all') => {
+const createCustomColorCollection = (customColor = '#755CFF') => {
+    const accent = normalizeHexColor(customColor, '#755CFF');
+    const accentSoft = mixHexColors(accent, '#FFFFFF', 0.76);
+    const heading = mixHexColors(accent, '#000000', 0.64);
+    return {
+        id: 'custom',
+        label: 'Custom',
+        accent,
+        accentSoft,
+        background: '#FFFFFF',
+        pale: mixHexColors(accent, '#FFFFFF', 0.92),
+        warm: '#FFFDF9',
+        cream: mixHexColors(accent, '#FFF8EC', 0.9),
+        wash: mixHexColors(accent, '#FFFFFF', 0.86),
+        heading,
+        body: mixHexColors(heading, '#FFFFFF', 0.34),
+        dark: mixHexColors(accent, '#000000', 0.82),
+        darkPanel: mixHexColors(accent, '#000000', 0.68),
+        darkHeading: mixHexColors(accent, '#FFFFFF', 0.88),
+        darkBody: mixHexColors(accent, '#FFFFFF', 0.62),
+        industries: ['custom']
+    };
+};
+
+const paletteVariantsFor = (collection) => [
+    collection,
+    createPaletteVariant(collection, 'bright'),
+    createPaletteVariant(collection, 'deep'),
+    createPaletteVariant(collection, 'noir')
+];
+
+const getPaletteCollections = (paletteId = 'all', customColor = '#755CFF') => {
     if (paletteId === 'dark') {
         return {
-            collections: COLOR_COLLECTIONS.map(collection => ({
-                ...collection,
-                label: `${collection.label} Noir`,
-                variantId: 'noir',
-                variantLabel: 'Noir'
-            })),
+            collections: COLOR_COLLECTIONS.map(collection => createPaletteVariant(collection, 'noir')),
             focused: false,
             forceDark: true
+        };
+    }
+
+    if (paletteId === 'custom') {
+        const base = createCustomColorCollection(customColor);
+        return {
+            collections: paletteVariantsFor(base),
+            focused: true,
+            forceDark: false
         };
     }
 
@@ -651,7 +835,7 @@ const getPaletteCollections = (paletteId = 'all') => {
         const base = COLOR_COLLECTIONS.find(collection => collection.id === paletteId);
         if (base) {
             return {
-                collections: [base, createPaletteVariant(base, 'bright'), createPaletteVariant(base, 'deep')],
+                collections: paletteVariantsFor(base),
                 focused: true,
                 forceDark: false
             };
@@ -659,7 +843,7 @@ const getPaletteCollections = (paletteId = 'all') => {
         return { collections: [], focused: true, forceDark: false };
     }
 
-    return { collections: COLOR_COLLECTIONS, focused: false, forceDark: false };
+    return { collections: COLOR_COLLECTIONS.flatMap(paletteVariantsFor), focused: false, forceDark: false };
 };
 
 const sortCollectionsByDetectedPalette = (collections, detectedPalette) => {
@@ -860,25 +1044,33 @@ export const generateThemeCollection = ({
     palette = 'all',
     style = 'all-styles',
     detectedPalette = '',
-    detectedStyle = ''
+    detectedStyle = '',
+    customColor = ''
 } = {}) => {
-    const cacheKey = `${industry}|${palette}|${style}|${palette === 'all' ? detectedPalette : ''}|${style === 'all-styles' ? detectedStyle : ''}`;
+    const cacheKey = `${industry}|${palette}|${customColor || ''}|${style}|${palette === 'all' ? detectedPalette : ''}|${style === 'all-styles' ? detectedStyle : ''}`;
     const cached = themeCollectionCache.get(cacheKey);
     if (cached) return cached;
 
     const profile = getIndustryProfile(industry);
     const recipe = getIndustryRecipe(profile, style, detectedStyle);
-    const palettePlan = getPaletteCollections(palette);
+    const palettePlan = getPaletteCollections(palette, customColor);
     const collections = sortCollectionsByDetectedPalette(palettePlan.collections, palette === 'all' ? detectedPalette : '');
-    const generated = collections.flatMap(collection => (
-        recipe.map(archetype => createTheme(collection, archetype, {
+    const generated = palettePlan.focused
+        ? collections.flatMap(collection => (
+            recipe.slice(0, 8).map(archetype => createTheme(collection, archetype, {
+                profile,
+                forceDark: palettePlan.forceDark || collection.forceDark,
+                variantId: collection.variantId,
+                variantLabel: collection.variantLabel
+            }))
+        ))
+        : collections.map((collection, index) => createTheme(collection, recipe[index % recipe.length], {
             profile,
-            forceDark: palettePlan.forceDark,
+            forceDark: palettePlan.forceDark || collection.forceDark,
             variantId: collection.variantId,
             variantLabel: collection.variantLabel
-        }))
-    ));
-    const generatedLimit = palettePlan.focused ? 30 : 80;
+        }));
+    const generatedLimit = palettePlan.focused ? 34 : 34;
     const withNativeTheme = shouldIncludeNativeTheme({ industry, palette, style })
         ? [NATIVE_THEME, ...generated]
         : generated;

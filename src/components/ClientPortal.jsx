@@ -29,6 +29,12 @@ import {
 } from '../services/notifications';
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
+const cleanFirestoreIdPart = (value = '') => (
+  String(value || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 80) || 'item'
+);
+const buildSupportThreadId = (ownerId = '', bookingId = '') => (
+  `${cleanFirestoreIdPart(ownerId)}_${cleanFirestoreIdPart(bookingId)}`
+);
 
 const timestampValue = (value) => {
   if (!value) return 0;
@@ -56,6 +62,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const [activeView, setActiveView] = useState('chats');
   const [bookings, setBookings] = useState([]);
   const [threads, setThreads] = useState([]);
+  const [fallbackThreads, setFallbackThreads] = useState([]);
   const [messages, setMessages] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState('');
   const [messageDraft, setMessageDraft] = useState('');
@@ -119,7 +126,14 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
 
   const showExamplePortal = bookingsReady && threadsReady && bookings.length === 0 && threads.length === 0;
   const bookingSource = bookings.length ? bookings : (showExamplePortal ? [exampleBooking] : []);
-  const threadSource = threads.length ? threads : (showExamplePortal ? [exampleThread] : []);
+  const mergedThreads = useMemo(() => {
+    const byId = new Map();
+    [...fallbackThreads, ...threads].forEach(thread => {
+      if (thread?.id) byId.set(thread.id, { ...(byId.get(thread.id) || {}), ...thread });
+    });
+    return Array.from(byId.values()).sort((a, b) => timestampValue(b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAt || a.lastMessageAt));
+  }, [fallbackThreads, threads]);
+  const threadSource = mergedThreads.length ? mergedThreads : (showExamplePortal ? [exampleThread] : []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -174,6 +188,36 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       unsubThreads();
     };
   }, [appId, db, emailKey]);
+
+  useEffect(() => {
+    if (!db || !bookingsReady || !bookings.length) {
+      setFallbackThreads([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const knownThreadIds = new Set(threads.map(thread => thread.id));
+    const candidates = bookings
+      .map(booking => {
+        const bookingId = booking.bookingId || booking.id;
+        return booking.threadId || (booking.ownerId && bookingId ? buildSupportThreadId(booking.ownerId, bookingId) : '');
+      })
+      .filter(threadId => threadId && !knownThreadIds.has(threadId));
+
+    if (!candidates.length) {
+      setFallbackThreads([]);
+      return undefined;
+    }
+
+    Promise.all(candidates.slice(0, 20).map(async (threadId) => {
+      const snap = await FirebaseSDK.getDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', threadId)).catch(() => null);
+      return snap?.exists?.() ? { id: snap.id, ...snap.data() } : null;
+    })).then((found) => {
+      if (cancelled) return;
+      setFallbackThreads(found.filter(Boolean));
+    });
+
+    return () => { cancelled = true; };
+  }, [appId, bookings, bookingsReady, db, threads]);
 
   useEffect(() => {
     const syncPermission = () => setBrowserPermission(getBrowserNotificationPermission());
@@ -386,7 +430,9 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   };
 
   const openBookingThread = (booking) => {
-    if (booking.threadId) openThread(booking.threadId);
+    const bookingId = booking.bookingId || booking.id;
+    const threadId = booking.threadId || (booking.ownerId && bookingId ? buildSupportThreadId(booking.ownerId, bookingId) : '');
+    if (threadId) openThread(threadId);
     if (booking.isExample) openThread(exampleThread.id);
     setRescheduleDraft(prev => ({ ...prev, bookingId: booking.id }));
   };
@@ -401,7 +447,9 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       return;
     }
     if (!String(rescheduleDraft.date || '').trim() || !String(rescheduleDraft.time || '').trim()) return;
-    if (booking.threadId) setActiveThreadId(booking.threadId);
+    const bookingId = booking.bookingId || booking.id;
+    const threadId = booking.threadId || (booking.ownerId && bookingId ? buildSupportThreadId(booking.ownerId, bookingId) : '');
+    if (threadId) setActiveThreadId(threadId);
     const preferredDate = rescheduleDraft.date;
     const preferredTime = rescheduleDraft.time;
     const message = `Reschedule request for ${booking.workspaceName || 'booking'}: ${booking.date} at ${booking.time}. Preferred: ${preferredDate} at ${preferredTime}.`;

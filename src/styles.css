@@ -206,6 +206,96 @@ body {
             background-position: var(--native-accent-x) 50%;
         }
 
+        .native-ui.dashboard-dark {
+            background: #050506 !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-main > div,
+        .native-ui.dashboard-dark .dashboard-sidebar,
+        .native-ui.dashboard-dark .mobile-bottom-nav,
+        .native-ui.dashboard-dark .mobile-editor-shell,
+        .native-ui.dashboard-dark .mobile-editor-panel,
+        .native-ui.dashboard-dark .mobile-editor-preview {
+            background-color: #050506 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.09) !important;
+        }
+
+        .native-ui.dashboard-dark .saas-card,
+        .native-ui.dashboard-dark .saas-panel,
+        .native-ui.dashboard-dark .theme-template-panel,
+        .native-ui.dashboard-dark .bg-white {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+            box-shadow: 0 28px 80px -58px rgba(0,0,0,0.9) !important;
+        }
+
+        .native-ui.dashboard-dark .bg-neutral-50,
+        .native-ui.dashboard-dark .bg-neutral-100,
+        .native-ui.dashboard-dark .bg-neutral-200,
+        .native-ui.dashboard-dark .bg-neutral-300 {
+            background-color: #17191d !important;
+            color: #e5e7eb !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+
+        .native-ui.dashboard-dark .text-black,
+        .native-ui.dashboard-dark .text-neutral-950,
+        .native-ui.dashboard-dark .text-neutral-900,
+        .native-ui.dashboard-dark .text-neutral-800,
+        .native-ui.dashboard-dark .text-neutral-700 {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .text-neutral-600,
+        .native-ui.dashboard-dark .text-neutral-500,
+        .native-ui.dashboard-dark .text-neutral-400,
+        .native-ui.dashboard-dark .text-neutral-300 {
+            color: #9ca3af !important;
+        }
+
+        .native-ui.dashboard-dark .border-neutral-50,
+        .native-ui.dashboard-dark .border-neutral-100,
+        .native-ui.dashboard-dark .border-neutral-200,
+        .native-ui.dashboard-dark .border-black\/5,
+        .native-ui.dashboard-dark .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .native-ui.dashboard-dark input,
+        .native-ui.dashboard-dark textarea,
+        .native-ui.dashboard-dark select {
+            background-color: #0b0c10 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+
+        .native-ui.dashboard-dark input::placeholder,
+        .native-ui.dashboard-dark textarea::placeholder {
+            color: rgba(248,250,252,0.36) !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-theme-switch,
+        .native-ui.dashboard-dark .dashboard-theme-floating {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .native-gradient-ring {
+            background:
+                linear-gradient(180deg, rgba(16,17,20,0.98), rgba(10,11,14,0.98)) padding-box,
+                var(--native-accent-gradient) border-box !important;
+        }
+
+        .native-ui.dashboard-dark .brand-loader-orbit,
+        .native-ui.dashboard-dark .brand-loader-dot {
+            background: #101114;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+        }
+
         .native-booking-theme {
             animation: native-accent-sync var(--native-accent-duration) var(--native-accent-easing) infinite;
         }
@@ -625,20 +715,6 @@ body {
             background-position: 0 0, var(--native-accent-x) 50% !important;
         }
 
-        .backend-skin .bg-\[\#39FF14\],
-        .backend-skin .text-\[\#39FF14\],
-        .backend-skin .border-\[\#39FF14\] {
-            animation: none !important;
-            filter: none !important;
-            background-image: none !important;
-        }
-
-        .backend-skin .schedule-day-selected {
-            background: var(--skin-surface) !important;
-            border-color: var(--skin-primary) !important;
-            box-shadow: 0 24px 64px -40px var(--skin-primary-soft) !important;
-        }
-
         @media (min-width: 1400px) {
             .schedule-mode-month.schedule-forward-days {
                 display: flex;
@@ -1018,187 +1094,6 @@ body {
 
         }
 
-        .backend-skin {
-            background: var(--skin-bg) !important;
-            color: var(--skin-bg-text) !important;
-            font-family: var(--skin-font-body) !important;
-        }
-
-        .backend-skin h1,
-        .backend-skin h2,
-        .backend-skin h3,
-        .backend-skin h4,
-        .backend-skin .font-serif,
-        .backend-skin .font-display {
-            font-family: var(--skin-font-heading) !important;
-        }
-
-        .backend-skin .dashboard-main > div,
-        .backend-skin .mobile-editor-shell {
-            background: var(--skin-bg) !important;
-            color: var(--skin-bg-text) !important;
-        }
-
-        .backend-skin .dashboard-sidebar,
-        .backend-skin .mobile-editor-panel,
-        .backend-skin .mobile-bottom-nav {
-            background: var(--skin-surface) !important;
-            border-color: var(--skin-border) !important;
-            color: var(--skin-text) !important;
-        }
-
-        .backend-skin .saas-card,
-        .backend-skin .saas-panel {
-            background: var(--skin-surface) !important;
-            border-color: var(--skin-border) !important;
-            color: var(--skin-text) !important;
-            box-shadow: 0 28px 70px -44px var(--skin-shadow) !important;
-        }
-
-        .backend-skin .bg-white {
-            background-color: var(--skin-surface) !important;
-            border-color: var(--skin-border) !important;
-            color: var(--skin-text) !important;
-        }
-
-        .backend-skin .saas-card,
-        .backend-skin .saas-panel,
-        .backend-skin button.rounded-lg,
-        .backend-skin input.rounded-lg,
-        .backend-skin textarea.rounded-lg,
-        .backend-skin select.rounded-lg {
-            border-radius: var(--skin-radius) !important;
-        }
-
-        .backend-skin .saas-panel,
-        .backend-skin .bg-neutral-50,
-        .backend-skin .bg-neutral-100,
-        .backend-skin .bg-neutral-200,
-        .backend-skin .bg-neutral-300 {
-            background-color: var(--skin-panel) !important;
-            color: var(--skin-panel-text) !important;
-        }
-
-        .backend-skin .bg-black {
-            background-color: var(--skin-heading) !important;
-            border-color: var(--skin-heading) !important;
-            color: var(--skin-on-heading) !important;
-        }
-
-        .backend-skin .text-black,
-        .backend-skin .text-neutral-900,
-        .backend-skin .text-neutral-800,
-        .backend-skin .text-neutral-700 {
-            color: var(--skin-text) !important;
-        }
-
-        .backend-skin [class*="text-black/"] {
-            color: var(--skin-muted) !important;
-        }
-
-        .backend-skin .text-white {
-            color: var(--skin-on-heading) !important;
-        }
-
-        .backend-skin .text-neutral-600,
-        .backend-skin .text-neutral-500,
-        .backend-skin .text-neutral-400,
-        .backend-skin .text-neutral-300 {
-            color: var(--skin-muted) !important;
-        }
-
-        .backend-skin .border-neutral-50,
-        .backend-skin .border-neutral-100,
-        .backend-skin .border-neutral-200,
-        .backend-skin .border-black\/5,
-        .backend-skin .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
-            border-color: var(--skin-border) !important;
-        }
-
-        .backend-skin .bg-\[\#39FF14\] {
-            background-color: var(--skin-primary) !important;
-            color: var(--skin-on-primary) !important;
-        }
-
-        .backend-skin .bg-\[\#39FF14\] .text-black,
-        .backend-skin .bg-\[\#39FF14\] [class*="text-black/"],
-        .backend-skin .bg-\[\#39FF14\] .text-white,
-        .backend-skin .bg-\[\#39FF14\] [class*="text-white/"] {
-            color: var(--skin-on-primary-muted) !important;
-        }
-
-        .backend-skin .bg-\[\#39FF14\] h1,
-        .backend-skin .bg-\[\#39FF14\] h2,
-        .backend-skin .bg-\[\#39FF14\] h3,
-        .backend-skin .bg-\[\#39FF14\] h4,
-        .backend-skin .bg-\[\#39FF14\] .metric-value {
-            color: var(--skin-on-primary) !important;
-        }
-
-        .backend-skin .text-\[\#39FF14\] {
-            color: var(--skin-primary-text) !important;
-        }
-
-        .backend-skin .bg-black .text-\[\#39FF14\] {
-            color: var(--skin-on-heading) !important;
-        }
-
-        .backend-skin .border-\[\#39FF14\] {
-            border-color: var(--skin-primary) !important;
-        }
-
-        .backend-skin [class*="bg-white/"] {
-            background-color: var(--skin-heading-soft) !important;
-        }
-
-        .backend-skin [class*="bg-black/"] {
-            background-color: var(--skin-text-soft) !important;
-        }
-
-        .backend-skin [class*="text-white/"] {
-            color: var(--skin-on-heading-muted) !important;
-        }
-
-        .backend-skin .bg-white [class*="text-white/"],
-        .backend-skin .saas-card [class*="text-white/"],
-        .backend-skin .saas-panel [class*="text-white/"] {
-            color: var(--skin-muted) !important;
-        }
-
-        .backend-skin [class*="border-white/"] {
-            border-color: var(--skin-on-heading-border) !important;
-        }
-
-        .backend-skin input,
-        .backend-skin textarea,
-        .backend-skin select {
-            background-color: var(--skin-input) !important;
-            border-color: var(--skin-border) !important;
-            color: var(--skin-text) !important;
-            font-family: var(--skin-font-body) !important;
-        }
-
-        .backend-skin input::placeholder,
-        .backend-skin textarea::placeholder {
-            color: var(--skin-muted) !important;
-            opacity: 0.45;
-        }
-
-        .backend-skin button {
-            font-family: var(--skin-font-button) !important;
-        }
-
-        .backend-skin .backend-skin-ambient {
-            background:
-                radial-gradient(circle at 10% 0%, var(--skin-primary-soft), transparent 32%),
-                radial-gradient(circle at 85% 10%, var(--skin-heading-soft), transparent 34%),
-                linear-gradient(135deg, var(--skin-bg), var(--skin-panel));
-        }
-
-        .backend-skin-soft .backend-skin-ambient {
-            opacity: 0.62;
-        }
-
         .mobile-editor-rotate-prompt,
         .mobile-editor-install-prompt {
             display: none;
@@ -1255,25 +1150,18 @@ body {
         }
 
         .native-ui .tracking-widest,
-        .native-ui [class*="tracking-["],
-        .backend-skin .tracking-widest,
-        .backend-skin [class*="tracking-["] {
+        .native-ui [class*="tracking-["] {
             letter-spacing: 0.075em !important;
         }
 
         .native-ui button.uppercase,
-        .native-ui a.uppercase,
-        .backend-skin button.uppercase,
-        .backend-skin a.uppercase {
+        .native-ui a.uppercase {
             letter-spacing: 0.075em !important;
         }
 
         .native-ui h1,
         .native-ui h2,
         .native-ui h3,
-        .backend-skin h1,
-        .backend-skin h2,
-        .backend-skin h3,
         .editor-panel-header h2 {
             letter-spacing: -0.025em !important;
         }
@@ -1282,8 +1170,7 @@ body {
             letter-spacing: 0.075em !important;
         }
 
-        .native-ui .metric-value,
-        .backend-skin .metric-value {
+        .native-ui .metric-value {
             letter-spacing: -0.025em !important;
         }
 
