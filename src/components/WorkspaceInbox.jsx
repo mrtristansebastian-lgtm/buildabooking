@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bell, Calendar, Check, Maximize2, MessageCircle, Minimize2, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, Bell, Calendar, Check, Clock, Maximize2, MessageCircle, Minimize2, RefreshCw, Search, Send, Users } from 'lucide-react';
 import * as FirebaseSDK from '../services/firebase';
 import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
 
@@ -235,6 +235,81 @@ export function WorkspaceInbox({
     showToast?.('Booking confirmed and client thread updated.');
   };
 
+  const offerReschedule = async () => {
+    if (activeThread?.isExample) {
+      showToast?.('Example preview only. Live threads can send reschedule options.');
+      return;
+    }
+    if (!activeThread?.id) {
+      showToast?.('Open a client thread first.');
+      return;
+    }
+
+    const currentDate = linkedBooking?.date || '';
+    const currentTime = linkedBooking?.time || '';
+    const nextDate = typeof window === 'undefined'
+      ? currentDate
+      : window.prompt('What date should we offer this client?', currentDate);
+    if (nextDate === null) return;
+    const cleanDate = String(nextDate || '').trim();
+    if (!cleanDate) {
+      showToast?.('Add a date before sending a reschedule option.');
+      return;
+    }
+
+    const nextTime = typeof window === 'undefined'
+      ? currentTime
+      : window.prompt('What time should we offer this client?', currentTime);
+    if (nextTime === null) return;
+    const cleanTime = String(nextTime || '').trim();
+    if (!cleanTime) {
+      showToast?.('Add a time before sending a reschedule option.');
+      return;
+    }
+
+    const message = `Reschedule option: ${cleanDate} at ${cleanTime}. Reply here to confirm and we will update your booking.`;
+    const confirmed = typeof window === 'undefined' || window.confirm(`Send this reschedule option to ${activeThread.clientName || 'this client'}?`);
+    if (!confirmed) return;
+
+    if (db && activeThread.id) {
+      await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
+        rescheduleStatus: 'offered',
+        proposedReschedule: { date: cleanDate, time: cleanTime },
+        updatedAt: FirebaseSDK.serverTimestamp()
+      }).catch(() => {});
+    }
+    await sendMessage(message);
+    showToast?.('Reschedule option sent to the client.');
+  };
+
+  const sendRunningLateUpdate = async () => {
+    if (activeThread?.isExample) {
+      showToast?.('Example preview only. Live threads can send running-late updates.');
+      return;
+    }
+    if (!activeThread?.id) {
+      showToast?.('Open a client thread first.');
+      return;
+    }
+
+    const minutesValue = typeof window === 'undefined'
+      ? '10'
+      : window.prompt('How many minutes late should we tell the client?', '10');
+    if (minutesValue === null) return;
+    const cleanMinutes = String(minutesValue || '').trim();
+    if (!cleanMinutes) {
+      showToast?.('Add the number of minutes before sending.');
+      return;
+    }
+
+    const message = `Running ${cleanMinutes} minutes late. Thanks for your patience - we will keep you posted here.`;
+    const confirmed = typeof window === 'undefined' || window.confirm(`Send this running-late update to ${activeThread.clientName || 'this client'}?`);
+    if (!confirmed) return;
+
+    await sendMessage(message);
+    showToast?.('Running-late update sent.');
+  };
+
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.ownerUnread || 0), 0);
   const needsReplyCount = threads.filter(thread => Number(thread.ownerUnread || 0) > 0 || thread.rescheduleStatus === 'requested').length;
   const openRequestCount = threads.filter(thread => ['pending', 'waitlist'].includes(thread.bookingStatus)).length;
@@ -254,17 +329,17 @@ export function WorkspaceInbox({
   return (
     <section data-tour="client-inbox" className={`saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
       <div className="h-1 native-gradient-line" />
-      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3`}>
-        <div>
+      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} border-b border-neutral-100 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4`}>
+        <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">
             <MessageCircle size={13} className="text-black" />
             Support Inbox
           </div>
-          <h2 className="text-lg md:text-2xl font-bold tracking-tight text-black">Chat with your clients & manage their bookings!</h2>
+          <h2 className="text-lg md:text-3xl font-bold tracking-tight text-black">Chat with your clients & manage their bookings!</h2>
           <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Reply, confirm, reschedule, and keep every client conversation beside the booking it belongs to.</p>
           {!threads.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
-        <div className="grid grid-cols-3 gap-2 lg:min-w-[250px]">
+        <div className="grid grid-cols-3 gap-2 w-full lg:w-[360px] xl:w-[390px] shrink-0">
           {[
             ['Needs Reply', needsReplyCount, Bell],
             ['Open Requests', openRequestCount, MessageCircle],
@@ -305,7 +380,7 @@ export function WorkspaceInbox({
                     setActiveThreadId(thread.id);
                     setMobileChatOpen(true);
                   }}
-                  className={`w-full text-left p-3.5 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'bg-transparent hover:bg-white text-black'}`}
+                  className={`w-full text-left p-3.5 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-white text-black shadow-sm' : 'bg-transparent hover:bg-white text-black'}`}
                 >
                   {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
                   <div className="flex items-start justify-between gap-3">
@@ -314,18 +389,18 @@ export function WorkspaceInbox({
                         {(thread.clientName || 'C').charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className={`font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{thread.clientName || 'Client'}</p>
-                        <p className={`text-xs mt-1 truncate ${active ? 'text-white/55' : 'text-neutral-500'}`}>{thread.isExample ? 'Example only - live chats replace this' : thread.workspaceName || thread.clientEmail}</p>
+                        <p className="font-bold truncate text-black">{thread.clientName || 'Client'}</p>
+                        <p className="text-xs mt-1 truncate text-neutral-500">{thread.isExample ? 'Example only - live chats replace this' : thread.workspaceName || thread.clientEmail}</p>
                       </div>
                     </div>
                     {Number(thread.ownerUnread || 0) > 0 && <span className="min-w-6 h-6 rounded-full bg-[#39FF14] text-black text-[10px] font-bold flex items-center justify-center">{thread.ownerUnread}</span>}
                   </div>
-                  <p className={`text-sm mt-3 line-clamp-2 ${active ? 'text-white/60' : 'text-neutral-500'}`}>{thread.lastMessage || 'No messages yet.'}</p>
+                  <p className="text-sm mt-3 line-clamp-2 text-neutral-500">{thread.lastMessage || 'No messages yet.'}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <span className={`px-2 py-1 rounded-md border text-[8px] font-bold uppercase tracking-widest ${active ? 'border-white/15 bg-white/10 text-white/70' : statusStyles[thread.bookingStatus] || statusStyles.pending}`}>
+                    <span className={`px-2 py-1 rounded-md border text-[8px] font-bold uppercase tracking-widest ${statusStyles[thread.bookingStatus] || statusStyles.pending}`}>
                       {thread.bookingStatus || 'pending'}
                     </span>
-                    {thread.isExample && <span className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${active ? 'bg-white/10 text-white/70' : 'bg-neutral-100 text-neutral-500'}`}>Example</span>}
+                    {thread.isExample && <span className="px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Example</span>}
                     {thread.rescheduleStatus === 'requested' && <span className="px-2 py-1 rounded-md bg-violet-50 text-violet-700 text-[8px] font-bold uppercase tracking-widest">Reschedule</span>}
                   </div>
                 </button>
@@ -358,12 +433,18 @@ export function WorkspaceInbox({
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0 w-full sm:w-auto">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-2 shrink-0 w-full sm:w-auto">
                   <button type="button" onClick={() => setChatFullscreen(value => !value)} className="hidden md:flex h-10 w-10 rounded-lg border border-neutral-200 bg-white items-center justify-center text-black hover:border-black transition-colors">
                     {chatFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                   </button>
-                  <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors">
-                    Bookings
+                  <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
+                    <Calendar size={13} /> Open Bookings
+                  </button>
+                  <button onClick={offerReschedule} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
+                    <RefreshCw size={13} /> Reschedule
+                  </button>
+                  <button onClick={sendRunningLateUpdate} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
+                    <Clock size={13} /> Running Late
                   </button>
                   <button onClick={confirmLinkedBooking} className="h-10 px-3 md:px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">
                     <Check size={13} /> Confirm

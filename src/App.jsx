@@ -1129,6 +1129,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [clientSearch, setClientSearch] = useState('');
             const [selectedClientId, setSelectedClientId] = useState(null);
             const [clientNoteDraft, setClientNoteDraft] = useState('');
+            const [activeProfileSection, setActiveProfileSection] = useState('');
             const [showOnboarding, setShowOnboarding] = useState(false);
             const [showOwnerManual, setShowOwnerManual] = useState(false);
             const [onboardingStartScene, setOnboardingStartScene] = useState('intro');
@@ -1158,6 +1159,9 @@ const signInWithNativeGoogle = async (authInstance) => {
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
+            useEffect(() => {
+                if (activeTab !== 'profile') setActiveProfileSection('');
+            }, [activeTab]);
 
             useEffect(() => {
                 const syncPublicRoute = () => setPublicSlug(getPublicBookingSlug());
@@ -3777,6 +3781,38 @@ const signInWithNativeGoogle = async (authInstance) => {
             const editorPreviewFrameClass = device === 'desktop'
                 ? (isCompactEditorViewport ? 'rounded-lg border-[12px]' : 'rounded-lg border-[22px]')
                 : (isCompactEditorViewport ? 'rounded-[3rem] border-[12px]' : 'rounded-[5rem] md:rounded-[5.5rem] border-[16px] md:border-[18px]');
+            const profileSections = [
+                {
+                    id: 'account',
+                    title: 'Account & Access',
+                    note: isGuestWorkspace ? 'Guest workspace controls' : user?.email || 'Owner account',
+                    icon: ShieldCheck,
+                    meta: workspaceRole
+                },
+                {
+                    id: 'billing',
+                    title: 'Plan & Billing',
+                    note: 'Plans, checkout, and billing portal',
+                    icon: Briefcase,
+                    meta: 'Ready'
+                },
+                {
+                    id: 'business',
+                    title: 'Business Details',
+                    note: settings.brandName || 'Brand, links, logo, and banner',
+                    icon: Palette,
+                    meta: settings.slug || 'booking'
+                },
+                {
+                    id: 'manual',
+                    title: 'Owner Manual',
+                    note: 'Feature guide and setup help',
+                    icon: BookOpen,
+                    meta: 'Guide',
+                    action: () => setShowOwnerManual(true)
+                }
+            ];
+            const activeProfileSectionMeta = profileSections.find(section => section.id === activeProfileSection);
 
             if (loading || publicLoading) return (
                 <div className="h-screen bg-white flex items-center justify-center">
@@ -4177,11 +4213,10 @@ const signInWithNativeGoogle = async (authInstance) => {
                 <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden ${isGuestWorkspace ? 'pb-36' : 'pb-20'} md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
                     {activeTab === 'overview' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="mb-6 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+                            <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Workspace Home</p>
-                                    <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-black">Dashboard</h1>
-                                    <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
+                                    <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Dashboard</h1>
+                                    <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
                                 </div>
                                 <div className="dashboard-overview-actions grid grid-cols-5 sm:flex sm:flex-row gap-1.5 sm:gap-3">
                                     <button onClick={() => { setOnboardingStartScene('intro'); setShowOnboarding(true); }} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
@@ -4461,17 +4496,13 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                     {activeTab === 'profile' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F7F7F5]">
-                            <header className="max-w-6xl mb-8 md:mb-12">
-                                <div className="inline-flex items-center gap-2 rounded-full bg-white border border-neutral-100 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400 shadow-sm mb-5">
-                                    <ShieldCheck size={14} className="text-[#39FF14]" />
-                                    Workspace profile
-                                </div>
-                                <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+                            <header className="dashboard-page-header max-w-6xl mb-4 md:mb-6">
+                                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                                     <div>
-                                        <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-black">Profile</h2>
-                                        <p className="text-neutral-500 font-medium text-lg max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
+                                        <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Profile</h2>
+                                        <p className="text-neutral-500 font-medium text-sm md:text-base mt-2 max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="hidden md:flex flex-col sm:flex-row gap-3">
                                         <button onClick={() => setShowOwnerManual(true)} className="h-12 px-7 bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/5 hover:-translate-y-0.5 hover:border-black transition-all flex items-center justify-center gap-2">
                                             <BookOpen size={14}/> Owner Manual
                                         </button>
@@ -4482,8 +4513,54 @@ const signInWithNativeGoogle = async (authInstance) => {
                                 </div>
                             </header>
 
+                            <div className="profile-mobile-hub md:hidden max-w-6xl mb-4">
+                                {!activeProfileSection ? (
+                                    <div className="space-y-3">
+                                        {profileSections.map(section => {
+                                            const IconCmp = section.icon;
+                                            return (
+                                                <button
+                                                    key={section.id}
+                                                    type="button"
+                                                    onClick={() => section.action ? section.action() : setActiveProfileSection(section.id)}
+                                                    className="w-full rounded-2xl border border-neutral-100 bg-white p-4 text-left shadow-[0_14px_36px_-30px_rgba(15,23,42,0.45)] flex items-center justify-between gap-4"
+                                                >
+                                                    <span className="flex items-center gap-3 min-w-0">
+                                                        <span className="w-11 h-11 rounded-xl native-gradient-icon flex items-center justify-center shrink-0 text-black">
+                                                            <IconCmp size={18} />
+                                                        </span>
+                                                        <span className="min-w-0">
+                                                            <span className="block text-base font-bold tracking-tight text-black truncate">{section.title}</span>
+                                                            <span className="block text-xs text-neutral-500 font-medium mt-0.5 truncate">{section.note}</span>
+                                                        </span>
+                                                    </span>
+                                                    <span className="flex items-center gap-2 shrink-0">
+                                                        <span className="max-w-[5.8rem] truncate rounded-full bg-neutral-50 border border-neutral-100 px-2.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">{section.meta}</span>
+                                                        <ChevronRight size={17} className="text-neutral-300" />
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="rounded-2xl border border-neutral-100 bg-white p-3 shadow-[0_14px_36px_-30px_rgba(15,23,42,0.45)] flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveProfileSection('')}
+                                            className="w-10 h-10 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0"
+                                        >
+                                            <ChevronLeft size={18} />
+                                        </button>
+                                        <div className="min-w-0">
+                                            <p className="text-[8px] font-bold uppercase tracking-[0.24em] text-neutral-400">Profile Section</p>
+                                            <h3 className="text-lg font-bold tracking-tight text-black truncate">{activeProfileSectionMeta?.title}</h3>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="max-w-6xl space-y-8">
-                                <div className="overflow-hidden bg-white rounded-lg border border-neutral-100 shadow-[0_25px_80px_-60px_rgba(0,0,0,0.75)]">
+                                <div className={`profile-section profile-section-account ${activeProfileSection === 'account' ? 'block' : 'hidden'} md:block overflow-hidden bg-white rounded-lg border border-neutral-100 shadow-[0_25px_80px_-60px_rgba(0,0,0,0.75)]`}>
                                     <div className="grid grid-cols-1 lg:grid-cols-12">
                                         <div className="lg:col-span-5 bg-black text-white p-6 md:p-8 flex flex-col justify-between gap-10">
                                             <div className="flex items-center gap-4">
@@ -4523,7 +4600,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                                <div className={`profile-section profile-section-account ${activeProfileSection === 'account' ? 'grid' : 'hidden'} md:grid grid-cols-1 lg:grid-cols-12 gap-5`}>
                                     <section className="lg:col-span-7 bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]">
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
                                             <div className="flex items-start gap-4">
@@ -4568,7 +4645,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     </section>
                                 </div>
 
-                                <section className="bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]">
+                                <section className={`profile-section profile-section-billing ${activeProfileSection === 'billing' ? 'block' : 'hidden'} md:block bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]`}>
                                     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
                                         <div className="flex items-start gap-4">
                                             <div className="w-12 h-12 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
@@ -4591,7 +4668,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     </div>
                                 </section>
 
-                                <div data-tour="profile-business-info" className="bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-[0_25px_80px_-65px_rgba(0,0,0,0.75)]">
+                                <div data-tour="profile-business-info" className={`profile-section profile-section-business ${activeProfileSection === 'business' ? 'block' : 'hidden'} md:block bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-[0_25px_80px_-65px_rgba(0,0,0,0.75)]`}>
                                     <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
                                         <div>
                                             <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-300 mb-3">Business Profile</p>
@@ -4738,6 +4815,10 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                     {activeTab === 'business' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
+                            <header className="dashboard-page-header mb-4 md:mb-6">
+                                <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Schedule</h2>
+                                <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Open days, tune staff calendars, and keep booking capacity clear.</p>
+                            </header>
                             <Suspense fallback={<LazySectionFallback label="Loading schedule" />}>
                                 <BusinessCalendar
                                     settings={settings}
@@ -4755,12 +4836,20 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                     {activeTab === 'communications' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F6F7F9]">
-                            <header className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-                                <div>
-                                    <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Client Support</p>
-                                    <h2 className="text-3xl md:text-6xl font-bold tracking-tight text-black">Support Inbox</h2>
+                            <header className="dashboard-page-header mb-4 md:mb-6 max-w-7xl">
+                                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                                  <div className="max-w-4xl">
+                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Support Inbox</h2>
+                                    <p className="mt-2 text-sm md:text-base text-neutral-500 font-medium max-w-3xl">Chat with your clients, manage their bookings, and keep every request, reschedule, and update in one clean workspace.</p>
+                                  </div>
+                                  <div className="hidden xl:flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+                                    <span className="w-2.5 h-2.5 rounded-full native-gradient-button shadow-[0_0_18px_rgba(120,110,255,0.28)]" />
+                                    <div>
+                                      <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400">Live Desk</p>
+                                      <p className="text-sm font-bold text-black">Ready for client replies</p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <p className="text-sm md:text-base text-neutral-500 font-medium max-w-2xl">Chat with your clients, manage their bookings, and keep every request, reschedule, and update in one clean workspace.</p>
                             </header>
 
                             <div className="max-w-7xl">
@@ -4783,11 +4872,10 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                     {activeTab === 'clients' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+                            <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Client Book</p>
-                                    <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-black">My Clients</h2>
-                                    <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">Profiles are built from bookings automatically, with space for notes, labels, photos, and manual walk-ins.</p>
+                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">My Clients</h2>
+                                    <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Profiles are built from bookings automatically, with space for notes, labels, photos, and manual walk-ins.</p>
                                 </div>
                                 <button onClick={() => { saveClients(clientRecords); showToast("Client book saved"); }} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto">
                                     <Check size={15}/> Save Client Book
@@ -5085,11 +5173,10 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                     {activeTab === 'staff' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+                            <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Team Studio</p>
-                                    <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-black">Team</h2>
-                                    <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">Manage who can handle bookings, assign clients, and keep your calendar moving.</p>
+                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Team</h2>
+                                    <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Manage who can handle bookings, assign clients, and keep your calendar moving.</p>
                                 </div>
                                 <button onClick={() => { saveStaff(staffList); showToast("Team setup saved"); }} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto">
                                     <Check size={15}/> Save Team Setup
@@ -5250,7 +5337,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                     )}
 
                     {activeTab === 'editor' && (
-                    <div className={`flex-1 flex overflow-hidden mobile-editor-shell bg-[#F5F5F7] ${editorCollapsed ? 'mobile-editor-panel-is-collapsed' : ''} ${mobileNavCollapsed ? 'mobile-editor-nav-is-collapsed' : ''}`}>
+                    <div className={`flex-1 flex overflow-hidden mobile-editor-shell bg-[#F5F5F7] ${isPortraitMobileRuntime ? 'mobile-editor-portrait-runtime' : ''} ${editorCollapsed ? 'mobile-editor-panel-is-collapsed' : ''} ${mobileNavCollapsed ? 'mobile-editor-nav-is-collapsed' : ''}`}>
                         <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'mobile-editor-panel-collapsed w-0 opacity-0 pointer-events-none' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
                         {!editorCollapsed && (
                             <>
@@ -5462,7 +5549,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     <div data-tour="editor-theme-library">
                                         <div className="flex items-center justify-between gap-4 mb-6">
                                             <label className="text-[10px] font-bold uppercase tracking-[0.5em] text-neutral-300 block">{isMobileWebEditorRuntime ? 'Mobile Theme Starter' : 'Industry Theme Engine'}</label>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-black bg-neutral-100 px-3 py-1.5 rounded-full">{isMobileWebEditorRuntime ? 'Focused Mode' : 'Live Curated'}</span>
                                         </div>
                                         {isMobileWebEditorRuntime && (
                                             <div className="mobile-editor-starter-note mb-4 rounded-[20px] border border-neutral-100 bg-white p-3 shadow-[0_18px_48px_rgba(15,23,42,0.055)] overflow-hidden relative">
@@ -5474,7 +5560,6 @@ const signInWithNativeGoogle = async (authInstance) => {
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex flex-wrap items-center gap-2 mb-1">
                                                             <p className="text-[8px] font-bold uppercase tracking-[0.28em] text-neutral-400">Mobile Web Editor</p>
-                                                            <span className="rounded-full bg-neutral-100 px-2 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-500">Starter</span>
                                                         </div>
                                                         <h3 className="text-lg font-black tracking-[-0.04em] leading-tight text-black">Fast starter mode.</h3>
                                                         <p className="text-xs text-neutral-500 font-medium leading-relaxed mt-1">
@@ -6123,11 +6208,10 @@ const signInWithNativeGoogle = async (authInstance) => {
 
                     {activeTab === 'bookings' && (
                     <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                        <header className="mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+                        <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Booking Desk</p>
-                                <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-black">My Bookings</h1>
-                                <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">Review requests, confirm clients, assign your team, and keep every appointment moving.</p>
+                                <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">My Bookings</h1>
+                                <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Review requests, confirm clients, assign your team, and keep every appointment moving.</p>
                             </div>
                         </header>
 
