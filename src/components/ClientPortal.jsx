@@ -67,6 +67,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
   const [browserPermission, setBrowserPermission] = useState(getBrowserNotificationPermission);
   const notificationSeenRef = useRef(new Set());
   const notificationsReadyRef = useRef(false);
+  const firstName = String(user?.displayName || user?.email || 'there').split(/[ @]/)[0] || 'there';
 
   const exampleBooking = useMemo(() => ({
     id: 'example-client-booking',
@@ -114,6 +115,12 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
 
   const bookingSource = bookings.length ? bookings : [exampleBooking];
   const threadSource = threads.length ? threads : [exampleThread];
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    document.documentElement.classList.toggle('client-chat-open', mobileChatOpen);
+    return () => document.documentElement.classList.remove('client-chat-open');
+  }, [mobileChatOpen]);
 
   useEffect(() => {
     if (!db || !emailKey) {
@@ -415,8 +422,8 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         }) : (
           <div className="p-8 text-center">
             <div className="w-14 h-14 rounded-full bg-white border border-neutral-100 flex items-center justify-center mx-auto mb-4 text-neutral-300"><MessageCircle size={22}/></div>
-            <h3 className="font-bold text-black mb-2">{threads.length ? 'No chats found' : 'No chats yet'}</h3>
-            <p className="text-sm text-neutral-500">{threads.length ? 'Try another search.' : 'Chats appear here after you book with your email address.'}</p>
+            <h3 className="font-bold text-black mb-2">{threads.length ? 'No chats found' : 'Your chats will live here'}</h3>
+            <p className="text-sm text-neutral-500">{threads.length ? 'Try another business name or message.' : 'After you book, messages, updates, and reschedule help will stay in one easy thread.'}</p>
           </div>
         )}
       </div>
@@ -474,7 +481,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
             )}
           </div>
 
-          <div className="p-4 md:p-5 border-t border-neutral-100 bg-white space-y-3">
+          <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-5 border-t border-neutral-100 bg-white space-y-3">
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
                 <select
@@ -511,8 +518,8 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         <div className="flex-1 flex items-center justify-center p-10 text-center">
           <div>
             <div className="w-16 h-16 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-300"><MessageCircle size={24}/></div>
-            <h3 className="text-2xl font-bold tracking-tight mb-3">Chats will appear here</h3>
-            <p className="text-sm text-neutral-500 max-w-sm mx-auto">Use the same email when you book and the conversation will connect automatically.</p>
+            <h3 className="text-2xl font-bold tracking-tight mb-3">Your booking chats will appear here</h3>
+            <p className="text-sm text-neutral-500 max-w-sm mx-auto">Use the same email when you book and we will connect the conversation automatically.</p>
           </div>
         </div>
       )}
@@ -526,7 +533,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Booking Timeline</p>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">My <span className="native-accent-text">Bookings</span></h1>
-          <p className="text-sm md:text-base text-neutral-500 mt-2">Track upcoming requests, confirmed visits, waitlist spots, and reschedule conversations.</p>
+          <p className="text-sm md:text-base text-neutral-500 mt-2">Everything you have booked, requested, or need help with stays here.</p>
           {!bookings.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
         <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center">
@@ -559,8 +566,8 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         )) : (
           <div className="md:col-span-2 p-10 md:p-16 text-center">
             <div className="w-16 h-16 rounded-lg bg-white border border-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-300"><Calendar size={24}/></div>
-            <h3 className="text-2xl font-bold tracking-tight mb-3">No client bookings yet</h3>
-            <p className="text-sm text-neutral-500 max-w-md mx-auto">Bookings linked to {emailKey || 'your email'} will appear here after you submit a request.</p>
+            <h3 className="text-2xl font-bold tracking-tight mb-3">Your bookings will appear here</h3>
+            <p className="text-sm text-neutral-500 max-w-md mx-auto">Book with {emailKey || 'this email'} and your requests, approvals, waitlist spots, and reschedules will stay connected.</p>
           </div>
         )}
       </div>
@@ -675,28 +682,45 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-4 md:py-10">
-        <section className="mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-3 md:p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3 native-gradient-ring">
+        <section className="mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 native-gradient-ring">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-lg native-gradient-icon flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
               {activeView === 'chats' ? <MessageCircle size={18} /> : activeView === 'bookings' ? <BookOpen size={18} /> : <UserRound size={18} />}
             </div>
             <div>
-              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Client App</p>
+              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Your Booking Home</p>
               <h1 className="text-xl md:text-4xl font-bold tracking-tight">
-                {activeView === 'chats' ? <><span className="native-accent-text">Chats</span></> : activeView === 'bookings' ? 'My Bookings' : 'My Profile'}
-              </h1>
-              <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">
                 {activeView === 'chats'
-                  ? 'Message the businesses you booked with and keep every update in one thread.'
+                  ? <>Hi {firstName}, <span className="native-accent-text">stay connected.</span></>
                   : activeView === 'bookings'
-                    ? 'See your booking history, current status, and the quickest path to support.'
-                    : 'Manage your client account, app access, and sign-in session.'}
+                    ? 'Your bookings, all in one place.'
+                    : 'Your client profile.'}
+              </h1>
+              <p className="text-sm text-neutral-500 mt-1 max-w-2xl">
+                {activeView === 'chats'
+                  ? 'Message businesses you book with, follow approvals, and ask for help without hunting through old emails.'
+                  : activeView === 'bookings'
+                    ? 'See what is pending, confirmed, waitlisted, or ready to reschedule.'
+                    : 'Manage your account, app access, and the email that links your bookings.'}
               </p>
             </div>
           </div>
+          <div className="grid grid-cols-3 gap-2 lg:min-w-[290px]">
+            {[
+              ['Bookings', bookingSource.filter(item => !item.isExample).length || 0, BookOpen],
+              ['Updates', unreadCount, Bell],
+              ['Confirmed', confirmedCount, CheckCircle2]
+            ].map(([label, value, IconCmp]) => (
+              <div key={label} className="rounded-lg border border-neutral-100 bg-neutral-50/70 px-3 py-2.5">
+                <IconCmp size={14} className="mb-2 text-black" />
+                <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
+                <p className="metric-value text-lg font-bold text-black">{value}</p>
+              </div>
+            ))}
+          </div>
           {activeView === 'chats' && threadSource.length > 0 && (
-            <button type="button" onClick={() => openThread(threadSource[0].id)} className="h-10 md:h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
-              Latest Chat <ArrowRight size={13} />
+            <button type="button" onClick={() => openThread(threadSource[0].id)} className="h-10 md:h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors lg:ml-auto">
+              Open latest update <ArrowRight size={13} />
             </button>
           )}
         </section>
@@ -714,7 +738,7 @@ export function ClientPortal({ appId, db, user, onSignOut, onOwnerLogin, onInsta
         {activeView === 'profile' && renderProfile()}
       </main>
 
-      <nav className="fixed md:hidden left-3 right-3 bottom-4 z-40 rounded-[1.5rem] bg-white/90 backdrop-blur-xl border border-neutral-200 shadow-2xl shadow-black/10 p-2 grid grid-cols-3 gap-2">
+      <nav className={`${mobileChatOpen ? 'hidden' : 'grid'} fixed md:hidden left-3 right-3 bottom-4 z-40 rounded-[1.5rem] bg-white/90 backdrop-blur-xl border border-neutral-200 shadow-2xl shadow-black/10 p-2 grid-cols-3 gap-2`}>
         {navItems.map(item => {
           const IconCmp = item.icon;
           return (

@@ -118,6 +118,12 @@ export function WorkspaceInbox({
     linkedBooking?.staffId ? staffList.find(staff => staff.id === linkedBooking.staffId) : null
   ), [linkedBooking?.staffId, staffList]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    document.documentElement.classList.toggle('support-chat-open', mobileChatOpen);
+    return () => document.documentElement.classList.remove('support-chat-open');
+  }, [mobileChatOpen]);
+
   const createClientNotification = async (email, payload) => {
     const emailKey = notificationEmailKey(email);
     if (!db || !emailKey) return false;
@@ -230,6 +236,9 @@ export function WorkspaceInbox({
   };
 
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.ownerUnread || 0), 0);
+  const needsReplyCount = threads.filter(thread => Number(thread.ownerUnread || 0) > 0 || thread.rescheduleStatus === 'requested').length;
+  const openRequestCount = threads.filter(thread => ['pending', 'waitlist'].includes(thread.bookingStatus)).length;
+  const linkedBookingCount = threads.filter(thread => thread.bookingId).length;
   const filteredThreads = useMemo(() => {
     const queryText = threadQuery.trim().toLowerCase();
     if (!queryText) return threadSource;
@@ -251,15 +260,15 @@ export function WorkspaceInbox({
             <MessageCircle size={13} className="text-black" />
             Support Inbox
           </div>
-          <h2 className="text-lg md:text-2xl font-bold tracking-tight text-black">Chats tied to bookings.</h2>
-          <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Confirm, reschedule, and reply with the booking context beside the conversation.</p>
+          <h2 className="text-lg md:text-2xl font-bold tracking-tight text-black">Chat with your clients & manage their bookings!</h2>
+          <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Reply, confirm, reschedule, and keep every client conversation beside the booking it belongs to.</p>
           {!threads.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
         <div className="grid grid-cols-3 gap-2 lg:min-w-[250px]">
           {[
-            ['Threads', threads.length, MessageCircle],
-            ['Unread', unreadCount, Bell],
-            ['Linked', threads.filter(thread => thread.bookingId).length, Calendar]
+            ['Needs Reply', needsReplyCount, Bell],
+            ['Open Requests', openRequestCount, MessageCircle],
+            ['Linked Bookings', linkedBookingCount, Calendar]
           ].map(([label, value, IconCmp]) => (
             <div key={label} className="native-stat-card rounded-lg border border-neutral-100 bg-neutral-50 p-2.5 md:p-3">
               <div className="w-7 h-7 md:w-8 md:h-8 native-gradient-icon rounded-lg flex items-center justify-center mb-2">
@@ -334,8 +343,8 @@ export function WorkspaceInbox({
         <div className={`${mobileChatOpen ? 'fixed inset-0 z-[999] xl:static xl:z-auto' : 'hidden xl:flex'} xl:col-span-8 flex flex-col min-h-[100dvh] xl:min-h-[620px] bg-white`}>
           {activeThread ? (
             <>
-              <div className="p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex items-center justify-between gap-3 bg-white">
-                <div className="flex items-center gap-4 min-w-0">
+              <div className="p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
+                <div className="flex items-center gap-3 min-w-0">
                   <button type="button" onClick={() => setMobileChatOpen(false)} className="xl:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
                     <ArrowLeft size={18} />
                   </button>
@@ -349,24 +358,35 @@ export function WorkspaceInbox({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0 w-full sm:w-auto">
                   <button type="button" onClick={() => setChatFullscreen(value => !value)} className="hidden md:flex h-10 w-10 rounded-lg border border-neutral-200 bg-white items-center justify-center text-black hover:border-black transition-colors">
                     {chatFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                   </button>
-                  <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-4 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors">
-                    Open Bookings
+                  <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors">
+                    Bookings
                   </button>
-                  <button onClick={confirmLinkedBooking} className="h-10 px-3 md:px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+                  <button onClick={confirmLinkedBooking} className="h-10 px-3 md:px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">
                     <Check size={13} /> Confirm
                   </button>
                 </div>
               </div>
 
-              {assignedStaff && (
-                <div className="px-4 py-2 bg-neutral-50 border-b border-neutral-100 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: assignedStaff.color || '#39FF14' }} />
-                  {assignedStaff.photoURL ? <img src={assignedStaff.photoURL} alt="" className="w-5 h-5 rounded-full object-cover" /> : null}
-                  Staff member: {assignedStaff.name}
+              {(linkedBooking || assignedStaff) && (
+                <div className="px-3 md:px-5 py-2.5 bg-neutral-50 border-b border-neutral-100">
+                  <div className="grid grid-cols-3 gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
+                    <div className="rounded-lg bg-white border border-neutral-100 px-3 py-2 min-w-0">
+                      <p>Booking</p>
+                      <p className="mt-1 text-xs normal-case tracking-normal font-bold text-black truncate">{linkedBooking ? `${linkedBooking.date || 'Date'} / ${linkedBooking.time || 'Time'}` : 'Not linked yet'}</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-neutral-100 px-3 py-2 min-w-0">
+                      <p>Status</p>
+                      <p className="mt-1 text-xs normal-case tracking-normal font-bold text-black truncate">{linkedBooking?.status || activeThread.bookingStatus || 'Open'}</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-neutral-100 px-3 py-2 min-w-0">
+                      <p>Staff</p>
+                      <p className="mt-1 text-xs normal-case tracking-normal font-bold text-black truncate">{assignedStaff?.name || activeStaff?.name || 'Team'}</p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -384,7 +404,7 @@ export function WorkspaceInbox({
                 })}
               </div>
 
-              <div className="p-3 md:p-5 border-t border-neutral-100 bg-white">
+              <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:p-5 border-t border-neutral-100 bg-white">
                 <div className="flex items-end gap-2">
                   <textarea
                     value={draft}

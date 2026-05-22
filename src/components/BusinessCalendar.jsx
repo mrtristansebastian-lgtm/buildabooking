@@ -14,7 +14,7 @@ import { getLocalDateStr } from '../utils/dates';
             const [calendarViewMode, setCalendarViewMode] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'week' : 'month'
             ));
-            const [hidePastDays, setHidePastDays] = useState(false);
+            const [hidePastDays, setHidePastDays] = useState(true);
             const [isMobilePortraitCalendar, setIsMobilePortraitCalendar] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
             ));
@@ -113,6 +113,7 @@ import { getLocalDateStr } from '../utils/dates';
                 return (bookings || []).reduce((summary, booking) => {
                     const dateKey = getBookingDateKey(booking);
                     if (!dateKey || booking.status === 'declined') return summary;
+                    if (selectedCalendarId !== 'workspace' && booking.staffId !== selectedCalendarId) return summary;
                     if (!summary[dateKey]) summary[dateKey] = { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
                     summary[dateKey].total += 1;
                     if (booking.status === 'confirmed') summary[dateKey].confirmed += 1;
@@ -121,7 +122,7 @@ import { getLocalDateStr } from '../utils/dates';
                     if (booking.status !== 'waitlist' && booking.time !== 'Waitlist') summary[dateKey].reserved += 1;
                     return summary;
                 }, {});
-            }, [bookings, todayStr, currentMonth]);
+            }, [bookings, todayStr, currentMonth, selectedCalendarId]);
 
             const getCalendarBubble = (dateStr, config) => {
                 const dayBookings = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0 };
@@ -258,6 +259,36 @@ import { getLocalDateStr } from '../utils/dates';
             const selectedCapacity = selectedConfig?.available ? selectedConfig.times.length : 0;
             const selectedOpenSlots = expandedDate && expandedDate >= todayStr && selectedConfig?.available ? Math.max(0, selectedCapacity - selectedDayBookings.reserved) : 0;
             const selectedBookingRate = selectedCapacity ? Math.min(100, Math.round((selectedDayBookings.reserved / selectedCapacity) * 100)) : 0;
+            const selectedAgendaDate = calendarViewMode === 'day' && hidePastDays && expandedDate < todayStr ? todayStr : expandedDate;
+            const selectedDayBookingList = useMemo(() => {
+                const toMinutes = (time = '') => {
+                    const match = String(time).match(/^(\d{1,2}):(\d{2})/);
+                    if (!match) return 9999;
+                    return (Number(match[1]) * 60) + Number(match[2]);
+                };
+
+                return (bookings || [])
+                    .map(booking => ({ ...booking, dateKeyResolved: getBookingDateKey(booking) }))
+                    .filter(booking => (
+                        booking.dateKeyResolved === selectedAgendaDate &&
+                        booking.status !== 'declined' &&
+                        (selectedCalendarId === 'workspace' || booking.staffId === selectedCalendarId)
+                    ))
+                    .sort((a, b) => toMinutes(a.time) - toMinutes(b.time) || String(a.clientName || '').localeCompare(String(b.clientName || '')));
+            }, [bookings, selectedAgendaDate, selectedCalendarId, todayStr, currentMonth]);
+            const selectedDayBookingsByTime = useMemo(() => {
+                return selectedDayBookingList.reduce((groups, booking) => {
+                    const timeKey = booking.time || 'Unscheduled';
+                    groups[timeKey] = [...(groups[timeKey] || []), booking];
+                    return groups;
+                }, {});
+            }, [selectedDayBookingList]);
+            const getBookingStatusMeta = (booking) => {
+                if (booking?.status === 'confirmed') return { label: 'Confirmed', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+                if (booking?.status === 'waitlist' || booking?.time === 'Waitlist') return { label: 'Waitlist', className: 'bg-violet-50 text-violet-700 border-violet-100' };
+                if (booking?.status === 'pending') return { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-100' };
+                return { label: booking?.status || 'Request', className: 'bg-neutral-100 text-neutral-600 border-neutral-200' };
+            };
             const calendarAnchorDate = expandedDate ? dateFromKey(expandedDate) : new Date();
             const calendarWeekStart = addDaysToDate(calendarAnchorDate, -((calendarAnchorDate.getDay() + 6) % 7));
             const calendarWeekEnd = addDaysToDate(calendarWeekStart, 6);
@@ -300,24 +331,32 @@ import { getLocalDateStr } from '../utils/dates';
                     return dateStr;
                 });
             }, [calendarViewMode, expandedDate, hidePastDays, todayStr, daysInMonth, calendarWeekStart, calendarWeekEnd]);
+            const visibleCalendarDayCount = calendarDisplayDays.filter(Boolean).length;
+            const isForwardMonthBoard = calendarViewMode === 'month' && hidePastDays;
             const calendarGridClass = calendarViewMode === 'day'
                 ? 'grid-cols-1'
                 : calendarViewMode === 'week'
                     ? 'grid-cols-2 sm:grid-cols-7'
-                    : hidePastDays
-                        ? 'grid-cols-2 sm:grid-cols-7'
+                    : isForwardMonthBoard
+                        ? visibleCalendarDayCount <= 5
+                            ? 'grid-cols-[repeat(auto-fit,minmax(120px,1fr))]'
+                            : visibleCalendarDayCount <= 10
+                                ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5'
+                                : visibleCalendarDayCount <= 14
+                                    ? 'grid-cols-2 sm:grid-cols-4 xl:grid-cols-7'
+                                    : 'grid-cols-2 sm:grid-cols-5 xl:grid-cols-7'
                         : 'grid-cols-7';
             const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-2 sm:grid-cols-7' : 'grid-cols-7';
             const calendarHeaderVisibilityClass = calendarViewMode === 'month'
-                ? (hidePastDays ? 'hidden' : 'grid')
+                ? (isForwardMonthBoard ? 'hidden' : 'grid')
                 : 'hidden sm:grid';
-            const calendarFrameClass = calendarViewMode === 'month' ? 'min-w-0 md:min-w-[560px] xl:min-w-0' : 'min-w-0';
+            const calendarFrameClass = calendarViewMode === 'month' && !isForwardMonthBoard ? 'min-w-0 md:min-w-[560px] xl:min-w-0' : 'min-w-0';
             const calendarCellSizeClass = calendarViewMode === 'day'
-                ? 'min-h-[150px] md:min-h-[180px]'
+                ? 'min-h-[420px] md:min-h-[460px]'
                 : calendarViewMode === 'week'
                     ? 'min-h-[116px] md:min-h-[128px]'
-                    : hidePastDays
-                        ? 'min-h-[116px] md:min-h-[128px]'
+                    : isForwardMonthBoard
+                        ? 'min-h-[132px] md:min-h-[148px]'
                         : 'min-h-[92px] md:min-h-[120px]';
 
             const setCalendarScope = (mode) => {
@@ -547,8 +586,8 @@ import { getLocalDateStr } from '../utils/dates';
                         </div>
                     </section>
 
-                    <div className="grid grid-cols-1 min-[1400px]:grid-cols-[minmax(0,1fr)_340px] gap-6">
-                        <section data-tour="schedule-calendar" className={`saas-card schedule-calendar-card schedule-mode-${calendarViewMode} ${hidePastDays ? 'schedule-forward-days' : ''} overflow-hidden`}>
+                    <div className="grid grid-cols-1 min-[1400px]:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+                        <section data-tour="schedule-calendar" className={`saas-card schedule-calendar-card schedule-mode-${calendarViewMode} ${hidePastDays ? 'schedule-forward-days' : ''} ${calendarViewMode === 'day' ? 'min-[1400px]:col-span-2' : ''} overflow-hidden`}>
                             <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-5 bg-white">
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
@@ -626,6 +665,154 @@ import { getLocalDateStr } from '../utils/dates';
                                             closed: 'bg-red-50 text-red-600 border-red-100',
                                             full: 'bg-amber-50 text-amber-700 border-amber-100'
                                         }[calendarBubble.tone];
+
+                                        if (calendarViewMode === 'day') {
+                                            const daySummary = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
+                                            const dayCapacity = config.available ? config.times.length : 0;
+                                            const dayOpenSlots = dateStr >= todayStr && config.available ? Math.max(0, dayCapacity - daySummary.reserved) : 0;
+                                            const dayRate = dayCapacity ? Math.min(100, Math.round((daySummary.reserved / dayCapacity) * 100)) : 0;
+                                            const unslottedBookings = selectedDayBookingList.filter(booking => !config.times.includes(booking.time));
+
+                                            return (
+                                                <div
+                                                    key={dateStr}
+                                                    className={`schedule-day-agenda-card relative ${calendarCellSizeClass} rounded-lg border p-4 md:p-5 overflow-hidden ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent' : 'bg-white border-neutral-200'}`}
+                                                >
+                                                    {!isPastDay && (
+                                                        <button
+                                                            type="button"
+                                                            aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
+                                                            title={config.available ? 'Mark unavailable' : 'Mark available'}
+                                                            onClick={() => toggleDateAvailability(dateStr)}
+                                                            className={`absolute right-4 top-4 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-300 shadow-sm z-10 ${config.available ? 'bg-[#39FF14] border-transparent text-black' : 'bg-red-500 border-red-500 text-white'}`}
+                                                        >
+                                                            {config.available ? <Check size={14}/> : <X size={14}/>}
+                                                        </button>
+                                                    )}
+
+                                                    <div className="grid grid-cols-1 xl:grid-cols-[0.82fr_1.18fr] gap-5 h-full">
+                                                        <div className="flex flex-col min-h-0 pr-0 xl:pr-3">
+                                                            <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">
+                                                                {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                                            </p>
+                                                            <div className="flex items-start justify-between gap-4 mb-5">
+                                                                <div>
+                                                                    <p className="metric-value text-5xl md:text-6xl font-black tracking-tight leading-none text-black">{dayNum}</p>
+                                                                    <div className="mt-3 flex flex-wrap gap-1.5">
+                                                                        {isToday && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-black text-white">Today</span>}
+                                                                        {isCustom && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Custom</span>}
+                                                                        <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${config.available ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{config.available ? 'Open' : 'Closed'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-3 gap-2 mb-5">
+                                                                {[
+                                                                    { label: 'Booked', value: daySummary.reserved },
+                                                                    { label: 'Open', value: dayOpenSlots },
+                                                                    { label: 'Rate', value: `${dayRate}%` }
+                                                                ].map(item => (
+                                                                    <div key={item.label} className="rounded-lg border border-neutral-100 bg-neutral-50/80 px-3 py-3">
+                                                                        <p className="metric-value text-xl md:text-2xl font-bold text-black leading-none">{item.value}</p>
+                                                                        <p className="mt-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">{item.label}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            <div className="rounded-lg border border-neutral-100 bg-neutral-50/70 p-3 mt-auto">
+                                                                <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Day Flow</p>
+                                                                <p className="text-sm text-neutral-600 leading-snug">
+                                                                    {selectedDayBookingList.length
+                                                                        ? `${selectedDayBookingList.length} booking ${selectedDayBookingList.length === 1 ? 'record' : 'records'} synced to this calendar.`
+                                                                        : 'No bookings yet. Open slots are ready for clients.'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+                                                            <div className="rounded-lg border border-neutral-100 bg-white p-3 md:p-4 min-h-0">
+                                                                <div className="flex items-center justify-between gap-3 mb-3">
+                                                                    <div>
+                                                                        <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Slot Timeline</p>
+                                                                        <p className="text-sm font-bold text-black">{config.times.length || 0} times available</p>
+                                                                    </div>
+                                                                    <Clock size={16} className="text-neutral-300" />
+                                                                </div>
+                                                                <div className="space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
+                                                                    {config.times.length ? config.times.map(time => {
+                                                                        const timeBookings = selectedDayBookingsByTime[time] || [];
+                                                                        const hasBookings = timeBookings.length > 0;
+                                                                        return (
+                                                                            <div key={time} className="rounded-lg border border-neutral-100 bg-neutral-50/70 px-3 py-3">
+                                                                                <div className="flex items-center justify-between gap-3">
+                                                                                    <div className="flex items-center gap-3 min-w-0">
+                                                                                        <span className="w-8 h-8 rounded-md bg-white border border-neutral-100 flex items-center justify-center shrink-0">
+                                                                                            <Clock size={13} className="text-neutral-400"/>
+                                                                                        </span>
+                                                                                        <div className="min-w-0">
+                                                                                            <p className="text-sm font-black tracking-widest text-black">{time}</p>
+                                                                                            <p className="text-[10px] text-neutral-400 font-semibold truncate">{hasBookings ? timeBookings.map(booking => booking.clientName || 'Client').join(', ') : 'Available for booking'}</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <span className={`shrink-0 rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${hasBookings ? 'bg-black text-white border-black' : 'bg-white text-neutral-500 border-neutral-200'}`}>
+                                                                                        {hasBookings ? `${timeBookings.length} booked` : 'Open'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }) : (
+                                                                        <div className="rounded-lg border border-dashed border-neutral-200 p-5 text-center text-sm font-medium text-neutral-400">No slots set for this day.</div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="rounded-lg border border-neutral-100 bg-white p-3 md:p-4 min-h-0">
+                                                                <div className="flex items-center justify-between gap-3 mb-3">
+                                                                    <div>
+                                                                        <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Bookings</p>
+                                                                        <p className="text-sm font-bold text-black">{selectedDayBookingList.length ? 'Synced records' : 'Clear day'}</p>
+                                                                    </div>
+                                                                    <CalendarCheck size={16} className="text-neutral-300" />
+                                                                </div>
+                                                                <div className="space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
+                                                                    {selectedDayBookingList.length ? selectedDayBookingList.map(booking => {
+                                                                        const statusMeta = getBookingStatusMeta(booking);
+                                                                        return (
+                                                                            <div key={booking.id || `${booking.clientName}-${booking.time}`} className="rounded-lg border border-neutral-100 bg-neutral-50/70 px-3 py-3">
+                                                                                <div className="flex items-start justify-between gap-3">
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-sm font-black text-black truncate">{booking.clientName || 'Client'}</p>
+                                                                                        <p className="text-xs text-neutral-500 mt-1 truncate">{booking.clientPhone || booking.clientEmail || booking.email || 'Client details saved'}</p>
+                                                                                    </div>
+                                                                                    <span className={`shrink-0 rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${statusMeta.className}`}>{statusMeta.label}</span>
+                                                                                </div>
+                                                                                <div className="mt-3 flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                                                                                    <span>{booking.time || 'Unscheduled'}</span>
+                                                                                    {booking.staffName && <span className="truncate">With {booking.staffName}</span>}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }) : (
+                                                                        <div className="rounded-lg border border-dashed border-neutral-200 p-5 text-center">
+                                                                            <CalendarCheck size={20} className="mx-auto mb-2 text-neutral-300" />
+                                                                            <p className="text-sm font-bold text-black">No appointments yet</p>
+                                                                            <p className="text-xs text-neutral-400 mt-1">New requests for this day will appear here.</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {unslottedBookings.length > 0 && (
+                                                                        <div className="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-3">
+                                                                            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-violet-700 mb-1">Needs placement</p>
+                                                                            <p className="text-xs text-violet-700">{unslottedBookings.length} booking {unslottedBookings.length === 1 ? 'record is' : 'records are'} not tied to a visible slot.</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
 
                                         return (
                                             <div

@@ -1187,6 +1187,17 @@ body {
             box-shadow: none !important;
         }
 
+        .support-chat-open .mobile-bottom-nav,
+        .support-chat-open .mobile-guest-auth-cta,
+        .client-chat-open .mobile-bottom-nav,
+        .client-chat-open .mobile-guest-auth-cta {
+            transform: translateY(120%) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+
         .mobile-editor-shell,
         .mobile-editor-panel,
         .mobile-editor-preview {

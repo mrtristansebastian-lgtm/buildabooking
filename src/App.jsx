@@ -4760,7 +4760,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Client Support</p>
                                     <h2 className="text-3xl md:text-6xl font-bold tracking-tight text-black">Support Inbox</h2>
                                 </div>
-                                <p className="text-sm md:text-base text-neutral-500 font-medium max-w-2xl">Reply to clients, manage reschedules, and keep booking context in one clean thread.</p>
+                                <p className="text-sm md:text-base text-neutral-500 font-medium max-w-2xl">Chat with your clients, manage their bookings, and keep every request, reschedule, and update in one clean workspace.</p>
                             </header>
 
                             <div className="max-w-7xl">
