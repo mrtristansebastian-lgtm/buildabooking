@@ -37,6 +37,7 @@ export function WorkspaceInbox({
   const [sending, setSending] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [chatFullscreen, setChatFullscreen] = useState(false);
+  const [actionDialog, setActionDialog] = useState(null);
 
   const exampleThread = useMemo(() => ({
     id: 'example-support-thread',
@@ -235,7 +236,7 @@ export function WorkspaceInbox({
     showToast?.('Booking confirmed and client thread updated.');
   };
 
-  const offerReschedule = async () => {
+  const offerReschedule = () => {
     if (activeThread?.isExample) {
       showToast?.('Example preview only. Live threads can send reschedule options.');
       return;
@@ -245,31 +246,31 @@ export function WorkspaceInbox({
       return;
     }
 
-    const currentDate = linkedBooking?.date || '';
-    const currentTime = linkedBooking?.time || '';
-    const nextDate = typeof window === 'undefined'
-      ? currentDate
-      : window.prompt('What date should we offer this client?', currentDate);
-    if (nextDate === null) return;
-    const cleanDate = String(nextDate || '').trim();
+    setActionDialog({
+      type: 'reschedule',
+      title: 'Offer a new time',
+      eyebrow: 'Reschedule',
+      date: linkedBooking?.date || '',
+      time: linkedBooking?.time || '',
+      message: ''
+    });
+  };
+
+  const submitRescheduleOffer = async () => {
+    const cleanDate = String(actionDialog?.date || '').trim();
     if (!cleanDate) {
       showToast?.('Add a date before sending a reschedule option.');
       return;
     }
 
-    const nextTime = typeof window === 'undefined'
-      ? currentTime
-      : window.prompt('What time should we offer this client?', currentTime);
-    if (nextTime === null) return;
-    const cleanTime = String(nextTime || '').trim();
+    const cleanTime = String(actionDialog?.time || '').trim();
     if (!cleanTime) {
       showToast?.('Add a time before sending a reschedule option.');
       return;
     }
 
-    const message = `Reschedule option: ${cleanDate} at ${cleanTime}. Reply here to confirm and we will update your booking.`;
-    const confirmed = typeof window === 'undefined' || window.confirm(`Send this reschedule option to ${activeThread.clientName || 'this client'}?`);
-    if (!confirmed) return;
+    const message = String(actionDialog?.message || '').trim()
+      || `Reschedule option: ${cleanDate} at ${cleanTime}. Reply here to confirm and we will update your booking.`;
 
     if (db && activeThread.id) {
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
@@ -279,10 +280,11 @@ export function WorkspaceInbox({
       }).catch(() => {});
     }
     await sendMessage(message);
+    setActionDialog(null);
     showToast?.('Reschedule option sent to the client.');
   };
 
-  const sendRunningLateUpdate = async () => {
+  const sendRunningLateUpdate = () => {
     if (activeThread?.isExample) {
       showToast?.('Example preview only. Live threads can send running-late updates.');
       return;
@@ -292,23 +294,39 @@ export function WorkspaceInbox({
       return;
     }
 
-    const minutesValue = typeof window === 'undefined'
-      ? '10'
-      : window.prompt('How many minutes late should we tell the client?', '10');
-    if (minutesValue === null) return;
-    const cleanMinutes = String(minutesValue || '').trim();
+    setActionDialog({
+      type: 'late',
+      title: 'Send running-late update',
+      eyebrow: 'Quick Update',
+      minutes: '10',
+      message: ''
+    });
+  };
+
+  const submitRunningLateUpdate = async () => {
+    const cleanMinutes = String(actionDialog?.minutes || '').trim();
     if (!cleanMinutes) {
       showToast?.('Add the number of minutes before sending.');
       return;
     }
 
-    const message = `Running ${cleanMinutes} minutes late. Thanks for your patience - we will keep you posted here.`;
-    const confirmed = typeof window === 'undefined' || window.confirm(`Send this running-late update to ${activeThread.clientName || 'this client'}?`);
-    if (!confirmed) return;
+    const message = String(actionDialog?.message || '').trim()
+      || `Running ${cleanMinutes} minutes late. Thanks for your patience - we will keep you posted here.`;
 
     await sendMessage(message);
+    setActionDialog(null);
     showToast?.('Running-late update sent.');
   };
+
+  const bookingStatus = String(linkedBooking?.status || activeThread?.bookingStatus || '').toLowerCase();
+  const bookingActionMeta = (() => {
+    if (activeThread?.isExample) return { label: 'Preview', disabled: false, className: 'native-gradient-button' };
+    if (!linkedBooking) return { label: 'No Booking', disabled: true, className: 'bg-neutral-100 text-neutral-400 border border-neutral-200' };
+    if (bookingStatus === 'confirmed') return { label: 'Confirmed', disabled: true, className: 'bg-emerald-50 text-emerald-700 border border-emerald-100' };
+    if (bookingStatus === 'declined') return { label: 'Declined', disabled: true, className: 'bg-red-50 text-red-600 border border-red-100' };
+    if (bookingStatus === 'waitlist') return { label: 'Confirm Waitlist', disabled: false, className: 'native-gradient-button' };
+    return { label: 'Confirm', disabled: false, className: 'native-gradient-button' };
+  })();
 
   const unreadCount = threads.reduce((sum, thread) => sum + Number(thread.ownerUnread || 0), 0);
   const needsReplyCount = threads.filter(thread => Number(thread.ownerUnread || 0) > 0 || thread.rescheduleStatus === 'requested').length;
@@ -327,6 +345,7 @@ export function WorkspaceInbox({
   }, [threadQuery, threadSource]);
 
   return (
+    <>
     <section data-tour="client-inbox" className={`saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
       <div className="h-1 native-gradient-line" />
       <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} border-b border-neutral-100 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4`}>
@@ -446,8 +465,8 @@ export function WorkspaceInbox({
                   <button onClick={sendRunningLateUpdate} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
                     <Clock size={13} /> Running Late
                   </button>
-                  <button onClick={confirmLinkedBooking} className="h-10 px-3 md:px-4 rounded-lg native-gradient-button text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">
-                    <Check size={13} /> Confirm
+                  <button onClick={confirmLinkedBooking} disabled={bookingActionMeta.disabled} className={`h-10 px-3 md:px-4 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed ${bookingActionMeta.className}`}>
+                    <Check size={13} /> {bookingActionMeta.label}
                   </button>
                 </div>
               </div>
@@ -512,5 +531,88 @@ export function WorkspaceInbox({
         </div>
       </div>
     </section>
+    {actionDialog && (
+      <div className="fixed inset-0 z-[1200] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="w-full sm:max-w-lg rounded-t-[1.5rem] sm:rounded-[1.25rem] bg-white border border-neutral-100 shadow-2xl p-5 sm:p-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">{actionDialog.eyebrow}</p>
+              <h3 className="text-2xl font-bold tracking-tight text-black">{actionDialog.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                {actionDialog.type === 'reschedule'
+                  ? `Send ${activeThread?.clientName || 'this client'} a clear reschedule option inside this thread.`
+                  : `Send ${activeThread?.clientName || 'this client'} a running-late update without leaving the inbox.`}
+              </p>
+            </div>
+            <button type="button" onClick={() => setActionDialog(null)} className="w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+
+          {actionDialog.type === 'reschedule' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <label className="block">
+                <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Date</span>
+                <input
+                  value={actionDialog.date}
+                  onChange={(event) => setActionDialog(prev => ({ ...prev, date: event.target.value }))}
+                  placeholder="Friday, May 22"
+                  className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Time</span>
+                <input
+                  value={actionDialog.time}
+                  onChange={(event) => setActionDialog(prev => ({ ...prev, time: event.target.value }))}
+                  placeholder="14:30"
+                  className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+                />
+              </label>
+            </div>
+          ) : (
+            <label className="block mb-4">
+              <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Minutes Late</span>
+              <input
+                type="number"
+                min="1"
+                value={actionDialog.minutes}
+                onChange={(event) => setActionDialog(prev => ({ ...prev, minutes: event.target.value }))}
+                placeholder="10"
+                className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+              />
+            </label>
+          )}
+
+          <label className="block mb-5">
+            <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Message Preview</span>
+            <textarea
+              rows={4}
+              value={actionDialog.message}
+              onChange={(event) => setActionDialog(prev => ({ ...prev, message: event.target.value }))}
+              placeholder={actionDialog.type === 'reschedule'
+                ? `Reschedule option: ${actionDialog.date || 'new date'} at ${actionDialog.time || 'new time'}. Reply here to confirm and we will update your booking.`
+                : `Running ${actionDialog.minutes || '10'} minutes late. Thanks for your patience - we will keep you posted here.`}
+              className="w-full resize-none rounded-lg bg-neutral-50 border border-neutral-100 px-4 py-3 text-sm leading-relaxed text-black outline-none focus:bg-white focus:border-black transition-colors"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setActionDialog(null)} className="h-12 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={actionDialog.type === 'reschedule' ? submitRescheduleOffer : submitRunningLateUpdate}
+              disabled={sending}
+              className="h-12 rounded-full native-gradient-button text-black text-[10px] font-bold uppercase tracking-[0.12em] disabled:opacity-50 disabled:cursor-wait"
+            >
+              {sending ? 'Sending' : 'Send Update'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

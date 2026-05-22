@@ -740,9 +740,9 @@ body {
 
             .dashboard-main > div:not(.mobile-editor-shell) > header h1,
             .dashboard-main > div:not(.mobile-editor-shell) > header h2 {
-                font-size: 2rem !important;
-                line-height: 0.95 !important;
-                letter-spacing: -0.045em !important;
+                font-size: 2.45rem !important;
+                line-height: 0.92 !important;
+                letter-spacing: -0.025em !important;
                 margin-bottom: 0.45rem !important;
             }
 
@@ -798,7 +798,7 @@ body {
             .dashboard-main > div:not(.mobile-editor-shell) .metric-value {
                 font-size: 1.65rem !important;
                 line-height: 0.95 !important;
-                letter-spacing: -0.045em !important;
+                letter-spacing: -0.025em !important;
             }
 
             .dashboard-main > div:not(.mobile-editor-shell) .text-3xl,
@@ -823,8 +823,8 @@ body {
                 height: 0.95rem;
             }
 
-            .dashboard-main > div:not(.mobile-editor-shell) [class*="tracking-"] {
-                letter-spacing: 0.18em !important;
+            .dashboard-main > div:not(.mobile-editor-shell) .uppercase[class*="tracking-"] {
+                letter-spacing: 0.075em !important;
             }
 
             .dashboard-main > div:not(.mobile-editor-shell) span[class*="uppercase"][class*="rounded-md"],
@@ -1213,11 +1213,58 @@ body {
 
         .dashboard-page-header h1,
         .dashboard-page-header h2 {
-            letter-spacing: -0.045em;
+            font-family: inherit;
+            font-weight: 700;
+            letter-spacing: -0.025em !important;
             line-height: 0.95;
         }
 
+        .dashboard-page-header p {
+            letter-spacing: 0 !important;
+            line-height: 1.45;
+        }
+
+        .native-ui .tracking-widest,
+        .native-ui [class*="tracking-["],
+        .backend-skin .tracking-widest,
+        .backend-skin [class*="tracking-["] {
+            letter-spacing: 0.075em !important;
+        }
+
+        .native-ui button.uppercase,
+        .native-ui a.uppercase,
+        .backend-skin button.uppercase,
+        .backend-skin a.uppercase {
+            letter-spacing: 0.075em !important;
+        }
+
+        .native-ui h1,
+        .native-ui h2,
+        .native-ui h3,
+        .backend-skin h1,
+        .backend-skin h2,
+        .backend-skin h3,
+        .editor-panel-header h2 {
+            letter-spacing: -0.025em !important;
+        }
+
+        .editor-tab-button {
+            letter-spacing: 0.075em !important;
+        }
+
+        .native-ui .metric-value,
+        .backend-skin .metric-value {
+            letter-spacing: -0.025em !important;
+        }
+
         @media (max-width: 767px) {
+            .dashboard-page-header h1,
+            .dashboard-page-header h2 {
+                font-size: 2.45rem !important;
+                letter-spacing: -0.025em !important;
+                line-height: 0.92 !important;
+            }
+
             .dashboard-page-header p {
                 display: none !important;
             }
@@ -1264,7 +1311,7 @@ body {
                 padding-top: 1rem !important;
                 padding-bottom: 1rem !important;
                 font-size: 0.58rem !important;
-                letter-spacing: 0.34em !important;
+                letter-spacing: 0.12em !important;
             }
         }
 
@@ -1306,7 +1353,7 @@ body {
                 padding-top: 0.85rem !important;
                 padding-bottom: 0.85rem !important;
                 font-size: 0.58rem !important;
-                letter-spacing: 0.34em !important;
+                letter-spacing: 0.12em !important;
             }
             .mobile-editor-panel.mobile-editor-panel-collapsed {
                 width: 0 !important;
@@ -1350,7 +1397,7 @@ body {
             .mobile-editor-device-option {
                 padding-left: 1.25rem !important;
                 padding-right: 1.25rem !important;
-                letter-spacing: 0.24em !important;
+                letter-spacing: 0.1em !important;
             }
             .mobile-editor-install-action {
                 height: 2.4rem !important;
@@ -1420,7 +1467,7 @@ body {
                 padding-top: 0.85rem !important;
                 padding-bottom: 0.85rem !important;
                 font-size: 0.58rem !important;
-                letter-spacing: 0.34em !important;
+                letter-spacing: 0.12em !important;
             }
             .mobile-editor-panel.mobile-editor-panel-collapsed {
                 width: 0 !important;
@@ -1467,7 +1514,7 @@ body {
             .mobile-editor-device-option {
                 padding-left: 1.25rem !important;
                 padding-right: 1.25rem !important;
-                letter-spacing: 0.24em !important;
+                letter-spacing: 0.1em !important;
             }
             .mobile-editor-install-action {
                 height: 2.4rem !important;
@@ -1527,7 +1574,7 @@ body {
             .mobile-editor-panel .editor-panel-header h2 {
                 font-size: 2rem !important;
                 line-height: 0.95 !important;
-                letter-spacing: -0.045em !important;
+                letter-spacing: -0.025em !important;
             }
 
             .mobile-editor-panel .editor-tab-rail {
@@ -1613,7 +1660,7 @@ body {
 
             .mobile-editor-panel .editor-panel-scroll label[class*="tracking"],
             .mobile-editor-panel .editor-panel-scroll p[class*="tracking"] {
-                letter-spacing: 0.24em !important;
+                letter-spacing: 0.09em !important;
             }
 
             .mobile-editor-panel .editor-panel-scroll input[type="text"],

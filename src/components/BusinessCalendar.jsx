@@ -3,11 +3,25 @@ import { CalendarCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, P
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
-        export const BusinessCalendar = ({ settings, setSettings, onSave, showToast, bookings = [], staffList = [], activeStaffId = 'owner', workspaceRole = 'owner' }) => {
+        export const BusinessCalendar = ({
+            settings,
+            setSettings,
+            onSave,
+            showToast,
+            bookings = [],
+            staffList = [],
+            activeStaffId = 'owner',
+            workspaceRole = 'owner',
+            googleCalendarState = {},
+            onConnectGoogleCalendar,
+            onSyncGoogleCalendar
+        }) => {
             const [currentMonth, setCurrentMonth] = useState(new Date());
             const [expandedDate, setExpandedDate] = useState(getLocalDateStr(new Date()));
             const [isAddingSlot, setIsAddingSlot] = useState(false);
             const [newSlotTime, setNewSlotTime] = useState('18:00');
+            const [isAddingDefaultSlot, setIsAddingDefaultSlot] = useState(false);
+            const [defaultSlotTime, setDefaultSlotTime] = useState('12:00');
             const [scheduleStatsPeriod, setScheduleStatsPeriod] = useState('month');
             const initialCalendarId = workspaceRole === 'staff' ? (activeStaffId || 'owner') : 'workspace';
             const [selectedCalendarId, setSelectedCalendarId] = useState(initialCalendarId);
@@ -21,11 +35,17 @@ import { getLocalDateStr } from '../utils/dates';
             useEffect(() => {
                 if (workspaceRole === 'staff' && activeStaffId) setSelectedCalendarId(activeStaffId);
             }, [activeStaffId, workspaceRole]);
+            const staffMembersForCoverage = useMemo(() => (
+                (staffList || []).filter(staff => staff?.id && staff.accessEnabled !== false)
+            ), [staffList]);
             const staffCalendarOptions = useMemo(() => {
-                const options = [{ id: 'workspace', name: 'Business Calendar', role: 'Shared', color: '#000000' }];
+                const options = [
+                    { id: 'workspace', name: 'Business Calendar', role: 'Shared', color: '#000000' },
+                    ...(workspaceRole === 'staff' ? [] : [{ id: 'all-staff', name: 'All Staff', role: 'Team coverage', color: '#755CFF' }])
+                ];
                 return [
                     ...options,
-                    ...(staffList || []).map(staff => ({
+                    ...staffMembersForCoverage.map(staff => ({
                         id: staff.id,
                         name: staff.name || 'Team member',
                         role: staff.role === 'owner' ? 'Owner' : staff.role === 'admin' ? 'Admin' : 'Staff',
@@ -33,16 +53,35 @@ import { getLocalDateStr } from '../utils/dates';
                         photoURL: staff.photoURL || ''
                     }))
                 ].filter((calendar, index, list) => calendar.id && list.findIndex(item => item.id === calendar.id) === index);
-            }, [staffList]);
+            }, [staffMembersForCoverage, workspaceRole]);
             const selectedCalendar = staffCalendarOptions.find(calendar => calendar.id === selectedCalendarId) || staffCalendarOptions[0];
             const visibleCalendarOptions = workspaceRole === 'staff'
                 ? staffCalendarOptions.filter(calendar => calendar.id === selectedCalendarId)
                 : staffCalendarOptions;
-            const activeStaffCalendar = selectedCalendarId === 'workspace' ? null : (settings.staffCalendars?.[selectedCalendarId] || {});
-            const activeSchedule = selectedCalendarId === 'workspace' ? (settings.schedule || {}) : (activeStaffCalendar?.schedule || {});
-            const defaultTimes = Array.isArray(activeStaffCalendar?.availableTimes)
-                ? activeStaffCalendar.availableTimes
-                : Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
+            const isWorkspaceCalendar = selectedCalendarId === 'workspace';
+            const isAggregateCalendar = selectedCalendarId === 'all-staff';
+            const isSingleStaffCalendar = !isWorkspaceCalendar && !isAggregateCalendar;
+            const activeStaffCalendar = isSingleStaffCalendar ? (settings.staffCalendars?.[selectedCalendarId] || {}) : null;
+            const activeSchedule = isSingleStaffCalendar ? (activeStaffCalendar?.schedule || {}) : (settings.schedule || {});
+            const businessDefaultTimes = Array.isArray(settings.availableTimes) ? settings.availableTimes : [];
+            const getCalendarDefaultTimes = (calendarId) => {
+                if (calendarId === 'workspace') return businessDefaultTimes;
+                const staffCalendar = settings.staffCalendars?.[calendarId] || {};
+                return Array.isArray(staffCalendar.availableTimes) ? staffCalendar.availableTimes : businessDefaultTimes;
+            };
+            const getCalendarDayConfig = (calendarId, dateStr) => {
+                const schedule = calendarId === 'workspace'
+                    ? (settings.schedule || {})
+                    : (settings.staffCalendars?.[calendarId]?.schedule || {});
+                const savedConfig = schedule?.[dateStr];
+                return {
+                    available: savedConfig?.available ?? true,
+                    times: Array.isArray(savedConfig?.times) ? savedConfig.times : [...getCalendarDefaultTimes(calendarId)]
+                };
+            };
+            const defaultTimes = isAggregateCalendar
+                ? [...new Set(staffMembersForCoverage.flatMap(staff => getCalendarDefaultTimes(staff.id)))].sort()
+                : getCalendarDefaultTimes(selectedCalendarId);
             const todayStr = getLocalDateStr(new Date());
             const monthLookup = {
                 jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
@@ -78,11 +117,25 @@ import { getLocalDateStr } from '../utils/dates';
             }, [currentMonth]);
 
             const getDayConfig = (dateStr) => {
-                const savedConfig = activeSchedule?.[dateStr];
-                return {
-                    available: savedConfig?.available ?? true,
-                    times: Array.isArray(savedConfig?.times) ? savedConfig.times : [...defaultTimes]
-                };
+                if (isAggregateCalendar) {
+                    const businessConfig = getCalendarDayConfig('workspace', dateStr);
+                    if (!businessConfig.available) return { available: false, times: [] };
+                    if (!staffMembersForCoverage.length) return businessConfig;
+                    const businessTimes = new Set(businessConfig.times || []);
+                    const coveredTimes = staffMembersForCoverage
+                        .flatMap(staff => {
+                            const staffConfig = getCalendarDayConfig(staff.id, dateStr);
+                            if (!staffConfig.available) return [];
+                            return (staffConfig.times || []).filter(time => !businessTimes.size || businessTimes.has(time));
+                        });
+                    const uniqueTimes = [...new Set(coveredTimes)].sort();
+                    return {
+                        available: uniqueTimes.length > 0,
+                        times: uniqueTimes
+                    };
+                }
+
+                return getCalendarDayConfig(selectedCalendarId, dateStr);
             };
 
             const getBookingDateKey = (booking) => {
@@ -113,7 +166,7 @@ import { getLocalDateStr } from '../utils/dates';
                 return (bookings || []).reduce((summary, booking) => {
                     const dateKey = getBookingDateKey(booking);
                     if (!dateKey || booking.status === 'declined') return summary;
-                    if (selectedCalendarId !== 'workspace' && booking.staffId !== selectedCalendarId) return summary;
+                    if (isSingleStaffCalendar && booking.staffId !== selectedCalendarId) return summary;
                     if (!summary[dateKey]) summary[dateKey] = { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
                     summary[dateKey].total += 1;
                     if (booking.status === 'confirmed') summary[dateKey].confirmed += 1;
@@ -122,7 +175,7 @@ import { getLocalDateStr } from '../utils/dates';
                     if (booking.status !== 'waitlist' && booking.time !== 'Waitlist') summary[dateKey].reserved += 1;
                     return summary;
                 }, {});
-            }, [bookings, todayStr, currentMonth, selectedCalendarId]);
+            }, [bookings, todayStr, currentMonth, selectedCalendarId, isSingleStaffCalendar]);
 
             const getCalendarBubble = (dateStr, config) => {
                 const dayBookings = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0 };
@@ -149,8 +202,12 @@ import { getLocalDateStr } from '../utils/dates';
             };
 
             const updateDateConfig = (dateStr, nextConfig) => {
+                if (isAggregateCalendar) {
+                    showToast("Choose Business Calendar or a staff member to edit availability.");
+                    return;
+                }
                 setSettings(prev => {
-                    if (selectedCalendarId === 'workspace') {
+                    if (isWorkspaceCalendar) {
                         return {
                             ...prev,
                             schedule: {
@@ -186,38 +243,36 @@ import { getLocalDateStr } from '../utils/dates';
                 });
             };
 
-            const promptForTime = (message, fallback, onSubmit) => {
-                const newTime = prompt(message, fallback);
-                const time = newTime?.trim();
+            const saveDefaultTime = () => {
+                if (isAggregateCalendar) {
+                    showToast("Choose Business Calendar or a staff member to add default times.");
+                    return;
+                }
+                const time = defaultSlotTime?.trim();
                 if (!time) return;
-                onSubmit(time);
-            };
-
-            const addDefaultTime = () => {
-                promptForTime("Enter time (e.g. 11:30)", "12:00", (time) => {
-                    if (defaultTimes.includes(time)) {
-                        showToast("That slot already exists.");
-                        return;
+                if (defaultTimes.includes(time)) {
+                    showToast("That slot already exists.");
+                    return;
+                }
+                setSettings(prev => {
+                    if (isWorkspaceCalendar) {
+                        return { ...prev, availableTimes: [...(prev.availableTimes || []), time].sort() };
                     }
-                    setSettings(prev => {
-                        if (selectedCalendarId === 'workspace') {
-                            return { ...prev, availableTimes: [...(prev.availableTimes || []), time].sort() };
-                        }
-                        const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
-                        return {
-                            ...prev,
-                            staffCalendars: {
-                                ...(prev.staffCalendars || {}),
-                                [selectedCalendarId]: {
-                                    ...previousCalendar,
-                                    staffId: selectedCalendarId,
-                                    availableTimes: [...(Array.isArray(previousCalendar.availableTimes) ? previousCalendar.availableTimes : defaultTimes), time].sort(),
-                                    updatedAt: Date.now()
-                                }
+                    const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
+                    return {
+                        ...prev,
+                        staffCalendars: {
+                            ...(prev.staffCalendars || {}),
+                            [selectedCalendarId]: {
+                                ...previousCalendar,
+                                staffId: selectedCalendarId,
+                                availableTimes: [...(Array.isArray(previousCalendar.availableTimes) ? previousCalendar.availableTimes : defaultTimes), time].sort(),
+                                updatedAt: Date.now()
                             }
-                        };
-                    });
+                        }
+                    };
                 });
+                setIsAddingDefaultSlot(false);
             };
 
             const getNextOpenTime = (existingTimes = []) => {
@@ -237,6 +292,15 @@ import { getLocalDateStr } from '../utils/dates';
             const startAddingSlot = () => {
                 setNewSlotTime(getNextOpenTime(selectedConfig?.times || []));
                 setIsAddingSlot(true);
+            };
+
+            const startAddingDefaultSlot = () => {
+                if (isAggregateCalendar) {
+                    showToast("Choose Business Calendar or a staff member to add default times.");
+                    return;
+                }
+                setDefaultSlotTime(getNextOpenTime(defaultTimes));
+                setIsAddingDefaultSlot(true);
             };
 
             const saveNewSlot = () => {
@@ -272,10 +336,10 @@ import { getLocalDateStr } from '../utils/dates';
                     .filter(booking => (
                         booking.dateKeyResolved === selectedAgendaDate &&
                         booking.status !== 'declined' &&
-                        (selectedCalendarId === 'workspace' || booking.staffId === selectedCalendarId)
+                        (!isSingleStaffCalendar || booking.staffId === selectedCalendarId)
                     ))
                     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time) || String(a.clientName || '').localeCompare(String(b.clientName || '')));
-            }, [bookings, selectedAgendaDate, selectedCalendarId, todayStr, currentMonth]);
+            }, [bookings, selectedAgendaDate, selectedCalendarId, isSingleStaffCalendar, todayStr, currentMonth]);
             const selectedDayBookingsByTime = useMemo(() => {
                 return selectedDayBookingList.reduce((groups, booking) => {
                     const timeKey = booking.time || 'Unscheduled';
@@ -495,23 +559,46 @@ import { getLocalDateStr } from '../utils/dates';
                 }
             }, [calendarViewMode, isMobilePortraitCalendar]);
 
+            const googleSyncableBookings = useMemo(() => (
+                (bookings || []).filter(booking => (
+                    !booking.isExample &&
+                    booking.status === 'confirmed' &&
+                    booking.dateKey &&
+                    booking.time &&
+                    booking.time !== 'Waitlist' &&
+                    !booking.googleCalendarEventId &&
+                    (!isSingleStaffCalendar || booking.staffId === selectedCalendarId)
+                ))
+            ), [bookings, isSingleStaffCalendar, selectedCalendarId]);
+            const googleCalendarConnected = Boolean(googleCalendarState.connected);
+            const googleCalendarLabel = googleCalendarConnected
+                ? 'Google Connected'
+                : googleCalendarState.email
+                    ? 'Reconnect Google'
+                    : 'Connect Google';
+
             return (
                 <div className="w-full max-w-7xl mx-auto pb-32 animate-in fade-in duration-700">
-                    <header className="mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-3">Availability Studio</p>
-                            <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-black">Schedule</h2>
-                            <p className="text-neutral-500 text-base md:text-lg mt-3 max-w-2xl">Shape your default slots, close specific dates, and fine tune each day without leaving the calendar.</p>
+                    <div className="mb-4 md:mb-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-3">
+                        <div className="rounded-lg border border-neutral-100 bg-white px-4 py-3 shadow-sm flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.26em] text-neutral-400">Google Calendar</p>
+                                <p className="text-sm font-bold text-black truncate">
+                                    {googleCalendarConnected ? `Connected${googleCalendarState.email ? ` as ${googleCalendarState.email}` : ''}` : 'Connect once, then sync confirmed bookings.'}
+                                </p>
+                            </div>
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${googleCalendarConnected ? 'bg-[#39FF14] shadow-[0_0_0_5px_rgba(57,255,20,0.15)]' : 'bg-neutral-200'}`} />
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                            <button onClick={() => showToast("iCal sync URL copied to clipboard.")} className="h-11 px-5 rounded-lg bg-white border border-neutral-200 text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors shadow-sm text-black flex items-center justify-center gap-2">
-                                <CalendarCheck size={15} /> Sync Calendar
-                            </button>
-                            <button onClick={onSave} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10">
-                                <Check size={15}/> Save Schedule
-                            </button>
-                        </div>
-                    </header>
+                        <button onClick={() => onConnectGoogleCalendar?.()} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-white border border-neutral-200 text-[10px] md:text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors shadow-sm text-black flex items-center justify-center gap-2">
+                            <CalendarCheck size={15} /> {googleCalendarLabel}
+                        </button>
+                        <button onClick={() => onSyncGoogleCalendar?.(selectedCalendarId)} disabled={googleCalendarState.syncing} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-white border border-neutral-200 text-[10px] md:text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors shadow-sm text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait">
+                            <RefreshCw size={15} className={googleCalendarState.syncing ? 'animate-spin' : ''} /> {googleCalendarState.syncing ? 'Syncing' : `Sync ${googleSyncableBookings.length}`}
+                        </button>
+                        <button onClick={onSave} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-black text-white text-[10px] md:text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10">
+                            <Check size={15}/> Save Schedule
+                        </button>
+                    </div>
 
                     <section className="saas-card p-3 md:p-4 mb-6">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -520,7 +607,7 @@ import { getLocalDateStr } from '../utils/dates';
                                     <Users size={17} />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Calendar Owner</p>
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Team Calendar</p>
                                     <h3 className="text-lg font-bold tracking-tight text-black truncate">{selectedCalendar?.name || 'Business Calendar'}</h3>
                                 </div>
                             </div>
@@ -546,6 +633,42 @@ import { getLocalDateStr } from '../utils/dates';
                                 })}
                             </div>
                         </div>
+                        {workspaceRole !== 'staff' && staffMembersForCoverage.length > 0 && (
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                                {staffMembersForCoverage.slice(0, 4).map(staff => {
+                                    const dateKey = expandedDate || todayStr;
+                                    const staffConfig = getCalendarDayConfig(staff.id, dateKey);
+                                    const staffBookings = (bookings || []).filter(booking => (
+                                        booking.staffId === staff.id &&
+                                        booking.status !== 'declined' &&
+                                        getBookingDateKey(booking) === dateKey
+                                    )).length;
+                                    const initials = (staff.name || 'Team').split(' ').map(part => part.charAt(0)).join('').slice(0, 2).toUpperCase();
+                                    return (
+                                        <button
+                                            key={staff.id}
+                                            type="button"
+                                            onClick={() => setSelectedCalendarId(staff.id)}
+                                            className="rounded-lg border border-neutral-100 bg-neutral-50/70 p-3 text-left hover:bg-white hover:border-neutral-200 transition-all"
+                                        >
+                                            <div className="flex items-center justify-between gap-3 mb-3">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden shrink-0" style={{ backgroundColor: staff.color || '#000000' }}>
+                                                        {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : initials}
+                                                    </span>
+                                                    <span className="text-sm font-bold text-black truncate">{staff.name || 'Team member'}</span>
+                                                </div>
+                                                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${staffConfig.available ? 'bg-[#39FF14]' : 'bg-red-400'}`} />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
+                                                <span>{staffConfig.available ? `${staffConfig.times.length} slots` : 'Closed'}</span>
+                                                <span>{staffBookings} bookings</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
 
                     <section className="saas-card overflow-hidden mb-6">
@@ -878,12 +1001,34 @@ import { getLocalDateStr } from '../utils/dates';
                                     <div>
                                         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-2">Template</p>
                                         <h3 className="text-xl font-bold tracking-tight text-black">Default Slots</h3>
-                                        <p className="text-sm text-neutral-500 mt-1">{selectedCalendarId === 'workspace' ? 'New open days start with these times.' : `${selectedCalendar?.name || 'This staff member'} uses these default times.`}</p>
+                                        <p className="text-sm text-neutral-500 mt-1">{isAggregateCalendar ? 'Combined from every active staff calendar.' : isWorkspaceCalendar ? 'New open days start with these times.' : `${selectedCalendar?.name || 'This staff member'} uses these default times.`}</p>
                                     </div>
-                                    <button onClick={addDefaultTime} className="w-11 h-11 rounded-lg bg-[#39FF14] text-black flex items-center justify-center hover:scale-105 transition-transform shrink-0 shadow-lg shadow-black/5">
+                                    <button onClick={startAddingDefaultSlot} disabled={isAggregateCalendar} className={`w-11 h-11 rounded-lg flex items-center justify-center transition-transform shrink-0 shadow-lg shadow-black/5 ${isAggregateCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#39FF14] text-black hover:scale-105'}`}>
                                         <Plus size={16}/>
                                     </button>
                                 </div>
+                                {isAddingDefaultSlot && (
+                                    <div className="mb-4 p-4 rounded-lg bg-white border border-neutral-200 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.45)] animate-in fade-in zoom-in-95 duration-200">
+                                        <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 block mb-3">New Default Slot</label>
+                                        <div className="h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 flex items-center gap-3 focus-within:bg-white focus-within:border-black transition-colors mb-3">
+                                            <Clock size={15} className="text-neutral-400"/>
+                                            <input
+                                                type="time"
+                                                value={defaultSlotTime}
+                                                onChange={(event) => setDefaultSlotTime(event.target.value)}
+                                                className="w-full bg-transparent outline-none text-base font-bold tracking-tight text-black"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button onClick={saveDefaultTime} className="h-10 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-[0.12em] hover:bg-neutral-800 transition-colors">
+                                                Save Slot
+                                            </button>
+                                            <button onClick={() => setIsAddingDefaultSlot(false)} className="h-10 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-2">
                                     {defaultTimes.length ? defaultTimes.map((time, i) => (
                                         <div key={`${time}-${i}`} className="schedule-time-chip group flex items-center justify-between gap-2 bg-white border border-neutral-200 px-3 py-2.5 rounded-lg text-sm font-bold text-black shadow-sm">
@@ -891,8 +1036,13 @@ import { getLocalDateStr } from '../utils/dates';
                                                 <Clock size={13} className="text-neutral-400"/>
                                                 {time}
                                             </span>
-                                            <button onClick={() => setSettings(prev => {
-                                                if (selectedCalendarId === 'workspace') {
+                                            <button onClick={() => {
+                                                if (isAggregateCalendar) {
+                                                    showToast("Choose Business Calendar or a staff member to edit default times.");
+                                                    return;
+                                                }
+                                                setSettings(prev => {
+                                                if (isWorkspaceCalendar) {
                                                     return { ...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i) };
                                                 }
                                                 const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
@@ -908,7 +1058,8 @@ import { getLocalDateStr } from '../utils/dates';
                                                         }
                                                     }
                                                 };
-                                            })} className="text-neutral-300 hover:text-red-500 transition-colors"><X size={13}/></button>
+                                            });
+                                            }} className="text-neutral-300 hover:text-red-500 transition-colors"><X size={13}/></button>
                                         </div>
                                     )) : (
                                         <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 col-span-2">No default slots yet.</p>

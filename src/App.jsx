@@ -14,6 +14,10 @@ import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, functions, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
 import {
+  GOOGLE_CALENDAR_EVENTS_SCOPE,
+  syncConfirmedBookingsToGoogleCalendar
+} from './services/googleCalendar';
+import {
   getBrowserNotificationPermission,
   makeClientNotification,
   makeOwnerNotification,
@@ -886,6 +890,7 @@ const workspaceRouteStorageKey = 'build-a-booking-workspace-route';
 const authRedirectStorageKey = 'build-a-booking-auth-return';
 const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
+const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
 const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'clients', 'staff', 'profile'];
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
 
@@ -1054,21 +1059,28 @@ const writeGoogleAuthIntentUrl = (route = {}) => {
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 };
 
-const createGoogleProvider = () => {
+const createGoogleProvider = (options = {}) => {
   const provider = new FirebaseSDK.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
+  if (options.calendar) provider.addScope(GOOGLE_CALENDAR_EVENTS_SCOPE);
+  provider.setCustomParameters({ prompt: options.calendar ? 'consent select_account' : 'select_account' });
   return provider;
 };
 
-const signInWithNativeGoogle = async (authInstance) => {
-  const result = await FirebaseAuthentication.signInWithGoogle();
+const getGoogleAccessTokenFromResult = (result) => {
+  const credential = FirebaseSDK.GoogleAuthProvider.credentialFromResult?.(result);
+  return credential?.accessToken || result?._tokenResponse?.oauthAccessToken || '';
+};
+
+const signInWithNativeGoogle = async (authInstance, options = {}) => {
+  const result = await FirebaseAuthentication.signInWithGoogle(options);
   const idToken = result?.credential?.idToken;
   const accessToken = result?.credential?.accessToken;
   if (!idToken && !accessToken) {
     throw new Error('Google did not return a usable sign-in token. Check the Android Firebase app setup.');
   }
   const credential = FirebaseSDK.GoogleAuthProvider.credential(idToken || null, accessToken || undefined);
-  return FirebaseSDK.signInWithCredential(authInstance, credential);
+  const firebaseResult = await FirebaseSDK.signInWithCredential(authInstance, credential);
+  return { firebaseResult, accessToken };
 };
 
 // --- Main App Component ---
@@ -1087,6 +1099,8 @@ const signInWithNativeGoogle = async (authInstance) => {
             const [authError, setAuthError] = useState('');
             const [authPanelOpen, setAuthPanelOpen] = useState(false);
             const [authBusy, setAuthBusy] = useState(false);
+            const [googleCalendarAuth, setGoogleCalendarAuth] = useState({ accessToken: '', email: '', connectedAt: 0 });
+            const [googleCalendarSyncing, setGoogleCalendarSyncing] = useState(false);
             const [keepLoggedIn, setKeepLoggedIn] = useState(() => safeLocalGet(rememberLoginStorageKey) !== 'false');
             const [authRedirectPending, setAuthRedirectPending] = useState(() => (
                 Boolean(safeSessionGet(authRedirectStartedStorageKey) || safeLocalGet(authRedirectStartedStorageKey) || getGoogleAuthIntent())
@@ -1143,6 +1157,7 @@ const signInWithNativeGoogle = async (authInstance) => {
             const themeBatchTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
+            const [runningLateDialog, setRunningLateDialog] = useState(null);
             const [legalPanel, setLegalPanel] = useState(null);
             const [ownerNotifications, setOwnerNotifications] = useState([]);
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
@@ -1305,6 +1320,8 @@ const signInWithNativeGoogle = async (authInstance) => {
                 detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
                 availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
                 schedule: {},
+                staffCalendars: {},
+                googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
                 features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
                 backendSkin: { enabled: false, mode: 'immersive', showBranding: true },
                 onboarding: {},
@@ -2464,11 +2481,12 @@ const signInWithNativeGoogle = async (authInstance) => {
                 }
             };
 
-            const startGoogleRedirect = async (returnRoute = { view: 'dashboard' }) => {
-                const provider = createGoogleProvider();
+            const startGoogleRedirect = async (returnRoute = { view: 'dashboard' }, options = {}) => {
+                const provider = createGoogleProvider({ calendar: Boolean(options.calendar) });
                 await applyAuthPersistence(keepLoggedIn);
                 setAuthRedirectPending(true);
                 const savedReturnRoute = saveAuthReturnState(returnRoute);
+                if (options.calendar) safeSessionSet(googleCalendarRedirectStorageKey, 'true');
                 writeGoogleAuthIntentUrl(savedReturnRoute);
                 try {
                     await FirebaseSDK.signInWithRedirect(auth, provider);
@@ -2476,6 +2494,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                     setAuthRedirectPending(false);
                     clearAuthReturnState();
                     clearGoogleAuthIntentUrl();
+                    safeSessionRemove(googleCalendarRedirectStorageKey);
                     throw error;
                 }
             };
@@ -2494,6 +2513,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     console.error(error);
                                     clearAuthReturnState();
                                     clearGoogleAuthIntentUrl();
+                                    safeSessionRemove(googleCalendarRedirectStorageKey);
                                     const message = error?.code === 'auth/unauthorized-domain'
                                         ? 'Google sign-in needs this domain allowed in Firebase Authentication.'
                                         : error?.code === 'auth/web-storage-unsupported'
@@ -2503,6 +2523,17 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     setAuthRedirectPending(false);
                                     return null;
                                 });
+                                if (redirectResult?.user && safeSessionGet(googleCalendarRedirectStorageKey) === 'true') {
+                                    const accessToken = getGoogleAccessTokenFromResult(redirectResult);
+                                    if (accessToken) {
+                                        setGoogleCalendarAuth({
+                                            accessToken,
+                                            email: redirectResult.user.email || '',
+                                            connectedAt: Date.now()
+                                        });
+                                    }
+                                    safeSessionRemove(googleCalendarRedirectStorageKey);
+                                }
                                 if (redirectWasStarted) {
                                     safeSessionRemove(authRedirectStartedStorageKey);
                                     safeLocalRemove(authRedirectStartedStorageKey);
@@ -3584,20 +3615,33 @@ const signInWithNativeGoogle = async (authInstance) => {
             };
 
             const sendRunningLateToBooking = async (booking) => {
-                const minutes = prompt(`Minutes late for ${booking.clientName}?`, "15");
-                if (minutes) {
-                    await sendBookingEmail(booking, 'runningLate', { minutes });
-                    await createClientNotification(booking.clientEmail, makeClientNotification({
-                        type: NOTIFICATION_TYPES.RUNNING_LATE,
-                        title: `${settings.brandName || 'The business'} is running late`,
-                        body: `They are running about ${minutes} minutes behind. Your booking thread stays open for questions.`,
-                        ownerId: workspaceOwnerId,
-                        booking,
-                        view: 'chats',
-                        priority: 'high',
-                        metadata: { minutes }
-                    }));
+                setRunningLateDialog({
+                    booking,
+                    minutes: '15',
+                    message: `Running 15 minutes late. Thanks for your patience - we will keep you posted here.`
+                });
+            };
+
+            const submitRunningLateDialog = async () => {
+                const booking = runningLateDialog?.booking;
+                const minutes = String(runningLateDialog?.minutes || '').trim();
+                if (!booking || !minutes) {
+                    showToast('Add the number of minutes before sending.');
+                    return;
                 }
+                await sendBookingEmail(booking, 'runningLate', { minutes });
+                await createClientNotification(booking.clientEmail, makeClientNotification({
+                    type: NOTIFICATION_TYPES.RUNNING_LATE,
+                    title: `${settings.brandName || 'The business'} is running late`,
+                    body: String(runningLateDialog?.message || '').trim() || `They are running about ${minutes} minutes behind. Your booking thread stays open for questions.`,
+                    ownerId: workspaceOwnerId,
+                    booking,
+                    view: 'chats',
+                    priority: 'high',
+                    metadata: { minutes }
+                }));
+                setRunningLateDialog(null);
+                showToast('Running-late update sent.');
             };
 
             const sendWaitlistToBooking = async (booking) => {
@@ -3643,6 +3687,145 @@ const signInWithNativeGoogle = async (authInstance) => {
                     priority: 'normal'
                 }));
                 showToast(sent ? `Nudge sent to ${booking.clientName}.` : 'Client portal nudges need a client email.');
+            };
+
+            const connectGoogleCalendar = async () => {
+                if (!isFirebaseConfigured || !auth) {
+                    showToast('Google Calendar sync needs Firebase Google sign-in.');
+                    return '';
+                }
+                if (!user) {
+                    setAuthPersona('owner');
+                    setAuthMode('signin');
+                    setAuthPanelOpen(true);
+                    showToast('Sign in first, then connect Google Calendar.');
+                    return '';
+                }
+
+                try {
+                    if (isNativeAppRuntime) {
+                        const nativeResult = await signInWithNativeGoogle(auth, {
+                            scopes: [GOOGLE_CALENDAR_EVENTS_SCOPE],
+                            useCredentialManager: false
+                        });
+                        const accessToken = nativeResult?.accessToken || '';
+                        if (!accessToken) throw new Error('Google did not return Calendar permission yet.');
+                        setGoogleCalendarAuth({
+                            accessToken,
+                            email: auth.currentUser?.email || user.email || '',
+                            connectedAt: Date.now()
+                        });
+                        showToast('Google Calendar connected.');
+                        return accessToken;
+                    }
+
+                    const provider = createGoogleProvider({ calendar: true });
+                    await applyAuthPersistence(keepLoggedIn);
+                    try {
+                        const result = await FirebaseSDK.signInWithPopup(auth, provider);
+                        const accessToken = getGoogleAccessTokenFromResult(result);
+                        if (!accessToken) throw new Error('Google did not return Calendar permission yet.');
+                        setGoogleCalendarAuth({
+                            accessToken,
+                            email: result.user?.email || user.email || '',
+                            connectedAt: Date.now()
+                        });
+                        if (canManageWorkspace) {
+                            await saveSettingsDraft({
+                                ...settings,
+                                googleCalendar: {
+                                    ...(settings.googleCalendar || {}),
+                                    connectedEmail: result.user?.email || user.email || '',
+                                    connectedAt: Date.now(),
+                                    mode: 'manual-sync'
+                                }
+                            }, 'Google Calendar connected.');
+                        } else {
+                            showToast('Google Calendar connected for this session.');
+                        }
+                        return accessToken;
+                    } catch (error) {
+                        if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported'].includes(error?.code)) {
+                            await startGoogleRedirect(getCurrentAuthReturnRoute(), { calendar: true });
+                            return '';
+                        }
+                        throw error;
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showToast(error?.message || 'Google Calendar could not connect.');
+                    return '';
+                }
+            };
+
+            const markGoogleCalendarResults = async (results = []) => {
+                if (!results.length) return;
+                const syncedAt = Date.now();
+                setBookings(prev => prev.map(booking => {
+                    const match = results.find(result => result.bookingId === booking.id);
+                    return match
+                        ? { ...booking, googleCalendarEventId: match.eventId, googleCalendarSyncedAt: syncedAt, googleCalendarLink: match.htmlLink || '' }
+                        : booking;
+                }));
+                if (!isFirebaseConfigured || !user || !workspaceOwnerId) return;
+                await Promise.all(results.map(result => FirebaseSDK.updateDoc(
+                    FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', result.bookingId),
+                    {
+                        googleCalendarEventId: result.eventId,
+                        googleCalendarLink: result.htmlLink || '',
+                        googleCalendarSyncedAt: syncedAt
+                    }
+                ).catch(error => console.error('Google Calendar booking sync marker failed', error))));
+            };
+
+            const syncGoogleCalendarBookings = async (calendarId = 'workspace') => {
+                if (googleCalendarSyncing) return;
+                setGoogleCalendarSyncing(true);
+                try {
+                    let accessToken = googleCalendarAuth.accessToken;
+                    if (!accessToken) {
+                        accessToken = await connectGoogleCalendar();
+                    }
+                    if (!accessToken) return;
+
+                    const result = await syncConfirmedBookingsToGoogleCalendar({
+                        accessToken,
+                        bookings: visibleBookings,
+                        settings,
+                        staffList,
+                        calendarId,
+                        durationMinutes: Number(settings.defaultBookingDurationMinutes) || 60
+                    });
+
+                    await markGoogleCalendarResults(result.results);
+                    const nextCalendarSettings = {
+                        ...(settings.googleCalendar || {}),
+                        connectedEmail: googleCalendarAuth.email || auth.currentUser?.email || user?.email || '',
+                        connectedAt: googleCalendarAuth.connectedAt || Date.now(),
+                        lastSyncedAt: Date.now(),
+                        lastSyncCount: result.created,
+                        mode: 'manual-sync'
+                    };
+                    if (canManageWorkspace) {
+                        await saveSettingsDraft({ ...settings, googleCalendar: nextCalendarSettings }, result.created
+                            ? `${result.created} booking${result.created === 1 ? '' : 's'} synced to Google Calendar.`
+                            : 'Google Calendar is already up to date.'
+                        );
+                    } else {
+                        showToast(result.created
+                            ? `${result.created} booking${result.created === 1 ? '' : 's'} synced to Google Calendar.`
+                            : 'Google Calendar is already up to date.'
+                        );
+                    }
+                } catch (error) {
+                    console.error(error);
+                    const message = error?.status === 403
+                        ? 'Google Calendar API needs to be enabled for this project, or the account needs Calendar permission.'
+                        : error?.message || 'Google Calendar sync failed.';
+                    showToast(message);
+                } finally {
+                    setGoogleCalendarSyncing(false);
+                }
             };
 
             const authPersonaCopy = authPersona === 'client'
@@ -3771,6 +3954,57 @@ const signInWithNativeGoogle = async (authInstance) => {
                             </button>
                             <button type="button" onClick={() => { const action = confirmDialog.onConfirm; setConfirmDialog(null); action?.(); }} className="h-12 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">
                                 {confirmDialog.actionLabel || 'Confirm'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const runningLateActionDialog = runningLateDialog && (
+                <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="w-full sm:max-w-lg bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-6 md:p-7 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="flex items-start justify-between gap-4 mb-5">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-3">Running Late</p>
+                                <h2 className="text-2xl font-bold tracking-tight text-black">Update {runningLateDialog.booking?.clientName || 'client'}</h2>
+                                <p className="mt-2 text-sm leading-relaxed text-neutral-500">Send a clean in-app notification and email using your saved communication settings.</p>
+                            </div>
+                            <button type="button" onClick={() => setRunningLateDialog(null)} className="w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <label className="block mb-4">
+                            <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Minutes Late</span>
+                            <input
+                                type="number"
+                                min="1"
+                                value={runningLateDialog.minutes}
+                                onChange={(event) => {
+                                    const minutes = event.target.value;
+                                    setRunningLateDialog(prev => ({
+                                        ...prev,
+                                        minutes,
+                                        message: prev.message?.startsWith('Running ') ? `Running ${minutes || '15'} minutes late. Thanks for your patience - we will keep you posted here.` : prev.message
+                                    }));
+                                }}
+                                className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+                            />
+                        </label>
+                        <label className="block mb-6">
+                            <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Message</span>
+                            <textarea
+                                rows={4}
+                                value={runningLateDialog.message}
+                                onChange={(event) => setRunningLateDialog(prev => ({ ...prev, message: event.target.value }))}
+                                className="w-full resize-none rounded-lg bg-neutral-50 border border-neutral-100 px-4 py-3 text-sm leading-relaxed text-black outline-none focus:bg-white focus:border-black transition-colors"
+                            />
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button type="button" onClick={() => setRunningLateDialog(null)} className="h-12 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
+                                Cancel
+                            </button>
+                            <button type="button" onClick={submitRunningLateDialog} className="h-12 rounded-full native-gradient-button text-black text-[10px] font-bold uppercase tracking-[0.12em]">
+                                Send Update
                             </button>
                         </div>
                     </div>
@@ -4049,6 +4283,7 @@ const signInWithNativeGoogle = async (authInstance) => {
                 {authDialog}
                 {legalDialog}
                 {confirmActionDialog}
+                {runningLateActionDialog}
                 {showOnboarding && (
                     <Suspense fallback={<LazySectionFallback label="Loading setup" />}>
                         <OnboardingShowroom
@@ -4829,6 +5064,16 @@ const signInWithNativeGoogle = async (authInstance) => {
                                     staffList={staffList}
                                     activeStaffId={activeStaffProfile?.id || 'owner'}
                                     workspaceRole={workspaceRole}
+                                    googleCalendarState={{
+                                        connected: Boolean(googleCalendarAuth.accessToken),
+                                        email: googleCalendarAuth.email || settings.googleCalendar?.connectedEmail || '',
+                                        connectedAt: googleCalendarAuth.connectedAt || settings.googleCalendar?.connectedAt || 0,
+                                        lastSyncedAt: settings.googleCalendar?.lastSyncedAt || 0,
+                                        lastSyncCount: settings.googleCalendar?.lastSyncCount || 0,
+                                        syncing: googleCalendarSyncing
+                                    }}
+                                    onConnectGoogleCalendar={connectGoogleCalendar}
+                                    onSyncGoogleCalendar={syncGoogleCalendarBookings}
                                 />
                             </Suspense>
                         </div>
