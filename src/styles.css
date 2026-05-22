@@ -2020,3 +2020,17 @@ body {
             color: #050505 !important;
             stroke: currentColor !important;
         }
+
+        .native-ui.dashboard-dark .hover\:bg-white:hover,
+        .native-ui.dashboard-dark .hover\:bg-neutral-50:hover,
+        .native-ui.dashboard-dark .hover\:bg-neutral-50\/70:hover,
+        .native-ui.dashboard-dark .hover\:bg-neutral-100:hover,
+        .native-ui.dashboard-dark .hover\:bg-neutral-100\/70:hover {
+            background-color: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .hover\:text-black:hover {
+            color: #f8fafc !important;
+        }
