@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState }
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, FileText, Globe, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, Sparkles, Star, Sun, Tag, Trash2, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, BadgeCheck, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, FileText, Globe, HelpCircle, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -1209,6 +1209,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 safeLocalGet('build-a-booking-dashboard-theme') === 'dark' ? 'dark' : 'light'
             ));
             const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
+            const [editorStudioModal, setEditorStudioModal] = useState(null);
             const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
             const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
             const [themeBatchLoading, setThemeBatchLoading] = useState(false);
@@ -3428,6 +3429,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             const handleInspect = (tab) => { if (activeTab !== 'editor') setActiveTab('editor'); setEditorCollapsed(false); setEditorTab(tab); };
+            const openEditorStudioModal = (tab) => {
+                setEditorTab(tab);
+                setEditorStudioModal(tab);
+            };
             const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
             const applyFontStylePreset = (preset) => {
                 if (!preset) return;
@@ -6264,10 +6269,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             <>
                             <header className="editor-panel-header p-5 sm:p-6 md:p-10 border-b border-neutral-50 flex flex-col lg:flex-row items-start lg:items-center justify-between flex-shrink-0 gap-4 md:gap-6">
                                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-black">Editor</h2>
-                                <div className="editor-tab-rail flex bg-neutral-100 p-1.5 rounded-full overflow-x-auto w-full lg:w-auto no-scrollbar">
-                                {['identity', 'themes', 'visuals', 'features', 'copy'].map(tab => (
-                                    <button key={tab} onClick={() => setEditorTab(tab)} className={`editor-tab-button flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${editorTab === tab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'}`}>{tab}</button>
-                                ))}
+                                <div className="editor-tab-rail editor-studio-header-actions flex bg-neutral-100 p-1.5 rounded-full overflow-x-auto w-full lg:w-auto no-scrollbar">
+                                    <span className="editor-studio-live-pill flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest whitespace-nowrap bg-white text-black shadow-sm">Studio Console</span>
+                                    <button type="button" onClick={() => openEditorStudioModal('themes')} className="editor-tab-button flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap text-neutral-500 hover:text-black">Theme Designer</button>
                                 </div>
                             </header>
 
@@ -6281,6 +6285,254 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </div>
                                     </div>
                                 </div>
+                                <div className="editor-studio-console animate-in fade-in duration-700">
+                                    <section className="editor-studio-hero">
+                                        <div className="editor-studio-hero-copy">
+                                            <span className="editor-studio-kicker">Live design studio</span>
+                                            <h3>Click a surface. Tune it beautifully.</h3>
+                                            <p>Open focused editors for brand, themes, visuals, tools, and copy while the live preview stays beside you.</p>
+                                        </div>
+                                        <button type="button" onClick={() => openEditorStudioModal('themes')} className="editor-studio-primary-action">
+                                            <Sparkles size={16} />
+                                            Design Theme
+                                        </button>
+                                    </section>
+
+                                    <div className="editor-studio-grid">
+                                        {[
+                                            { id: 'identity', icon: BadgeCheck, title: 'Brand Entrance', note: 'Logo, banner, business name, intro copy, and booking link.' },
+                                            { id: 'themes', icon: Sparkles, title: 'AI Theme Designer', note: 'Start with an industry, then generate tailored light and dark looks.' },
+                                            { id: 'visuals', icon: Palette, title: 'Visual System', note: 'Colors, calendar rows, time boxes, buttons, spacing, and fonts.' },
+                                            { id: 'features', icon: SlidersHorizontal, title: 'Booking Tools', note: 'Client fields, email opt-in, FAQ, socials, waitlist, and extras.' },
+                                            { id: 'copy', icon: Type, title: 'Page Words', note: 'The labels, action text, and success wording clients read.' }
+                                        ].map(card => {
+                                            const IconCmp = card.icon;
+                                            const isActive = editorTab === card.id;
+                                            return (
+                                                <button
+                                                    key={card.id}
+                                                    type="button"
+                                                    onClick={() => openEditorStudioModal(card.id)}
+                                                    className={`editor-studio-card ${isActive ? 'is-active' : ''}`}
+                                                >
+                                                    <span className="editor-studio-card-icon"><IconCmp size={18} /></span>
+                                                    <span className="editor-studio-card-copy">
+                                                        <strong>{card.title}</strong>
+                                                        <small>{card.note}</small>
+                                                    </span>
+                                                    <span className="editor-studio-card-arrow"><ChevronRight size={16} /></span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <section className="editor-studio-workflow">
+                                        <div>
+                                            <span className="editor-studio-kicker">Current build</span>
+                                            <h4>{selectedIndustryFilter ? `${selectedIndustryName} direction` : 'Choose an industry to unlock tailored themes'}</h4>
+                                            <p>{selectedIndustryFilter ? `${selectedPaletteName} palette, ${selectedStyleFilter.name.toLowerCase()} styling, ${settings.fontFamily || 'theme'} typography.` : 'The theme engine stays empty until it knows the business type, so every look feels relevant instead of random.'}</p>
+                                        </div>
+                                        <div className="editor-studio-preview-pills">
+                                            <span style={{ backgroundColor: settings.primaryColor || '#000000' }} />
+                                            <span style={{ backgroundColor: settings.backgroundColor || '#ffffff' }} />
+                                            <span style={{ backgroundColor: settings.headingColor || '#111111' }} />
+                                        </div>
+                                    </section>
+                                </div>
+
+                                {editorStudioModal && (
+                                    <div className="editor-studio-modal-backdrop" role="dialog" aria-modal="true">
+                                        <div className="editor-studio-modal-shell">
+                                            <div className="editor-studio-modal-header">
+                                                <div>
+                                                    <span className="editor-studio-kicker">Editing surface</span>
+                                                    <h3>{{
+                                                        identity: 'Brand Entrance',
+                                                        themes: 'AI Theme Designer',
+                                                        visuals: 'Visual System',
+                                                        features: 'Booking Tools',
+                                                        copy: 'Page Words'
+                                                    }[editorStudioModal]}</h3>
+                                                </div>
+                                                <button type="button" onClick={() => setEditorStudioModal(null)} className="editor-studio-modal-close" aria-label="Close editor modal">
+                                                    <X size={18} />
+                                                </button>
+                                            </div>
+
+                                            <div className="editor-studio-modal-body">
+                                                {editorStudioModal === 'identity' && (
+                                                    <div className="editor-studio-modal-stack">
+                                                        <div className="editor-studio-two-col">
+                                                            <section className="editor-studio-panel">
+                                                                <p className="editor-studio-panel-title">Business Logo</p>
+                                                                <div className="editor-studio-media-box square">
+                                                                    {settings.logo ? <img src={settings.logo} alt="" /> : <User size={26} />}
+                                                                </div>
+                                                                <label className="editor-studio-dark-button">
+                                                                    <Camera size={14}/> Upload Logo
+                                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { handleSettingImageUpload('logo', e.target.files[0], 'brand'); e.target.value = ''; }} />
+                                                                </label>
+                                                            </section>
+                                                            <section className="editor-studio-panel">
+                                                                <p className="editor-studio-panel-title">Landscape Banner</p>
+                                                                <div className="editor-studio-media-box">
+                                                                    {settings.bannerImage ? <img src={settings.bannerImage} alt="" /> : <Monitor size={26} />}
+                                                                </div>
+                                                                <label className="editor-studio-dark-button">
+                                                                    <Camera size={14}/> Upload Banner
+                                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { handleSettingImageUpload('bannerImage', e.target.files[0], 'brand'); e.target.value = ''; }} />
+                                                                </label>
+                                                            </section>
+                                                        </div>
+                                                        <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} />
+                                                        {identityTextControls.map(config => <IdentityTextControl key={config.id} settings={settings} config={config} onChange={handleSettingChange} />)}
+                                                        <section className="editor-studio-panel">
+                                                            <p className="editor-studio-panel-title">Booking Link</p>
+                                                            <div className="editor-studio-link-row">
+                                                                <span>{window.location.origin}/book/</span>
+                                                                <input type="text" value={settings.slug} onChange={(e) => handleSettingChange('slug', e.target.value)} />
+                                                            </div>
+                                                            <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')} className="editor-studio-dark-button"><Share2 size={14}/> Copy Link</button>
+                                                        </section>
+                                                    </div>
+                                                )}
+
+                                                {editorStudioModal === 'themes' && (
+                                                    <div className="editor-studio-modal-stack">
+                                                        <section className="editor-studio-panel editor-studio-theme-brief">
+                                                            <div>
+                                                                <span className="editor-studio-kicker">Theme brief</span>
+                                                                <h4>{selectedIndustryFilter ? <><span className="native-accent-text">{selectedIndustryName}</span> themes shaped for your business.</> : <>Choose your <span className="native-accent-text">industry first</span>.</>}</h4>
+                                                                <p>{themeBriefSupportText}</p>
+                                                            </div>
+                                                            <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting} className="editor-studio-light-button"><Pipette size={14}/>{paletteDetecting ? 'Reading' : 'Read Logo Colors'}</button>
+                                                        </section>
+                                                        <section className="editor-studio-panel">
+                                                            <div className="editor-studio-step-head"><span>1</span><div><strong>Industry first</strong><small>The engine changes layout, fonts, and energy from this choice.</small></div></div>
+                                                            <div className="editor-studio-industry-grid">
+                                                                {industryFilterOptions.map(industry => {
+                                                                    const isActive = themeGenerationInputs.industry === industry.id;
+                                                                    return (
+                                                                        <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={`editor-studio-choice ${isActive ? 'is-active' : ''}`}>
+                                                                            <span className="editor-studio-swatches">{industry.swatches.map(color => <i key={color} style={{ backgroundColor: color }} />)}</span>
+                                                                            <strong>{industry.name}</strong>
+                                                                            <small>{industry.hint}</small>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </section>
+                                                        <section className="editor-studio-panel">
+                                                            <div className="editor-studio-step-head"><span>2</span><div><strong>Color direction</strong><small>{selectedPaletteHint}</small></div></div>
+                                                            <div className="editor-studio-palette-row">
+                                                                {paletteFilterOptions.map(palette => {
+                                                                    const isActive = themeGenerationInputs.palette === palette.id;
+                                                                    return (
+                                                                        <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)} className={`editor-studio-palette-chip ${isActive ? 'is-active' : ''}`}>
+                                                                            {palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}
+                                                                            <span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </section>
+                                                        <section className="editor-studio-panel">
+                                                            <div className="editor-studio-step-head"><span>3</span><div><strong>Generated looks</strong><small>{themeBriefResultLabel}</small></div></div>
+                                                            <div className="editor-studio-theme-grid">
+                                                                {!themeGenerationInputs.industry && <div className="editor-studio-empty"><Sparkles size={24}/><strong>Select an industry to generate.</strong><span>No random themes. Every result starts from the business niche.</span></div>}
+                                                                {visibleThemeCards.map(t => {
+                                                                    const isNativeTheme = Boolean(t.nativeAccent);
+                                                                    const isSelectedTheme = settings.nativeAccent === t.nativeAccent && settings.primaryColor === t.primaryColor && settings.backgroundColor === t.backgroundColor && settings.fontFamily === t.fontFamily;
+                                                                    return (
+                                                                        <button key={t.id} type="button" onClick={() => applyTheme(t.id)} className={`editor-studio-theme-card ${isSelectedTheme ? 'is-selected' : ''} ${isNativeTheme ? 'native-theme-card-preview' : ''}`} style={{ backgroundColor: t.backgroundColor, color: t.headingColor, borderColor: isSelectedTheme ? t.primaryColor : `${t.headingColor}1f` }}>
+                                                                            <span>{t.name}</span>
+                                                                            <b style={{ fontFamily: getFontFamily(t.headingFontFamily || t.fontFamily) }}>Aa Bb</b>
+                                                                            <em style={{ backgroundColor: isNativeTheme ? undefined : t.primaryColor, color: t.buttonTextColor || '#000' }}>Action</em>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </section>
+                                                    </div>
+                                                )}
+
+                                                {editorStudioModal === 'visuals' && (
+                                                    <div className="editor-studio-modal-stack">
+                                                        <VisualEditorGroup title="Page Palette" note="Core colors and typography used across the whole booking page.">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                {[
+                                                                    { label: 'Accent', key: 'primaryColor' },
+                                                                    { label: 'Background', key: 'backgroundColor' },
+                                                                    { label: 'Heading Text', key: 'headingColor', fontKey: 'headingFontFamily' },
+                                                                    { label: 'Body Text', key: 'bodyColor', fontKey: 'bodyFontFamily' }
+                                                                ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                                            </div>
+                                                        </VisualEditorGroup>
+                                                        <VisualEditorGroup title="Calendar + Time Slots" note="The booking rhythm clients feel when choosing a day and time.">
+                                                            <StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" />
+                                                            <StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Time Box Style" />
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                {[
+                                                                    { label: 'Date Background', key: 'dateBgColor' },
+                                                                    { label: 'Active Date Background', key: 'dateActiveBgColor' },
+                                                                    { label: 'Time Box Bg', key: 'slotBgColor' },
+                                                                    { label: 'Time Box Text', key: 'slotTextColor', fontKey: 'slotFontFamily' }
+                                                                ].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}
+                                                            </div>
+                                                        </VisualEditorGroup>
+                                                        <VisualEditorGroup title="Action Button" note="The button clients trust before submitting.">
+                                                            <StyleSegmentedControl value={settings.actionButtonStyle || 'solid'} onChange={(value) => handleSettingChange('actionButtonStyle', value)} label="Action Style" />
+                                                            <ButtonShapeControl value={settings.buttonStyle || 'pill'} onChange={(value) => handleSettingChange('buttonStyle', value)} />
+                                                        </VisualEditorGroup>
+                                                        <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
+                                                    </div>
+                                                )}
+
+                                                {editorStudioModal === 'features' && (
+                                                    <div className="editor-studio-modal-stack">
+                                                        {[
+                                                            { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Used for contact records and follow-ups.', active: collectsClientPhone },
+                                                            { key: 'collectClientEmail', icon: Mail, label: 'Email Address', note: 'Required for email updates and client portal matching.', active: collectsClientEmail },
+                                                            { key: 'collectClientNotes', icon: MessageSquare, label: 'Client Note', note: 'Adds context before clients submit.', active: collectsClientNotes },
+                                                            { key: 'waitlist', icon: Clock, label: 'Waitlist Fallback', note: 'Let clients join standby when a day is full.', active: settings.features?.waitlist },
+                                                            { key: 'faqEnabled', icon: HelpCircle, label: 'FAQ Section', note: 'Answer objections before clients submit.', active: settings.features?.faqEnabled },
+                                                            { key: 'socialLinks', icon: Share2, label: 'Social Footer', note: 'Clickable socials below the booking action.', active: settings.features?.socialLinks }
+                                                        ].map(item => {
+                                                            const IconCmp = item.icon;
+                                                            return (
+                                                                <button key={item.key} type="button" onClick={() => handleFeatureChange(item.key, !item.active)} className={`editor-studio-feature-toggle ${item.active ? 'is-on' : ''}`}>
+                                                                    <IconCmp size={18} />
+                                                                    <span><strong>{item.label}</strong><small>{item.note}</small></span>
+                                                                    <i />
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                {editorStudioModal === 'copy' && (
+                                                    <div className="editor-studio-modal-stack">
+                                                        {[
+                                                            { key: 'dateLabel', l: 'Date Selection Title' },
+                                                            { key: 'timeLabel', l: 'Time Selection Title' },
+                                                            { key: 'detailsHeading', l: 'Details Section Title' },
+                                                            { key: 'detailsSubHeading', l: 'Details Sub-Title' },
+                                                            { key: 'confirmButtonText', l: 'Final Submit Button' },
+                                                            { key: 'successHeading', l: 'Success Screen Title' }
+                                                        ].map(item => (
+                                                            <label key={item.key} className="editor-studio-copy-field">
+                                                                <span>{item.l}</span>
+                                                                <input type="text" value={settings[item.key]} onChange={(e) => handleSettingChange(item.key, e.target.value)} />
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="hidden">
                                 {editorTab === 'identity' && (
                                 <div className="space-y-10 animate-in fade-in duration-700">
                                     <div className="space-y-5">
@@ -6950,6 +7202,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     ))}
                                 </div>
                                 )}
+                                </div>
                             </div>
 
                             <div className="editor-publish-footer p-2.5 sm:p-5 md:p-8 border-t border-neutral-50 flex-shrink-0 bg-white">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, ChevronLeft, ChevronRight, Clock, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
+import { CalendarCheck, Check, ChevronLeft, ChevronRight, Clock, Eye, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
@@ -341,6 +341,38 @@ import { getLocalDateStr } from '../utils/dates';
                 return start;
             };
 
+            const toTimeParts = (value = '', fallback = '09:00') => {
+                const source = String(value || fallback || '09:00');
+                const match = source.match(/^(\d{1,2}):(\d{2})/);
+                const rawHour = match ? Number(match[1]) : 9;
+                const rawMinute = match ? Number(match[2]) : 0;
+                return {
+                    hour: Math.min(23, Math.max(0, Number.isFinite(rawHour) ? rawHour : 9)),
+                    minute: Math.min(59, Math.max(0, Number.isFinite(rawMinute) ? rawMinute : 0))
+                };
+            };
+
+            const timePartsToValue = ({ hour = 9, minute = 0 } = {}) => (
+                `${String(Math.min(23, Math.max(0, hour))).padStart(2, '0')}:${String(Math.min(59, Math.max(0, minute))).padStart(2, '0')}`
+            );
+
+            const timeValueToMinutes = (value = '', fallback = '09:00') => {
+                const { hour, minute } = toTimeParts(value, fallback);
+                return (hour * 60) + minute;
+            };
+
+            const minutesToTimeValue = (minutes = 0) => {
+                const normalized = ((minutes % 1440) + 1440) % 1440;
+                return timePartsToValue({
+                    hour: Math.floor(normalized / 60),
+                    minute: normalized % 60
+                });
+            };
+
+            const addMinutesToTime = (value = '', delta = 0, fallback = '09:00') => (
+                minutesToTimeValue(timeValueToMinutes(value, fallback) + delta)
+            );
+
             const sortSlotValues = (times = []) => [...new Set(times.map(time => String(time || '').trim()).filter(Boolean))]
                 .sort((a, b) => getSlotStartMinutes(a) - getSlotStartMinutes(b) || a.localeCompare(b));
 
@@ -373,6 +405,16 @@ import { getLocalDateStr } from '../utils/dates';
                 if (!slotValue) {
                     showToast("Add a time before saving this slot.");
                     return;
+                }
+                if (slotEditor.mode === 'range') {
+                    if (!slotEditor.end) {
+                        showToast("Add an end time for this slot period.");
+                        return;
+                    }
+                    if (timeValueToMinutes(slotEditor.end) <= timeValueToMinutes(slotEditor.start)) {
+                        showToast("End time must be later than the start time.");
+                        return;
+                    }
                 }
                 const targetConfig = getCalendarDayConfig(slotEditor.calendarId, slotEditor.dateStr);
                 if (targetConfig.times.includes(slotValue) && slotValue !== slotEditor.originalTime) {
@@ -652,7 +694,105 @@ import { getLocalDateStr } from '../utils/dates';
                 const targetDateLabel = slotEditor.dateStr
                     ? new Date(`${slotEditor.dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
                     : 'Selected day';
-                const previewValue = formatSlotEditorValue(slotEditor) || 'Choose a time';
+                const previewValue = isRangeMode
+                    ? `${slotEditor.start || 'Start'} - ${slotEditor.end || 'End'}`
+                    : (formatSlotEditorValue(slotEditor) || 'Choose a time');
+                const quickTimes = ['08:00', '09:00', '10:30', '12:00', '14:30', '16:00'];
+                const minuteOptions = [0, 15, 30, 45];
+                const durationOptions = [
+                    { label: '30m', minutes: 30 },
+                    { label: '1h', minutes: 60 },
+                    { label: '90m', minutes: 90 },
+                    { label: '2h', minutes: 120 }
+                ];
+                const setTimeField = (field, value) => updateEditor({ [field]: value });
+                const nudgeTimeField = (field, delta) => {
+                    const fallback = field === 'end' ? addMinutesToTime(slotEditor.start, 60) : '09:00';
+                    setTimeField(field, addMinutesToTime(slotEditor[field], delta, fallback));
+                };
+                const setTimePart = (field, part, rawValue) => {
+                    const fallback = field === 'end' ? addMinutesToTime(slotEditor.start, 60) : '09:00';
+                    const parts = toTimeParts(slotEditor[field], fallback);
+                    const nextNumber = Number.parseInt(String(rawValue).replace(/\D/g, ''), 10);
+                    if (!Number.isFinite(nextNumber)) return;
+                    setTimeField(field, timePartsToValue({
+                        ...parts,
+                        [part]: part === 'hour'
+                            ? Math.min(23, Math.max(0, nextNumber))
+                            : Math.min(59, Math.max(0, nextNumber))
+                    }));
+                };
+                const setDurationFromStart = (minutes) => updateEditor({
+                    mode: 'range',
+                    end: addMinutesToTime(slotEditor.start, minutes)
+                });
+                const renderTimeControl = (field, label) => {
+                    const fallback = field === 'end' ? addMinutesToTime(slotEditor.start, 60) : '09:00';
+                    const value = slotEditor[field] || fallback;
+                    const { hour, minute } = toTimeParts(value, fallback);
+                    const paddedHour = String(hour).padStart(2, '0');
+                    const paddedMinute = String(minute).padStart(2, '0');
+
+                    return (
+                        <div className="rounded-xl border border-neutral-200 bg-white p-3 sm:p-4 shadow-sm">
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                                <div>
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">{label}</p>
+                                    <p className="text-2xl sm:text-3xl font-black tracking-tight text-black mt-1">{value}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <button type="button" onClick={() => nudgeTimeField(field, -15)} className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 text-sm font-black text-black hover:border-black transition-colors" aria-label={`Move ${label} back 15 minutes`}>-</button>
+                                    <button type="button" onClick={() => nudgeTimeField(field, 15)} className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 text-sm font-black text-black hover:border-black transition-colors" aria-label={`Move ${label} forward 15 minutes`}>+</button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                                <label className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 focus-within:border-black focus-within:bg-white transition-all">
+                                    <span className="block text-[8px] font-bold uppercase tracking-[0.22em] text-neutral-400 mb-1">Hour</span>
+                                    <input
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={2}
+                                        value={paddedHour}
+                                        onChange={(event) => setTimePart(field, 'hour', event.target.value)}
+                                        className="w-full bg-transparent outline-none text-2xl font-black tracking-tight text-black text-center"
+                                        aria-label={`${label} hour`}
+                                    />
+                                </label>
+                                <span className="pb-3 text-2xl font-black text-neutral-300">:</span>
+                                <label className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 focus-within:border-black focus-within:bg-white transition-all">
+                                    <span className="block text-[8px] font-bold uppercase tracking-[0.22em] text-neutral-400 mb-1">Min</span>
+                                    <input
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={2}
+                                        value={paddedMinute}
+                                        onChange={(event) => setTimePart(field, 'minute', event.target.value)}
+                                        className="w-full bg-transparent outline-none text-2xl font-black tracking-tight text-black text-center"
+                                        aria-label={`${label} minute`}
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-4 gap-2">
+                                {minuteOptions.map(option => {
+                                    const optionValue = timePartsToValue({ hour, minute: option });
+                                    const isSelected = minute === option;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={`${field}-${option}`}
+                                            onClick={() => setTimeField(field, optionValue)}
+                                            className={`h-9 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-neutral-500 border-neutral-200 hover:border-black hover:text-black'}`}
+                                        >
+                                            {String(option).padStart(2, '0')}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                };
 
                 return (
                     <div className="fixed inset-0 z-[1300] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-5 animate-in fade-in duration-200">
@@ -687,35 +827,56 @@ import { getLocalDateStr } from '../utils/dates';
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => updateEditor({ mode: 'range', end: slotEditor.end || '' })}
+                                                onClick={() => updateEditor({ mode: 'range', end: slotEditor.end || addMinutesToTime(slotEditor.start, 60) })}
                                                 className={`h-12 rounded-lg px-4 text-[10px] font-bold uppercase tracking-widest transition-all ${isRangeMode ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-500 hover:text-black hover:bg-neutral-50'}`}
                                             >
                                                 Period
                                             </button>
                                         </div>
 
-                                        <div className={`grid gap-3 ${isRangeMode ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-                                            <label className="rounded-xl border border-neutral-200 bg-white px-4 py-3 focus-within:border-black focus-within:shadow-xl focus-within:shadow-black/5 transition-all">
-                                                <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400 mb-2">{isRangeMode ? 'Starts' : 'Time'}</span>
-                                                <input
-                                                    type="time"
-                                                    value={slotEditor.start || ''}
-                                                    onChange={(event) => updateEditor({ start: event.target.value })}
-                                                    className="w-full bg-transparent outline-none text-2xl sm:text-3xl font-black tracking-tight text-black"
-                                                />
-                                            </label>
-                                            {isRangeMode && (
-                                                <label className="rounded-xl border border-neutral-200 bg-white px-4 py-3 focus-within:border-black focus-within:shadow-xl focus-within:shadow-black/5 transition-all">
-                                                    <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400 mb-2">Ends</span>
-                                                    <input
-                                                        type="time"
-                                                        value={slotEditor.end || ''}
-                                                        onChange={(event) => updateEditor({ end: event.target.value })}
-                                                        className="w-full bg-transparent outline-none text-2xl sm:text-3xl font-black tracking-tight text-black"
-                                                    />
-                                                </label>
-                                            )}
+                                        {isRangeMode && (
+                                            <div className="mb-4 rounded-xl border border-neutral-100 bg-white p-3">
+                                                <div className="flex items-center justify-between gap-3 mb-2">
+                                                    <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Duration</p>
+                                                    <p className="text-[10px] font-bold text-neutral-400">Starts at {slotEditor.start}</p>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {durationOptions.map(option => (
+                                                        <button
+                                                            type="button"
+                                                            key={option.label}
+                                                            onClick={() => setDurationFromStart(option.minutes)}
+                                                            className="h-9 rounded-lg border border-neutral-200 bg-neutral-50 text-[10px] font-black uppercase tracking-widest text-neutral-600 hover:border-black hover:bg-white hover:text-black transition-all"
+                                                        >
+                                                            {option.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {renderTimeControl('start', isRangeMode ? 'Starts' : 'Time')}
+                                            {isRangeMode && renderTimeControl('end', 'Ends')}
                                         </div>
+
+                                        {!isRangeMode && (
+                                            <div className="mt-4 rounded-xl border border-neutral-100 bg-white p-3">
+                                                <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400 mb-2">Quick picks</p>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {quickTimes.map(time => (
+                                                        <button
+                                                            type="button"
+                                                            key={time}
+                                                            onClick={() => setTimeField('start', time)}
+                                                            className={`h-10 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all ${slotEditor.start === time ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-neutral-50 text-neutral-600 border-neutral-200 hover:border-black hover:bg-white hover:text-black'}`}
+                                                        >
+                                                            {time}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 flex flex-col justify-between gap-5">
@@ -1144,20 +1305,6 @@ import { getLocalDateStr } from '../utils/dates';
                                                 }}
                                                 className={`schedule-day-cell schedule-day-row-card group relative ${calendarCellSizeClass} rounded-lg border transition-all duration-500 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.006]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
                                             >
-                                                {!isPastDay && (
-                                                    <button
-                                                        type="button"
-                                                        aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
-                                                        title={config.available ? 'Mark unavailable' : 'Mark available'}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            toggleDateAvailability(dateStr);
-                                                        }}
-                                                        className={`absolute right-1.5 top-1.5 w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-300 shadow-sm z-10 ${config.available ? (isSelected ? 'bg-[#39FF14] border-transparent text-black' : 'bg-white border-neutral-200 text-neutral-500 hover:bg-[#39FF14] hover:border-transparent hover:text-black') : (isSelected ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-red-100 text-red-500 hover:bg-red-500 hover:border-red-500 hover:text-white')}`}
-                                                    >
-                                                        {config.available ? <Check size={10}/> : <X size={10}/>}
-                                                    </button>
-                                                )}
                                                 <div className="schedule-day-row-date">
                                                     <p className="text-[9px] font-bold uppercase text-neutral-400">
                                                         {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -1198,6 +1345,21 @@ import { getLocalDateStr } from '../utils/dates';
                                                 </div>
 
                                                 <div className="schedule-day-row-capacity">
+                                                    {!isPastDay && (
+                                                        <button
+                                                            type="button"
+                                                            aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
+                                                            title={config.available ? 'Mark unavailable' : 'Mark available'}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleDateAvailability(dateStr);
+                                                            }}
+                                                            className={`schedule-day-availability-chip ${config.available ? 'is-open' : 'is-closed'}`}
+                                                        >
+                                                            {config.available ? <Check size={12}/> : <X size={12}/>}
+                                                            <span>{config.available ? 'Open' : 'Closed'}</span>
+                                                        </button>
+                                                    )}
                                                     <button
                                                         type="button"
                                                         onClick={(event) => {
@@ -1206,8 +1368,10 @@ import { getLocalDateStr } from '../utils/dates';
                                                             setSchedulePeriod('day');
                                                         }}
                                                         className="schedule-day-row-action"
+                                                        aria-label={`Open full view for ${dateStr}`}
+                                                        title="Open day view"
                                                     >
-                                                        Full view
+                                                        <Eye size={14}/>
                                                     </button>
                                                 </div>
                                             </div>
