@@ -914,6 +914,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-4 md:py-10">
+        {activeView === 'profile' && (
         <section className="client-portal-summary mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 native-gradient-ring">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-lg native-gradient-icon flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
@@ -956,6 +957,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
             </button>
           )}
         </section>
+        )}
 
         {activeView === 'chats' && (
           <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">

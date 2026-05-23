@@ -701,6 +701,49 @@ body {
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.98), 0 26px 70px -54px rgba(15, 23, 42, 0.58);
         }
 
+        .schedule-day-row-card {
+            display: grid !important;
+            grid-template-columns: minmax(8.5rem, 0.62fr) minmax(0, 1fr) minmax(10rem, 0.55fr);
+            align-items: center;
+            gap: 1rem;
+            padding: 0.9rem 1rem !important;
+        }
+
+        .schedule-day-row-date,
+        .schedule-day-row-staff,
+        .schedule-day-row-capacity {
+            min-width: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .schedule-day-row-date p {
+            letter-spacing: 0 !important;
+        }
+
+        .schedule-day-row-staff {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .schedule-day-row-capacity {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            justify-self: end;
+            width: min(100%, 15rem);
+        }
+
+        .schedule-day-row-action {
+            align-self: flex-end;
+            font-size: 0.46rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: rgb(163 163 163);
+            letter-spacing: 0;
+        }
+
         .schedule-day-cell::before {
             content: "";
             position: absolute;
@@ -726,6 +769,34 @@ body {
             inset: 0 0 auto 0;
             height: 2px;
             background: linear-gradient(90deg, rgba(228,231,236,0), rgba(228,231,236,0.9), rgba(228,231,236,0));
+        }
+
+        .booking-desk-shell {
+            box-shadow: 0 22px 60px -50px rgba(15, 23, 42, 0.42);
+        }
+
+        .booking-desk-command {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,251,253,0.98)),
+                radial-gradient(circle at 8% 0%, rgba(20, 167, 255, 0.08), transparent 30%),
+                radial-gradient(circle at 92% 10%, rgba(222, 91, 255, 0.08), transparent 34%);
+        }
+
+        .booking-desk-metric,
+        .booking-search-field input,
+        .booking-filter-rail button,
+        .booking-record-row {
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 16px 42px -40px rgba(15, 23, 42, 0.34);
+        }
+
+        .booking-record-list {
+            max-height: min(70vh, 58rem);
+            overflow-y: auto;
+            scrollbar-gutter: stable;
+        }
+
+        .booking-record-row {
+            background: rgba(255, 255, 255, 0.9);
         }
 
         .schedule-day-selected {
@@ -1059,13 +1130,31 @@ body {
 
             .schedule-calendar-grid.grid-cols-2 .schedule-day-cell,
             .schedule-calendar-grid.grid-cols-1 .schedule-day-cell {
-                min-height: 7.1rem !important;
-                padding: 0.75rem !important;
+                min-height: 6.2rem !important;
+                padding: 0.78rem !important;
             }
 
             .schedule-calendar-grid.grid-cols-2 .schedule-slot-pill,
             .schedule-calendar-grid.grid-cols-1 .schedule-slot-pill {
                 min-height: 2rem !important;
+            }
+
+            .schedule-day-row-card {
+                grid-template-columns: minmax(4.4rem, 0.45fr) minmax(0, 0.9fr) minmax(6.7rem, 0.72fr) !important;
+                gap: 0.5rem !important;
+            }
+
+            .schedule-day-row-staff {
+                gap: 0.45rem;
+            }
+
+            .schedule-day-row-capacity {
+                width: 100%;
+                justify-self: stretch;
+            }
+
+            .schedule-day-row-action {
+                display: none;
             }
 
             .schedule-calendar-card h3,
@@ -1080,6 +1169,42 @@ body {
 
             .schedule-calendar-card .schedule-slot-pill span:last-child {
                 letter-spacing: 0.04em !important;
+            }
+
+            .booking-desk-command {
+                padding: 1rem !important;
+            }
+
+            .booking-desk-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 0.5rem !important;
+            }
+
+            .booking-desk-metric {
+                padding: 0.8rem !important;
+            }
+
+            .booking-filter-rail {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                width: 100%;
+                gap: 0.45rem !important;
+            }
+
+            .booking-filter-rail button {
+                height: 2.45rem !important;
+                justify-content: center;
+                padding-left: 0.45rem !important;
+                padding-right: 0.45rem !important;
+                font-size: 0.54rem !important;
+            }
+
+            .booking-record-list {
+                max-height: none;
+            }
+
+            .booking-record-row {
+                padding: 1rem !important;
             }
         }
 
@@ -2094,6 +2219,69 @@ body {
             border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-row-card .text-black,
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-row-card .schedule-day-row-action {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-row-card .bg-neutral-50,
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-day-row-card .bg-neutral-100 {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-day-agenda-card .bg-neutral-50\/70,
+        .native-ui.dashboard-dark .schedule-day-agenda-card .bg-white,
+        .native-ui.dashboard-dark .schedule-day-agenda-card [class*="bg-neutral-50"] {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-day-agenda-card .text-black,
+        .native-ui.dashboard-dark .schedule-day-agenda-card .metric-value {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-day-agenda-card .text-neutral-500,
+        .native-ui.dashboard-dark .schedule-day-agenda-card .text-neutral-400,
+        .native-ui.dashboard-dark .schedule-day-agenda-card .text-neutral-300 {
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-day-agenda-card .border-dashed {
+            background: #0b0c10 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-desk-shell,
+        .native-ui.dashboard-dark .booking-desk-command,
+        .native-ui.dashboard-dark .booking-record-row,
+        .native-ui.dashboard-dark .booking-desk-metric {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-search-field input,
+        .native-ui.dashboard-dark .booking-filter-rail button:not(.bg-black) {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-desk-shell .text-black,
+        .native-ui.dashboard-dark .booking-desk-shell .metric-value {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .booking-desk-shell .bg-white,
+        .native-ui.dashboard-dark .booking-desk-shell .bg-neutral-50,
+        .native-ui.dashboard-dark .booking-desk-shell .bg-neutral-100 {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
         .native-ui.dashboard-dark [data-tour="client-inbox"] .support-inbox-card,
         .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list,
         .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list > div,
@@ -2373,12 +2561,31 @@ body {
         .native-home.native-home-dark .native-home-nav,
         .native-home.native-home-dark .bg-white,
         .native-home.native-home-dark .bg-white\/82,
-        .native-home.native-home-dark .native-feature-card,
         .native-home.native-home-dark section,
         .native-home.native-home-dark footer {
             background-color: #101114 !important;
             color: #f8fafc !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-home.native-home-dark .native-feature-card {
+            background:
+                linear-gradient(180deg, rgba(18, 19, 23, 0.96), rgba(11, 12, 16, 0.98)),
+                #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.13) !important;
+            box-shadow: 0 24px 74px -58px rgba(0, 0, 0, 0.88) !important;
+        }
+
+        .native-home.native-home-dark .native-feature-card h2,
+        .native-home.native-home-dark .native-feature-card h3,
+        .native-home.native-home-dark .native-feature-card svg {
+            color: #f8fafc !important;
+            stroke: currentColor !important;
+        }
+
+        .native-home.native-home-dark .native-feature-card p {
+            color: #a8b3c7 !important;
         }
 
         .native-home.native-home-dark .native-home-theme-toggle,

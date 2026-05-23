@@ -451,24 +451,15 @@ import { getLocalDateStr } from '../utils/dates';
                     return dateStr;
                 });
             }, [calendarViewMode, expandedDate, hidePastDays, todayStr, daysInMonth, calendarWeekStart, calendarWeekEnd]);
-            const isForwardMonthBoard = calendarViewMode === 'month' && hidePastDays;
             const calendarGridClass = calendarViewMode === 'day'
                 ? 'grid-cols-1'
-                : calendarViewMode === 'week'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'
-                    : hidePastDays
-                        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'
-                        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7';
+                : 'grid-cols-1';
             const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7';
             const calendarHeaderVisibilityClass = 'hidden';
             const calendarFrameClass = 'min-w-0';
             const calendarCellSizeClass = calendarViewMode === 'day'
                 ? 'min-h-[420px] md:min-h-[460px]'
-                : calendarViewMode === 'week'
-                    ? 'min-h-[132px] md:min-h-[220px] xl:min-h-[260px]'
-                    : isForwardMonthBoard
-                        ? 'min-h-[132px] md:min-h-[220px] xl:min-h-[260px]'
-                        : 'min-h-[132px] md:min-h-[200px] xl:min-h-[230px]';
+                : 'min-h-[96px]';
 
             const setSchedulePeriod = (period) => {
                 setScheduleStatsPeriod(period);
@@ -963,7 +954,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         setExpandedDate(dateStr);
                                                     }
                                                 }}
-                                                className={`schedule-day-cell group relative ${calendarCellSizeClass} rounded-lg border transition-all duration-500 flex flex-col p-2.5 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.012]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
+                                                className={`schedule-day-cell schedule-day-row-card group relative ${calendarCellSizeClass} rounded-lg border transition-all duration-500 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.006]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
                                             >
                                                 {!isPastDay && (
                                                     <button
@@ -979,45 +970,55 @@ import { getLocalDateStr } from '../utils/dates';
                                                         {config.available ? <Check size={10}/> : <X size={10}/>}
                                                     </button>
                                                 )}
-                                                {(calendarViewMode !== 'month' || hidePastDays) && (
-                                                    <p className="mb-2 pr-7 text-[8px] font-bold uppercase tracking-[0.24em] text-neutral-400">
+                                                <div className="schedule-day-row-date">
+                                                    <p className="text-[9px] font-bold uppercase text-neutral-400">
                                                         {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                                     </p>
-                                                )}
-                                                <div className="flex items-start justify-between gap-1 mb-2 pr-6">
-                                                    <span className={`metric-value text-xl md:text-[22px] font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
-                                                </div>
-                                                {staffCoverage.length > 0 && (
-                                                    <div className="mb-2 flex items-center gap-1.5">
-                                                        <div className="flex -space-x-1.5">
-                                                            {staffCoverage.slice(0, 3).map(staff => (
-                                                                <span
-                                                                    key={staff.id}
-                                                                    className="w-5 h-5 rounded-full border border-white bg-neutral-100 text-[7px] font-black text-black flex items-center justify-center overflow-hidden shadow-sm"
-                                                                    title={getStaffDisplayName(staff)}
-                                                                >
-                                                                    {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
-                                                                </span>
-                                                            ))}
+                                                    <div className="flex items-end gap-2">
+                                                        <span className={`metric-value text-3xl md:text-[34px] font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
+                                                        <div className="flex flex-wrap items-center gap-1 pb-1">
+                                                            {isToday && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-black text-white">Today</span>}
+                                                            {isCustom && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-400">Custom</span>}
                                                         </div>
-                                                        <span className="rounded-full bg-neutral-50 border border-neutral-100 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.12em] text-neutral-400">
-                                                            {staffCoverage.length}
-                                                        </span>
                                                     </div>
-                                                )}
-                                                <div className="mt-auto space-y-2">
-                                                    <div className="min-h-[14px] flex flex-wrap items-center gap-1">
-                                                        {isToday && <span className={`rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-widest ${isSelected ? 'bg-black text-white' : 'bg-black text-white'}`}>Today</span>}
-                                                        {isCustom && <span className="rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-400">Custom</span>}
-                                                    </div>
+                                                </div>
+
+                                                <div className="schedule-day-row-staff">
+                                                    {staffCoverage.length > 0 ? (
+                                                        <>
+                                                            <div className="flex -space-x-2">
+                                                                {staffCoverage.slice(0, 4).map(staff => (
+                                                                    <span
+                                                                        key={staff.id}
+                                                                        className="w-7 h-7 rounded-full border border-white bg-neutral-100 text-[8px] font-black text-black flex items-center justify-center overflow-hidden shadow-sm"
+                                                                        title={getStaffDisplayName(staff)}
+                                                                    >
+                                                                        {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] font-bold uppercase text-neutral-400">Staff Coverage</p>
+                                                                <p className="text-xs font-bold text-black">{staffCoverage.length} covering this day</p>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase text-neutral-400">
+                                                            Business availability
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="schedule-day-row-capacity">
                                                     <span
-                                                        className={`schedule-slot-pill inline-flex min-h-[28px] w-full items-center justify-center gap-1 rounded-full border px-2 py-1 text-center font-bold leading-none transition-colors ${bubbleClass}`}
+                                                        className={`schedule-slot-pill inline-flex min-h-[34px] w-full items-center justify-center gap-1 rounded-full border px-3 py-1.5 text-center font-bold leading-none transition-colors ${bubbleClass}`}
                                                         aria-label={calendarBubble.label}
                                                         title={calendarBubble.label}
                                                     >
-                                                        {calendarBubble.count !== null && <span className="metric-value text-[12px] leading-none font-black tracking-tight">{calendarBubble.count}</span>}
-                                                        <span className="text-[6px] uppercase tracking-[0.12em] leading-tight">{calendarBubble.caption}</span>
+                                                        {calendarBubble.count !== null && <span className="metric-value text-[14px] leading-none font-black tracking-tight">{calendarBubble.count}</span>}
+                                                        <span className="text-[7px] uppercase tracking-[0.12em] leading-tight">{calendarBubble.caption}</span>
                                                     </span>
+                                                    <span className="schedule-day-row-action">Open day view</span>
                                                 </div>
                                             </div>
                                         );

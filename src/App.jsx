@@ -1233,8 +1233,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
             ));
             const [mobileNavCollapsed, setMobileNavCollapsed] = useState(false);
-            const [bookingDeskPeriod, setBookingDeskPeriod] = useState('day');
-            const [bookingFilter, setBookingFilter] = useState('all');
+            const [bookingDeskPeriod, setBookingDeskPeriod] = useState('month');
+            const [bookingFilter, setBookingFilter] = useState('upcoming');
+            const [bookingSearch, setBookingSearch] = useState('');
             const [clientRecords, setClientRecords] = useState([]);
             const [clientSearch, setClientSearch] = useState('');
             const [selectedClientId, setSelectedClientId] = useState(null);
@@ -1653,6 +1654,20 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const activePeriod = periodConfig[bookingDeskPeriod] || periodConfig.day;
                 const startKey = getLocalDateStr(activePeriod.start);
                 const endKey = getLocalDateStr(activePeriod.end);
+                const toMinutes = (time = '') => {
+                    const match = String(time || '').match(/^(\d{1,2}):(\d{2})/);
+                    return match ? (Number(match[1]) * 60) + Number(match[2]) : 9999;
+                };
+                const sortUpcoming = (rows = []) => [...rows].sort((a, b) => (
+                    String(a.dateKeyResolved || '9999-12-31').localeCompare(String(b.dateKeyResolved || '9999-12-31')) ||
+                    toMinutes(a.time) - toMinutes(b.time) ||
+                    String(b.timestamp || 0).localeCompare(String(a.timestamp || 0))
+                ));
+                const sortRecent = (rows = []) => [...rows].sort((a, b) => (
+                    String(b.dateKeyResolved || '').localeCompare(String(a.dateKeyResolved || '')) ||
+                    toMinutes(b.time) - toMinutes(a.time) ||
+                    Number(b.timestamp || 0) - Number(a.timestamp || 0)
+                ));
                 const records = visibleBookings.map(booking => ({
                     ...booking,
                     dateKeyResolved: parseBookingDate(booking)
@@ -1662,14 +1677,30 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     booking.dateKeyResolved >= startKey &&
                     booking.dateKeyResolved <= endKey
                 ));
-                const activeRecords = periodRecords.filter(booking => booking.status !== 'declined');
-                const pending = periodRecords.filter(booking => booking.status === 'pending').length;
-                const waitlist = periodRecords.filter(booking => booking.status === 'waitlist').length;
-                const confirmedRecords = periodRecords.filter(booking => booking.status === 'confirmed');
-                const declinedRecords = periodRecords.filter(booking => booking.status === 'declined');
-                const reviewRecords = periodRecords.filter(booking => booking.status === 'pending' || booking.status === 'waitlist');
+                const normalizedSearch = bookingSearch.trim().toLowerCase();
+                const searchedRecords = normalizedSearch
+                    ? periodRecords.filter(booking => [
+                        booking.clientName,
+                        booking.clientPhone,
+                        booking.clientEmail,
+                        booking.clientBirthday,
+                        booking.clientNote,
+                        booking.date,
+                        booking.dateKeyResolved,
+                        booking.time,
+                        booking.status,
+                        booking.staffName,
+                        staffList.find(staff => staff.id === booking.staffId)?.name
+                    ].filter(Boolean).join(' ').toLowerCase().includes(normalizedSearch))
+                    : periodRecords;
+                const activeRecords = searchedRecords.filter(booking => booking.status !== 'declined');
+                const pending = searchedRecords.filter(booking => booking.status === 'pending').length;
+                const waitlist = searchedRecords.filter(booking => booking.status === 'waitlist').length;
+                const confirmedRecords = searchedRecords.filter(booking => booking.status === 'confirmed');
+                const declinedRecords = searchedRecords.filter(booking => booking.status === 'declined');
+                const reviewRecords = searchedRecords.filter(booking => booking.status === 'pending' || booking.status === 'waitlist');
                 const upcomingRecords = activeRecords.filter(booking => !booking.dateKeyResolved || booking.dateKeyResolved >= todayKey);
-                const historyRecords = periodRecords.filter(booking => (
+                const historyRecords = searchedRecords.filter(booking => (
                     booking.status === 'declined' ||
                     booking.status === 'completed' ||
                     (booking.dateKeyResolved && booking.dateKeyResolved < todayKey)
@@ -1677,31 +1708,35 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const eligibleCount = activeRecords.length;
                 const bookingRate = eligibleCount ? Math.round((confirmedRecords.length / eligibleCount) * 100) : 0;
                 const rowsByFilter = {
-                    all: periodRecords,
-                    review: reviewRecords,
-                    upcoming: upcomingRecords,
-                    confirmed: confirmedRecords,
-                    waitlist: periodRecords.filter(booking => booking.status === 'waitlist'),
-                    history: historyRecords
+                    all: [...sortUpcoming(activeRecords), ...sortRecent(declinedRecords)],
+                    review: sortUpcoming(reviewRecords),
+                    upcoming: sortUpcoming(upcomingRecords),
+                    confirmed: sortUpcoming(confirmedRecords),
+                    waitlist: sortUpcoming(searchedRecords.filter(booking => booking.status === 'waitlist')),
+                    history: sortRecent(historyRecords)
                 };
                 const filters = [
-                    { id: 'all', label: 'All', count: periodRecords.length },
-                    { id: 'review', label: 'Review', count: reviewRecords.length },
                     { id: 'upcoming', label: 'Upcoming', count: upcomingRecords.length },
+                    { id: 'review', label: 'Review', count: reviewRecords.length },
                     { id: 'confirmed', label: 'Confirmed', count: confirmedRecords.length },
                     { id: 'waitlist', label: 'Waitlist', count: waitlist },
-                    { id: 'history', label: 'History', count: historyRecords.length }
+                    { id: 'history', label: 'History', count: historyRecords.length },
+                    { id: 'all', label: 'All', count: searchedRecords.length }
                 ];
-                const activeFilter = filters.some(filter => filter.id === bookingFilter) ? bookingFilter : 'all';
+                const activeFilter = filters.some(filter => filter.id === bookingFilter) ? bookingFilter : 'upcoming';
+                const activeFilterLabel = filters.find(filter => filter.id === activeFilter)?.label || 'Upcoming';
 
                 return {
                     periods: Object.values(periodConfig),
                     period: activePeriod,
                     filters,
                     activeFilter,
+                    activeFilterLabel,
                     rowsByFilter,
                     filteredRows: rowsByFilter[activeFilter] || rowsByFilter.all,
-                    total: periodRecords.length,
+                    total: searchedRecords.length,
+                    periodTotal: periodRecords.length,
+                    searchActive: Boolean(normalizedSearch),
                     pending,
                     waitlist,
                     confirmed: confirmedRecords.length,
@@ -1712,13 +1747,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     bookingRate,
                     eligibleCount,
                     metrics: [
-                        { label: 'Total Records', value: periodRecords.length, hint: activePeriod.id === 'day' ? 'Today' : activePeriod.id === 'week' ? 'This Week' : 'This Month', icon: Layers },
+                        { label: 'Upcoming', value: upcomingRecords.length, hint: activePeriod.id === 'day' ? 'Today' : activePeriod.id === 'week' ? 'This week' : 'This month', icon: CalendarCheck },
                         { label: 'Needs Review', value: reviewRecords.length, hint: `${pending} pending / ${waitlist} waitlist`, icon: Bell },
-                        { label: 'Confirmed', value: confirmedRecords.length, hint: `${upcomingRecords.length} upcoming`, icon: CheckCircle2 },
-                        { label: 'Booking Rate', value: `${bookingRate}%`, hint: `${confirmedRecords.length}/${eligibleCount || 0} confirmed`, icon: ShieldCheck }
+                        { label: 'Confirmed', value: confirmedRecords.length, hint: `${bookingRate}% booking rate`, icon: CheckCircle2 },
+                        { label: 'History', value: historyRecords.length, hint: `${declinedRecords.length} declined`, icon: History }
                     ]
                 };
-            }, [bookingDeskPeriod, bookingFilter, visibleBookings]);
+            }, [bookingDeskPeriod, bookingFilter, bookingSearch, visibleBookings, staffList]);
 
             const filteredBookings = bookingDesk.filteredRows;
             const showBookingExample = bookingsReady && visibleBookings.length === 0;
@@ -6995,71 +7030,80 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             </div>
                         </header>
 
-                        <section className="saas-card overflow-hidden mb-4 md:mb-6">
-                            <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Booking Desk</p>
-                                    <h2 className="text-xl md:text-2xl font-bold tracking-tight text-black">{bookingDesk.period.periodName} Stats</h2>
-                                    <p className="text-sm text-neutral-500 mt-1">{bookingDesk.period.rangeLabel}</p>
+                        <section data-tour="bookings-queue" className="saas-card booking-desk-shell overflow-hidden">
+                            <div className="booking-desk-command p-4 md:p-5 border-b border-neutral-100">
+                                <div className="flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase text-neutral-400 mb-2">Booking Desk</p>
+                                        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black">
+                                            {bookingDesk.activeFilter === 'upcoming' ? 'Latest Upcoming' : `${bookingDesk.activeFilterLabel} Bookings`}
+                                        </h2>
+                                        <p className="text-sm text-neutral-500 mt-1">
+                                            {showBookingExample
+                                                ? '0 real records. Example shown for layout only.'
+                                                : `${bookingRows.length} shown / ${bookingDesk.period.rangeLabel}.`}
+                                        </p>
+                                    </div>
+                                    <div className="schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                        {bookingDesk.periods.map(period => (
+                                            <button
+                                                key={period.id}
+                                                onClick={() => setBookingDeskPeriod(period.id)}
+                                                className={`flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                            >
+                                                {period.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="flex bg-neutral-100 p-1.5 rounded-lg border border-neutral-200 w-full sm:w-fit">
-                                    {bookingDesk.periods.map(period => (
-                                        <button
-                                            key={period.id}
-                                            onClick={() => setBookingDeskPeriod(period.id)}
-                                            className={`flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${bookingDeskPeriod === period.id ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
-                                        >
-                                            {period.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="native-stat-grid grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4">
-                                {bookingDesk.metrics.map((metric, index) => {
-                                    const IconCmp = metric.icon;
-                                    return (
-                                        <div key={metric.label} className={`native-stat-card p-5 md:p-6 border-neutral-100 bg-white text-black ${index > 0 ? 'xl:border-l' : ''} ${index % 2 === 1 ? 'sm:border-l xl:border-l' : ''} ${index > 1 ? 'sm:border-t xl:border-t-0' : ''}`}>
-                                            <div className="flex items-start justify-between gap-4 mb-8">
-                                                <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
-                                                <span className="max-w-[170px] text-right leading-tight text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">{metric.hint}</span>
+
+                                <div className="booking-desk-metrics grid grid-cols-2 xl:grid-cols-4 gap-2 mt-4">
+                                    {bookingDesk.metrics.map(metric => {
+                                        const IconCmp = metric.icon;
+                                        return (
+                                            <div key={metric.label} className="booking-desk-metric native-stat-card rounded-lg border border-neutral-100 bg-white p-3 md:p-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-black shrink-0"><IconCmp size={15}/></div>
+                                                    <span className="text-right leading-tight text-[9px] font-bold uppercase text-neutral-400 bg-neutral-50 px-2 py-1 rounded-md">{metric.hint}</span>
+                                                </div>
+                                                <p className="text-[9px] font-bold uppercase text-neutral-400 mt-5 mb-1">{metric.label}</p>
+                                                <p className="metric-value text-2xl md:text-3xl font-bold tracking-tight leading-none text-black">{metric.value}</p>
                                             </div>
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400 mb-2">{metric.label}</p>
-                                            <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight leading-none text-black">{metric.value}</p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
-
-                            <section data-tour="bookings-queue" className="saas-card overflow-hidden">
-                            <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-                                <div>
-                                    <h2 className="text-lg font-bold tracking-tight text-black">Booking Queue</h2>
-                                    <p className="text-sm text-neutral-500">
-                                        {showBookingExample
-                                            ? '0 real records. Example shown for layout only.'
-                                            : `${filteredBookings.length} shown for ${bookingDesk.period.rangeLabel.toLowerCase()}.`}
-                                    </p>
+                                        );
+                                    })}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {bookingDesk.filters.map(filter => (
-                                        <button
-                                            key={filter.id}
-                                            onClick={() => setBookingFilter(filter.id)}
-                                            className={`h-10 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${bookingDesk.activeFilter === filter.id ? 'bg-black text-white shadow-lg' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100 hover:text-black'}`}
-                                        >
-                                            {filter.label} <span className={`px-1.5 py-0.5 rounded ${bookingDesk.activeFilter === filter.id ? 'bg-white/15 text-white' : 'bg-white text-neutral-400'}`}>{filter.count}</span>
-                                        </button>
-                                    ))}
+
+                                <div className="booking-desk-controls mt-4 flex flex-col xl:flex-row gap-3">
+                                    <label className="booking-search-field relative flex-1 min-w-0">
+                                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
+                                        <input
+                                            value={bookingSearch}
+                                            onChange={(event) => setBookingSearch(event.target.value)}
+                                            placeholder="Search client, phone, email, note"
+                                            className="w-full h-12 rounded-lg bg-white border border-neutral-200 pl-11 pr-4 text-sm font-bold text-black outline-none focus:border-black transition-colors"
+                                        />
+                                    </label>
+                                    <div className="booking-filter-rail flex flex-wrap items-center gap-2">
+                                        {bookingDesk.filters.map(filter => (
+                                            <button
+                                                key={filter.id}
+                                                onClick={() => setBookingFilter(filter.id)}
+                                                className={`h-11 px-3 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-2 ${bookingDesk.activeFilter === filter.id ? 'bg-black text-white shadow-lg' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100 hover:text-black'}`}
+                                            >
+                                                {filter.label}
+                                                <span className={`px-1.5 py-0.5 rounded ${bookingDesk.activeFilter === filter.id ? 'bg-white/15 text-white' : 'bg-white text-neutral-400'}`}>{filter.count}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="divide-y divide-neutral-100">
+                            <div className="booking-record-list divide-y divide-neutral-100">
                                 {bookingRows.length === 0 ? (
-                                    <div className="p-16 md:p-24 text-center">
+                                    <div className="p-12 md:p-20 text-center">
                                         <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-400"><Layers size={22}/></div>
-                                        <h3 className="text-xl font-bold tracking-tight text-black mb-2">No bookings here</h3>
-                                        <p className="text-sm text-neutral-500">Try another filter or wait for new booking requests.</p>
+                                        <h3 className="text-xl font-bold tracking-tight text-black mb-2">{bookingDesk.searchActive ? 'No matching bookings' : 'No bookings here'}</h3>
+                                        <p className="text-sm text-neutral-500">{bookingDesk.searchActive ? 'Try a different client name, phone, email, or note.' : 'Try another category or wait for new booking requests.'}</p>
                                     </div>
                                 ) : bookingRows.map(b => {
                                     const assignedStaff = staffList.find(s => s.id === b.staffId);
@@ -7074,9 +7118,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 ? 'bg-red-50 text-red-600'
                                                 : 'bg-black text-white';
                                     return (
-                                        <div key={b.id} className={`p-5 md:p-6 transition-all hover:bg-neutral-50/70 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
-                                            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 xl:items-center">
-                                                <div className="xl:col-span-5 flex items-center gap-4 min-w-0">
+                                        <div key={b.id} className={`booking-record-row p-4 md:p-5 transition-all hover:bg-neutral-50/70 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
+                                            <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
+                                                <div className="2xl:col-span-5 flex items-center gap-4 min-w-0">
                                                     <div className="relative shrink-0">
                                                         <div className={`w-14 h-14 rounded-lg flex items-center justify-center font-bold text-xl shadow-inner uppercase overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : statusStyle}`}>
                                                             {clientAvatar ? <img src={clientAvatar} alt="" className="w-full h-full object-cover" /> : b.clientName.charAt(0)}
@@ -7093,12 +7137,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     </div>
                                                 </div>
 
-                                                <div className="xl:col-span-2">
+                                                <div className="2xl:col-span-2">
                                                     <p className="metric-value text-2xl font-bold tracking-tight text-black">{b.time}</p>
                                                     <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{b.date}</p>
                                                 </div>
 
-                                                <div className="xl:col-span-3">
+                                                <div className="2xl:col-span-3">
                                                     {isExampleBooking ? (
                                                         <div className="inline-flex h-10 items-center px-3 rounded-lg bg-neutral-50 border border-neutral-100 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                                                             Example preview
@@ -7119,7 +7163,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     )}
                                                 </div>
 
-                                                <div className="xl:col-span-2 flex flex-wrap items-center justify-start xl:justify-end gap-2">
+                                                <div className="2xl:col-span-2 flex flex-wrap items-center justify-start 2xl:justify-end gap-2">
                                                     {isExampleBooking ? (
                                                         <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2">
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
