@@ -6369,86 +6369,31 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     </div>
                                 </div>
                                 <div className="editor-studio-console editor-command-center animate-in fade-in duration-700">
-                                    <section className="editor-command-hero">
-                                        <div className="editor-command-hero-mark">
-                                            <BuildABookingMark className="w-8 h-8" variant="light" />
-                                        </div>
-                                        <div className="editor-command-hero-copy">
-                                            <span className="editor-studio-kicker">Booking page cockpit</span>
-                                            <h3>Design every booking moment.</h3>
-                                            <p>Play the studio build, watch each piece assemble in preview, then jump back into any room to tune it.</p>
-                                        </div>
-                                        <div className="editor-command-hero-actions">
-                                            <button type="button" onClick={startEditorStudioPresentation} className="editor-command-primary">
-                                                <Zap size={16} />
-                                                {editorStudioPresenting ? 'Presenting...' : 'Play studio build'}
-                                            </button>
-                                            <button type="button" onClick={() => openEditorStudioModal('identity')} className="editor-command-secondary">
-                                                <BadgeCheck size={15} />
-                                                Brand setup
-                                            </button>
-                                            <button type="button" onClick={() => setEditorStudioSoundEnabled(prev => !prev)} className="editor-command-secondary">
-                                                <Signal size={15} />
-                                                {editorStudioSoundEnabled ? 'Sound on' : 'Sound off'}
-                                            </button>
-                                        </div>
-                                    </section>
-
-                                    <section className={`editor-command-stage ${editorStudioPresenting ? 'is-playing' : ''}`}>
-                                        <div className="editor-command-stage-screen">
-                                            <div className="editor-command-stage-orbit">
-                                                <span />
-                                                <BuildABookingMark className="w-9 h-9" variant="light" />
-                                            </div>
+                                    <section className="editor-command-map editor-room-launcher">
+                                        <div className="editor-command-section-head editor-room-launcher-head">
                                             <div>
-                                                <span className="editor-studio-kicker">Live assembly</span>
-                                                <h4>{{
-                                                    identity: 'Brand enters first.',
-                                                    themes: 'The industry look lands.',
-                                                    visuals: 'The interface gets its rhythm.',
-                                                    features: 'The booking flow learns what to ask.',
-                                                    copy: 'The words pull everything together.'
-                                                }[editorStudioScene] || 'The studio is ready.'}</h4>
-                                                <p>{{
-                                                    identity: 'Logo, banner, name, and intro copy set the trust signal clients see before choosing a time.',
-                                                    themes: 'The theme designer reads the business type, then builds a look that belongs to that world.',
-                                                    visuals: 'Calendar, time slots, buttons, spacing, and typography are tuned as one system.',
-                                                    features: 'Client fields, FAQ, waitlist, email opt-in, and socials become the practical booking flow.',
-                                                    copy: 'Labels, button text, and success messages finish the client-facing experience.'
-                                                }[editorStudioScene] || 'Run the studio build or open a room to tune one exact piece.'}</p>
+                                                <span className="editor-studio-kicker">Editor rooms</span>
+                                                <h4>Choose what to tune.</h4>
+                                                <p>Open one focused room, make the change, and watch the preview update beside you.</p>
                                             </div>
-                                        </div>
-                                        <div className="editor-command-stage-rail">
-                                            {[
-                                                { id: 'identity', label: 'Brand' },
-                                                { id: 'themes', label: 'Theme' },
-                                                { id: 'visuals', label: 'Visuals' },
-                                                { id: 'features', label: 'Flow' },
-                                                { id: 'copy', label: 'Copy' }
-                                            ].map((stage, index) => (
-                                                <button key={stage.id} type="button" onClick={() => { setEditorStudioScene(stage.id); openEditorStudioModal(stage.id, 'step'); }} className={editorStudioScene === stage.id ? 'is-active' : ''}>
-                                                    <span>{String(index + 1).padStart(2, '0')}</span>
-                                                    {stage.label}
+                                            <div className="editor-room-launcher-actions">
+                                                <button type="button" onClick={startEditorStudioPresentation} className="editor-command-secondary">
+                                                    <Zap size={15} />
+                                                    {editorStudioPresenting ? 'Playing' : 'Preview build'}
                                                 </button>
-                                            ))}
-                                        </div>
-                                    </section>
-
-                                    <section className="editor-command-map">
-                                        <div className="editor-command-section-head">
-                                            <div>
-                                                <span className="editor-studio-kicker">Experience map</span>
-                                                <h4>Click the part of the page you want to shape.</h4>
+                                                <button type="button" onClick={() => setEditorStudioSoundEnabled(prev => !prev)} className="editor-command-secondary">
+                                                    <Signal size={15} />
+                                                    {editorStudioSoundEnabled ? 'Sound on' : 'Sound off'}
+                                                </button>
                                             </div>
-                                            <span className="editor-command-status">{selectedIndustryFilter ? selectedIndustryName : 'Industry not chosen yet'}</span>
                                         </div>
-                                        <div className="editor-command-journey">
+                                        <div className="editor-command-journey editor-room-launcher-grid">
                                             {[
-                                                { id: 'identity', icon: BadgeCheck, step: '01', title: 'First impression', note: 'Logo, banner, business name, intro message, and booking link.', meta: 'Brand entrance' },
-                                                { id: 'themes', icon: Sparkles, step: '02', title: 'Industry look', note: 'Generate tailored themes by business type, palette, light mode, and dark mode.', meta: selectedIndustryFilter ? selectedIndustryName : 'Choose industry' },
-                                                { id: 'visuals', icon: Palette, step: '03', title: 'Booking feel', note: 'Calendar rows, slot surfaces, buttons, fonts, spacing, and motion accents.', meta: selectedPaletteName || 'Visual system' },
-                                                { id: 'features', icon: SlidersHorizontal, step: '04', title: 'Client flow', note: 'Required fields, email opt-in, waitlist, socials, FAQ, and trust helpers.', meta: `${settings.features?.faqEnabled ? 'FAQ on' : 'FAQ off'} / ${settings.features?.waitlist ? 'Waitlist on' : 'Waitlist off'}` },
-                                                { id: 'copy', icon: Type, step: '05', title: 'Words that convert', note: 'Headings, labels, button text, success state, and the tone clients read.', meta: settings.confirmButtonText || 'Button copy' }
+                                                { id: 'identity', icon: BadgeCheck, step: '01', title: 'Brand', note: 'Logo, banner, business name, intro message, and booking link.', meta: 'Identity' },
+                                                { id: 'themes', icon: Sparkles, step: '02', title: 'Theme', note: 'Industry, palette, light mode, dark mode, and generated looks.', meta: selectedIndustryFilter ? selectedIndustryName : 'Choose industry' },
+                                                { id: 'visuals', icon: Palette, step: '03', title: 'Visuals', note: 'Calendar rows, slots, buttons, fonts, spacing, and motion accents.', meta: selectedPaletteName || 'System' },
+                                                { id: 'features', icon: SlidersHorizontal, step: '04', title: 'Flow', note: 'Client fields, email opt-in, waitlist, socials, FAQ, and trust tools.', meta: `${settings.features?.faqEnabled ? 'FAQ on' : 'FAQ off'} / ${settings.features?.waitlist ? 'Waitlist on' : 'Waitlist off'}` },
+                                                { id: 'copy', icon: Type, step: '05', title: 'Copy', note: 'Headings, labels, button text, success state, and client-facing tone.', meta: settings.confirmButtonText || 'Button copy' }
                                             ].map(card => {
                                                 const IconCmp = card.icon;
                                                 return (
@@ -6464,40 +6409,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     </button>
                                                 );
                                             })}
-                                        </div>
-                                    </section>
-
-                                    <section className="editor-command-launchpad">
-                                        <div className="editor-command-launch-copy">
-                                            <span className="editor-studio-kicker">Smart shortcuts</span>
-                                            <h4>Fast edits without hunting.</h4>
-                                        </div>
-                                        <div className="editor-command-shortcuts">
-                                            <button type="button" onClick={() => openEditorStudioModal('themes')}>
-                                                <Pipette size={16} />
-                                                Read logo colors
-                                            </button>
-                                            <button type="button" onClick={() => openEditorStudioModal('features')}>
-                                                <HelpCircle size={16} />
-                                                Manage FAQ
-                                            </button>
-                                            <button type="button" onClick={() => openEditorStudioModal('visuals')}>
-                                                <MousePointerClick size={16} />
-                                                Tune buttons
-                                            </button>
-                                        </div>
-                                    </section>
-
-                                    <section className="editor-command-summary">
-                                        <div>
-                                            <span className="editor-studio-kicker">Current direction</span>
-                                            <h4>{selectedIndustryFilter ? `${selectedIndustryName} booking experience` : 'Choose an industry to unlock custom looks'}</h4>
-                                            <p>{selectedIndustryFilter ? `${selectedPaletteName} palette, ${selectedStyleFilter.name.toLowerCase()} styling, and ${settings.fontFamily || 'theme'} typography are shaping this page.` : 'The designer waits for the business type first so every generated look feels intentional, not random.'}</p>
-                                        </div>
-                                        <div className="editor-command-swatches">
-                                            <span style={{ backgroundColor: settings.primaryColor || '#000000' }} />
-                                            <span style={{ backgroundColor: settings.backgroundColor || '#ffffff' }} />
-                                            <span style={{ backgroundColor: settings.headingColor || '#111111' }} />
                                         </div>
                                     </section>
                                 </div>
