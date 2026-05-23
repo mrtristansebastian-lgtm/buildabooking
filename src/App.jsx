@@ -1210,6 +1210,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             ));
             const [editorTab, setEditorTab] = useState(initialWorkspaceRoute.editorTab);
             const [editorStudioModal, setEditorStudioModal] = useState(null);
+            const editorStudioAudioRef = useRef(null);
+            const editorStudioPresentationRef = useRef([]);
+            const [editorStudioScene, setEditorStudioScene] = useState('identity');
+            const [editorStudioSoundEnabled, setEditorStudioSoundEnabled] = useState(true);
+            const [editorStudioPresenting, setEditorStudioPresenting] = useState(false);
             const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
             const [themeDisplayLimit, setThemeDisplayLimit] = useState(60);
             const [themeBatchLoading, setThemeBatchLoading] = useState(false);
@@ -3364,6 +3369,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const theme = visibleThemes.find(t => t.id === themeId) || PRESET_THEMES.find(t => t.id === themeId);
                 if(theme) {
                     setThemeTemplateName(`${theme.name} Template`);
+                    setEditorStudioScene('themes');
+                    playEditorStudioSound('complete');
                     setSettings(prev => ({
                         ...prev, 
                         ...theme,
@@ -3380,6 +3387,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }));
                 }
             };
+
+            useEffect(() => {
+                return () => {
+                    editorStudioPresentationRef.current.forEach(timer => window.clearTimeout(timer));
+                    editorStudioPresentationRef.current = [];
+                    editorStudioAudioRef.current?.close?.();
+                };
+            }, []);
 
             const applySavedThemeTemplate = (template) => {
                 const templateSettings = template?.settings || pickThemeTemplateSettings(template);
@@ -3429,9 +3444,77 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             const handleInspect = (tab) => { if (activeTab !== 'editor') setActiveTab('editor'); setEditorCollapsed(false); setEditorTab(tab); };
-            const openEditorStudioModal = (tab) => {
+            const playEditorStudioSound = (type = 'open') => {
+                if (!editorStudioSoundEnabled || typeof window === 'undefined') return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                try {
+                    const context = editorStudioAudioRef.current || new AudioContext();
+                    editorStudioAudioRef.current = context;
+                    if (context.state === 'suspended') context.resume();
+                    const now = context.currentTime;
+                    const master = context.createGain();
+                    master.gain.setValueAtTime(0.0001, now);
+                    master.gain.exponentialRampToValueAtTime(type === 'complete' ? 0.06 : 0.035, now + 0.018);
+                    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+                    master.connect(context.destination);
+
+                    const playTone = (frequency, offset, duration, wave = 'sine', endFrequency = frequency) => {
+                        const osc = context.createOscillator();
+                        const gain = context.createGain();
+                        osc.type = wave;
+                        osc.frequency.setValueAtTime(frequency, now + offset);
+                        osc.frequency.exponentialRampToValueAtTime(endFrequency, now + offset + duration);
+                        gain.gain.setValueAtTime(0.0001, now + offset);
+                        gain.gain.exponentialRampToValueAtTime(0.42, now + offset + 0.018);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + duration);
+                        osc.connect(gain);
+                        gain.connect(master);
+                        osc.start(now + offset);
+                        osc.stop(now + offset + duration + 0.04);
+                    };
+
+                    if (type === 'complete') {
+                        playTone(392, 0, 0.18, 'sine', 588);
+                        playTone(588, 0.08, 0.2, 'triangle', 880);
+                        playTone(1176, 0.18, 0.16, 'sine', 1568);
+                    } else if (type === 'step') {
+                        playTone(540, 0, 0.11, 'triangle', 760);
+                        playTone(960, 0.05, 0.1, 'sine', 1120);
+                    } else {
+                        playTone(720, 0, 0.12, 'triangle', 520);
+                    }
+                } catch (error) {
+                    console.warn('Editor studio sound unavailable', error);
+                }
+            };
+
+            const openEditorStudioModal = (tab, soundType = 'open') => {
                 setEditorTab(tab);
+                setEditorStudioScene(tab);
                 setEditorStudioModal(tab);
+                playEditorStudioSound(soundType);
+            };
+            const startEditorStudioPresentation = () => {
+                const scenes = ['identity', 'themes', 'visuals', 'features', 'copy'];
+                editorStudioPresentationRef.current.forEach(timer => window.clearTimeout(timer));
+                setEditorStudioPresenting(true);
+                setEditorStudioModal(null);
+                scenes.forEach((scene, index) => {
+                    const timer = window.setTimeout(() => {
+                        setEditorStudioScene(scene);
+                        setEditorTab(scene);
+                        setPreviewKey(prev => prev + 1);
+                        playEditorStudioSound(index === scenes.length - 1 ? 'complete' : 'step');
+                        if (index === scenes.length - 1) {
+                            window.setTimeout(() => {
+                                setEditorStudioPresenting(false);
+                                showToast('Booking page assembled in the live preview.');
+                            }, 680);
+                        }
+                    }, index * 900);
+                    editorStudioPresentationRef.current.push(timer);
+                });
             };
             const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
             const applyFontStylePreset = (preset) => {
@@ -6285,54 +6368,133 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="editor-studio-console animate-in fade-in duration-700">
-                                    <section className="editor-studio-hero">
-                                        <div className="editor-studio-hero-copy">
-                                            <span className="editor-studio-kicker">Live design studio</span>
-                                            <h3>Click a surface. Tune it beautifully.</h3>
-                                            <p>Open focused editors for brand, themes, visuals, tools, and copy while the live preview stays beside you.</p>
+                                <div className="editor-studio-console editor-command-center animate-in fade-in duration-700">
+                                    <section className="editor-command-hero">
+                                        <div className="editor-command-hero-mark">
+                                            <BuildABookingMark className="w-8 h-8" variant="light" />
                                         </div>
-                                        <button type="button" onClick={() => openEditorStudioModal('themes')} className="editor-studio-primary-action">
-                                            <Sparkles size={16} />
-                                            Design Theme
-                                        </button>
+                                        <div className="editor-command-hero-copy">
+                                            <span className="editor-studio-kicker">Booking page cockpit</span>
+                                            <h3>Design every booking moment.</h3>
+                                            <p>Play the studio build, watch each piece assemble in preview, then jump back into any room to tune it.</p>
+                                        </div>
+                                        <div className="editor-command-hero-actions">
+                                            <button type="button" onClick={startEditorStudioPresentation} className="editor-command-primary">
+                                                <Zap size={16} />
+                                                {editorStudioPresenting ? 'Presenting...' : 'Play studio build'}
+                                            </button>
+                                            <button type="button" onClick={() => openEditorStudioModal('identity')} className="editor-command-secondary">
+                                                <BadgeCheck size={15} />
+                                                Brand setup
+                                            </button>
+                                            <button type="button" onClick={() => setEditorStudioSoundEnabled(prev => !prev)} className="editor-command-secondary">
+                                                <Signal size={15} />
+                                                {editorStudioSoundEnabled ? 'Sound on' : 'Sound off'}
+                                            </button>
+                                        </div>
                                     </section>
 
-                                    <div className="editor-studio-grid">
-                                        {[
-                                            { id: 'identity', icon: BadgeCheck, title: 'Brand Entrance', note: 'Logo, banner, business name, intro copy, and booking link.' },
-                                            { id: 'themes', icon: Sparkles, title: 'AI Theme Designer', note: 'Start with an industry, then generate tailored light and dark looks.' },
-                                            { id: 'visuals', icon: Palette, title: 'Visual System', note: 'Colors, calendar rows, time boxes, buttons, spacing, and fonts.' },
-                                            { id: 'features', icon: SlidersHorizontal, title: 'Booking Tools', note: 'Client fields, email opt-in, FAQ, socials, waitlist, and extras.' },
-                                            { id: 'copy', icon: Type, title: 'Page Words', note: 'The labels, action text, and success wording clients read.' }
-                                        ].map(card => {
-                                            const IconCmp = card.icon;
-                                            const isActive = editorTab === card.id;
-                                            return (
-                                                <button
-                                                    key={card.id}
-                                                    type="button"
-                                                    onClick={() => openEditorStudioModal(card.id)}
-                                                    className={`editor-studio-card ${isActive ? 'is-active' : ''}`}
-                                                >
-                                                    <span className="editor-studio-card-icon"><IconCmp size={18} /></span>
-                                                    <span className="editor-studio-card-copy">
-                                                        <strong>{card.title}</strong>
-                                                        <small>{card.note}</small>
-                                                    </span>
-                                                    <span className="editor-studio-card-arrow"><ChevronRight size={16} /></span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <section className="editor-studio-workflow">
-                                        <div>
-                                            <span className="editor-studio-kicker">Current build</span>
-                                            <h4>{selectedIndustryFilter ? `${selectedIndustryName} direction` : 'Choose an industry to unlock tailored themes'}</h4>
-                                            <p>{selectedIndustryFilter ? `${selectedPaletteName} palette, ${selectedStyleFilter.name.toLowerCase()} styling, ${settings.fontFamily || 'theme'} typography.` : 'The theme engine stays empty until it knows the business type, so every look feels relevant instead of random.'}</p>
+                                    <section className={`editor-command-stage ${editorStudioPresenting ? 'is-playing' : ''}`}>
+                                        <div className="editor-command-stage-screen">
+                                            <div className="editor-command-stage-orbit">
+                                                <span />
+                                                <BuildABookingMark className="w-9 h-9" variant="light" />
+                                            </div>
+                                            <div>
+                                                <span className="editor-studio-kicker">Live assembly</span>
+                                                <h4>{{
+                                                    identity: 'Brand enters first.',
+                                                    themes: 'The industry look lands.',
+                                                    visuals: 'The interface gets its rhythm.',
+                                                    features: 'The booking flow learns what to ask.',
+                                                    copy: 'The words pull everything together.'
+                                                }[editorStudioScene] || 'The studio is ready.'}</h4>
+                                                <p>{{
+                                                    identity: 'Logo, banner, name, and intro copy set the trust signal clients see before choosing a time.',
+                                                    themes: 'The theme designer reads the business type, then builds a look that belongs to that world.',
+                                                    visuals: 'Calendar, time slots, buttons, spacing, and typography are tuned as one system.',
+                                                    features: 'Client fields, FAQ, waitlist, email opt-in, and socials become the practical booking flow.',
+                                                    copy: 'Labels, button text, and success messages finish the client-facing experience.'
+                                                }[editorStudioScene] || 'Run the studio build or open a room to tune one exact piece.'}</p>
+                                            </div>
                                         </div>
-                                        <div className="editor-studio-preview-pills">
+                                        <div className="editor-command-stage-rail">
+                                            {[
+                                                { id: 'identity', label: 'Brand' },
+                                                { id: 'themes', label: 'Theme' },
+                                                { id: 'visuals', label: 'Visuals' },
+                                                { id: 'features', label: 'Flow' },
+                                                { id: 'copy', label: 'Copy' }
+                                            ].map((stage, index) => (
+                                                <button key={stage.id} type="button" onClick={() => { setEditorStudioScene(stage.id); openEditorStudioModal(stage.id, 'step'); }} className={editorStudioScene === stage.id ? 'is-active' : ''}>
+                                                    <span>{String(index + 1).padStart(2, '0')}</span>
+                                                    {stage.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    <section className="editor-command-map">
+                                        <div className="editor-command-section-head">
+                                            <div>
+                                                <span className="editor-studio-kicker">Experience map</span>
+                                                <h4>Click the part of the page you want to shape.</h4>
+                                            </div>
+                                            <span className="editor-command-status">{selectedIndustryFilter ? selectedIndustryName : 'Industry not chosen yet'}</span>
+                                        </div>
+                                        <div className="editor-command-journey">
+                                            {[
+                                                { id: 'identity', icon: BadgeCheck, step: '01', title: 'First impression', note: 'Logo, banner, business name, intro message, and booking link.', meta: 'Brand entrance' },
+                                                { id: 'themes', icon: Sparkles, step: '02', title: 'Industry look', note: 'Generate tailored themes by business type, palette, light mode, and dark mode.', meta: selectedIndustryFilter ? selectedIndustryName : 'Choose industry' },
+                                                { id: 'visuals', icon: Palette, step: '03', title: 'Booking feel', note: 'Calendar rows, slot surfaces, buttons, fonts, spacing, and motion accents.', meta: selectedPaletteName || 'Visual system' },
+                                                { id: 'features', icon: SlidersHorizontal, step: '04', title: 'Client flow', note: 'Required fields, email opt-in, waitlist, socials, FAQ, and trust helpers.', meta: `${settings.features?.faqEnabled ? 'FAQ on' : 'FAQ off'} / ${settings.features?.waitlist ? 'Waitlist on' : 'Waitlist off'}` },
+                                                { id: 'copy', icon: Type, step: '05', title: 'Words that convert', note: 'Headings, labels, button text, success state, and the tone clients read.', meta: settings.confirmButtonText || 'Button copy' }
+                                            ].map(card => {
+                                                const IconCmp = card.icon;
+                                                return (
+                                                    <button key={card.id} type="button" onClick={() => openEditorStudioModal(card.id)} className={`editor-command-journey-card ${editorStudioScene === card.id ? 'is-active' : ''}`}>
+                                                        <span className="editor-command-step">{card.step}</span>
+                                                        <span className="editor-command-icon"><IconCmp size={18} /></span>
+                                                        <span className="editor-command-card-copy">
+                                                            <strong>{card.title}</strong>
+                                                            <small>{card.note}</small>
+                                                        </span>
+                                                        <span className="editor-command-meta">{card.meta}</span>
+                                                        <ChevronRight size={16} className="editor-command-chevron" />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </section>
+
+                                    <section className="editor-command-launchpad">
+                                        <div className="editor-command-launch-copy">
+                                            <span className="editor-studio-kicker">Smart shortcuts</span>
+                                            <h4>Fast edits without hunting.</h4>
+                                        </div>
+                                        <div className="editor-command-shortcuts">
+                                            <button type="button" onClick={() => openEditorStudioModal('themes')}>
+                                                <Pipette size={16} />
+                                                Read logo colors
+                                            </button>
+                                            <button type="button" onClick={() => openEditorStudioModal('features')}>
+                                                <HelpCircle size={16} />
+                                                Manage FAQ
+                                            </button>
+                                            <button type="button" onClick={() => openEditorStudioModal('visuals')}>
+                                                <MousePointerClick size={16} />
+                                                Tune buttons
+                                            </button>
+                                        </div>
+                                    </section>
+
+                                    <section className="editor-command-summary">
+                                        <div>
+                                            <span className="editor-studio-kicker">Current direction</span>
+                                            <h4>{selectedIndustryFilter ? `${selectedIndustryName} booking experience` : 'Choose an industry to unlock custom looks'}</h4>
+                                            <p>{selectedIndustryFilter ? `${selectedPaletteName} palette, ${selectedStyleFilter.name.toLowerCase()} styling, and ${settings.fontFamily || 'theme'} typography are shaping this page.` : 'The designer waits for the business type first so every generated look feels intentional, not random.'}</p>
+                                        </div>
+                                        <div className="editor-command-swatches">
                                             <span style={{ backgroundColor: settings.primaryColor || '#000000' }} />
                                             <span style={{ backgroundColor: settings.backgroundColor || '#ffffff' }} />
                                             <span style={{ backgroundColor: settings.headingColor || '#111111' }} />
@@ -6490,23 +6652,74 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                                                 {editorStudioModal === 'features' && (
                                                     <div className="editor-studio-modal-stack">
-                                                        {[
-                                                            { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Used for contact records and follow-ups.', active: collectsClientPhone },
-                                                            { key: 'collectClientEmail', icon: Mail, label: 'Email Address', note: 'Required for email updates and client portal matching.', active: collectsClientEmail },
-                                                            { key: 'collectClientNotes', icon: MessageSquare, label: 'Client Note', note: 'Adds context before clients submit.', active: collectsClientNotes },
-                                                            { key: 'waitlist', icon: Clock, label: 'Waitlist Fallback', note: 'Let clients join standby when a day is full.', active: settings.features?.waitlist },
-                                                            { key: 'faqEnabled', icon: HelpCircle, label: 'FAQ Section', note: 'Answer objections before clients submit.', active: settings.features?.faqEnabled },
-                                                            { key: 'socialLinks', icon: Share2, label: 'Social Footer', note: 'Clickable socials below the booking action.', active: settings.features?.socialLinks }
-                                                        ].map(item => {
-                                                            const IconCmp = item.icon;
-                                                            return (
-                                                                <button key={item.key} type="button" onClick={() => handleFeatureChange(item.key, !item.active)} className={`editor-studio-feature-toggle ${item.active ? 'is-on' : ''}`}>
-                                                                    <IconCmp size={18} />
-                                                                    <span><strong>{item.label}</strong><small>{item.note}</small></span>
-                                                                    <i />
+                                                        <section className="editor-studio-feature-grid">
+                                                            {[
+                                                                { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Used for contact records and follow-ups.', active: collectsClientPhone },
+                                                                { key: 'collectClientEmail', icon: Mail, label: 'Email Address', note: 'Required for email updates and client portal matching.', active: collectsClientEmail },
+                                                                { key: 'collectClientNotes', icon: MessageSquare, label: 'Client Note', note: 'Adds context before clients submit.', active: collectsClientNotes },
+                                                                { key: 'waitlist', icon: Clock, label: 'Waitlist Fallback', note: 'Let clients join standby when a day is full.', active: settings.features?.waitlist },
+                                                                { key: 'faqEnabled', icon: HelpCircle, label: 'FAQ Section', note: 'Answer common questions before clients submit.', active: settings.features?.faqEnabled, onClick: toggleFaqFeature },
+                                                                { key: 'socialLinks', icon: Share2, label: 'Social Footer', note: 'Clickable socials below the booking action.', active: settings.features?.socialLinks }
+                                                            ].map(item => {
+                                                                const IconCmp = item.icon;
+                                                                const toggleFeature = item.onClick || (() => handleFeatureChange(item.key, !item.active));
+                                                                return (
+                                                                    <button key={item.key} type="button" onClick={toggleFeature} className={`editor-studio-feature-toggle ${item.active ? 'is-on' : ''}`}>
+                                                                        <IconCmp size={18} />
+                                                                        <span><strong>{item.label}</strong><small>{item.note}</small></span>
+                                                                        <i />
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </section>
+
+                                                        <section className={`editor-studio-faq-builder ${settings.features?.faqEnabled ? 'is-enabled' : ''}`}>
+                                                            <div className="editor-studio-faq-head">
+                                                                <div>
+                                                                    <span className="editor-studio-kicker">Client questions</span>
+                                                                    <h4>Booking page FAQ</h4>
+                                                                    <p>Keep quick answers beside the booking form so clients feel confident before they submit.</p>
+                                                                </div>
+                                                                <button type="button" onClick={toggleFaqFeature} className={`editor-studio-faq-master ${settings.features?.faqEnabled ? 'is-on' : ''}`}>
+                                                                    {settings.features?.faqEnabled ? 'Shown' : 'Hidden'}
                                                                 </button>
-                                                            );
-                                                        })}
+                                                            </div>
+
+                                                            {settings.features?.faqEnabled ? (
+                                                                <div className="editor-studio-faq-list">
+                                                                    {(settings.features?.faqs || []).map((faq, i) => (
+                                                                        <article key={i} className="editor-studio-faq-card">
+                                                                            <div className="editor-studio-faq-card-top">
+                                                                                <span>Question {i + 1}</span>
+                                                                                <button type="button" onClick={() => removeFaqItem(i)} aria-label={`Remove question ${i + 1}`}>
+                                                                                    <X size={14} />
+                                                                                </button>
+                                                                            </div>
+                                                                            <label>
+                                                                                <small>Client sees</small>
+                                                                                <input type="text" value={faq.q} onChange={(e) => updateFaqItem(i, 'q', e.target.value)} placeholder="Can I reschedule my booking?" />
+                                                                            </label>
+                                                                            <label>
+                                                                                <small>Your answer</small>
+                                                                                <textarea value={faq.a} onChange={(e) => updateFaqItem(i, 'a', e.target.value)} placeholder="Yes. Send us a message from your booking thread and we will help you find another time." />
+                                                                            </label>
+                                                                        </article>
+                                                                    ))}
+                                                                    <button type="button" onClick={addFaqItem} className="editor-studio-faq-add">
+                                                                        <Plus size={16} />
+                                                                        Add another question
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="editor-studio-faq-empty">
+                                                                    <HelpCircle size={18} />
+                                                                    <div>
+                                                                        <strong>FAQ is hidden right now.</strong>
+                                                                        <span>Turn it on when you want to explain policies, deposits, late arrivals, or reschedules.</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </section>
                                                     </div>
                                                 )}
 
