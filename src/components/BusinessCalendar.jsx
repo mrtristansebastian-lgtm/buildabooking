@@ -645,88 +645,125 @@ import { getLocalDateStr } from '../utils/dates';
                     ? 'Reconnect Google'
                     : 'Connect Google';
 
-            const renderSlotEditor = ({ dateStr, calendarId, time = null, isNew = false }) => {
-                const isActiveEditor = slotEditor?.dateStr === dateStr &&
-                    slotEditor?.calendarId === calendarId &&
-                    (isNew ? slotEditor.originalTime === null : slotEditor.originalTime === time);
-
-                if (!isActiveEditor) return null;
-
+            const renderSlotEditor = () => {
+                if (!slotEditor) return null;
                 const isRangeMode = slotEditor.mode === 'range';
                 const updateEditor = (nextFields) => setSlotEditor(current => current ? { ...current, ...nextFields } : current);
+                const targetDateLabel = slotEditor.dateStr
+                    ? new Date(`${slotEditor.dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                    : 'Selected day';
+                const previewValue = formatSlotEditorValue(slotEditor) || 'Choose a time';
 
                 return (
-                    <div className="schedule-slot-editor mt-3 rounded-lg border border-neutral-200 bg-white p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.5)] animate-in fade-in slide-in-from-top-1 duration-200">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                            <div>
-                                <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-neutral-400">{slotEditor.originalTime ? 'Edit Slot' : 'New Slot'}</p>
-                                <p className="text-xs font-semibold text-neutral-500">Use one start time or a bookable time period.</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => updateEditor({ mode: 'single', end: '' })}
-                                    className={`h-8 rounded-md px-3 text-[9px] font-bold uppercase tracking-widest transition-all ${!isRangeMode ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'}`}
-                                >
-                                    Set time
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => updateEditor({ mode: 'range', end: slotEditor.end || '' })}
-                                    className={`h-8 rounded-md px-3 text-[9px] font-bold uppercase tracking-widest transition-all ${isRangeMode ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'}`}
-                                >
-                                    Period
-                                </button>
-                            </div>
-                        </div>
+                    <div className="fixed inset-0 z-[1300] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-5 animate-in fade-in duration-200">
+                        <div className="schedule-slot-modal relative w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-[1.75rem] sm:rounded-[1.25rem] bg-white border border-neutral-100 shadow-2xl shadow-black/30">
+                            <div className="h-1 native-gradient-line" />
+                            <div className="p-5 sm:p-7">
+                                <div className="flex items-start justify-between gap-4 mb-6">
+                                    <div>
+                                        <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-2">{slotEditor.originalTime ? 'Edit Slot' : 'New Slot'}</p>
+                                        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-black">Slot time</h2>
+                                        <p className="text-sm sm:text-base font-medium text-neutral-500 mt-2 max-w-xl">Choose a simple listed time, or switch to a period for longer sessions, classes, or hourly services.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSlotEditor(null)}
+                                        className="w-11 h-11 rounded-full border border-neutral-200 bg-white text-neutral-500 flex items-center justify-center hover:border-black hover:text-black transition-colors shrink-0"
+                                        aria-label="Close slot editor"
+                                    >
+                                        <X size={18}/>
+                                    </button>
+                                </div>
 
-                        <div className={`grid gap-2 ${isRangeMode ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-                            <label className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 focus-within:border-neutral-300 focus-within:bg-white transition-all">
-                                <span className="block text-[8px] font-bold uppercase tracking-[0.22em] text-neutral-400 mb-1">{isRangeMode ? 'Starts' : 'Time'}</span>
-                                <input
-                                    type="time"
-                                    value={slotEditor.start || ''}
-                                    onChange={(event) => updateEditor({ start: event.target.value })}
-                                    className="w-full bg-transparent outline-none text-base font-black text-black"
-                                />
-                            </label>
-                            {isRangeMode && (
-                                <label className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 focus-within:border-neutral-300 focus-within:bg-white transition-all">
-                                    <span className="block text-[8px] font-bold uppercase tracking-[0.22em] text-neutral-400 mb-1">Ends</span>
-                                    <input
-                                        type="time"
-                                        value={slotEditor.end || ''}
-                                        onChange={(event) => updateEditor({ end: event.target.value })}
-                                        className="w-full bg-transparent outline-none text-base font-black text-black"
-                                    />
-                                </label>
-                            )}
-                        </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-4 sm:gap-5">
+                                    <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-3 sm:p-4">
+                                        <div className="grid grid-cols-2 gap-2 rounded-xl bg-white p-1 border border-neutral-100 mb-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateEditor({ mode: 'single', end: '' })}
+                                                className={`h-12 rounded-lg px-4 text-[10px] font-bold uppercase tracking-widest transition-all ${!isRangeMode ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-500 hover:text-black hover:bg-neutral-50'}`}
+                                            >
+                                                Set time
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateEditor({ mode: 'range', end: slotEditor.end || '' })}
+                                                className={`h-12 rounded-lg px-4 text-[10px] font-bold uppercase tracking-widest transition-all ${isRangeMode ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-500 hover:text-black hover:bg-neutral-50'}`}
+                                            >
+                                                Period
+                                            </button>
+                                        </div>
 
-                        <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <button
-                                type="button"
-                                onClick={deleteSlotFromEditor}
-                                className="h-9 rounded-lg border border-red-100 bg-red-50 px-3 text-[9px] font-bold uppercase tracking-widest text-red-600 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-40"
-                                disabled={!slotEditor.originalTime}
-                            >
-                                <Trash2 size={13}/> Delete slot
-                            </button>
-                            <div className="grid grid-cols-2 gap-2 sm:w-auto w-full">
-                                <button
-                                    type="button"
-                                    onClick={() => setSlotEditor(null)}
-                                    className="h-9 rounded-lg border border-neutral-200 px-4 text-[9px] font-bold uppercase tracking-widest text-neutral-500 hover:border-black hover:text-black transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={saveSlotEditor}
-                                    className="h-9 rounded-lg bg-black px-4 text-[9px] font-bold uppercase tracking-widest text-white hover:bg-neutral-800 transition-colors"
-                                >
-                                    Save
-                                </button>
+                                        <div className={`grid gap-3 ${isRangeMode ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                                            <label className="rounded-xl border border-neutral-200 bg-white px-4 py-3 focus-within:border-black focus-within:shadow-xl focus-within:shadow-black/5 transition-all">
+                                                <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400 mb-2">{isRangeMode ? 'Starts' : 'Time'}</span>
+                                                <input
+                                                    type="time"
+                                                    value={slotEditor.start || ''}
+                                                    onChange={(event) => updateEditor({ start: event.target.value })}
+                                                    className="w-full bg-transparent outline-none text-2xl sm:text-3xl font-black tracking-tight text-black"
+                                                />
+                                            </label>
+                                            {isRangeMode && (
+                                                <label className="rounded-xl border border-neutral-200 bg-white px-4 py-3 focus-within:border-black focus-within:shadow-xl focus-within:shadow-black/5 transition-all">
+                                                    <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400 mb-2">Ends</span>
+                                                    <input
+                                                        type="time"
+                                                        value={slotEditor.end || ''}
+                                                        onChange={(event) => updateEditor({ end: event.target.value })}
+                                                        className="w-full bg-transparent outline-none text-2xl sm:text-3xl font-black tracking-tight text-black"
+                                                    />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:p-5 flex flex-col justify-between gap-5">
+                                        <div>
+                                            <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-2">Preview</p>
+                                            <div className="rounded-xl bg-neutral-50 border border-neutral-100 p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-10 h-10 rounded-lg bg-white border border-neutral-100 flex items-center justify-center text-neutral-400">
+                                                        <Clock size={16}/>
+                                                    </span>
+                                                    <div>
+                                                        <p className="text-2xl font-black tracking-tight text-black">{previewValue}</p>
+                                                        <p className="text-xs font-semibold text-neutral-400">{targetDateLabel}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs font-medium text-neutral-500 mt-3">
+                                                {isRangeMode ? 'Clients see this as one bookable time period.' : 'Clients see this as one exact start time.'}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={deleteSlotFromEditor}
+                                            className="h-11 rounded-xl border border-red-100 bg-red-50 px-4 text-[10px] font-bold uppercase tracking-widest text-red-600 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            disabled={!slotEditor.originalTime}
+                                        >
+                                            <Trash2 size={14}/> Delete slot
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 sm:mt-6 grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSlotEditor(null)}
+                                        className="h-12 rounded-xl border border-neutral-200 px-5 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:border-black hover:text-black transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={saveSlotEditor}
+                                        className="h-12 rounded-xl bg-black px-5 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10"
+                                    >
+                                        Save slot
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -993,7 +1030,6 @@ import { getLocalDateStr } from '../utils/dates';
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
-                                                                    {renderSlotEditor({ dateStr, calendarId: agendaCalendarId, isNew: true })}
                                                                     {agendaConfig.times.length ? agendaConfig.times.map(time => {
                                                                         const timeBookings = selectedDayBookingsByTime[time] || [];
                                                                         const hasBookings = timeBookings.length > 0;
@@ -1032,7 +1068,6 @@ import { getLocalDateStr } from '../utils/dates';
                                                                                         )}
                                                                                     </div>
                                                                                 </div>
-                                                                                {renderSlotEditor({ dateStr, calendarId: agendaCalendarId, time })}
                                                                             </div>
                                                                         );
                                                                     }) : (
@@ -1184,6 +1219,7 @@ import { getLocalDateStr } from '../utils/dates';
                         </section>
 
                     </div>
+                    {renderSlotEditor()}
                 </div>
             );
         };
