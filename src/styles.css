@@ -736,7 +736,7 @@ body {
             flex-direction: column;
             gap: 0.35rem;
             justify-self: end;
-            width: min(100%, 15rem);
+            width: min(100%, 8.25rem);
         }
 
         .schedule-day-row-action {
@@ -744,16 +744,25 @@ body {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 1.35rem;
-            padding: 0.2rem 0.45rem;
+            min-height: 1.75rem;
+            width: 100%;
+            padding: 0.32rem 0.7rem;
             border-radius: 999px;
             border: 1px solid rgba(212, 212, 216, 0.8);
             background: rgba(255, 255, 255, 0.86);
-            font-size: 0.46rem;
+            font-size: 0.54rem;
             font-weight: 800;
             text-transform: uppercase;
-            color: rgb(163 163 163);
+            color: rgb(24 24 27);
             letter-spacing: 0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 12px 28px -26px rgba(15, 23, 42, 0.45);
+            transition: border-color 180ms ease, transform 180ms ease, background-color 180ms ease;
+        }
+
+        .schedule-day-row-action:hover {
+            transform: translateY(-1px);
+            border-color: rgba(24, 24, 27, 0.28);
+            background: #fff;
         }
 
         .schedule-day-cell::before {
@@ -2165,6 +2174,11 @@ body {
             color: #ffffff !important;
         }
 
+        .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-child,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-child :where(*) {
+            color: #050505 !important;
+        }
+
         .native-ui.dashboard-dark .hover\:bg-white:hover,
         .native-ui.dashboard-dark .hover\:bg-neutral-50:hover,
         .native-ui.dashboard-dark .hover\:bg-neutral-50\/70:hover,
@@ -2274,6 +2288,25 @@ body {
         .native-ui.dashboard-dark .schedule-day-agenda-card .border-dashed {
             background: #0b0c10 !important;
             border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-side-panel .bg-white,
+        .native-ui.dashboard-dark .schedule-side-panel .bg-neutral-50,
+        .native-ui.dashboard-dark .schedule-side-panel [class*="bg-neutral-50"] {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-side-panel .text-black,
+        .native-ui.dashboard-dark .schedule-side-panel input {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-side-panel .text-neutral-500,
+        .native-ui.dashboard-dark .schedule-side-panel .text-neutral-400,
+        .native-ui.dashboard-dark .schedule-side-panel .text-neutral-300 {
+            color: #a8b3c7 !important;
         }
 
         .native-ui.dashboard-dark .booking-desk-shell,

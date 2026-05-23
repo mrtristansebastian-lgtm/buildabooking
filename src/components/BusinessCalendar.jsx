@@ -26,6 +26,7 @@ import { getLocalDateStr } from '../utils/dates';
             const [editingDefaultSlotIndex, setEditingDefaultSlotIndex] = useState(null);
             const [editingDaySlotIndex, setEditingDaySlotIndex] = useState(null);
             const [scheduleStatsPeriod, setScheduleStatsPeriod] = useState('month');
+            const [defaultSlotsOpen, setDefaultSlotsOpen] = useState(false);
             const calendarViewMode = scheduleStatsPeriod;
             const initialCalendarId = workspaceRole === 'staff' ? (activeStaffId || 'owner') : 'workspace';
             const [selectedCalendarId, setSelectedCalendarId] = useState(initialCalendarId);
@@ -792,15 +793,7 @@ import { getLocalDateStr } from '../utils/dates';
                                         const isToday = todayStr === dateStr;
                                         const isPastDay = dateStr < todayStr;
                                         const isCustom = Boolean(activeSchedule?.[dateStr]);
-                                        const calendarBubble = getCalendarBubble(dateStr, config);
                                         const staffCoverage = isWorkspaceCalendar ? getStaffCoverageForDate(dateStr) : [];
-                                        const bubbleClass = {
-                                            open: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-white text-black border-neutral-200',
-                                            confirmed: isSelected ? 'bg-[#39FF14] text-black border-transparent' : 'bg-emerald-50 text-emerald-700 border-emerald-100',
-                                            quiet: 'bg-white text-neutral-400 border-neutral-200',
-                                            closed: 'bg-red-50 text-red-600 border-red-100',
-                                            full: 'bg-amber-50 text-amber-700 border-amber-100'
-                                        }[calendarBubble.tone];
 
                                         if (calendarViewMode === 'day') {
                                             const activeDayFocusId = isWorkspaceCalendar && staffCoverage.some(staff => staff.id === overviewDayFocusStaffId)
@@ -1037,14 +1030,6 @@ import { getLocalDateStr } from '../utils/dates';
                                                 </div>
 
                                                 <div className="schedule-day-row-capacity">
-                                                    <span
-                                                        className={`schedule-slot-pill inline-flex min-h-[34px] w-full items-center justify-center gap-1 rounded-full border px-3 py-1.5 text-center font-bold leading-none transition-colors ${bubbleClass}`}
-                                                        aria-label={calendarBubble.label}
-                                                        title={calendarBubble.label}
-                                                    >
-                                                        {calendarBubble.count !== null && <span className="metric-value text-[14px] leading-none font-black tracking-tight">{calendarBubble.count}</span>}
-                                                        <span className="text-[7px] uppercase tracking-[0.12em] leading-tight">{calendarBubble.caption}</span>
-                                                    </span>
                                                     <button
                                                         type="button"
                                                         onClick={(event) => {
@@ -1065,79 +1050,7 @@ import { getLocalDateStr } from '../utils/dates';
                             </div>
                         </section>
 
-                        <div className="schedule-detail-row grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <section className="saas-card schedule-side-panel p-5">
-                                <div className="flex items-start justify-between gap-4 mb-5">
-                                    <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-2">Template</p>
-                                        <h3 className="text-xl font-bold tracking-tight text-black">Default Slots</h3>
-                                        <p className="text-sm text-neutral-500 mt-1">{isAggregateCalendar ? 'Combined from every active staff calendar.' : isWorkspaceCalendar ? 'New open days start with these times.' : `${selectedCalendar?.name || 'This staff member'} uses these default times.`}</p>
-                                    </div>
-                                    <button onClick={startAddingDefaultSlot} disabled={!canEditSelectedCalendar} className={`w-11 h-11 rounded-lg flex items-center justify-center transition-transform shrink-0 shadow-lg shadow-black/5 ${!canEditSelectedCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#39FF14] text-black hover:scale-105'}`}>
-                                        <Plus size={16}/>
-                                    </button>
-                                </div>
-                                {isAddingDefaultSlot && (
-                                    <div className="mb-4 p-4 rounded-lg bg-white border border-neutral-200 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.45)] animate-in fade-in zoom-in-95 duration-200">
-                                        <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 block mb-3">{editingDefaultSlotIndex !== null ? 'Edit Default Slot' : 'New Default Slot'}</label>
-                                        <div className="h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 flex items-center gap-3 focus-within:bg-white focus-within:border-black transition-colors mb-3">
-                                            <Clock size={15} className="text-neutral-400"/>
-                                            <input
-                                                type="text"
-                                                value={defaultSlotTime}
-                                                onChange={(event) => setDefaultSlotTime(event.target.value)}
-                                                placeholder="09:00 - 10:00"
-                                                className="w-full bg-transparent outline-none text-base font-bold tracking-tight text-black"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button onClick={saveDefaultTime} className="h-10 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-[0.12em] hover:bg-neutral-800 transition-colors">
-                                                {editingDefaultSlotIndex !== null ? 'Update Slot' : 'Save Slot'}
-                                            </button>
-                                            <button onClick={() => { setIsAddingDefaultSlot(false); setEditingDefaultSlotIndex(null); }} className="h-10 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-2 gap-2">
-                                    {defaultTimes.length ? defaultTimes.map((time, i) => (
-                                        <div key={`${time}-${i}`} className="schedule-time-chip group flex items-center justify-between gap-2 bg-white border border-neutral-200 px-3 py-2.5 rounded-lg text-sm font-bold text-black shadow-sm">
-                                            <span className="flex items-center gap-2">
-                                                <Clock size={13} className="text-neutral-400"/>
-                                                {time}
-                                            </span>
-                                            <div className="flex items-center gap-1">
-                                            <button onClick={() => startEditingDefaultSlot(i)} disabled={!canEditSelectedCalendar} className={`transition-colors ${canEditSelectedCalendar ? 'text-neutral-300 hover:text-black' : 'text-neutral-200 cursor-not-allowed'}`}><Pencil size={13}/></button>
-                                            <button onClick={() => {
-                                                if (!guardCalendarEdit()) return;
-                                                setSettings(prev => {
-                                                if (isWorkspaceCalendar) {
-                                                    return { ...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i) };
-                                                }
-                                                const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
-                                                return {
-                                                    ...prev,
-                                                    staffCalendars: {
-                                                        ...(prev.staffCalendars || {}),
-                                                        [selectedCalendarId]: {
-                                                            ...previousCalendar,
-                                                            staffId: selectedCalendarId,
-                                                            availableTimes: defaultTimes.filter((_, idx) => idx !== i),
-                                                            updatedAt: Date.now()
-                                                        }
-                                                    }
-                                                };
-                                            });
-                                            }} disabled={!canEditSelectedCalendar} className={`transition-colors ${canEditSelectedCalendar ? 'text-neutral-300 hover:text-red-500' : 'text-neutral-200 cursor-not-allowed'}`}><X size={13}/></button>
-                                            </div>
-                                        </div>
-                                    )) : (
-                                        <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 col-span-2">No default slots yet.</p>
-                                    )}
-                                </div>
-                            </section>
-
+                        <div className="schedule-detail-row grid grid-cols-1 gap-6">
                             <section className="saas-card schedule-selected-panel p-5 md:p-6 overflow-hidden">
                                 <div className="flex items-start justify-between gap-4 mb-6">
                                     <div>
@@ -1249,6 +1162,94 @@ import { getLocalDateStr } from '../utils/dates';
                                         <button onClick={() => updateDateConfig(expandedDate, { available: true, times: [...defaultTimes] })} disabled={!canEditSelectedCalendar} className={`h-11 px-5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors ${canEditSelectedCalendar ? 'bg-black text-white hover:bg-neutral-800' : 'bg-neutral-100 text-neutral-300 cursor-not-allowed'}`}>
                                             Reopen Day
                                         </button>
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className="saas-card schedule-side-panel schedule-default-drawer overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setDefaultSlotsOpen(open => !open)}
+                                    className="w-full p-5 flex items-center justify-between gap-4 text-left"
+                                    aria-expanded={defaultSlotsOpen}
+                                >
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400 mb-1">Template</p>
+                                        <h3 className="text-xl font-bold tracking-tight text-black">Default Slots</h3>
+                                        <p className="text-sm text-neutral-500 mt-1">{isAggregateCalendar ? 'Combined from every active staff calendar.' : isWorkspaceCalendar ? 'Open this drawer to edit your reusable time periods.' : `${selectedCalendar?.name || 'This staff member'} uses these default time periods.`}</p>
+                                    </div>
+                                    <span className={`w-10 h-10 rounded-lg border border-neutral-200 flex items-center justify-center text-black transition-transform ${defaultSlotsOpen ? 'rotate-45 bg-black text-white border-black' : 'bg-white'}`}>
+                                        <Plus size={16}/>
+                                    </span>
+                                </button>
+
+                                {defaultSlotsOpen && (
+                                    <div className="px-5 pb-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="flex items-center justify-between gap-4 mb-4 pt-4 border-t border-neutral-100">
+                                            <p className="text-xs font-semibold text-neutral-500">Use ranges like 09:00 - 10:00 or 12 to 2.</p>
+                                            <button onClick={startAddingDefaultSlot} disabled={!canEditSelectedCalendar} className={`h-10 px-4 rounded-lg flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-transform shrink-0 shadow-lg shadow-black/5 ${!canEditSelectedCalendar ? 'bg-neutral-100 text-neutral-300 cursor-not-allowed' : 'bg-[#39FF14] text-black hover:scale-105'}`}>
+                                                <Plus size={14}/> Add
+                                            </button>
+                                        </div>
+                                        {isAddingDefaultSlot && (
+                                            <div className="mb-4 p-4 rounded-lg bg-white border border-neutral-200 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.45)] animate-in fade-in zoom-in-95 duration-200">
+                                                <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 block mb-3">{editingDefaultSlotIndex !== null ? 'Edit Default Slot' : 'New Default Slot'}</label>
+                                                <div className="h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 flex items-center gap-3 focus-within:bg-white focus-within:border-black transition-colors mb-3">
+                                                    <Clock size={15} className="text-neutral-400"/>
+                                                    <input
+                                                        type="text"
+                                                        value={defaultSlotTime}
+                                                        onChange={(event) => setDefaultSlotTime(event.target.value)}
+                                                        placeholder="09:00 - 10:00"
+                                                        className="w-full bg-transparent outline-none text-base font-bold tracking-tight text-black"
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button onClick={saveDefaultTime} className="h-10 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-[0.12em] hover:bg-neutral-800 transition-colors">
+                                                        {editingDefaultSlotIndex !== null ? 'Update Slot' : 'Save Slot'}
+                                                    </button>
+                                                    <button onClick={() => { setIsAddingDefaultSlot(false); setEditingDefaultSlotIndex(null); }} className="h-10 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                                            {defaultTimes.length ? defaultTimes.map((time, i) => (
+                                                <div key={`${time}-${i}`} className="schedule-time-chip group flex items-center justify-between gap-2 bg-white border border-neutral-200 px-3 py-2.5 rounded-lg text-sm font-bold text-black shadow-sm">
+                                                    <span className="flex items-center gap-2">
+                                                        <Clock size={13} className="text-neutral-400"/>
+                                                        {time}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button onClick={() => startEditingDefaultSlot(i)} disabled={!canEditSelectedCalendar} className={`transition-colors ${canEditSelectedCalendar ? 'text-neutral-300 hover:text-black' : 'text-neutral-200 cursor-not-allowed'}`}><Pencil size={13}/></button>
+                                                        <button onClick={() => {
+                                                            if (!guardCalendarEdit()) return;
+                                                            setSettings(prev => {
+                                                                if (isWorkspaceCalendar) {
+                                                                    return { ...prev, availableTimes: (prev.availableTimes || []).filter((_, idx) => idx !== i) };
+                                                                }
+                                                                const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
+                                                                return {
+                                                                    ...prev,
+                                                                    staffCalendars: {
+                                                                        ...(prev.staffCalendars || {}),
+                                                                        [selectedCalendarId]: {
+                                                                            ...previousCalendar,
+                                                                            staffId: selectedCalendarId,
+                                                                            availableTimes: defaultTimes.filter((_, idx) => idx !== i),
+                                                                            updatedAt: Date.now()
+                                                                        }
+                                                                    }
+                                                                };
+                                                            });
+                                                        }} disabled={!canEditSelectedCalendar} className={`transition-colors ${canEditSelectedCalendar ? 'text-neutral-300 hover:text-red-500' : 'text-neutral-200 cursor-not-allowed'}`}><X size={13}/></button>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <p className="text-sm text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-lg p-4 sm:col-span-2 xl:col-span-3">No default slots yet.</p>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </section>
