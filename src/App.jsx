@@ -6522,6 +6522,276 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </div>
 
                                             <div className="editor-studio-modal-body">
+                                                <section className={`editor-room-workspace editor-room-${editorStudioModal}`}>
+                                                    <div className="editor-room-font-strip">
+                                                        <div>
+                                                            <span className="editor-studio-kicker">Font mood</span>
+                                                            <strong>Choose the personality first.</strong>
+                                                        </div>
+                                                        <div className="editor-room-font-rail">
+                                                            {fontStylePresets.map(preset => (
+                                                                <button
+                                                                    key={preset.id}
+                                                                    type="button"
+                                                                    onClick={() => applyFontStylePreset(preset)}
+                                                                    className={(settings.headingFontFamily || settings.fontFamily) === (preset.headingFontFamily || preset.fontFamily) ? 'is-active' : ''}
+                                                                    style={{ fontFamily: getFontFamily(preset.headingFontFamily || preset.fontFamily) }}
+                                                                >
+                                                                    <b>Aa</b>
+                                                                    <span>{preset.label}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="editor-room-preview-shell">
+                                                        <div className="editor-room-preview-top">
+                                                            <div>
+                                                                <span className="editor-studio-kicker">Live room preview</span>
+                                                                <h4>{{
+                                                                    identity: 'Brand entrance',
+                                                                    themes: selectedIndustryFilter ? `${selectedIndustryName} theme lab` : 'Industry theme lab',
+                                                                    visuals: 'Calendar, slots, and buttons',
+                                                                    features: 'Booking tools and FAQ',
+                                                                    copy: 'Words clients read'
+                                                                }[editorStudioModal]}</h4>
+                                                            </div>
+                                                            <span className="editor-room-live-badge">Updates preview</span>
+                                                        </div>
+
+                                                        {editorStudioModal === 'identity' && (
+                                                            <div className="editor-room-live-card editor-room-brand-preview">
+                                                                <div className="editor-room-banner-preview">
+                                                                    {settings.bannerImage ? <img src={settings.bannerImage} alt="" /> : <span>Optional banner</span>}
+                                                                </div>
+                                                                <div className="editor-room-brand-main" style={{ textAlign: getLogoDisplay(settings).alignment }}>
+                                                                    {getLogoDisplay(settings).visible && (
+                                                                        <div className="editor-room-logo-preview" style={{ width: `${Math.min(92, getLogoDisplay(settings).size)}px`, height: `${Math.min(92, getLogoDisplay(settings).size)}px` }}>
+                                                                            {settings.logo ? <img src={settings.logo} alt="" /> : <BuildABookingMark className="w-10 h-10" />}
+                                                                        </div>
+                                                                    )}
+                                                                    <input
+                                                                        type="text"
+                                                                        value={settings.tagline || ''}
+                                                                        onChange={(event) => handleSettingChange('tagline', event.target.value)}
+                                                                        className="editor-room-inline-kicker"
+                                                                        placeholder="Atelier 7B / Private"
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={settings.brandName || ''}
+                                                                        onChange={(event) => handleSettingChange('brandName', event.target.value)}
+                                                                        className="editor-room-inline-title"
+                                                                        style={{ fontFamily: getFontFamily(settings.brandNameFontFamily || settings.headingFontFamily || settings.fontFamily) }}
+                                                                        placeholder="Studio Noir"
+                                                                    />
+                                                                    <textarea
+                                                                        value={settings.welcomeMessage || ''}
+                                                                        onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)}
+                                                                        className="editor-room-inline-copy"
+                                                                        placeholder="Reserve your private session."
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {editorStudioModal === 'themes' && (
+                                                            <div className="editor-room-live-card editor-room-theme-preview">
+                                                                <div className="editor-room-theme-brief-inline">
+                                                                    <span>{selectedIndustryFilter ? 'Industry selected' : 'Start here'}</span>
+                                                                    <h5>{selectedIndustryFilter ? `${selectedIndustryName} looks` : 'Choose an industry to generate real directions.'}</h5>
+                                                                    <p>{selectedIndustryFilter ? `Built around ${selectedPalettePhrase}, ${selectedStyleFilter.name.toLowerCase()} pacing, and client-facing booking flow.` : 'The theme engine stays focused so users never scroll through random styles.'}</p>
+                                                                </div>
+                                                                <div className="editor-room-industry-mini-grid">
+                                                                    {industryFilterOptions.slice(0, 8).map(industry => (
+                                                                        <button
+                                                                            key={industry.id}
+                                                                            type="button"
+                                                                            onClick={() => setThemeFilterValue('industry', industry.id)}
+                                                                            className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}
+                                                                        >
+                                                                            <span>{industry.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}</span>
+                                                                            {industry.name}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="editor-room-theme-mini-grid">
+                                                                    {visibleThemeCards.slice(0, 4).map(theme => (
+                                                                        <button
+                                                                            key={theme.id}
+                                                                            type="button"
+                                                                            onClick={() => applyTheme(theme.id)}
+                                                                            style={{ backgroundColor: theme.backgroundColor, color: theme.headingColor, borderColor: `${theme.primaryColor}66` }}
+                                                                        >
+                                                                            <span>{theme.name}</span>
+                                                                            <b style={{ fontFamily: getFontFamily(theme.headingFontFamily || theme.fontFamily) }}>Aa Bb</b>
+                                                                            <em style={{ backgroundColor: theme.nativeAccent ? undefined : theme.primaryColor, color: theme.buttonTextColor || '#050505' }}>Apply</em>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {editorStudioModal === 'visuals' && (
+                                                            <div className="editor-room-live-card editor-room-visual-preview">
+                                                                <div className="editor-room-calendar-mini">
+                                                                    <span>{settings.dateLabel || 'Which day are you looking to book ?'}</span>
+                                                                    <div className="editor-room-date-row">
+                                                                        {['Tue 19', 'Wed 20', 'Thu 21'].map((label, index) => (
+                                                                            <button
+                                                                                key={label}
+                                                                                type="button"
+                                                                                className={index === 0 ? 'is-active' : ''}
+                                                                                style={{
+                                                                                    background: index === 0 ? settings.dateActiveBgColor || settings.primaryColor : settings.dateBgColor || '#f8fafc',
+                                                                                    color: index === 0 ? settings.dateActiveTextColor || '#050505' : settings.dateTextColor || '#050505',
+                                                                                    fontFamily: getFontFamily(settings.dateFontFamily || settings.fontFamily)
+                                                                                }}
+                                                                            >
+                                                                                {label}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="editor-room-slot-mini">
+                                                                    <span>{settings.timeLabel || 'Lets see what time works'}</span>
+                                                                    <div>
+                                                                        {(settings.availableTimes || ['09:00', '10:30', '12:00']).slice(0, 4).map(time => (
+                                                                            <button
+                                                                                key={time}
+                                                                                type="button"
+                                                                                style={{
+                                                                                    background: settings.slotBgColor || '#f8fafc',
+                                                                                    color: settings.slotTextColor || '#050505',
+                                                                                    fontFamily: getFontFamily(settings.slotFontFamily || settings.fontFamily)
+                                                                                }}
+                                                                            >
+                                                                                {time}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                                <input
+                                                                    type="text"
+                                                                    value={settings.confirmButtonText || ''}
+                                                                    onChange={(event) => handleSettingChange('confirmButtonText', event.target.value)}
+                                                                    className="editor-room-action-edit"
+                                                                    style={{
+                                                                        background: settings.buttonColor || settings.primaryColor || '#050505',
+                                                                        color: settings.buttonTextColor || '#fff',
+                                                                        borderRadius: settings.buttonStyle === 'sharp' ? '12px' : '999px',
+                                                                        fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily)
+                                                                    }}
+                                                                    placeholder="Confirm Booking"
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        {editorStudioModal === 'features' && (
+                                                            <div className="editor-room-live-card editor-room-features-preview">
+                                                                <div className="editor-room-feature-line">
+                                                                    {[
+                                                                        { key: 'collectClientPhone', label: 'Phone', active: collectsClientPhone },
+                                                                        { key: 'collectClientEmail', label: 'Email', active: collectsClientEmail },
+                                                                        { key: 'collectClientNotes', label: 'Notes', active: collectsClientNotes },
+                                                                        { key: 'waitlist', label: 'Waitlist', active: settings.features?.waitlist }
+                                                                    ].map(item => (
+                                                                        <button key={item.key} type="button" onClick={() => handleFeatureChange(item.key, !item.active)} className={item.active ? 'is-on' : ''}>
+                                                                            <span>{item.label}</span>
+                                                                            <i />
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                                <div className={`editor-room-faq-live ${settings.features?.faqEnabled ? 'is-on' : ''}`}>
+                                                                    <div className="editor-room-faq-live-head">
+                                                                        <div>
+                                                                            <span className="editor-studio-kicker">FAQ section</span>
+                                                                            <h5>Answer questions before clients ask.</h5>
+                                                                        </div>
+                                                                        <button type="button" onClick={toggleFaqFeature}>{settings.features?.faqEnabled ? 'On' : 'Off'}</button>
+                                                                    </div>
+                                                                    {settings.features?.faqEnabled ? (
+                                                                        <div className="editor-room-faq-live-list">
+                                                                            {(settings.features?.faqs?.length ? settings.features.faqs : defaultFaqItems).map((faq, index) => (
+                                                                                <article key={index}>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={faq.q}
+                                                                                        onChange={(event) => updateFaqItem(index, 'q', event.target.value)}
+                                                                                        placeholder="Can I reschedule?"
+                                                                                    />
+                                                                                    <textarea
+                                                                                        value={faq.a}
+                                                                                        onChange={(event) => updateFaqItem(index, 'a', event.target.value)}
+                                                                                        placeholder="Yes. Message us from your booking thread."
+                                                                                    />
+                                                                                </article>
+                                                                            ))}
+                                                                            <button type="button" onClick={addFaqItem} className="editor-room-faq-add-inline"><Plus size={14}/> Add question</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="editor-room-muted-note">Turn FAQ on when policies, deposits, or reschedules need quick answers.</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {editorStudioModal === 'copy' && (
+                                                            <div className="editor-room-live-card editor-room-copy-preview">
+                                                                <label>
+                                                                    <span>Step 01</span>
+                                                                    <input type="text" value={settings.dateLabel || ''} onChange={(event) => handleSettingChange('dateLabel', event.target.value)} placeholder="Which day are you looking to book ?" />
+                                                                </label>
+                                                                <label>
+                                                                    <span>Step 02</span>
+                                                                    <input type="text" value={settings.timeLabel || ''} onChange={(event) => handleSettingChange('timeLabel', event.target.value)} placeholder="Lets see what time works" />
+                                                                </label>
+                                                                <label>
+                                                                    <span>Form headline</span>
+                                                                    <input type="text" value={settings.detailsSubHeading || ''} onChange={(event) => handleSettingChange('detailsSubHeading', event.target.value)} placeholder="Secure Your Slot" />
+                                                                </label>
+                                                                <label>
+                                                                    <span>Success state</span>
+                                                                    <input type="text" value={settings.successHeading || ''} onChange={(event) => handleSettingChange('successHeading', event.target.value)} placeholder="Booking Confirmed!" />
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="editor-room-spectrum">
+                                                        <div>
+                                                            <span className="editor-studio-kicker">Color spectrum</span>
+                                                            <strong>{selectedPaletteName} direction</strong>
+                                                        </div>
+                                                        <div className="editor-room-spectrum-rail">
+                                                            {paletteFilterOptions.map(palette => (
+                                                                <button
+                                                                    key={palette.id}
+                                                                    type="button"
+                                                                    onClick={() => setThemeFilterValue('palette', palette.id)}
+                                                                    className={themeGenerationInputs.palette === palette.id ? 'is-active' : ''}
+                                                                    title={palette.name}
+                                                                >
+                                                                    {palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}
+                                                                    <span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span>
+                                                                </button>
+                                                            ))}
+                                                            <label className={`editor-room-custom-color ${themeGenerationInputs.palette === 'custom' ? 'is-active' : ''}`}>
+                                                                <i style={{ backgroundColor: customThemeColor }} />
+                                                                <span>Custom</span>
+                                                                <input
+                                                                    type="color"
+                                                                    value={customThemeColor}
+                                                                    onChange={(event) => {
+                                                                        setCustomThemeColor(event.target.value);
+                                                                        setThemeFilterValue('palette', 'custom');
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </section>
+
                                                 {editorStudioModal === 'identity' && (
                                                     <div className="editor-studio-modal-stack">
                                                         <div className="editor-studio-two-col">
