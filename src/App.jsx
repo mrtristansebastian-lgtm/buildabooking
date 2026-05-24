@@ -6350,11 +6350,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'mobile-editor-panel-collapsed w-0 opacity-0 pointer-events-none' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
                         {!editorCollapsed && (
                             <>
-                            <header className="editor-panel-header p-5 sm:p-6 md:p-10 border-b border-neutral-50 flex flex-col lg:flex-row items-start lg:items-center justify-between flex-shrink-0 gap-4 md:gap-6">
-                                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-black">Editor</h2>
-                                <div className="editor-tab-rail editor-studio-header-actions flex bg-neutral-100 p-1.5 rounded-full overflow-x-auto w-full lg:w-auto no-scrollbar">
-                                    <span className="editor-studio-live-pill flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest whitespace-nowrap bg-white text-black shadow-sm">Studio Console</span>
-                                    <button type="button" onClick={() => openEditorStudioModal('themes')} className="editor-tab-button flex-1 lg:flex-none px-5 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap text-neutral-500 hover:text-black">Theme Designer</button>
+                            <header className="editor-panel-header editor-cinema-header flex-shrink-0">
+                                <div>
+                                    <span>Build A Booking Studio</span>
+                                    <h2>Editor</h2>
+                                </div>
+                                <div className="editor-cinema-header-actions">
+                                    <button type="button" onClick={startEditorStudioPresentation}><Zap size={14} /> Play</button>
+                                    <button type="button" onClick={() => setEditorStudioSoundEnabled(prev => !prev)}><Signal size={14} /> {editorStudioSoundEnabled ? 'Sound' : 'Muted'}</button>
                                 </div>
                             </header>
 
@@ -6368,228 +6371,196 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="editor-live-rooms animate-in fade-in duration-700">
+                                <div className="editor-cinema-studio animate-in fade-in duration-700">
                                     {(() => {
-                                        const activeRoom = editorStudioModal || 'identity';
-                                        const rooms = [
-                                            { id: 'identity', icon: BadgeCheck, number: '01', title: 'Brand', summary: 'Logo, banner, name, intro copy, and booking link.', status: settings.logo ? 'Logo ready' : 'Needs logo' },
-                                            { id: 'themes', icon: Sparkles, number: '02', title: 'Theme', summary: 'Industry-first looks, palette direction, and generated booking-page moods.', status: selectedIndustryFilter ? selectedIndustryName : 'Choose industry' },
-                                            { id: 'visuals', icon: Palette, number: '03', title: 'Visuals', summary: 'Calendar style, time slots, action buttons, fonts, and spacing.', status: selectedPaletteName || 'Palette' },
-                                            { id: 'features', icon: SlidersHorizontal, number: '04', title: 'Flow', summary: 'Client fields, email consent, FAQ, socials, waitlist, and trust tools.', status: settings.features?.faqEnabled ? 'FAQ on' : 'FAQ off' },
-                                            { id: 'copy', icon: Type, number: '05', title: 'Copy', summary: 'Words that guide clients from date to confirmed request.', status: settings.confirmButtonText || 'Button text' }
+                                        const scenes = [
+                                            { id: 'identity', number: '01', icon: BadgeCheck, title: 'Brand entrance', prompt: 'Name, logo, banner, and the first sentence clients trust.' },
+                                            { id: 'themes', number: '02', icon: Sparkles, title: 'Theme direction', prompt: 'Choose the industry, color world, and design mood.' },
+                                            { id: 'typography', number: '03', icon: Type, title: 'Typography', prompt: 'Shape every heading, paragraph, label, and letter spacing.' },
+                                            { id: 'visuals', number: '04', icon: Palette, title: 'Calendar scene', prompt: 'Tune calendar tiles, slot cards, page rhythm, and spacing.' },
+                                            { id: 'buttons', number: '05', icon: SlidersHorizontal, title: 'Buttons', prompt: 'Style every client action from time choice to final submit.' },
+                                            { id: 'features', number: '06', icon: CheckCircle2, title: 'Booking tools', prompt: 'Client fields, FAQ, socials, email consent, and waitlist.' },
+                                            { id: 'copy', number: '07', icon: MessageSquare, title: 'Page copy', prompt: 'Write the words clients see at every step.' },
+                                            { id: 'launch', number: '08', icon: Zap, title: 'Launch pass', prompt: 'Save, publish, and preview the finished booking experience.' }
                                         ];
-                                        const activeRoomData = rooms.find(room => room.id === activeRoom) || rooms[0];
-                                        const ActiveRoomIcon = activeRoomData.icon;
-                                        const openEditorRoom = (roomId) => {
-                                            setEditorStudioModal(roomId);
+                                        const activeSceneId = editorStudioModal || 'identity';
+                                        const activeIndex = Math.max(0, scenes.findIndex(scene => scene.id === activeSceneId));
+                                        const activeScene = scenes[activeIndex] || scenes[0];
+                                        const ActiveSceneIcon = activeScene.icon;
+                                        const goScene = (sceneId) => {
+                                            setEditorStudioModal(sceneId);
                                             window.requestAnimationFrame(() => {
-                                                document.querySelector('.editor-live-workbench')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                document.querySelector('.editor-cinema-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                             });
                                         };
+                                        const goNext = () => goScene(scenes[Math.min(scenes.length - 1, activeIndex + 1)].id);
+                                        const goPrev = () => goScene(scenes[Math.max(0, activeIndex - 1)].id);
+                                        const sceneProgress = `${Math.round(((activeIndex + 1) / scenes.length) * 100)}%`;
                                         return (
                                             <>
-                                                <section className="editor-live-room-rail">
-                                                    <div className="editor-live-room-head">
-                                                        <div>
-                                                            <span>Editor Studio</span>
-                                                            <h3>Choose a room.</h3>
-                                                            <p>Each room changes one part of the booking page. The preview on the right keeps the whole page in view.</p>
-                                                        </div>
-                                                        <div className="editor-live-room-actions">
-                                                            <button type="button" onClick={startEditorStudioPresentation}><Zap size={14} /> Preview build</button>
-                                                            <button type="button" onClick={() => setEditorStudioSoundEnabled(prev => !prev)}><Signal size={14} /> {editorStudioSoundEnabled ? 'Sound on' : 'Sound off'}</button>
-                                                        </div>
+                                                <section className="editor-cinema-hero">
+                                                    <div className="editor-cinema-hero-copy">
+                                                        <span>Live Design Session</span>
+                                                        <h3>Design it like an iPhone lock screen.</h3>
+                                                        <p>Tap through the timeline, tune each layer, then watch the full booking page come together in the preview. Clean enough for beginners, powerful enough for a real brand.</p>
                                                     </div>
-                                                    <div className="editor-live-room-grid">
-                                                        {rooms.map(room => {
-                                                            const RoomIcon = room.icon;
-                                                            const isActive = activeRoom === room.id;
+                                                    <div className="editor-cinema-hero-actions">
+                                                        <button type="button" onClick={() => goScene('identity')}><Zap size={14} /> Start designing</button>
+                                                        <button type="button" onClick={startEditorStudioPresentation}><Sparkles size={14} /> Play reveal</button>
+                                                    </div>
+                                                </section>
+
+                                                <section className="editor-cinema-timeline" aria-label="Editor studio timeline">
+                                                    <div className="editor-cinema-progress"><span style={{ width: sceneProgress }} /></div>
+                                                    <div className="editor-cinema-track">
+                                                        {scenes.map((scene, index) => {
+                                                            const SceneIcon = scene.icon;
+                                                            const isActive = scene.id === activeScene.id;
+                                                            const isComplete = index < activeIndex;
                                                             return (
-                                                                <button key={room.id} type="button" onClick={() => openEditorRoom(room.id)} className={`editor-live-room-card ${isActive ? 'is-active' : ''}`}>
-                                                                    <span className="editor-live-room-number">{room.number}</span>
-                                                                    <span className="editor-live-room-icon"><RoomIcon size={17} /></span>
-                                                                    <span className="editor-live-room-copy">
-                                                                        <strong>{room.title}</strong>
-                                                                        <small>{room.summary}</small>
-                                                                    </span>
-                                                                    <em>{room.status}</em>
+                                                                <button key={scene.id} type="button" onClick={() => goScene(scene.id)} className={`${isActive ? 'is-active' : ''} ${isComplete ? 'is-complete' : ''}`}>
+                                                                    <i>{isComplete ? <Check size={13} /> : <SceneIcon size={14} />}</i>
+                                                                    <span>{scene.number}</span>
+                                                                    <strong>{scene.title}</strong>
                                                                 </button>
                                                             );
                                                         })}
                                                     </div>
                                                 </section>
 
-                                                <section className={`editor-live-workbench editor-live-workbench-${activeRoom}`}>
-                                                    <div className="editor-live-workbench-head">
-                                                        <div className="editor-live-workbench-title">
-                                                            <span><ActiveRoomIcon size={18} /></span>
-                                                            <div>
-                                                                <p>{activeRoomData.number} / {activeRoomData.title} Room</p>
-                                                                <h3>{{
-                                                                    identity: 'Set the first impression.',
-                                                                    themes: selectedIndustryFilter ? `${selectedIndustryName} theme designer.` : 'Start with the industry.',
-                                                                    visuals: 'Tune the booking feel.',
-                                                                    features: 'Shape the booking flow.',
-                                                                    copy: 'Write the client journey.'
-                                                                }[activeRoom]}</h3>
-                                                            </div>
+                                                <section className={`editor-cinema-stage editor-cinema-scene-${activeScene.id}`}>
+                                                    <div className="editor-cinema-stage-head">
+                                                        <div>
+                                                            <span><ActiveSceneIcon size={16} /> Scene {activeScene.number}</span>
+                                                            <h3>{activeScene.title}</h3>
+                                                            <p>{activeScene.prompt}</p>
                                                         </div>
-                                                        {activeRoom !== 'identity' && <button type="button" onClick={() => setEditorStudioModal('identity')} className="editor-live-reset-room">Brand room</button>}
+                                                        <div className="editor-cinema-nav-buttons">
+                                                        <button type="button" onClick={goPrev} disabled={activeIndex === 0}><ChevronLeft size={15} /> Back</button>
+                                                        <button type="button" onClick={goNext} disabled={activeIndex === scenes.length - 1}>Next layer <ChevronRight size={15} /></button>
+                                                        </div>
                                                     </div>
 
-                                                    <div className="editor-live-workbench-body">
-                                                        <div className="editor-live-section-preview">
-                                                            {activeRoom === 'identity' && (
-                                                                <div className="editor-live-preview-card identity-preview-card">
-                                                                    <div className="editor-live-banner-preview">{settings.bannerImage ? <img src={settings.bannerImage} alt="" /> : <span>Banner area</span>}</div>
-                                                                    <div className="editor-live-brand-frame" style={{ textAlign: getLogoDisplay(settings).alignment }}>
-                                                                        {getLogoDisplay(settings).visible && (
-                                                                            <div className="editor-live-logo-preview" style={{ width: `${Math.min(84, getLogoDisplay(settings).size)}px`, height: `${Math.min(84, getLogoDisplay(settings).size)}px` }}>
-                                                                                {settings.logo ? <img src={settings.logo} alt="" /> : <BuildABookingMark className="w-9 h-9" />}
-                                                                            </div>
-                                                                        )}
-                                                                        <input type="text" value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Atelier 7B / Private" />
-                                                                        <textarea value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder="Studio Noir" style={{ fontFamily: getFontFamily(settings.brandNameFontFamily || settings.headingFontFamily || settings.fontFamily) }} />
-                                                                        <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Reserve your private session." />
-                                                                    </div>
+                                                    <div className="editor-cinema-stage-body">
+                                                        <div className="editor-cinema-live-card">
+                                                            {activeScene.id === 'identity' && (
+                                                                <div className="cinema-brand-preview" style={{ textAlign: getLogoDisplay(settings).alignment }}>
+                                                                    <div className="cinema-banner-frame">{settings.bannerImage ? <img src={settings.bannerImage} alt="" /> : <span>Optional banner</span>}</div>
+                                                                    {getLogoDisplay(settings).visible && <div className="cinema-logo-frame" style={{ width: `${Math.min(88, getLogoDisplay(settings).size)}px`, height: `${Math.min(88, getLogoDisplay(settings).size)}px` }}>{settings.logo ? <img src={settings.logo} alt="" /> : <BuildABookingMark className="w-10 h-10" />}</div>}
+                                                                    <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Atelier 7B / Private" />
+                                                                    <textarea value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder="Studio Noir" style={{ fontFamily: getFontFamily(settings.brandNameFontFamily || settings.headingFontFamily || settings.fontFamily) }} />
+                                                                    <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Reserve your private session." />
                                                                 </div>
                                                             )}
 
-                                                            {activeRoom === 'themes' && (
-                                                                <div className="editor-live-preview-card theme-preview-card">
-                                                                    <div className="editor-live-theme-brief">
-                                                                        <span>{selectedIndustryFilter ? 'Theme brief' : 'Choose industry'}</span>
-                                                                        <h4>{selectedIndustryFilter ? `${selectedIndustryName} booking pages` : 'No random themes.'}</h4>
-                                                                        <p>{selectedIndustryFilter ? `Built around ${selectedPalettePhrase}, client trust, and a ${selectedIndustryName.toLowerCase()}-ready visual rhythm.` : 'Pick an industry and the engine generates looks that fit that business type first.'}</p>
-                                                                    </div>
-                                                                    <div className="editor-live-theme-strip">
-                                                                        {(visibleThemeCards.length ? visibleThemeCards : mobileWebEditorThemes).slice(0, 3).map(theme => (
-                                                                            <button key={theme.id} type="button" onClick={() => applyTheme(theme.id)} style={{ backgroundColor: theme.backgroundColor, color: theme.headingColor, borderColor: `${theme.primaryColor}55` }}>
-                                                                                <span>{theme.name}</span>
-                                                                                <b style={{ fontFamily: getFontFamily(theme.headingFontFamily || theme.fontFamily) }}>Aa Bb</b>
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
+                                                            {activeScene.id === 'themes' && (
+                                                                <div className="cinema-theme-preview">
+                                                                    <span>{selectedIndustryFilter ? selectedIndustryName : 'Choose an industry'}</span>
+                                                                    <h4>{selectedIndustryFilter ? `${selectedIndustryName} themes shaped for your business.` : 'No random templates.'}</h4>
+                                                                    <p>{selectedIndustryFilter ? `The engine builds around ${selectedPalettePhrase}, client trust, and a visual rhythm that fits ${selectedIndustryName.toLowerCase()}.` : 'Pick an industry first, then color and style become tailored to that world.'}</p>
+                                                                    <div>{(visibleThemeCards.length ? visibleThemeCards : mobileWebEditorThemes).slice(0, 3).map(theme => <button key={theme.id} type="button" onClick={() => applyTheme(theme.id)} style={{ backgroundColor: theme.backgroundColor, color: theme.headingColor, borderColor: `${theme.primaryColor}66` }}><small>{theme.name}</small><b style={{ fontFamily: getFontFamily(theme.headingFontFamily || theme.fontFamily) }}>Aa Bb</b></button>)}</div>
                                                                 </div>
                                                             )}
 
-                                                            {activeRoom === 'visuals' && (
-                                                                <div className="editor-live-preview-card visuals-preview-card">
-                                                                    <div className="editor-live-date-row">
-                                                                        {['Tue 19', 'Wed 20', 'Thu 21'].map((label, index) => (
-                                                                            <button key={label} type="button" className={index === 0 ? 'is-active' : ''} style={{ background: index === 0 ? settings.dateActiveBgColor || settings.primaryColor : settings.dateBgColor || '#f8fafc', color: index === 0 ? settings.dateActiveTextColor || '#050505' : settings.dateTextColor || '#050505', fontFamily: getFontFamily(settings.dateFontFamily || settings.fontFamily) }}>{label}</button>
-                                                                        ))}
-                                                                    </div>
-                                                                    <div className="editor-live-slot-row">
-                                                                        {(settings.availableTimes || ['09:00', '10:30', '12:00']).slice(0, 4).map(time => <button key={time} type="button" style={{ background: settings.slotBgColor || '#f8fafc', color: settings.slotTextColor || '#050505', fontFamily: getFontFamily(settings.slotFontFamily || settings.fontFamily) }}>{time}</button>)}
-                                                                    </div>
-                                                                    <input type="text" value={settings.confirmButtonText || ''} onChange={(event) => handleSettingChange('confirmButtonText', event.target.value)} style={{ background: settings.buttonColor || settings.primaryColor || '#050505', color: settings.buttonTextColor || '#fff', borderRadius: settings.buttonStyle === 'sharp' ? '14px' : '999px', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }} placeholder="Confirm Booking" />
+                                                            {activeScene.id === 'typography' && (
+                                                                <div className="cinema-type-preview">
+                                                                    <span>Font personality</span>
+                                                                    <h4 style={{ fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>Every word should feel intentional.</h4>
+                                                                    <p style={{ fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily) }}>Tune display type, body copy, button text, labels, and spacing without hunting through the page.</p>
+                                                                    <div className="cinema-type-spec"><b>Aa</b><b>Bb</b><small>Heading / Body / Labels</small></div>
                                                                 </div>
                                                             )}
 
-                                                            {activeRoom === 'features' && (
-                                                                <div className="editor-live-preview-card features-preview-card">
-                                                                    <div className="editor-live-feature-toggles">
-                                                                        {[
-                                                                            { key: 'collectClientPhone', label: 'Phone', active: collectsClientPhone },
-                                                                            { key: 'collectClientEmail', label: 'Email', active: collectsClientEmail },
-                                                                            { key: 'collectClientNotes', label: 'Notes', active: collectsClientNotes },
-                                                                            { key: 'waitlist', label: 'Waitlist', active: settings.features?.waitlist },
-                                                                            { key: 'faqEnabled', label: 'FAQ', active: settings.features?.faqEnabled, onClick: toggleFaqFeature },
-                                                                            { key: 'socialLinks', label: 'Socials', active: settings.features?.socialLinks }
-                                                                        ].map(item => {
-                                                                            const onClick = item.onClick || (() => handleFeatureChange(item.key, !item.active));
-                                                                            return <button key={item.key} type="button" onClick={onClick} className={item.active ? 'is-on' : ''}><span>{item.label}</span><i /></button>;
-                                                                        })}
-                                                                    </div>
-                                                                    <div className={`editor-live-faq-card ${settings.features?.faqEnabled ? 'is-on' : ''}`}>
-                                                                        <div><strong>FAQ</strong><button type="button" onClick={toggleFaqFeature}>{settings.features?.faqEnabled ? 'Shown' : 'Hidden'}</button></div>
-                                                                        {settings.features?.faqEnabled ? (settings.features?.faqs || []).slice(0, 2).map((faq, index) => (
-                                                                            <label key={index}><input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="Question" /><textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="Answer" /></label>
-                                                                        )) : <p>Turn this on when clients need policies, deposits, or reschedule answers.</p>}
-                                                                        {settings.features?.faqEnabled && <button type="button" onClick={addFaqItem} className="editor-live-add-question"><Plus size={14}/> Add question</button>}
-                                                                    </div>
+                                                            {activeScene.id === 'visuals' && (
+                                                                <div className="cinema-visual-preview">
+                                                                    <div className="cinema-date-strip">{['Tue 19', 'Wed 20', 'Thu 21'].map((label, index) => <button key={label} type="button" className={index === 0 ? 'is-active' : ''} style={{ background: index === 0 ? settings.dateActiveBgColor || settings.primaryColor : settings.dateBgColor || '#f8fafc', color: index === 0 ? settings.dateActiveTextColor || '#050505' : settings.dateTextColor || '#050505' }}>{label}</button>)}</div>
+                                                                    <div className="cinema-slot-strip">{(settings.availableTimes || ['09:00', '10:30', '12:00']).slice(0, 6).map(time => <button key={time} type="button" style={{ background: settings.slotBgColor || '#f8fafc', color: settings.slotTextColor || '#050505' }}>{time}</button>)}</div>
                                                                 </div>
                                                             )}
 
-                                                            {activeRoom === 'copy' && (
-                                                                <div className="editor-live-preview-card copy-preview-card">
-                                                                    {[
-                                                                        { key: 'dateLabel', label: 'Date step' },
-                                                                        { key: 'timeLabel', label: 'Time step' },
-                                                                        { key: 'detailsHeading', label: 'Form headline' },
-                                                                        { key: 'detailsSubHeading', label: 'Form subheading' },
-                                                                        { key: 'confirmButtonText', label: 'Action button' },
-                                                                        { key: 'successHeading', label: 'Success state' }
-                                                                    ].map(item => <label key={item.key}><span>{item.label}</span><input type="text" value={settings[item.key] || ''} onChange={(event) => handleSettingChange(item.key, event.target.value)} /></label>)}
+                                                            {activeScene.id === 'buttons' && (
+                                                                <div className="cinema-button-preview">
+                                                                    <button type="button" style={{ background: settings.buttonColor || settings.primaryColor || '#050505', color: settings.buttonTextColor || '#fff', borderRadius: settings.buttonStyle === 'sharp' ? '14px' : '999px', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>{settings.confirmButtonText || 'Confirm Booking'}</button>
+                                                                    <button type="button" className="secondary">FAQ</button>
+                                                                    <button type="button" className="ghost">Tue 19</button>
+                                                                </div>
+                                                            )}
+
+                                                            {activeScene.id === 'features' && (
+                                                                <div className="cinema-feature-preview">
+                                                                    {[['Phone', collectsClientPhone], ['Email', collectsClientEmail], ['Notes', collectsClientNotes], ['FAQ', settings.features?.faqEnabled], ['Waitlist', settings.features?.waitlist], ['Socials', settings.features?.socialLinks]].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}
+                                                                </div>
+                                                            )}
+
+                                                            {activeScene.id === 'copy' && (
+                                                                <div className="cinema-copy-preview">
+                                                                    <input value={settings.dateLabel || ''} onChange={(event) => handleSettingChange('dateLabel', event.target.value)} placeholder="Which day are you looking to book?" />
+                                                                    <input value={settings.timeLabel || ''} onChange={(event) => handleSettingChange('timeLabel', event.target.value)} placeholder="Lets see what time works" />
+                                                                    <input value={settings.detailsHeading || ''} onChange={(event) => handleSettingChange('detailsHeading', event.target.value)} placeholder="Secure Your Slot" />
+                                                                    <input value={settings.confirmButtonText || ''} onChange={(event) => handleSettingChange('confirmButtonText', event.target.value)} placeholder="Confirm Booking" />
+                                                                </div>
+                                                            )}
+
+                                                            {activeScene.id === 'launch' && (
+                                                                <div className="cinema-launch-preview">
+                                                                    <BuildABookingMark className="w-14 h-14" />
+                                                                    <h4>Ready for the web.</h4>
+                                                                    <p>Save the draft, publish the booking page, then open the live link to test the client experience.</p>
+                                                                    <button type="button" onClick={saveSettings}>Publish to web</button>
                                                                 </div>
                                                             )}
                                                         </div>
 
-                                                        <div className="editor-live-control-deck">
-                                                            {activeRoom === 'identity' && (
-                                                                <>
-                                                                    <div className="editor-live-control-row media-controls">
-                                                                        <label><Camera size={15}/> Upload logo<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('logo', file, 'brand'); e.target.value = ''; }} /></label>
-                                                                        <label><Monitor size={15}/> Upload banner<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('bannerImage', file, 'brand'); e.target.value = ''; }} /></label>
-                                                                        <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy link</button>
-                                                                    </div>
-                                                                    <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} />
-                                                                </>
-                                                            )}
+                                                        <div className="editor-cinema-control-panel">
+                                                            {activeScene.id === 'identity' && <>
+                                                                <label><Camera size={15}/> Logo<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('logo', file, 'brand'); e.target.value = ''; }} /></label>
+                                                                <label><Monitor size={15}/> Banner<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('bannerImage', file, 'brand'); e.target.value = ''; }} /></label>
+                                                                <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy booking link</button>
+                                                                <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} />
+                                                            </>}
 
-                                                            {activeRoom === 'themes' && (
-                                                                <>
-                                                                    <div className="editor-live-control-title"><span>01</span><strong>Industry</strong><small>The page mood starts here.</small></div>
-                                                                    <div className="editor-live-scroll-row">
-                                                                        {industryFilterOptions.map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}><span>{industry.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}</span>{industry.name}</button>)}
-                                                                    </div>
-                                                                    <div className="editor-live-control-title"><span>02</span><strong>Palette</strong><small>{selectedPaletteHint}</small></div>
-                                                                    <div className="editor-live-chip-row">
-                                                                        {paletteFilterOptions.map(palette => <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)} className={themeGenerationInputs.palette === palette.id ? 'is-active' : ''}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span></button>)}
-                                                                        <label className={`editor-live-color-chip ${themeGenerationInputs.palette === 'custom' ? 'is-active' : ''}`}><i style={{ backgroundColor: customThemeColor }} /><span>Custom</span><input type="color" value={customThemeColor} onChange={(event) => { setCustomThemeColor(event.target.value); setThemeFilterValue('palette', 'custom'); }} /></label>
-                                                                    </div>
-                                                                    <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting} className="editor-live-detect-button"><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
-                                                                </>
-                                                            )}
+                                                            {activeScene.id === 'themes' && <>
+                                                                <div className="cinema-control-title"><span>Industry</span><small>The theme starts here.</small></div>
+                                                                <div className="cinema-chip-scroll">{industryFilterOptions.map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}>{industry.name}</button>)}</div>
+                                                                <div className="cinema-control-title"><span>Color direction</span><small>{selectedPaletteHint}</small></div>
+                                                                <div className="cinema-color-grid">{paletteFilterOptions.map(palette => <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)} className={themeGenerationInputs.palette === palette.id ? 'is-active' : ''}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span></button>)}<label className={themeGenerationInputs.palette === 'custom' ? 'is-active' : ''}><i style={{ backgroundColor: customThemeColor }} /><span>Custom</span><input type="color" value={customThemeColor} onChange={(event) => { setCustomThemeColor(event.target.value); setThemeFilterValue('palette', 'custom'); }} /></label></div>
+                                                                <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
+                                                            </>}
 
-                                                            {activeRoom === 'visuals' && (
-                                                                <>
-                                                                    <VisualEditorGroup title="Page Palette" note="Core colors and typography used across the whole booking page."><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{[{ label: 'Accent', key: 'primaryColor' }, { label: 'Background', key: 'backgroundColor' }, { label: 'Heading Text', key: 'headingColor', fontKey: 'headingFontFamily' }, { label: 'Body Text', key: 'bodyColor', fontKey: 'bodyFontFamily' }].map(item => <ColorFontControl key={item.key} settings={settings} item={item} onChange={handleSettingChange} />)}</div></VisualEditorGroup>
-                                                                    <VisualEditorGroup title="Calendar + Time Slots" note="The booking rhythm clients feel when choosing a day and time."><StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" /><StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Time Box Style" /></VisualEditorGroup>
-                                                                    <VisualEditorGroup title="Action Button" note="The final booking action."><StyleSegmentedControl value={settings.actionButtonStyle || 'solid'} onChange={(value) => handleSettingChange('actionButtonStyle', value)} label="Action Style" /><ButtonShapeControl value={settings.buttonStyle || 'pill'} onChange={(value) => handleSettingChange('buttonStyle', value)} /></VisualEditorGroup>
-                                                                    <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
-                                                                </>
-                                                            )}
+                                                            {activeScene.id === 'typography' && <>
+                                                                <div className="cinema-control-title"><span>Font style</span><small>Apply a polished preset, then fine tune spacing.</small></div>
+                                                                <div className="cinema-font-grid">{fontStylePresets.map(preset => <button key={preset.id} type="button" onClick={() => applyFontStylePreset(preset)} className={(settings.headingFontFamily || settings.fontFamily) === (preset.headingFontFamily || preset.fontFamily) ? 'is-active' : ''} style={{ fontFamily: getFontFamily(preset.headingFontFamily || preset.fontFamily) }}>Aa <span>{preset.label}</span></button>)}</div>
+                                                                <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
+                                                            </>}
 
-                                                            {activeRoom === 'features' && (
-                                                                <>
-                                                                    <div className="editor-live-control-title"><span>01</span><strong>Client detail fields</strong><small>Only ask for what the business needs.</small></div>
-                                                                    <div className="editor-live-feature-grid">{[
-                                                                        { key: 'collectClientPhone', icon: Phone, label: 'Mobile Number', note: 'Contact records and follow-ups.', active: collectsClientPhone },
-                                                                        { key: 'collectClientEmail', icon: Mail, label: 'Email Address', note: 'Email updates and portal matching.', active: collectsClientEmail },
-                                                                        { key: 'collectClientNotes', icon: MessageSquare, label: 'Client Note', note: 'Context before submit.', active: collectsClientNotes }
-                                                                    ].map(item => { const IconCmp = item.icon; return <button key={item.key} type="button" onClick={() => handleFeatureChange(item.key, !item.active)} className={item.active ? 'is-on' : ''}><IconCmp size={16}/><span><strong>{item.label}</strong><small>{item.note}</small></span><i /></button>; })}</div>
-                                                                    <div className="editor-live-control-title"><span>02</span><strong>Booking page tools</strong><small>FAQ, socials, email consent, and waitlist.</small></div>
-                                                                    <div className="editor-live-feature-grid">{[
-                                                                        { key: 'waitlist', icon: Clock, label: 'Waitlist', note: 'Standby when full.', active: settings.features?.waitlist },
-                                                                        { key: 'faqEnabled', icon: HelpCircle, label: 'FAQ Section', note: 'Answers before submit.', active: settings.features?.faqEnabled, onClick: toggleFaqFeature },
-                                                                        { key: 'socialLinks', icon: Share2, label: 'Social Footer', note: 'Clickable profile links.', active: settings.features?.socialLinks },
-                                                                        { key: 'emailUpdates', icon: Mail, label: 'Email Opt-In', note: 'Consent checkbox.', active: emailUpdatesEnabled && collectsClientEmail, disabled: !collectsClientEmail }
-                                                                    ].map(item => { const IconCmp = item.icon; const onClick = item.onClick || (() => !item.disabled && handleFeatureChange(item.key, !item.active)); return <button key={item.key} type="button" onClick={onClick} className={`${item.active ? 'is-on' : ''} ${item.disabled ? 'is-disabled' : ''}`}><IconCmp size={16}/><span><strong>{item.label}</strong><small>{item.note}</small></span><i /></button>; })}</div>
-                                                                </>
-                                                            )}
+                                                            {activeScene.id === 'visuals' && <>
+                                                                <VisualEditorGroup title="Calendar" note="Date cards and selection style."><StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" /></VisualEditorGroup>
+                                                                <VisualEditorGroup title="Time Slots" note="Bookable time card style."><StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Time Box Style" /></VisualEditorGroup>
+                                                            </>}
 
-                                                            {activeRoom === 'copy' && (
-                                                                <div className="editor-live-copy-grid">{[
-                                                                    { key: 'dateLabel', l: 'Date Selection Title' },
-                                                                    { key: 'timeLabel', l: 'Time Selection Title' },
-                                                                    { key: 'detailsHeading', l: 'Details Section Title' },
-                                                                    { key: 'detailsSubHeading', l: 'Details Sub-Title' },
-                                                                    { key: 'confirmButtonText', l: 'Final Submit Button' },
-                                                                    { key: 'successHeading', l: 'Success Screen Title' }
-                                                                ].map(item => <label key={item.key}><span>{item.l}</span><input type="text" value={settings[item.key] || ''} onChange={(e) => handleSettingChange(item.key, e.target.value)} /></label>)}</div>
-                                                            )}
+                                                            {activeScene.id === 'buttons' && <>
+                                                                <VisualEditorGroup title="Action Button" note="Final booking action style."><StyleSegmentedControl value={settings.actionButtonStyle || 'solid'} onChange={(value) => handleSettingChange('actionButtonStyle', value)} label="Action Style" /><ButtonShapeControl value={settings.buttonStyle || 'pill'} onChange={(value) => handleSettingChange('buttonStyle', value)} /></VisualEditorGroup>
+                                                                <div className="cinema-field-grid"><label>Button text<input value={settings.confirmButtonText || ''} onChange={(event) => handleSettingChange('confirmButtonText', event.target.value)} /></label><label>Button color<input type="color" value={settings.buttonColor || settings.primaryColor || '#050505'} onChange={(event) => handleSettingChange('buttonColor', event.target.value)} /></label></div>
+                                                            </>}
+
+                                                            {activeScene.id === 'features' && <>
+                                                                <div className="cinema-toggle-grid">{[
+                                                                    { key: 'collectClientPhone', label: 'Mobile number', active: collectsClientPhone },
+                                                                    { key: 'collectClientEmail', label: 'Email address', active: collectsClientEmail },
+                                                                    { key: 'collectClientNotes', label: 'Client note', active: collectsClientNotes },
+                                                                    { key: 'waitlist', label: 'Waitlist', active: settings.features?.waitlist },
+                                                                    { key: 'faqEnabled', label: 'FAQ section', active: settings.features?.faqEnabled, onClick: toggleFaqFeature },
+                                                                    { key: 'socialLinks', label: 'Social footer', active: settings.features?.socialLinks },
+                                                                    { key: 'emailUpdates', label: 'Email opt-in', active: emailUpdatesEnabled && collectsClientEmail, disabled: !collectsClientEmail }
+                                                                ].map(item => { const onClick = item.onClick || (() => !item.disabled && handleFeatureChange(item.key, !item.active)); return <button key={item.key} type="button" onClick={onClick} className={`${item.active ? 'is-on' : ''} ${item.disabled ? 'is-disabled' : ''}`}><span>{item.label}</span><i /></button>; })}</div>
+                                                                <div className="cinema-faq-editor"><div><strong>FAQ questions</strong><button type="button" onClick={addFaqItem}><Plus size={14}/> Add</button></div>{(settings.features?.faqs || []).slice(0, 3).map((faq, index) => <label key={index}><input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="Question" /><textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="Answer" /></label>)}</div>
+                                                            </>}
+
+                                                            {activeScene.id === 'copy' && <div className="cinema-field-grid single">{[
+                                                                { key: 'dateLabel', l: 'Date section' }, { key: 'timeLabel', l: 'Time section' }, { key: 'detailsHeading', l: 'Form headline' }, { key: 'detailsSubHeading', l: 'Form helper' }, { key: 'confirmButtonText', l: 'Final button' }, { key: 'successHeading', l: 'Success title' }
+                                                            ].map(item => <label key={item.key}>{item.l}<input value={settings[item.key] || ''} onChange={(event) => handleSettingChange(item.key, event.target.value)} /></label>)}</div>}
+
+                                                            {activeScene.id === 'launch' && <div className="cinema-launch-actions"><button type="button" onClick={() => saveSettingsDraft(settings, 'Editor draft saved.')}><CheckCircle2 size={15}/> Save draft</button><button type="button" onClick={saveSettings}><Zap size={15}/> Publish to web</button><button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy link</button></div>}
                                                         </div>
                                                     </div>
                                                 </section>
