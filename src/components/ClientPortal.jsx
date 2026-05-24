@@ -27,6 +27,7 @@ import {
   showBrowserNotification,
   NOTIFICATION_TYPES
 } from '../services/notifications';
+import { formatServiceDuration, formatServicePrice } from '../utils/services';
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
 const cleanFirestoreIdPart = (value = '') => (
@@ -87,6 +88,10 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
     date: 'Thursday, May 28',
     time: '14:30',
     status: 'pending',
+    serviceName: 'Private Styling Session',
+    serviceDuration: '60',
+    servicePrice: '650',
+    servicePriceType: 'from',
     isExample: true
   }), []);
 
@@ -796,7 +801,11 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 md:p-6 bg-neutral-50/60">
-        {bookingSource.length ? bookingSource.map(booking => (
+        {bookingSource.length ? bookingSource.map(booking => {
+          const serviceSummary = booking.serviceName
+            ? [booking.serviceName, formatServiceDuration(booking.serviceDuration), formatServicePrice(booking)].filter(Boolean).join(' / ')
+            : '';
+          return (
           <article key={booking.id} className="native-stat-card rounded-lg bg-white border border-neutral-100 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-8">
               <div>
@@ -804,6 +813,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
                 {booking.isExample && <span className="ml-2 inline-flex px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example</span>}
                 <h3 className="text-2xl font-bold tracking-tight mt-4">{booking.workspaceName || 'Booking'}</h3>
                 <p className="text-sm text-neutral-500 mt-1">{booking.date} / {booking.time}</p>
+                {serviceSummary && <p className="mt-3 inline-flex max-w-full rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-neutral-500 truncate">{serviceSummary}</p>}
               </div>
               <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center shrink-0">
                 <Calendar size={18} />
@@ -818,7 +828,8 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
               </button>
             </div>
           </article>
-        )) : (
+          );
+        }) : (
           <div className="md:col-span-2 p-10 md:p-16 text-center">
             <div className="w-16 h-16 rounded-lg bg-white border border-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-300"><Calendar size={24}/></div>
             <h3 className="text-2xl font-bold tracking-tight mb-3">Your bookings will appear here</h3>

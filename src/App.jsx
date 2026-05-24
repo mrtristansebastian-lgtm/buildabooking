@@ -28,6 +28,7 @@ import {
 } from './services/notifications';
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
+import { formatServiceDuration, formatServicePrice, normalizeServiceList, summarizeService } from './utils/services';
 import { mixHexColors, normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
 
 const OnboardingShowroom = lazy(() => (
@@ -52,6 +53,10 @@ const ClientPortal = lazy(() => (
 
 const WorkspaceInbox = lazy(() => (
   import('./components/WorkspaceInbox').then((module) => ({ default: module.WorkspaceInbox }))
+));
+
+const ServicesStudio = lazy(() => (
+  import('./components/ServicesStudio').then((module) => ({ default: module.ServicesStudio }))
 ));
 
 const BrandLoader = ({ label = 'Loading workspace', variant = 'dark' }) => (
@@ -980,7 +985,7 @@ const authRedirectStorageKey = 'build-a-booking-auth-return';
 const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
-const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'clients', 'staff', 'profile'];
+const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'services', 'clients', 'staff', 'profile'];
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
 
 const safeJsonParse = (value, fallback = null) => {
@@ -1442,6 +1447,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 onboarding: {},
                 accountProfiles: {},
                 themeTemplates: [],
+                serviceIndustry: '',
+                services: [],
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
                 logo: '', bannerImage: '', address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
             });
@@ -1498,6 +1505,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ...workspaceAccess
                 ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
             }, [settings.brandName, user, workspaceAccess]);
+            const workspaceServices = useMemo(() => normalizeServiceList(settings.services || []), [settings.services]);
+            const serviceById = useMemo(() => new Map(workspaceServices.map(service => [service.id, service])), [workspaceServices]);
+            const getBookingService = (booking = {}) => {
+                if (booking.serviceName || booking.serviceId) {
+                    return {
+                        ...serviceById.get(booking.serviceId),
+                        serviceId: booking.serviceId,
+                        name: booking.serviceName || serviceById.get(booking.serviceId)?.name || '',
+                        description: booking.serviceDescription || serviceById.get(booking.serviceId)?.description || '',
+                        price: booking.servicePrice || serviceById.get(booking.serviceId)?.price || '',
+                        priceType: booking.servicePriceType || serviceById.get(booking.serviceId)?.priceType || '',
+                        duration: booking.serviceDuration || serviceById.get(booking.serviceId)?.duration || '',
+                        category: booking.serviceCategory || serviceById.get(booking.serviceId)?.category || ''
+                    };
+                }
+                return null;
+            };
             const accountProfileKey = useMemo(() => (
                 user?.uid || normalizeEmail(user?.email || '') || (isGuestWorkspace ? 'guest-workspace' : 'local-account')
             ), [isGuestWorkspace, user?.email, user?.uid]);
@@ -1711,6 +1735,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         booking.dateKeyResolved,
                         booking.time,
                         booking.status,
+                        booking.serviceName,
+                        booking.serviceCategory,
+                        booking.serviceDescription,
+                        booking.servicePrice,
+                        booking.serviceDuration,
                         booking.staffName,
                         staffList.find(staff => staff.id === booking.staffId)?.name
                     ].filter(Boolean).join(' ').toLowerCase().includes(normalizedSearch))
@@ -2309,6 +2338,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 { id: 'business', icon: Calendar, label: 'Schedule' },
                 { id: 'communications', icon: MessageSquare, label: 'Support Inbox' },
                 { id: 'editor', icon: Paintbrush, label: 'Editor' },
+                { id: 'services', icon: Briefcase, label: 'My Services', mobileLabel: 'Services' },
                 { id: 'clients', icon: Star, label: 'My Clients', mobileLabel: 'Clients', badge: clientMetrics.firstTimers > 0 },
                 { id: 'staff', icon: Users, label: 'Team' },
                 { id: 'profile', icon: User, label: 'Profile' }
@@ -3447,6 +3477,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 identity: 'identity',
                 introduction: 'identity',
                 industry: 'identity',
+                services: 'services',
                 colours: 'identity',
                 typography: 'identity',
                 calendar: 'calendar',
@@ -3460,19 +3491,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 { id: 'identity', number: '01', icon: BadgeCheck, title: 'Brand Identity' },
                 { id: 'industry', number: '02', icon: Sparkles, title: 'Industry' },
                 { id: 'introduction', number: '03', icon: MessageSquare, title: 'Introduction' },
-                { id: 'colours', number: '04', icon: Pipette, title: 'Colour Direction' },
-                { id: 'typography', number: '05', icon: Type, title: 'Typography' },
-                { id: 'calendar', number: '06', icon: Calendar, title: 'Calendar Style' },
-                { id: 'time', number: '07', icon: Clock, title: 'Time Style' },
-                { id: 'faq', number: '08', icon: HelpCircle, title: 'FAQ Setup' },
-                { id: 'form', number: '09', icon: FileText, title: 'Client Form' },
-                { id: 'buttons', number: '10', icon: SlidersHorizontal, title: 'Action Buttons' },
-                { id: 'social', number: '11', icon: Globe, title: 'Social & Maps' }
+                { id: 'services', number: '04', icon: Briefcase, title: 'Services' },
+                { id: 'colours', number: '05', icon: Pipette, title: 'Colour Direction' },
+                { id: 'typography', number: '06', icon: Type, title: 'Typography' },
+                { id: 'calendar', number: '07', icon: Calendar, title: 'Calendar Style' },
+                { id: 'time', number: '08', icon: Clock, title: 'Time Style' },
+                { id: 'faq', number: '09', icon: HelpCircle, title: 'FAQ Setup' },
+                { id: 'form', number: '10', icon: FileText, title: 'Client Form' },
+                { id: 'buttons', number: '11', icon: SlidersHorizontal, title: 'Action Buttons' },
+                { id: 'social', number: '12', icon: Globe, title: 'Social & Maps' }
             ];
             const roomTabMap = {
                 identity: 'identity',
                 industry: 'themes',
                 introduction: 'identity',
+                services: 'features',
                 colours: 'themes',
                 typography: 'visuals',
                 calendar: 'visuals',
@@ -3543,6 +3576,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const inspectRoomMap = {
                     identity: 'identity',
                     introduction: 'introduction',
+                    services: 'services',
                     calendar: 'calendar',
                     time: 'time',
                     faq: 'faq',
@@ -4083,6 +4117,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     clientBirthday: formData.birthday || '',
                     clientNote: formData.note || '',
                     clientEmailOptIn: Boolean(formData.emailOptIn && formData.email),
+                    serviceId: formData.serviceId || '',
+                    serviceName: formData.serviceName || '',
+                    serviceDescription: formData.serviceDescription || '',
+                    servicePrice: formData.servicePrice || '',
+                    servicePriceType: formData.servicePriceType || '',
+                    serviceDuration: formData.serviceDuration || '',
+                    serviceCategory: formData.serviceCategory || '',
                     notificationChannels: {
                         email: Boolean(formData.email && formData.emailOptIn),
                         portal: Boolean(formData.email)
@@ -4106,7 +4147,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     await createOwnerNotification(makeOwnerNotification({
                         type: NOTIFICATION_TYPES.BOOKING_REQUEST,
                         title: `New booking request from ${bookingRecord.clientName}`,
-                        body: `${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from My Bookings.`,
+                        body: `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from My Bookings.`,
                         ownerId: workspaceOwnerId,
                         booking: { ...bookingRecord, id: bookingRef.id },
                         bookingId: bookingRef.id,
@@ -4134,6 +4175,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     clientBirthday: formData.birthday || '',
                     clientNote: formData.note || '',
                     clientEmailOptIn: Boolean(formData.emailOptIn && formData.email),
+                    serviceId: formData.serviceId || '',
+                    serviceName: formData.serviceName || '',
+                    serviceDescription: formData.serviceDescription || '',
+                    servicePrice: formData.servicePrice || '',
+                    servicePriceType: formData.servicePriceType || '',
+                    serviceDuration: formData.serviceDuration || '',
+                    serviceCategory: formData.serviceCategory || '',
                     notificationChannels: {
                         email: Boolean(formData.email && formData.emailOptIn),
                         portal: Boolean(formData.email)
@@ -4163,6 +4211,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     clientEmailOptIn: bookingRecord.clientEmailOptIn,
                                     clientBirthday: bookingRecord.clientBirthday,
                                     clientNote: bookingRecord.clientNote,
+                                    serviceId: bookingRecord.serviceId,
+                                    serviceName: bookingRecord.serviceName,
+                                    serviceDescription: bookingRecord.serviceDescription,
+                                    servicePrice: bookingRecord.servicePrice,
+                                    servicePriceType: bookingRecord.servicePriceType,
+                                    serviceDuration: bookingRecord.serviceDuration,
+                                    serviceCategory: bookingRecord.serviceCategory,
                                     date: bookingRecord.date,
                                     dateKey: bookingRecord.dateKey,
                                     time: bookingRecord.time,
@@ -4250,6 +4305,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 date: updates.date ?? existingBooking?.date ?? '',
                                 dateKey: updates.dateKey ?? existingBooking?.dateKey ?? null,
                                 time: updates.time ?? existingBooking?.time ?? '',
+                                serviceId: updates.serviceId ?? existingBooking?.serviceId ?? '',
+                                serviceName: updates.serviceName ?? existingBooking?.serviceName ?? '',
+                                serviceDescription: updates.serviceDescription ?? existingBooking?.serviceDescription ?? '',
+                                servicePrice: updates.servicePrice ?? existingBooking?.servicePrice ?? '',
+                                servicePriceType: updates.servicePriceType ?? existingBooking?.servicePriceType ?? '',
+                                serviceDuration: updates.serviceDuration ?? existingBooking?.serviceDuration ?? '',
+                                serviceCategory: updates.serviceCategory ?? existingBooking?.serviceCategory ?? '',
                                 status: updates.status ?? existingBooking?.status ?? 'pending',
                                 staffId: nextStaffId,
                                 staffName: nextAssignedStaff?.name || '',
@@ -6008,6 +6070,28 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         </div>
                     )}
 
+                    {activeTab === 'services' && (
+                        <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
+                            <Suspense fallback={<LazySectionFallback label="Loading service studio" />}>
+                                <ServicesStudio
+                                    settings={settings}
+                                    staffList={displayStaffList}
+                                    currentIndustry={themeGenerationInputs.industry || settings.serviceIndustry}
+                                    canManageWorkspace={canManageWorkspace}
+                                    onChooseIndustry={(industryId) => {
+                                        handleSettingChange('serviceIndustry', industryId);
+                                        if (industryId) setThemeFilterValue('industry', industryId);
+                                    }}
+                                    onUpdateSettings={async (nextSettings, message) => {
+                                        setSettings(nextSettings);
+                                        await saveSettingsDraft(nextSettings, message || 'Services saved.');
+                                    }}
+                                    showToast={showToast}
+                                />
+                            </Suspense>
+                        </div>
+                    )}
+
                     {activeTab === 'clients' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -6311,6 +6395,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     <div className="divide-y divide-neutral-100">
                                                         {activeClient.bookings.length ? activeClient.bookings.map(booking => {
                                                             const assignedStaff = staffList.find(staff => staff.id === booking.staffId);
+                                                            const serviceDetails = getBookingService(booking);
                                                             const statusStyle = booking.status === 'confirmed'
                                                                 ? 'bg-[#39FF14] text-black'
                                                                 : booking.status === 'waitlist'
@@ -6326,6 +6411,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                             <span className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${statusStyle}`}>{booking.status === 'waitlist' ? 'Standby' : booking.status}</span>
                                                                         </div>
                                                                         <p className="text-sm text-neutral-500">{booking.date}{booking.clientBirthday ? ` / Bday: ${booking.clientBirthday}` : ''}</p>
+                                                                        {serviceDetails?.name && (
+                                                                            <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-neutral-500">
+                                                                                <Briefcase size={12} />
+                                                                                {summarizeService(serviceDetails)}
+                                                                            </p>
+                                                                        )}
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
                                                                         {assignedStaff && <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{assignedStaff.name}</span>}
@@ -6554,6 +6645,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 identity: 'Brand Identity',
                                                 industry: 'Industry',
                                                 introduction: 'Introduction',
+                                                services: 'Services',
                                                 colours: 'Colour direction',
                                                 typography: 'Typography',
                                                 calendar: 'Calendar style',
@@ -6567,6 +6659,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 identity: 'Logo, banner, and page alignment live here in tidy setup drawers.',
                                                 industry: 'Choose the business world so the editor can shape the right booking experience.',
                                                 introduction: 'Name the page and write the first words clients see. Type here or directly on the mockup.',
+                                                services: 'Build the bookable menu clients choose from before they request a time.',
                                                 colours: 'Build a live color direction from one color, many colors, or your uploaded brand media.',
                                                 typography: 'Shape every heading, paragraph, label, and letter spacing.',
                                                 calendar: 'Customize the calendar only: date cards, active states, color, shadow, and glow.',
@@ -6663,6 +6756,17 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             )}
 
+                                                            {activeScene.id === 'services' && (
+                                                                <div className="cinema-feature-preview">
+                                                                    {[
+                                                                        ['Services', workspaceServices.length],
+                                                                        ['Live', workspaceServices.filter(service => service.active !== false).length],
+                                                                        ['Staff matched', workspaceServices.filter(service => Array.isArray(service.staffIds) && service.staffIds.length > 0).length],
+                                                                        [selectedIndustryName || 'Industry', true]
+                                                                    ].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}
+                                                                </div>
+                                                            )}
+
                                                             {activeScene.id === 'buttons' && (
                                                                 <div className="cinema-button-preview">
                                                                     <button type="button" style={{ background: settings.buttonColor || settings.primaryColor || '#050505', color: settings.buttonTextColor || '#fff', borderRadius: settings.buttonStyle === 'sharp' ? '14px' : '999px', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>{settings.confirmButtonText || 'Confirm Booking'}</button>
@@ -6721,6 +6825,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             {activeScene.id === 'industry' && <>
                                                                 <div className="cinema-control-title"><span>Industry</span><small>The theme starts here.</small></div>
                                                                 <div className="cinema-industry-list">{industryFilterOptions.map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}><span>{industry.name}</span><small>{industry.subtitle || industry.hint || 'Booking industry'}</small><ChevronRight size={15}/></button>)}</div>
+                                                            </>}
+
+                                                            {activeScene.id === 'services' && <>
+                                                                <div className="cinema-control-title"><span>Service menu</span><small>Services are edited in their own studio so pricing, galleries, and staff stay organized.</small></div>
+                                                                <div className="cinema-feature-preview">
+                                                                    {workspaceServices.slice(0, 6).map(service => <span key={service.id} className={service.active !== false ? 'is-on' : ''}>{service.name}</span>)}
+                                                                    {workspaceServices.length === 0 && <span>Add your first service</span>}
+                                                                </div>
+                                                                <button type="button" onClick={() => setActiveTab('services')}><Briefcase size={15}/> Open My Services</button>
                                                             </>}
 
                                                             {activeScene.id === 'colours' && <>
@@ -7122,6 +7235,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     const isExampleBooking = Boolean(b.isExample);
                                     const clientAvatar = getBookingClientAvatar(b);
                                     const contactSummary = [b.clientPhone, b.clientEmail, b.clientBirthday ? `Bday: ${b.clientBirthday}` : '', b.clientNote ? `Note: ${b.clientNote}` : ''].filter(Boolean).join(' / ');
+                                    const serviceDetails = getBookingService(b);
+                                    const serviceSummary = serviceDetails?.name
+                                        ? [serviceDetails.name, formatServiceDuration(serviceDetails.duration), formatServicePrice(serviceDetails)].filter(Boolean).join(' / ')
+                                        : '';
                                     const statusStyle = b.status === 'confirmed'
                                         ? 'bg-[#39FF14] text-black'
                                         : b.status === 'waitlist'
@@ -7146,6 +7263,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             <span className={`shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${statusStyle}`}>{b.status === 'waitlist' ? 'Standby' : b.status}</span>
                                                         </div>
                                                         <p className="text-sm text-neutral-500 truncate">{isExampleBooking ? 'Preview only - not saved, synced, or counted in stats' : contactSummary || 'No contact details collected'}</p>
+                                                        {serviceSummary && (
+                                                            <p className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-neutral-500">
+                                                                <Briefcase size={12} className="shrink-0" />
+                                                                <span className="truncate">{serviceSummary}</span>
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 

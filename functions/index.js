@@ -40,6 +40,13 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   const clientEmailOptIn = Boolean(incoming.clientEmailOptIn && clientEmail);
   const clientBirthday = cleanString(incoming.clientBirthday, 80);
   const clientNote = cleanString(incoming.clientNote, 1000);
+  const serviceId = cleanString(incoming.serviceId, 120);
+  const serviceName = cleanString(incoming.serviceName, 180);
+  const serviceDescription = cleanString(incoming.serviceDescription, 700);
+  const servicePrice = cleanString(incoming.servicePrice, 80);
+  const servicePriceType = cleanString(incoming.servicePriceType, 40);
+  const serviceDuration = cleanString(incoming.serviceDuration, 80);
+  const serviceCategory = cleanString(incoming.serviceCategory, 120);
   const date = requireString(incoming.date, 'Booking date', 120);
   const dateKey = cleanString(incoming.dateKey, 32);
   const time = requireString(incoming.time, 'Booking time', 80);
@@ -106,6 +113,13 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     clientEmailOptIn,
     clientBirthday,
     clientNote,
+    serviceId,
+    serviceName,
+    serviceDescription,
+    servicePrice,
+    servicePriceType,
+    serviceDuration,
+    serviceCategory,
     notificationChannels,
     date,
     dateKey: dateKey || null,
@@ -151,6 +165,13 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
         date,
         dateKey: dateKey || null,
         time,
+        serviceId,
+        serviceName,
+        serviceDescription,
+        servicePrice,
+        servicePriceType,
+        serviceDuration,
+        serviceCategory,
         status,
         timestamp: bookingRecord.timestamp,
         createdAt: serverTimestamp(),
@@ -165,9 +186,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       workspaceSlug,
       workspaceName: bookingRecord.workspaceName,
       workspaceLogo: bookingRecord.workspaceLogo,
+      serviceId,
+      serviceName,
       bookingStatus: status,
       status: 'open',
-      lastMessage: `Booking request received for ${date} at ${time}.`,
+      lastMessage: `Booking request received${serviceName ? ` for ${serviceName}` : ''} on ${date} at ${time}.`,
       lastMessageAt: serverTimestamp(),
       ownerUnread: 1,
       clientUnread: 0,
@@ -179,7 +202,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       audience: 'owner',
       type: 'booking_request',
       title: `New booking request from ${clientName}`,
-      body: `${date} at ${time}. Review, confirm, waitlist, or reply from My Bookings.`,
+      body: `${serviceName ? `${serviceName} / ` : ''}${date} at ${time}. Review, confirm, waitlist, or reply from My Bookings.`,
       ownerId,
       bookingId: bookingRef.id,
       threadId,
@@ -197,7 +220,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
         audience: 'client',
         type: 'booking_received',
         title: 'Your booking request was sent',
-        body: `${bookingRecord.workspaceName || 'The business'} received your request for ${date} at ${time}. Track it in your client portal.`,
+        body: `${bookingRecord.workspaceName || 'The business'} received your request${serviceName ? ` for ${serviceName}` : ''} on ${date} at ${time}. Track it in your client portal.`,
         ownerId,
         bookingId: bookingRef.id,
         threadId,
@@ -213,7 +236,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       });
     }
     transaction.set(initialMessageRef, {
-      text: `Booking request received for ${date} at ${time}. The business can confirm, reply, or help you reschedule here.`,
+      text: `Booking request received${serviceName ? ` for ${serviceName}` : ''} on ${date} at ${time}. The business can confirm, reply, or help you reschedule here.`,
       kind: 'booking-created',
       bookingId: bookingRef.id,
       senderId: 'system',

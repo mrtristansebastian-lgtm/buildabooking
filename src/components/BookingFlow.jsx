@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Globe, Instagram, Mail, MapPin } from 'lucide-react';
+import { ArrowRight, Bell, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flame, Globe, Instagram, Mail, MapPin } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
+import { formatServiceDuration, formatServicePrice, normalizeServiceList } from '../utils/services';
 
 const alignments = ['left', 'center', 'right'];
 const visualStyles = ['minimal', 'outline', 'solid'];
@@ -35,6 +36,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const [step, setStep] = useState(1);
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
+            const [selectedServiceId, setSelectedServiceId] = useState('');
             const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', emailOptIn: false });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [submitError, setSubmitError] = useState('');
@@ -88,12 +90,26 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const collectClientEmail = settings.features?.collectClientEmail !== false;
             const collectClientNotes = Boolean(settings.features?.collectClientNotes);
             const emailOptInEnabled = Boolean(settings.features?.emailUpdates !== false && collectClientEmail);
+            const activeServices = useMemo(() => normalizeServiceList(settings.services || []).filter(service => service.active !== false), [settings.services]);
+            const selectedService = activeServices.find(service => service.id === selectedServiceId) || activeServices[0] || null;
+            const serviceReady = activeServices.length === 0 || Boolean(selectedService?.id);
+            const detailsStepNumber = activeServices.length > 0 ? '04' : '03';
             const detailsReady = Boolean(
                 (!collectClientName || formData.name) &&
                 (!collectClientPhone || formData.phone) &&
                 (!collectClientEmail || formData.email)
             );
-            const canSubmitBooking = Boolean((selectedTime || isWaitlistMode) && detailsReady);
+            const canSubmitBooking = Boolean((selectedTime || isWaitlistMode) && detailsReady && serviceReady);
+
+            useEffect(() => {
+                if (!activeServices.length) {
+                    setSelectedServiceId('');
+                    return;
+                }
+                if (!activeServices.some(service => service.id === selectedServiceId)) {
+                    setSelectedServiceId(activeServices[0].id);
+                }
+            }, [activeServices, selectedServiceId]);
 
             useEffect(() => {
                 setFormData(prev => ({
@@ -210,7 +226,14 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 phone: collectClientPhone ? formData.phone : '',
                                 email: collectClientEmail ? formData.email : '',
                                 note: collectClientNotes ? formData.note : '',
-                                emailOptIn: Boolean(emailOptInEnabled && formData.emailOptIn)
+                                emailOptIn: Boolean(emailOptInEnabled && formData.emailOptIn),
+                                serviceId: selectedService?.id || '',
+                                serviceName: selectedService?.name || '',
+                                serviceDescription: selectedService?.description || '',
+                                servicePrice: selectedService?.price || '',
+                                servicePriceType: selectedService?.priceType || '',
+                                serviceDuration: selectedService?.duration || '',
+                                serviceCategory: selectedService?.category || ''
                             },
                             activeDate.full,
                             isWaitlistMode ? 'Waitlist' : selectedTime,
@@ -515,10 +538,61 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         )}
                         </section>
 
+                        {activeServices.length > 0 && (
+                            <section data-preview-section="services" className="pt-2">
+                                <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('services')}>
+                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>03 // Choose Service</h3>
+                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
+                                        What would you like to book?
+                                    </h4>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3" onClick={() => isPreview && onInspect('services')}>
+                                    {activeServices.map(service => {
+                                        const isActive = selectedService?.id === service.id;
+                                        const price = formatServicePrice(service);
+                                        const duration = formatServiceDuration(service.duration);
+                                        return (
+                                            <button
+                                                key={service.id}
+                                                type="button"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setSelectedServiceId(service.id);
+                                                }}
+                                                className={`appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all ${isActive ? `scale-[1.01] shadow-xl ${nativeAccentCardClass} ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
+                                                style={{
+                                                    borderColor: isActive ? settings.primaryColor : `${settings.headingColor || '#000000'}14`,
+                                                    backgroundColor: isActive ? `${settings.primaryColor || '#000000'}10` : `${settings.headingColor || '#000000'}05`
+                                                }}
+                                            >
+                                                <div className="flex items-start gap-4">
+                                                    <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ backgroundColor: isActive ? (settings.primaryColor || '#000') : `${settings.headingColor || '#000'}0D`, color: isActive ? (settings.buttonTextColor || '#000') : settings.headingColor }}>
+                                                        {service.imageUrls?.[0] ? <img src={service.imageUrls[0]} alt="" className="w-full h-full object-cover" /> : <Briefcase size={20} />}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <h5 className="text-base md:text-lg font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</h5>
+                                                            {isActive && <Check size={18} style={{ color: settings.primaryColor }} className="shrink-0" />}
+                                                        </div>
+                                                        {service.description && <p className="text-xs md:text-sm mt-2 leading-relaxed opacity-65" style={{ color: settings.bodyColor }}>{service.description}</p>}
+                                                        <div className="mt-4 flex flex-wrap gap-2">
+                                                            {service.category && <span className="rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em]" style={{ backgroundColor: `${settings.headingColor || '#000'}0A`, color: settings.bodyColor }}>{service.category}</span>}
+                                                            {duration && <span className="rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em] inline-flex items-center gap-1" style={{ backgroundColor: `${settings.headingColor || '#000'}0A`, color: settings.bodyColor }}><Clock size={10} />{duration}</span>}
+                                                            {price && <span className="rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em]" style={{ backgroundColor: `${settings.primaryColor || '#000'}18`, color: settings.headingColor }}>{price}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        )}
+
                         {/* DETAILS FORM */}
                         <section className="pt-10">
                             <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} data-preview-section="form" onClick={() => isPreview && onInspect('form')}>
-                                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('detailsHeading', event.currentTarget.textContent.replace(/^03\s*\/\/\s*/i, '').trim())}>03 // {settings.detailsHeading || "Your Details"}</h3>
+                                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('detailsHeading', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{detailsStepNumber} // {settings.detailsHeading || "Your Details"}</h3>
                                 <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                     {isWaitlistMode ? 'Join Standby' : (settings.detailsSubHeading || "Secure Your Slot")}
                                 </h4>

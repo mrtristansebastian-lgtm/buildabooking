@@ -1259,6 +1259,9 @@ import { getLocalDateStr } from '../utils/dates';
                                                                                         <div className="min-w-0">
                                                                                             <p className="text-sm font-black text-black truncate">{booking.clientName || 'Client'}</p>
                                                                                             <p className="text-xs text-neutral-500 mt-1 truncate">{booking.clientPhone || booking.clientEmail || booking.email || 'Client details saved'}</p>
+                                                                                            {booking.serviceName && (
+                                                                                                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-[0.16em] mt-1 truncate">{booking.serviceName}</p>
+                                                                                            )}
                                                                                         </div>
                                                                                     </div>
                                                                                     <span className={`shrink-0 rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${statusMeta.className}`}>{statusMeta.label}</span>
