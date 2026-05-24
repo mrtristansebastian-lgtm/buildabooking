@@ -83,12 +83,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             }, [activeDate, settings.schedule, settings.availableTimes]);
 
             const isWaitlistMode = availableTimesForActiveDate.length === 0 && settings.features?.waitlist;
+            const collectClientName = settings.features?.collectClientName !== false;
             const collectClientPhone = settings.features?.collectClientPhone !== false;
             const collectClientEmail = settings.features?.collectClientEmail !== false;
             const collectClientNotes = Boolean(settings.features?.collectClientNotes);
             const emailOptInEnabled = Boolean(settings.features?.emailUpdates !== false && collectClientEmail);
             const detailsReady = Boolean(
-                formData.name &&
+                (!collectClientName || formData.name) &&
                 (!collectClientPhone || formData.phone) &&
                 (!collectClientEmail || formData.email)
             );
@@ -97,12 +98,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             useEffect(() => {
                 setFormData(prev => ({
                     ...prev,
+                    name: collectClientName ? prev.name : '',
                     phone: collectClientPhone ? prev.phone : '',
                     email: collectClientEmail ? prev.email : '',
                     note: collectClientNotes ? prev.note : '',
                     emailOptIn: emailOptInEnabled ? prev.emailOptIn : false
                 }));
-            }, [collectClientEmail, collectClientNotes, collectClientPhone, emailOptInEnabled]);
+            }, [collectClientEmail, collectClientName, collectClientNotes, collectClientPhone, emailOptInEnabled]);
 
             const handleFirstAvailable = (e) => {
                 e.stopPropagation();
@@ -196,7 +198,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             ].filter(Boolean) : [];
 
             const handleAction = async () => {
-                if (isPreview) { onInspect('copy'); return; }
+                if (isPreview) { onInspect('buttons'); return; }
                 if (canSubmitBooking) {
                     setIsSubmitting(true);
                     setSubmitError('');
@@ -204,6 +206,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         const completed = await onComplete(
                             {
                                 ...formData,
+                                name: collectClientName ? formData.name : 'Client',
                                 phone: collectClientPhone ? formData.phone : '',
                                 email: collectClientEmail ? formData.email : '',
                                 note: collectClientNotes ? formData.note : '',
@@ -236,6 +239,11 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 const activeBg = settings.dateActiveBgColor && settings.dateActiveBgColor !== 'transparent' ? settings.dateActiveBgColor : `${activeColor}18`;
                 const baseBg = settings.dateBgColor && settings.dateBgColor !== 'transparent' ? settings.dateBgColor : 'transparent';
                 const fontFamily = getFontFamily(settings.dateFontFamily || settings.fontFamily);
+                const activeShadow = settings.calendarShadow === false
+                    ? 'none'
+                    : settings.calendarGlow
+                        ? `0 0 0 2px ${activeColor}55, 0 18px 44px -18px ${activeColor}`
+                        : `0 16px 34px -22px ${activeColor}`;
 
                 if (dateStyle === 'solid') {
                     return {
@@ -243,7 +251,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         color: isActive ? activeTextColor : baseTextColor,
                         borderRadius: radius,
                         border: '1px solid transparent',
-                        boxShadow: isActive ? `0 16px 34px -22px ${activeColor}` : 'none',
+                        boxShadow: isActive ? activeShadow : 'none',
                         fontFamily
                     };
                 }
@@ -253,7 +261,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         color: isActive ? activeColor : baseTextColor,
                         borderRadius: radius,
                         border: `1px solid ${isActive ? activeColor : `${baseTextColor}24`}`,
-                        boxShadow: isActive ? `0 12px 28px -24px ${activeColor}` : 'none',
+                        boxShadow: isActive ? activeShadow : 'none',
                         fontFamily
                     };
                 }
@@ -273,12 +281,19 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 const activeColor = settings.primaryColor;
                 const baseTextColor = settings.slotTextColor || '#000000';
                 const fontF = getFontFamily(settings.slotFontFamily || settings.fontFamily);
+                const activeBg = settings.slotActiveBgColor || activeColor;
+                const activeText = settings.slotActiveTextColor || '#000000';
+                const activeShadow = settings.timeSlotShadow === false
+                    ? 'none'
+                    : settings.timeSlotGlow
+                        ? `0 0 0 2px ${activeColor}55, 0 14px 38px -18px ${activeColor}`
+                        : `0 10px 30px -10px ${activeColor}80`;
 
                 if (isSolid) {
-                    return { backgroundColor: isActive ? activeColor : (settings.slotBgColor || '#f5f5f5'), color: isActive ? '#000000' : baseTextColor, borderRadius: radius, border: '1px solid transparent', boxShadow: isActive ? `0 10px 30px -10px ${activeColor}80` : 'none', fontFamily: fontF };
+                    return { backgroundColor: isActive ? activeBg : (settings.slotBgColor || '#f5f5f5'), color: isActive ? activeText : baseTextColor, borderRadius: radius, border: '1px solid transparent', boxShadow: isActive ? activeShadow : 'none', fontFamily: fontF };
                 }
                 if (isOutline) {
-                    return { backgroundColor: isActive ? activeColor + '0D' : 'transparent', color: isActive ? activeColor : baseTextColor, borderRadius: radius, border: `1px solid ${isActive ? activeColor : baseTextColor + '20'}`, fontFamily: fontF };
+                    return { backgroundColor: isActive ? `${activeBg}22` : 'transparent', color: isActive ? activeColor : baseTextColor, borderRadius: radius, border: `1px solid ${isActive ? activeColor : baseTextColor + '20'}`, boxShadow: isActive ? activeShadow : 'none', fontFamily: fontF };
                 }
                 return { backgroundColor: 'transparent', color: isActive ? activeColor : baseTextColor, border: '1px solid transparent', borderRadius: '0px', fontFamily: fontF };
             };
@@ -335,7 +350,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         <div
                             className={`flex items-center gap-4 mb-8 ${inspectClass}`}
                             style={{ justifyContent: pageJustify }}
-                            onClick={() => isPreview && onInspect('visuals')}
+                            onClick={() => isPreview && onInspect('calendar')}
                         >
                             <div className={`w-12 h-[2px] ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
                             <span
@@ -424,7 +439,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         
                         {/* DATE SLIDER */}
                         <section data-preview-section="calendar">
-                        <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
+                        <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('introduction')}>
                             <div className={`flex flex-col ${pageItems} ${pageTextClass}`}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.replace(/^01\s*\/\/\s*/i, '').trim())}>01 // {settings.dateLabel || "Which day?"}</h3>
                                 <div className="flex flex-wrap items-center gap-4" style={{ justifyContent: pageJustify }}>
@@ -443,7 +458,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         </div>
                         
                         <div className="relative w-full overflow-hidden h-[130px] md:h-[150px]">
-                            <div className={`flex gap-3 md:gap-4 overflow-x-auto h-[180px] md:h-[200px] pt-4 px-2 snap-x ${isPreview ? 'cursor-pointer' : ''} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`} onClick={() => isPreview && onInspect('visuals')}>
+                            <div className={`flex gap-3 md:gap-4 overflow-x-auto h-[180px] md:h-[200px] pt-4 px-2 snap-x ${isPreview ? 'cursor-pointer' : ''} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`} onClick={() => isPreview && onInspect('calendar')}>
                                 {dates.map((d, i) => {
                                 const isActive = selectedDateIdx === i;
                                 const nativeDateClass = nativeAccent && isActive
@@ -462,8 +477,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         </section>
 
                         {/* TIME GRID OR WAITLIST */}
-                        <section data-preview-section="visuals">
-                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="copy" onClick={() => isPreview && onInspect('copy')}>
+                        <section data-preview-section="time">
+                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="introduction" onClick={() => isPreview && onInspect('introduction')}>
                             <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('timeLabel', event.currentTarget.textContent.replace(/^02\s*\/\/\s*/i, '').trim())}>02 // {settings.timeLabel || "Select Time"}</h3>
                             <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                 {isWaitlistMode ? 'Day Full - Join Waitlist' : 'Available Slots'}
@@ -481,7 +496,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-20">Fully Booked</div>
                             )
                         ) : (
-                            <div className={`grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => isPreview && onInspect('visuals')}>
+                            <div className={`grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => isPreview && onInspect('time')}>
                                 {availableTimesForActiveDate.map((t) => {
                                 const isActive = selectedTime === t;
                                 const nativeTimeClass = nativeAccent && isActive
@@ -502,7 +517,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
 
                         {/* DETAILS FORM */}
                         <section className="pt-10">
-                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('copy')}>
+                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} data-preview-section="form" onClick={() => isPreview && onInspect('form')}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('detailsHeading', event.currentTarget.textContent.replace(/^03\s*\/\/\s*/i, '').trim())}>03 // {settings.detailsHeading || "Your Details"}</h3>
                                 <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                     {isWaitlistMode ? 'Join Standby' : (settings.detailsSubHeading || "Secure Your Slot")}
@@ -510,11 +525,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             </div>
                             
                             <div className="space-y-10 px-1">
+                                {collectClientName && (
                                 <div className="group relative">
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Full Name</label>
                                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
                                     <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
                                 </div>
+                                )}
                                 {collectClientPhone && (
                                 <div className="group relative">
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Mobile Number</label>
@@ -523,7 +540,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 </div>
                                 )}
                                 {faqItems.length > 0 && (
-                                <div className={`pt-2 ${inspectClass}`} data-preview-section="features" onClick={() => isPreview && onInspect('features')}>
+                                <div className={`pt-2 ${inspectClass}`} data-preview-section="faq" onClick={() => isPreview && onInspect('faq')}>
                                     <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-5 opacity-40" style={{ color: settings.bodyColor }}>Questions</h3>
                                     <div className="space-y-3">
                                         {faqItems.map((faq, i) => (
@@ -582,7 +599,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                     onClick={(event) => {
                                         if (isPreview) {
                                             event.preventDefault();
-                                            onInspect('features');
+                                            onInspect('form');
                                         }
                                     }}
                                 >
@@ -682,7 +699,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 <p className="mt-6 text-[10px] font-bold uppercase tracking-widest opacity-40" style={{ color: settings.bodyColor }}><Flame size={12} className="inline mr-1 -mt-0.5"/> 4 People secured slots this week</p>
                             )}
                             {socialLinks.length > 0 && (
-                                <div className={`mt-8 flex flex-wrap items-center justify-center gap-3 ${inspectClass}`} data-preview-section="features" onClick={() => isPreview && onInspect('features')}>
+                                <div className={`mt-8 flex flex-wrap items-center justify-center gap-3 ${inspectClass}`} data-preview-section="social" onClick={() => isPreview && onInspect('social')}>
                                     {socialLinks.map(link => {
                                         const IconCmp = link.icon;
                                         return (
@@ -694,7 +711,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                                 onClick={(event) => {
                                                     if (isPreview) {
                                                         event.preventDefault();
-                                                        onInspect('features');
+                                                        onInspect('social');
                                                     }
                                                 }}
                                                 className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-4 text-[10px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
@@ -715,13 +732,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
 
                 {step === 2 && (
                     <div className="h-full flex flex-col items-start justify-center text-left animate-in zoom-in-95 duration-1000 p-8 md:p-16 relative z-10">
-                    <div className={`flex items-center gap-8 mb-20 ${inspectClass}`} onClick={() => isPreview && onInspect('visuals')}>
+                    <div className={`flex items-center gap-8 mb-20 ${inspectClass}`} onClick={() => isPreview && onInspect('buttons')}>
                         <div className="w-20 h-20 rounded-lg flex items-center justify-center shadow-2xl rotate-12" style={{ backgroundColor: settings.headingColor }}>
                         {isWaitlistMode ? <Bell size={32} strokeWidth={3} style={{ color: settings.primaryColor }} /> : <Check size={40} strokeWidth={4} style={{ color: settings.primaryColor }} />}
                         </div>
                         <div><p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40" style={{ color: settings.bodyColor }}>Booking Status</p><p className="text-lg font-bold uppercase tracking-[0.2em]" style={{ color: settings.headingColor }}>{isWaitlistMode ? 'Standby' : 'Confirmed'}</p></div>
                     </div>
-                    <h2 className={`text-7xl md:text-[8rem] font-bold mb-10 tracking-tighter leading-[0.8] ${inspectClass}`} style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }} onClick={() => isPreview && onInspect('copy')}>
+                    <h2 className={`text-7xl md:text-[8rem] font-bold mb-10 tracking-tighter leading-[0.8] ${inspectClass}`} style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }} onClick={() => isPreview && onInspect('introduction')}>
                         {isWaitlistMode ? "On The List." : (settings.successHeading || "Confirmed!")}
                     </h2>
                     <p className="opacity-60 text-xl font-light mb-24 max-w-sm leading-relaxed" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>

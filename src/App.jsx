@@ -28,7 +28,7 @@ import {
 } from './services/notifications';
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
-import { normalizeHexColor, THEME_FILTER_GROUPS } from './utils/theme';
+import { normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
 
 const OnboardingShowroom = lazy(() => (
   import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
@@ -1438,7 +1438,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 schedule: {},
                 staffCalendars: {},
                 googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
-                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
+                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientName: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
                 onboarding: {},
                 accountProfiles: {},
                 themeTemplates: [],
@@ -3445,30 +3445,64 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const editorRoomPreviewTargets = {
                 identity: 'identity',
+                introduction: 'identity',
                 industry: 'identity',
-                palette: 'identity',
-                themes: 'identity',
+                colours: 'identity',
                 typography: 'identity',
-                visuals: 'calendar',
+                calendar: 'calendar',
+                time: 'time',
+                faq: 'faq',
+                form: 'form',
                 buttons: 'action',
-                features: 'features',
-                copy: 'copy',
-                launch: 'action'
+                social: 'social'
             };
             const editorRoomScenes = [
-                { id: 'identity', number: '01', icon: BadgeCheck, title: 'Brand' },
+                { id: 'identity', number: '01', icon: BadgeCheck, title: 'Brand Identity' },
                 { id: 'industry', number: '02', icon: Sparkles, title: 'Industry' },
-                { id: 'palette', number: '03', icon: Pipette, title: 'Color' },
-                { id: 'themes', number: '04', icon: Layers, title: 'Look' },
-                { id: 'typography', number: '05', icon: Type, title: 'Type' },
-                { id: 'visuals', number: '06', icon: Palette, title: 'Calendar' },
-                { id: 'buttons', number: '07', icon: SlidersHorizontal, title: 'Buttons' },
-                { id: 'features', number: '08', icon: CheckCircle2, title: 'Tools' },
-                { id: 'copy', number: '09', icon: MessageSquare, title: 'Copy' },
-                { id: 'launch', number: '10', icon: Zap, title: 'Launch' }
+                { id: 'introduction', number: '03', icon: MessageSquare, title: 'Introduction' },
+                { id: 'colours', number: '04', icon: Pipette, title: 'Colour Direction' },
+                { id: 'typography', number: '05', icon: Type, title: 'Typography' },
+                { id: 'calendar', number: '06', icon: Calendar, title: 'Calendar Style' },
+                { id: 'time', number: '07', icon: Clock, title: 'Time Style' },
+                { id: 'faq', number: '08', icon: HelpCircle, title: 'FAQ Setup' },
+                { id: 'form', number: '09', icon: FileText, title: 'Client Form' },
+                { id: 'buttons', number: '10', icon: SlidersHorizontal, title: 'Action Buttons' },
+                { id: 'social', number: '11', icon: Globe, title: 'Social & Maps' }
             ];
+            const roomTabMap = {
+                identity: 'identity',
+                industry: 'themes',
+                introduction: 'identity',
+                colours: 'themes',
+                typography: 'visuals',
+                calendar: 'visuals',
+                time: 'visuals',
+                faq: 'features',
+                form: 'features',
+                buttons: 'visuals',
+                social: 'features'
+            };
             const focusEditorPreviewRoom = (roomId) => {
                 if (typeof document === 'undefined') return;
+                const frame = document.querySelector('.editor-preview-frame');
+                if (roomId === 'colours') {
+                    frame?.classList.remove('booking-preview-paint-sweep');
+                    if (frame) {
+                        void frame.offsetWidth;
+                        frame.classList.add('booking-preview-paint-sweep');
+                        window.setTimeout(() => frame.classList.remove('booking-preview-paint-sweep'), 2200);
+                    }
+                    return;
+                }
+                if (roomId === 'typography') {
+                    frame?.classList.remove('booking-preview-text-dance');
+                    if (frame) {
+                        void frame.offsetWidth;
+                        frame.classList.add('booking-preview-text-dance');
+                        window.setTimeout(() => frame.classList.remove('booking-preview-text-dance'), 1800);
+                    }
+                    return;
+                }
                 const targetName = editorRoomPreviewTargets[roomId] || roomId;
                 window.requestAnimationFrame(() => {
                     const previewScroller = document.querySelector('.editor-preview-frame .overflow-y-auto');
@@ -3485,14 +3519,28 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const openEditorRoom = (roomId) => {
                 setEditorStudioModal(roomId);
-                setEditorTab(['identity', 'industry', 'palette', 'themes'].includes(roomId) ? 'themes' : roomId);
+                setEditorTab(roomTabMap[roomId] || 'identity');
                 focusEditorPreviewRoom(roomId);
                 playEditorStudioSound('step');
             };
             const handleInspect = (tab) => {
                 if (activeTab !== 'editor') setActiveTab('editor');
                 setEditorCollapsed(false);
-                openEditorRoom(tab);
+                const inspectRoomMap = {
+                    identity: 'identity',
+                    introduction: 'introduction',
+                    calendar: 'calendar',
+                    time: 'time',
+                    faq: 'faq',
+                    features: 'faq',
+                    form: 'form',
+                    social: 'social',
+                    action: 'buttons',
+                    buttons: 'buttons',
+                    copy: 'introduction',
+                    visuals: 'calendar'
+                };
+                openEditorRoom(inspectRoomMap[tab] || tab);
             };
             const playEditorStudioSound = (type = 'open') => {
                 if (!editorStudioSoundEnabled || typeof window === 'undefined') return;
@@ -3546,14 +3594,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 playEditorStudioSound(soundType);
             };
             const startEditorStudioPresentation = () => {
-                const scenes = ['identity', 'industry', 'palette', 'themes', 'typography', 'visuals', 'buttons', 'features', 'copy', 'launch'];
+                const scenes = editorRoomScenes.map(scene => scene.id);
                 editorStudioPresentationRef.current.forEach(timer => window.clearTimeout(timer));
                 setEditorStudioPresenting(true);
                 setEditorStudioModal(null);
                 scenes.forEach((scene, index) => {
                     const timer = window.setTimeout(() => {
                         setEditorStudioScene(scene);
-                        setEditorTab(['identity', 'industry', 'palette', 'themes'].includes(scene) ? 'themes' : scene);
+                        setEditorTab(roomTabMap[scene] || 'identity');
                         focusEditorPreviewRoom(scene);
                         setPreviewKey(prev => prev + 1);
                         playEditorStudioSound(index === scenes.length - 1 ? 'complete' : 'step');
@@ -3568,6 +3616,44 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             };
             const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
+            const applyColorDirection = (paletteId, selectedIds = settings.editorColorMix || [], depth = settings.editorColorDepth || 45) => {
+                const paletteLookup = new Map(paletteFilterOptions.map(option => [option.id, option]));
+                const ids = selectedIds.length ? selectedIds : [paletteId];
+                const swatches = ids.flatMap(id => (
+                    id === 'custom'
+                        ? [customThemeColor]
+                        : (paletteLookup.get(id)?.swatches || [])
+                )).filter(Boolean);
+                const primary = normalizeHexColor(swatches[0] || customThemeColor || settings.primaryColor || '#050505') || '#050505';
+                const secondary = normalizeHexColor(swatches[1] || swatches[0] || '#bae6fd') || '#bae6fd';
+                const accent = normalizeHexColor(swatches[2] || secondary) || secondary;
+                const darkMode = Number(depth) > 64;
+                const softAlpha = darkMode ? '33' : '18';
+                const lighterAlpha = darkMode ? '22' : '12';
+                const activeText = readableTextFor(primary);
+                const slotText = readableTextFor(secondary);
+                setSettings(prev => ({
+                    ...prev,
+                    primaryColor: primary,
+                    accentColor: accent,
+                    backgroundColor: darkMode ? '#0f1117' : '#ffffff',
+                    headingColor: darkMode ? '#f8fafc' : '#050505',
+                    bodyColor: darkMode ? '#cbd5e1' : '#64748b',
+                    dateActiveBgColor: `${primary}${softAlpha}`,
+                    dateActiveTextColor: activeText,
+                    dateBgColor: darkMode ? '#171a20' : '#f8fafc',
+                    dateTextColor: darkMode ? '#dbeafe' : '#64748b',
+                    slotBgColor: darkMode ? '#171a20' : '#f8fafc',
+                    slotTextColor: darkMode ? '#f8fafc' : '#050505',
+                    slotActiveBgColor: `${secondary}${softAlpha}`,
+                    slotActiveTextColor: slotText,
+                    buttonColor: primary,
+                    buttonTextColor: activeText,
+                    faqBgColor: darkMode ? `${primary}${lighterAlpha}` : '#ffffff',
+                    faqBorderColor: `${accent}66`,
+                    socialIconColor: primary
+                }));
+            };
             const applyFontStylePreset = (preset) => {
                 if (!preset) return;
                 setSettings(prev => ({
@@ -6427,28 +6513,30 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         const scenes = editorRoomScenes.map(scene => ({
                                             ...scene,
                                             title: {
-                                                identity: 'Brand entrance',
+                                                identity: 'Brand Identity',
                                                 industry: 'Industry',
-                                                palette: 'Color direction',
-                                                themes: 'Generated look',
+                                                introduction: 'Introduction',
+                                                colours: 'Colour direction',
                                                 typography: 'Typography',
-                                                visuals: 'Calendar scene',
-                                                buttons: 'Buttons',
-                                                features: 'Booking tools',
-                                                copy: 'Page copy',
-                                                launch: 'Launch pass'
+                                                calendar: 'Calendar style',
+                                                time: 'Time style',
+                                                faq: 'FAQ setup',
+                                                form: 'Client form',
+                                                buttons: 'Action buttons',
+                                                social: 'Social & maps'
                                             }[scene.id],
                                             prompt: {
-                                                identity: 'Name, logo, banner, and the first sentence clients trust.',
-                                                industry: 'Choose the business world so the editor knows what kind of experience to shape.',
-                                                palette: 'Pick a color family, add a custom tone, or read the palette from your logo.',
-                                                themes: 'Choose a polished look built from the industry and color direction.',
+                                                identity: 'Logo, banner, and page alignment live here in tidy setup drawers.',
+                                                industry: 'Choose the business world so the editor can shape the right booking experience.',
+                                                introduction: 'Name the page and write the first words clients see. Type here or directly on the mockup.',
+                                                colours: 'Build a live color direction from one color, many colors, or your uploaded brand media.',
                                                 typography: 'Shape every heading, paragraph, label, and letter spacing.',
-                                                visuals: 'Tune calendar tiles, slot cards, page rhythm, and spacing.',
-                                                buttons: 'Style every client action from time choice to final submit.',
-                                                features: 'Client fields, FAQ, socials, email consent, and waitlist.',
-                                                copy: 'Write the words clients see at every step.',
-                                                launch: 'Save, publish, and preview the finished booking experience.'
+                                                calendar: 'Customize the calendar only: date cards, active states, color, shadow, and glow.',
+                                                time: 'Customize bookable time slots without touching the calendar.',
+                                                faq: 'Add helpful questions and tune how the FAQ block feels.',
+                                                form: 'Choose the client details your business needs before booking.',
+                                                buttons: 'Tune the final booking button so the action feels clear and branded.',
+                                                social: 'Add social links and maps so clients can keep moving after booking.'
                                             }[scene.id]
                                         }));
                                         const activeSceneId = editorStudioModal || 'identity';
@@ -6530,21 +6618,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             )}
 
-                                                            {activeScene.id === 'palette' && (
+                                                            {activeScene.id === 'colours' && (
                                                                 <div className="cinema-theme-preview">
                                                                     <span>{selectedPaletteName || 'Color direction'}</span>
                                                                     <h4>{selectedIndustryFilter ? `${selectedPalettePhrase} for ${selectedIndustryName}.` : 'Choose color after industry.'}</h4>
                                                                     <p>{selectedIndustryFilter ? 'Pick a broad color direction, custom color, or extract a palette from your uploaded logo and banner.' : 'The palette room becomes sharper once the industry room is complete.'}</p>
                                                                     <div>{paletteFilterOptions.slice(0, 4).map(palette => <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<small>{palette.name}</small></button>)}</div>
-                                                                </div>
-                                                            )}
-
-                                                            {activeScene.id === 'themes' && (
-                                                                <div className="cinema-theme-preview">
-                                                                    <span>{selectedIndustryFilter ? `${selectedIndustryName} themes` : 'Generated looks'}</span>
-                                                                    <h4>{selectedIndustryFilter ? `Pick the look clients feel first.` : 'Choose industry first.'}</h4>
-                                                                    <p>{selectedIndustryFilter ? `These looks are built from ${selectedPalettePhrase}, your industry, and the booking page flow.` : 'A tailored theme set appears after the industry room is selected.'}</p>
-                                                                    <div>{(visibleThemeCards.length ? visibleThemeCards : mobileWebEditorThemes).slice(0, 3).map(theme => <button key={theme.id} type="button" onClick={() => applyTheme(theme.id)} style={{ backgroundColor: theme.backgroundColor, color: theme.headingColor, borderColor: `${theme.primaryColor}66` }}><small>{theme.name}</small><b style={{ fontFamily: getFontFamily(theme.headingFontFamily || theme.fontFamily) }}>Aa Bb</b></button>)}</div>
                                                                 </div>
                                                             )}
 
@@ -6557,7 +6636,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             )}
 
-                                                            {activeScene.id === 'visuals' && (
+                                                            {(activeScene.id === 'calendar' || activeScene.id === 'time') && (
                                                                 <div className="cinema-visual-preview">
                                                                     <div className="cinema-date-strip">{['Tue 19', 'Wed 20', 'Thu 21'].map((label, index) => <button key={label} type="button" className={index === 0 ? 'is-active' : ''} style={{ background: index === 0 ? settings.dateActiveBgColor || settings.primaryColor : settings.dateBgColor || '#f8fafc', color: index === 0 ? settings.dateActiveTextColor || '#050505' : settings.dateTextColor || '#050505' }}>{label}</button>)}</div>
                                                                     <div className="cinema-slot-strip">{(settings.availableTimes || ['09:00', '10:30', '12:00']).slice(0, 6).map(time => <button key={time} type="button" style={{ background: settings.slotBgColor || '#f8fafc', color: settings.slotTextColor || '#050505' }}>{time}</button>)}</div>
@@ -6572,54 +6651,84 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             )}
 
-                                                            {activeScene.id === 'features' && (
+                                                            {activeScene.id === 'form' && (
                                                                 <div className="cinema-feature-preview">
-                                                                    {[['Phone', collectsClientPhone], ['Email', collectsClientEmail], ['Notes', collectsClientNotes], ['FAQ', settings.features?.faqEnabled], ['Waitlist', settings.features?.waitlist], ['Socials', settings.features?.socialLinks]].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}
+                                                                    {[['Name', settings.features?.collectClientName !== false], ['Phone', collectsClientPhone], ['Email', collectsClientEmail], ['Notes', collectsClientNotes], ['Email opt-in', emailUpdatesEnabled]].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}
                                                                 </div>
                                                             )}
 
-                                                            {activeScene.id === 'copy' && (
+                                                            {activeScene.id === 'introduction' && (
                                                                 <div className="cinema-copy-preview">
+                                                                    <input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} />
+                                                                    <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Atelier 7B / Private" />
+                                                                    <input value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Reserve your private session." />
                                                                     <input value={settings.dateLabel || ''} onChange={(event) => handleSettingChange('dateLabel', event.target.value)} placeholder="Which day are you looking to book?" />
-                                                                    <input value={settings.timeLabel || ''} onChange={(event) => handleSettingChange('timeLabel', event.target.value)} placeholder="Lets see what time works" />
-                                                                    <input value={settings.detailsHeading || ''} onChange={(event) => handleSettingChange('detailsHeading', event.target.value)} placeholder="Secure Your Slot" />
-                                                                    <input value={settings.confirmButtonText || ''} onChange={(event) => handleSettingChange('confirmButtonText', event.target.value)} placeholder="Confirm Booking" />
                                                                 </div>
                                                             )}
 
-                                                            {activeScene.id === 'launch' && (
-                                                                <div className="cinema-launch-preview">
-                                                                    <BuildABookingMark className="w-14 h-14" />
-                                                                    <h4>Ready for the web.</h4>
-                                                                    <p>Save the draft, publish the booking page, then open the live link to test the client experience.</p>
-                                                                    <button type="button" onClick={saveSettings}>Publish to web</button>
-                                                                </div>
-                                                            )}
+                                                            {activeScene.id === 'faq' && <div className="cinema-feature-preview">{[['FAQ', settings.features?.faqEnabled], ['Questions', (settings.features?.faqs || []).length > 0], ['Styled', settings.faqStyle || 'minimal']].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
+                                                            {activeScene.id === 'social' && <div className="cinema-feature-preview">{[['Instagram', settings.socials?.instagram], ['TikTok', settings.socials?.tiktok], ['Facebook', settings.socials?.facebook], ['Website', settings.socials?.website], ['Maps', settings.features?.location]].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
                                                         </div>
 
                                                         <div className="editor-cinema-control-panel">
                                                             {activeScene.id === 'identity' && <>
-                                                                <label><Camera size={15}/> Logo<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('logo', file, 'brand'); e.target.value = ''; }} /></label>
-                                                                <label><Monitor size={15}/> Banner<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('bannerImage', file, 'brand'); e.target.value = ''; }} /></label>
+                                                                <details className="cinema-setting-group" open>
+                                                                    <summary><Camera size={15}/> Upload Logo</summary>
+                                                                    <label className="cinema-upload-line">Choose a logo image<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('logo', file, 'brand'); e.target.value = ''; }} /></label>
+                                                                </details>
+                                                                <details className="cinema-setting-group">
+                                                                    <summary><Monitor size={15}/> Upload Banner</summary>
+                                                                    <label className="cinema-upload-line">Choose a landscape banner<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('bannerImage', file, 'brand'); e.target.value = ''; }} /></label>
+                                                                </details>
+                                                                <details className="cinema-setting-group" open>
+                                                                    <summary><AlignCenter size={15}/> Page Alignment</summary>
+                                                                    <div className="cinema-control-title"><span>How would you like to align the page?</span><small>This also controls the logo position and page rhythm.</small></div>
+                                                                    <div className="cinema-align-grid">
+                                                                        {[
+                                                                            ['left', AlignLeft],
+                                                                            ['center', AlignCenter],
+                                                                            ['right', AlignRight]
+                                                                        ].map(([alignment, Icon]) => (
+                                                                            <button key={alignment} type="button" onClick={() => handleLogoDisplayChange('alignment', alignment)} className={getLogoDisplay(settings).alignment === alignment ? 'is-active' : ''}>
+                                                                                <Icon size={15}/>{alignment}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </details>
                                                                 <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy booking link</button>
-                                                                <LogoDisplayControls settings={settings} onChange={handleLogoDisplayChange} />
                                                             </>}
 
                                                             {activeScene.id === 'industry' && <>
                                                                 <div className="cinema-control-title"><span>Industry</span><small>The theme starts here.</small></div>
-                                                                <div className="cinema-chip-scroll">{industryFilterOptions.map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}>{industry.name}</button>)}</div>
+                                                                <div className="cinema-industry-list">{industryFilterOptions.map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}><span>{industry.name}</span><small>{industry.subtitle || industry.hint || 'Booking industry'}</small><ChevronRight size={15}/></button>)}</div>
                                                             </>}
 
-                                                            {activeScene.id === 'palette' && <>
-                                                                <div className="cinema-control-title"><span>Color direction</span><small>{selectedPaletteHint}</small></div>
-                                                                <div className="cinema-color-grid">{paletteFilterOptions.map(palette => <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)} className={themeGenerationInputs.palette === palette.id ? 'is-active' : ''}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span></button>)}<label className={themeGenerationInputs.palette === 'custom' ? 'is-active' : ''}><i style={{ backgroundColor: customThemeColor }} /><span>Custom</span><input type="color" value={customThemeColor} onChange={(event) => { setCustomThemeColor(event.target.value); setThemeFilterValue('palette', 'custom'); }} /></label></div>
+                                                            {activeScene.id === 'colours' && <>
+                                                                <div className="cinema-control-title"><span>Colour direction</span><small>Choose one or stack many colors. Later rooms can still fine tune exact calendar, time, and button colors.</small></div>
+                                                                <div className="cinema-color-grid cinema-color-grid-multi">{paletteFilterOptions.map(palette => {
+                                                                    const selectedMix = settings.editorColorMix || [];
+                                                                    const isActive = selectedMix.includes(palette.id) || (!selectedMix.length && themeGenerationInputs.palette === palette.id);
+                                                                    return (
+                                                                        <button key={palette.id} type="button" onClick={() => {
+                                                                            const current = settings.editorColorMix || [];
+                                                                            const nextMix = current.includes(palette.id) ? current.filter(id => id !== palette.id) : [...current, palette.id];
+                                                                            const usableMix = nextMix.length ? nextMix : [palette.id];
+                                                                            handleSettingChange('editorColorMix', usableMix);
+                                                                            setThemeFilterValue('palette', palette.id);
+                                                                            applyColorDirection(palette.id, usableMix, settings.editorColorDepth || 45);
+                                                                        }} className={isActive ? 'is-active' : ''}>
+                                                                            <span className="cinema-swatches">{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}</span>
+                                                                            <span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                                <label className={(settings.editorColorMix || []).includes('custom') || themeGenerationInputs.palette === 'custom' ? 'is-active' : ''}><i style={{ backgroundColor: customThemeColor }} /><span>Custom</span><input type="color" value={customThemeColor} onChange={(event) => { setCustomThemeColor(event.target.value); const nextMix = Array.from(new Set([...(settings.editorColorMix || []), 'custom'])); handleSettingChange('editorColorMix', nextMix); setThemeFilterValue('palette', 'custom'); applyColorDirection('custom', nextMix, settings.editorColorDepth || 45); }} /></label></div>
+                                                                <label className="cinema-range-control">
+                                                                    <span>Light to dark range</span>
+                                                                    <input type="range" min="0" max="100" value={settings.editorColorDepth || 45} onChange={(event) => { const depth = Number(event.target.value); handleSettingChange('editorColorDepth', depth); applyColorDirection(themeGenerationInputs.palette || 'all', settings.editorColorMix || [themeGenerationInputs.palette || 'all'], depth); }} />
+                                                                    <small>{(settings.editorColorDepth || 45) < 50 ? 'Light direction' : 'Darker direction'}</small>
+                                                                </label>
                                                                 <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
-                                                            </>}
-
-                                                            {activeScene.id === 'themes' && <>
-                                                                <div className="cinema-control-title"><span>Generated looks</span><small>{selectedIndustryFilter ? `${selectedIndustryName} with ${selectedPalettePhrase}` : 'Choose industry first'}</small></div>
-                                                                <div className="cinema-chip-scroll">{(visibleThemeCards.length ? visibleThemeCards : mobileWebEditorThemes).slice(0, 10).map(theme => <button key={theme.id} type="button" onClick={() => applyTheme(theme.id)} className={settings.themeId === theme.id ? 'is-active' : ''}>{theme.name}</button>)}</div>
-                                                                <button type="button" onClick={saveCurrentThemeTemplate}><CheckCircle2 size={15}/> Save this look</button>
                                                             </>}
 
                                                             {activeScene.id === 'typography' && <>
@@ -6628,9 +6737,39 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
                                                             </>}
 
-                                                            {activeScene.id === 'visuals' && <>
-                                                                <VisualEditorGroup title="Calendar" note="Date cards and selection style."><StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" /></VisualEditorGroup>
-                                                                <VisualEditorGroup title="Time Slots" note="Bookable time card style."><StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Time Box Style" /></VisualEditorGroup>
+                                                            {activeScene.id === 'introduction' && <div className="cinema-field-grid single">
+                                                                <p className="cinema-helper-copy">You can type here, or click the text directly on the mockup and edit it live.</p>
+                                                                <label>Booking page name<input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} /></label>
+                                                                <label>Text above heading<input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" /></label>
+                                                                <label>Header copy<textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." /></label>
+                                                            </div>}
+
+                                                            {activeScene.id === 'calendar' && <>
+                                                                <VisualEditorGroup title="Calendar frame" note="Date cards, active state, background, and glow."><StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" /></VisualEditorGroup>
+                                                                <div className="cinema-field-grid">
+                                                                    <label>Active color<input type="color" value={settings.dateActiveBgColor?.slice(0, 7) || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('dateActiveBgColor', event.target.value)} /></label>
+                                                                    <label>Active text<input type="color" value={settings.dateActiveTextColor || '#050505'} onChange={(event) => handleSettingChange('dateActiveTextColor', event.target.value)} /></label>
+                                                                    <label>Tile background<input type="color" value={settings.dateBgColor || '#f8fafc'} onChange={(event) => handleSettingChange('dateBgColor', event.target.value)} /></label>
+                                                                    <label>Tile text<input type="color" value={settings.dateTextColor || '#64748b'} onChange={(event) => handleSettingChange('dateTextColor', event.target.value)} /></label>
+                                                                </div>
+                                                                <div className="cinema-toggle-grid">{[
+                                                                    { key: 'calendarShadow', label: 'Soft shadow', active: settings.calendarShadow !== false },
+                                                                    { key: 'calendarGlow', label: 'Border glow', active: Boolean(settings.calendarGlow) }
+                                                                ].map(item => <button key={item.key} type="button" onClick={() => handleSettingChange(item.key, !item.active)} className={item.active ? 'is-on' : ''}><span>{item.label}</span><i /></button>)}</div>
+                                                            </>}
+
+                                                            {activeScene.id === 'time' && <>
+                                                                <VisualEditorGroup title="Time slots" note="Bookable time cards only."><StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Time Box Style" /></VisualEditorGroup>
+                                                                <div className="cinema-field-grid">
+                                                                    <label>Slot background<input type="color" value={settings.slotBgColor || '#f8fafc'} onChange={(event) => handleSettingChange('slotBgColor', event.target.value)} /></label>
+                                                                    <label>Slot text<input type="color" value={settings.slotTextColor || '#050505'} onChange={(event) => handleSettingChange('slotTextColor', event.target.value)} /></label>
+                                                                    <label>Selected background<input type="color" value={settings.slotActiveBgColor?.slice(0, 7) || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('slotActiveBgColor', event.target.value)} /></label>
+                                                                    <label>Selected text<input type="color" value={settings.slotActiveTextColor || '#050505'} onChange={(event) => handleSettingChange('slotActiveTextColor', event.target.value)} /></label>
+                                                                </div>
+                                                                <div className="cinema-toggle-grid">{[
+                                                                    { key: 'timeSlotShadow', label: 'Slot shadow', active: settings.timeSlotShadow !== false },
+                                                                    { key: 'timeSlotGlow', label: 'Active glow', active: Boolean(settings.timeSlotGlow) }
+                                                                ].map(item => <button key={item.key} type="button" onClick={() => handleSettingChange(item.key, !item.active)} className={item.active ? 'is-on' : ''}><span>{item.label}</span><i /></button>)}</div>
                                                             </>}
 
                                                             {activeScene.id === 'buttons' && <>
@@ -6638,24 +6777,34 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <div className="cinema-field-grid"><label>Button text<input value={settings.confirmButtonText || ''} onChange={(event) => handleSettingChange('confirmButtonText', event.target.value)} /></label><label>Button color<input type="color" value={settings.buttonColor || settings.primaryColor || '#050505'} onChange={(event) => handleSettingChange('buttonColor', event.target.value)} /></label></div>
                                                             </>}
 
-                                                            {activeScene.id === 'features' && <>
+                                                            {activeScene.id === 'form' && <>
                                                                 <div className="cinema-toggle-grid">{[
+                                                                    { key: 'collectClientName', label: 'Name & surname', active: settings.features?.collectClientName !== false },
                                                                     { key: 'collectClientPhone', label: 'Mobile number', active: collectsClientPhone },
                                                                     { key: 'collectClientEmail', label: 'Email address', active: collectsClientEmail },
                                                                     { key: 'collectClientNotes', label: 'Client note', active: collectsClientNotes },
-                                                                    { key: 'waitlist', label: 'Waitlist', active: settings.features?.waitlist },
-                                                                    { key: 'faqEnabled', label: 'FAQ section', active: settings.features?.faqEnabled, onClick: toggleFaqFeature },
-                                                                    { key: 'socialLinks', label: 'Social footer', active: settings.features?.socialLinks },
                                                                     { key: 'emailUpdates', label: 'Email opt-in', active: emailUpdatesEnabled && collectsClientEmail, disabled: !collectsClientEmail }
                                                                 ].map(item => { const onClick = item.onClick || (() => !item.disabled && handleFeatureChange(item.key, !item.active)); return <button key={item.key} type="button" onClick={onClick} className={`${item.active ? 'is-on' : ''} ${item.disabled ? 'is-disabled' : ''}`}><span>{item.label}</span><i /></button>; })}</div>
-                                                                <div className="cinema-faq-editor"><div><strong>FAQ questions</strong><button type="button" onClick={addFaqItem}><Plus size={14}/> Add</button></div>{(settings.features?.faqs || []).slice(0, 3).map((faq, index) => <label key={index}><input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="Question" /><textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="Answer" /></label>)}</div>
                                                             </>}
 
-                                                            {activeScene.id === 'copy' && <div className="cinema-field-grid single">{[
-                                                                { key: 'dateLabel', l: 'Date section' }, { key: 'timeLabel', l: 'Time section' }, { key: 'detailsHeading', l: 'Form headline' }, { key: 'detailsSubHeading', l: 'Form helper' }, { key: 'confirmButtonText', l: 'Final button' }, { key: 'successHeading', l: 'Success title' }
-                                                            ].map(item => <label key={item.key}>{item.l}<input value={settings[item.key] || ''} onChange={(event) => handleSettingChange(item.key, event.target.value)} /></label>)}</div>}
+                                                            {activeScene.id === 'faq' && <>
+                                                                <div className="cinema-toggle-grid"><button type="button" onClick={toggleFaqFeature} className={settings.features?.faqEnabled ? 'is-on' : ''}><span>Show FAQ section</span><i /></button></div>
+                                                                <VisualEditorGroup title="FAQ style" note="Question card shape."><StyleSegmentedControl value={settings.faqStyle || 'minimal'} onChange={(value) => handleSettingChange('faqStyle', value)} label="FAQ Style" /></VisualEditorGroup>
+                                                                <div className="cinema-field-grid"><label>FAQ background<input type="color" value={settings.faqBgColor === 'transparent' ? '#ffffff' : settings.faqBgColor || '#ffffff'} onChange={(event) => handleSettingChange('faqBgColor', event.target.value)} /></label><label>FAQ border<input type="color" value={settings.faqBorderColor || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('faqBorderColor', event.target.value)} /></label></div>
+                                                                <div className="cinema-faq-editor"><div><strong>Questions</strong><button type="button" onClick={addFaqItem}><Plus size={14}/> Add</button></div>{(settings.features?.faqs || []).map((faq, index) => <label key={index}><input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="Question" /><textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="Answer" /><button type="button" onClick={() => removeFaqItem(index)}><Trash2 size={13}/> Remove</button></label>)}</div>
+                                                            </>}
 
-                                                            {activeScene.id === 'launch' && <div className="cinema-launch-actions"><button type="button" onClick={() => saveSettingsDraft(settings, 'Editor draft saved.')}><CheckCircle2 size={15}/> Save draft</button><button type="button" onClick={saveSettings}><Zap size={15}/> Publish to web</button><button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy link</button></div>}
+                                                            {activeScene.id === 'social' && <>
+                                                                <div className="cinema-toggle-grid"><button type="button" onClick={() => handleFeatureChange('socialLinks', !settings.features?.socialLinks)} className={settings.features?.socialLinks ? 'is-on' : ''}><span>Show social footer</span><i /></button></div>
+                                                                <VisualEditorGroup title="Icon style" note="How social icons sit under the action."><StyleSegmentedControl value={settings.socialIconStyle || 'outline'} onChange={(value) => handleSettingChange('socialIconStyle', value)} label="Icon Style" /></VisualEditorGroup>
+                                                                <div className="cinema-field-grid single">
+                                                                    <label>Instagram<input value={settings.socials?.instagram || ''} onChange={(event) => handleSocialChange('instagram', event.target.value)} placeholder="@yourhandle" /></label>
+                                                                    <label>TikTok<input value={settings.socials?.tiktok || ''} onChange={(event) => handleSocialChange('tiktok', event.target.value)} placeholder="@yourtiktok" /></label>
+                                                                    <label>Facebook<input value={settings.socials?.facebook || ''} onChange={(event) => handleSocialChange('facebook', event.target.value)} placeholder="facebook page" /></label>
+                                                                    <label>Website<input value={settings.socials?.website || ''} onChange={(event) => handleSocialChange('website', event.target.value)} placeholder="https://yourwebsite.com" /></label>
+                                                                    <label>Google Maps / address<input value={settings.features?.location || ''} onChange={(event) => handleFeatureChange('location', event.target.value)} placeholder="Business address or maps link" /></label>
+                                                                </div>
+                                                            </>}
                                                         </div>
                                                     </div>
                                                 </section>

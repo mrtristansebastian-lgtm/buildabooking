@@ -1721,6 +1721,25 @@ body {
                 display: flex !important;
                 padding: 0.68rem !important;
             }
+            .editor-preview-room-nav.is-desktop {
+                top: 3.85rem !important;
+                max-width: min(52vw, 24rem) !important;
+                padding: 0.25rem !important;
+                gap: 0.2rem !important;
+                background: rgba(255,255,255,0.9) !important;
+            }
+            .editor-preview-room-nav.is-desktop button {
+                width: 2rem !important;
+                min-width: 2rem !important;
+                height: 2rem !important;
+                padding: 0 !important;
+            }
+            .editor-preview-room-nav.is-desktop button span {
+                display: none !important;
+            }
+            .native-ui.dashboard-dark .editor-preview-room-nav.is-desktop {
+                background: rgba(17,24,39,0.92) !important;
+            }
         }
 
         @media (max-width: 767px) {
@@ -3553,7 +3572,7 @@ body {
         }
 
         .editor-cinema-track button {
-            min-width: 6.55rem;
+            min-width: 7.35rem;
             min-height: 3.35rem;
             border-radius: 999px;
             border: 1px solid rgba(255,255,255,0.72);
@@ -3719,6 +3738,7 @@ body {
         .cinema-brand-preview textarea,
         .cinema-copy-preview input,
         .cinema-field-grid input,
+        .cinema-field-grid textarea,
         .cinema-faq-editor input,
         .cinema-faq-editor textarea {
             width: 100%;
@@ -3997,6 +4017,158 @@ body {
             padding: 0.75rem;
         }
 
+        .cinema-field-grid textarea {
+            min-height: 5rem;
+            resize: vertical;
+        }
+
+        .cinema-setting-group {
+            border-radius: 20px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(248,250,252,0.84);
+            overflow: hidden;
+        }
+
+        .cinema-setting-group summary {
+            min-height: 3.2rem;
+            padding: 0 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            color: #050505;
+            cursor: pointer;
+            font-size: 0.68rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            list-style: none;
+        }
+
+        .cinema-setting-group summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .cinema-setting-group[open] summary {
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .cinema-upload-line,
+        .cinema-range-control {
+            min-height: 4rem;
+            margin: 0.75rem;
+            border-radius: 18px;
+            border: 1px dashed rgba(15, 23, 42, 0.12);
+            background: #fff;
+            color: #050505;
+            display: grid;
+            place-items: center;
+            gap: 0.35rem;
+            font-size: 0.68rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .cinema-align-grid,
+        .cinema-industry-list {
+            display: grid;
+            gap: 0.55rem;
+            padding: 0.75rem;
+        }
+
+        .cinema-align-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .cinema-align-grid button,
+        .cinema-industry-list button {
+            min-height: 3rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            color: #050505;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            font-size: 0.64rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .cinema-align-grid button.is-active,
+        .cinema-industry-list button.is-active {
+            background: #050505;
+            color: #fff;
+            border-color: #050505;
+        }
+
+        .cinema-industry-list {
+            max-height: 26rem;
+            overflow-y: auto;
+            padding: 0;
+            scrollbar-width: thin;
+        }
+
+        .cinema-industry-list button {
+            border-radius: 18px;
+            min-height: 4.2rem;
+            justify-content: space-between;
+            padding: 0 0.85rem;
+            text-align: left;
+        }
+
+        .cinema-industry-list button span {
+            display: block;
+        }
+
+        .cinema-industry-list button small {
+            display: block;
+            margin-top: 0.2rem;
+            color: #94a3b8;
+            font-size: 0.56rem;
+            font-weight: 850;
+            max-width: 14rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cinema-color-grid-multi button,
+        .cinema-color-grid-multi label {
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 4.2rem;
+        }
+
+        .cinema-swatches {
+            display: flex;
+            align-items: center;
+        }
+
+        .cinema-range-control {
+            padding: 0.85rem;
+            place-items: stretch;
+            align-items: stretch;
+            border-style: solid;
+        }
+
+        .cinema-range-control input {
+            width: 100%;
+            accent-color: #050505;
+        }
+
+        .cinema-range-control small,
+        .cinema-helper-copy {
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 750;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
         .cinema-field-grid.single {
             grid-template-columns: 1fr;
         }
@@ -4148,6 +4320,7 @@ body {
         .native-ui.dashboard-dark .editor-cinema-header h2,
         .native-ui.dashboard-dark .editor-cinema-hero-copy h3,
         .native-ui.dashboard-dark .editor-cinema-stage-head h3,
+        .native-ui.dashboard-dark .cinema-setting-group summary,
         .native-ui.dashboard-dark .cinema-brand-preview input,
         .native-ui.dashboard-dark .cinema-brand-preview textarea,
         .native-ui.dashboard-dark .cinema-theme-preview h4,
@@ -4155,6 +4328,7 @@ body {
         .native-ui.dashboard-dark .cinema-launch-preview h4,
         .native-ui.dashboard-dark .cinema-copy-preview input,
         .native-ui.dashboard-dark .cinema-field-grid input,
+        .native-ui.dashboard-dark .cinema-field-grid textarea,
         .native-ui.dashboard-dark .cinema-faq-editor input,
         .native-ui.dashboard-dark .cinema-faq-editor textarea {
             color: #f8fafc !important;
@@ -4175,6 +4349,11 @@ body {
         .native-ui.dashboard-dark .editor-cinema-nav-buttons button,
         .native-ui.dashboard-dark .editor-cinema-control-panel > button,
         .native-ui.dashboard-dark .editor-cinema-control-panel > label,
+        .native-ui.dashboard-dark .cinema-setting-group,
+        .native-ui.dashboard-dark .cinema-upload-line,
+        .native-ui.dashboard-dark .cinema-range-control,
+        .native-ui.dashboard-dark .cinema-align-grid button,
+        .native-ui.dashboard-dark .cinema-industry-list button,
         .native-ui.dashboard-dark .cinema-banner-frame,
         .native-ui.dashboard-dark .cinema-logo-frame,
         .native-ui.dashboard-dark .cinema-theme-preview button,
@@ -4190,6 +4369,7 @@ body {
         .native-ui.dashboard-dark .cinema-field-grid label,
         .native-ui.dashboard-dark .cinema-faq-editor,
         .native-ui.dashboard-dark .cinema-faq-editor label,
+        .native-ui.dashboard-dark .cinema-field-grid textarea,
         .native-ui.dashboard-dark .cinema-copy-preview input {
             background: #171a20 !important;
             color: #f8fafc !important;
@@ -4211,6 +4391,13 @@ body {
             background: #fff !important;
             color: #050505 !important;
             border-color: #fff !important;
+        }
+
+        .native-ui.dashboard-dark .cinema-align-grid button.is-active,
+        .native-ui.dashboard-dark .cinema-industry-list button.is-active {
+            background: #f8fafc !important;
+            color: #050505 !important;
+            border-color: #f8fafc !important;
         }
 
         .mobile-editor-panel .editor-panel-scroll {
@@ -4353,6 +4540,43 @@ body {
             position: relative;
             border-radius: 22px;
             animation: bookingPreviewRoomFlash 2.35s ease both;
+        }
+
+        .booking-preview-paint-sweep::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 60;
+            pointer-events: none;
+            background:
+                linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.18) 28%, rgba(217,249,157,0.52) 38%, rgba(103,232,249,0.5) 50%, rgba(167,139,250,0.5) 62%, rgba(244,114,182,0.42) 72%, transparent 100%);
+            mix-blend-mode: screen;
+            transform: translateX(-110%) skewX(-10deg);
+            animation: bookingPreviewPaintSweep 1.75s cubic-bezier(.16,1,.3,1) both;
+        }
+
+        @keyframes bookingPreviewPaintSweep {
+            0% { transform: translateX(-115%) skewX(-10deg); opacity: 0; }
+            14% { opacity: 1; }
+            72% { opacity: 0.92; }
+            100% { transform: translateX(115%) skewX(-10deg); opacity: 0; }
+        }
+
+        .booking-preview-text-dance [contenteditable],
+        .booking-preview-text-dance h1,
+        .booking-preview-text-dance h2,
+        .booking-preview-text-dance h3,
+        .booking-preview-text-dance h4,
+        .booking-preview-text-dance p,
+        .booking-preview-text-dance button span {
+            animation: bookingPreviewTextDance 760ms cubic-bezier(.2,.9,.2,1.25) both;
+        }
+
+        @keyframes bookingPreviewTextDance {
+            0% { transform: translateY(0); filter: blur(0); }
+            28% { transform: translateY(-4px) rotate(-0.3deg); filter: blur(0.4px); }
+            55% { transform: translateY(2px) rotate(0.2deg); }
+            100% { transform: translateY(0); filter: blur(0); }
         }
 
         @keyframes bookingPreviewRoomFlash {
