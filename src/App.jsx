@@ -6528,10 +6528,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <span>Build A Booking Studio</span>
                                     <h2>Editor</h2>
                                 </div>
-                                <div className="editor-cinema-header-actions">
-                                    <button type="button" onClick={startEditorStudioPresentation}><Zap size={14} /> Play</button>
-                                    <button type="button" onClick={() => setEditorStudioSoundEnabled(prev => !prev)}><Signal size={14} /> {editorStudioSoundEnabled ? 'Sound' : 'Muted'}</button>
-                                </div>
                             </header>
 
                             <div ref={editorContentRef} className="editor-panel-scroll flex-1 overflow-y-auto p-5 sm:p-6 md:p-12 space-y-8 md:space-y-12 no-scrollbar">
@@ -6594,10 +6590,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         <span>Live Design Session</span>
                                                         <h3>Customize your booking page.</h3>
                                                         <p>Choose each room, tune the exact part of the page, and watch the live preview move with you. Simple for beginners, deep enough for a real brand.</p>
-                                                    </div>
-                                                    <div className="editor-cinema-hero-actions">
-                                                        <button type="button" onClick={() => goScene('identity')}><Zap size={14} /> Start designing</button>
-                                                        <button type="button" onClick={startEditorStudioPresentation}><Sparkles size={14} /> Play reveal</button>
                                                     </div>
                                                 </section>
 
@@ -6704,7 +6696,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </details>
                                                                 <details className="cinema-setting-group" open>
                                                                     <summary><AlignCenter size={15}/> Page Alignment</summary>
-                                                                    <div className="cinema-control-title"><span>How would you like to align the page?</span><small>This also controls the logo position and page rhythm.</small></div>
+                                                                    <div className="cinema-control-title"><span>How would you like to align the page?</span><small>This controls the logo position and the rhythm of the booking page.</small></div>
                                                                     <div className="cinema-align-grid">
                                                                         {[
                                                                             ['left', AlignLeft],
@@ -6767,29 +6759,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                             }
                                                                         }
                                                                     ].map((control) => {
-                                                                        const spectrum = Number(settings.editorColorSpectrums?.[control.id] ?? 50);
                                                                         const displayColor = normalizeHexColor(control.value?.slice?.(0, 7), control.value || '#050505');
                                                                         return (
                                                                             <div key={control.id} className="cinema-color-director">
                                                                                 <div className="cinema-color-director-head">
-                                                                                    <span style={{ backgroundColor: displayColor }} />
+                                                                                    <span className="cinema-color-orb" style={{ backgroundColor: displayColor }} />
                                                                                     <div>
                                                                                         <b>{control.label}</b>
                                                                                         <small>{control.note}</small>
                                                                                     </div>
-                                                                                    <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} />
+                                                                                    <label className="cinema-color-edit">
+                                                                                        <Pipette size={14} />
+                                                                                        Edit
+                                                                                        <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} aria-label={`Edit ${control.label.toLowerCase()} colour`} />
+                                                                                    </label>
                                                                                 </div>
-                                                                                <label className="cinema-spectrum-slider">
-                                                                                    <span>Soft</span>
-                                                                                    <input type="range" min="0" max="100" value={spectrum} onChange={(event) => {
-                                                                                        const depth = Number(event.target.value);
-                                                                                        const nextSpectrums = { ...(settings.editorColorSpectrums || {}), [control.id]: depth };
-                                                                                        const tuned = tuneColorByDepth(displayColor, depth);
-                                                                                        handleSettingChange('editorColorSpectrums', nextSpectrums);
-                                                                                        control.onApply(tuned);
-                                                                                    }} />
-                                                                                    <span>Deep</span>
-                                                                                </label>
                                                                             </div>
                                                                         );
                                                                     })}
@@ -6804,7 +6788,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             </>}
 
                                                             {activeScene.id === 'introduction' && <div className="cinema-intro-editor">
-                                                                <p className="cinema-editor-note">Edit the first words clients see. You can type here, or click the same text directly on the mockup.</p>
+                                                                <p className="cinema-editor-note">Write the first words clients see. Type here, or click the same copy directly on the mockup.</p>
                                                                 <label className="cinema-text-card is-hero">
                                                                     <span>Booking page name</span>
                                                                     <input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} />
@@ -6815,7 +6799,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                         <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" />
                                                                     </label>
                                                                     <label className="cinema-text-card">
-                                                                        <span>Subtext under heading</span>
+                                                                        <span>Header copy</span>
                                                                         <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." />
                                                                     </label>
                                                                 </div>
