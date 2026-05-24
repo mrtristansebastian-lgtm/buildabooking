@@ -1061,7 +1061,7 @@ import { getLocalDateStr } from '../utils/dates';
                                 </div>
                             </div>
 
-                            <div className="schedule-calendar-scroll-zone p-4 md:p-6 no-scrollbar bg-gradient-to-b from-white to-neutral-50/60">
+                            <div className={`schedule-calendar-scroll-zone ${calendarViewMode === 'day' ? 'schedule-day-scroll-zone' : ''} p-4 md:p-6 no-scrollbar bg-gradient-to-b from-white to-neutral-50/60`}>
                                 <div className={calendarFrameClass}>
                                 {calendarViewMode === 'month' && (
                                     <div className="schedule-rotate-prompt mb-3 rounded-lg border border-neutral-100 bg-white/85 px-3 py-3 text-black">
@@ -1122,7 +1122,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         </button>
                                                     )}
 
-                                                    <div className="grid grid-cols-1 xl:grid-cols-[0.82fr_1.18fr] gap-5 h-full">
+                                                    <div className="schedule-day-agenda-layout grid grid-cols-1 xl:grid-cols-[0.82fr_1.18fr] gap-5 h-full">
                                                         <div className="flex flex-col min-h-0 pr-0 xl:pr-3">
                                                             <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">
                                                                 {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -1167,8 +1167,8 @@ import { getLocalDateStr } from '../utils/dates';
                                                             </div>
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
-                                                            <div className="rounded-lg border border-neutral-100 bg-white p-3 md:p-4 min-h-0">
+                                                        <div className="schedule-day-agenda-panels grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+                                                            <div className="schedule-day-timeline-panel rounded-lg border border-neutral-100 bg-white p-3 md:p-4 min-h-0">
                                                                 <div className="flex items-center justify-between gap-3 mb-3">
                                                                     <div>
                                                                         <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Slot Timeline</p>
@@ -1190,7 +1190,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                                         <Clock size={16} className="text-neutral-300" />
                                                                     </div>
                                                                 </div>
-                                                                <div className="space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
+                                                                <div className="schedule-day-timeline-list space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
                                                                     {agendaConfig.times.length ? agendaConfig.times.map(time => {
                                                                         const timeBookings = selectedDayBookingsByTime[time] || [];
                                                                         const hasBookings = timeBookings.length > 0;
@@ -1237,7 +1237,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                                 </div>
                                                             </div>
 
-                                                            <div className="rounded-lg border border-neutral-100 bg-white p-3 md:p-4 min-h-0">
+                                                            <div className="schedule-day-bookings-panel rounded-lg border border-neutral-100 bg-white p-3 md:p-4 min-h-0">
                                                                 <div className="flex items-center justify-between gap-3 mb-3">
                                                                     <div>
                                                                         <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400">Bookings</p>
@@ -1245,7 +1245,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                                     </div>
                                                                     <CalendarCheck size={16} className="text-neutral-300" />
                                                                 </div>
-                                                                <div className="space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
+                                                                <div className="schedule-day-bookings-list space-y-2 max-h-[310px] overflow-y-auto no-scrollbar pr-1">
                                                                     {selectedDayBookingList.length ? selectedDayBookingList.map(booking => {
                                                                         const statusMeta = getBookingStatusMeta(booking);
                                                                         const clientAvatar = getBookingClientAvatar(booking);

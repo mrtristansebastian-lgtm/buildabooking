@@ -1311,6 +1311,34 @@ body {
                 letter-spacing: 0 !important;
             }
 
+            .schedule-day-scroll-zone {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            .schedule-day-scroll-zone .schedule-calendar-grid,
+            .schedule-calendar-grid .schedule-day-agenda-card,
+            .schedule-day-agenda-card .schedule-day-agenda-layout,
+            .schedule-day-agenda-card .schedule-day-agenda-panels,
+            .schedule-day-agenda-card .schedule-day-timeline-panel,
+            .schedule-day-agenda-card .schedule-day-bookings-panel {
+                height: auto !important;
+                max-height: none !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+            }
+
+            .schedule-calendar-grid .schedule-day-agenda-card {
+                padding-bottom: 1rem !important;
+            }
+
+            .schedule-day-agenda-card .schedule-day-timeline-list,
+            .schedule-day-agenda-card .schedule-day-bookings-list {
+                max-height: none !important;
+                overflow: visible !important;
+                padding-right: 0 !important;
+            }
+
             .booking-desk-command {
                 padding: 1rem !important;
             }
