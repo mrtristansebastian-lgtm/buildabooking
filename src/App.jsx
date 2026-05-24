@@ -28,7 +28,7 @@ import {
 } from './services/notifications';
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
-import { normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
+import { mixHexColors, normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
 
 const OnboardingShowroom = lazy(() => (
   import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
@@ -3520,7 +3520,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const openEditorRoom = (roomId) => {
                 setEditorStudioModal(roomId);
                 setEditorTab(roomTabMap[roomId] || 'identity');
-                focusEditorPreviewRoom(roomId);
+                if (roomId === 'faq' && !settings.features?.faqEnabled) {
+                    setSettings(prev => ({
+                        ...prev,
+                        features: { ...(prev.features || {}), faqEnabled: true }
+                    }));
+                    window.setTimeout(() => focusEditorPreviewRoom(roomId), 220);
+                } else {
+                    focusEditorPreviewRoom(roomId);
+                }
                 playEditorStudioSound('step');
             };
             const handleInspect = (tab) => {
@@ -3616,18 +3624,46 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             };
             const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
-            const applyColorDirection = (paletteId, selectedIds = settings.editorColorMix || [], depth = settings.editorColorDepth || 45) => {
+            const getEditorColorDepth = (paletteId, depthInput = settings.editorColorDepths || settings.editorColorDepth || 50) => {
+                if (typeof depthInput === 'object' && depthInput !== null) {
+                    return Number(depthInput[paletteId] ?? settings.editorColorDepths?.[paletteId] ?? settings.editorColorDepth ?? 50);
+                }
+                return Number(depthInput ?? settings.editorColorDepths?.[paletteId] ?? settings.editorColorDepth ?? 50);
+            };
+            const tuneColorByDepth = (color, depth = 50) => {
+                const normalized = normalizeHexColor(color, '');
+                if (!normalized) return '';
+                const safeDepth = Math.max(0, Math.min(100, Number(depth) || 50));
+                if (safeDepth === 50) return normalized;
+                const amount = Math.min(0.72, Math.abs(safeDepth - 50) / 72);
+                return safeDepth < 50
+                    ? mixHexColors(normalized, '#ffffff', amount)
+                    : mixHexColors(normalized, '#050505', amount);
+            };
+            const applyColorDirection = (paletteId, selectedIds = settings.editorColorMix || [], depthInput = settings.editorColorDepths || settings.editorColorDepth || 50) => {
                 const paletteLookup = new Map(paletteFilterOptions.map(option => [option.id, option]));
                 const ids = selectedIds.length ? selectedIds : [paletteId];
                 const swatches = ids.flatMap(id => (
                     id === 'custom'
-                        ? [customThemeColor]
-                        : (paletteLookup.get(id)?.swatches || [])
-                )).filter(Boolean);
-                const primary = normalizeHexColor(swatches[0] || customThemeColor || settings.primaryColor || '#050505') || '#050505';
-                const secondary = normalizeHexColor(swatches[1] || swatches[0] || '#bae6fd') || '#bae6fd';
-                const accent = normalizeHexColor(swatches[2] || secondary) || secondary;
-                const darkMode = Number(depth) > 64;
+                        ? [tuneColorByDepth(customThemeColor, getEditorColorDepth(id, depthInput))]
+                        : (paletteLookup.get(id)?.swatches || []).map(color => tuneColorByDepth(color, getEditorColorDepth(id, depthInput)))
+                )).filter(Boolean).map(color => normalizeHexColor(color, '')).filter(Boolean);
+                const firstPalette = ids[0] === 'custom'
+                    ? [tuneColorByDepth(customThemeColor, getEditorColorDepth(ids[0], depthInput))]
+                    : (paletteLookup.get(ids[0])?.swatches || swatches).map(color => tuneColorByDepth(color, getEditorColorDepth(ids[0], depthInput)));
+                const lastPalette = ids[ids.length - 1] === 'custom'
+                    ? [tuneColorByDepth(customThemeColor, getEditorColorDepth(ids[ids.length - 1], depthInput))]
+                    : (paletteLookup.get(ids[ids.length - 1])?.swatches || swatches).map(color => tuneColorByDepth(color, getEditorColorDepth(ids[ids.length - 1], depthInput)));
+                const firstSwatches = firstPalette.map(color => normalizeHexColor(color, '')).filter(Boolean);
+                const lastSwatches = lastPalette.map(color => normalizeHexColor(color, '')).filter(Boolean);
+                const richPrimary = firstSwatches[1] || firstSwatches[2] || firstSwatches[0] || swatches[1] || customThemeColor || settings.primaryColor || '#050505';
+                const softSecondary = lastSwatches[0] || swatches[0] || '#bae6fd';
+                const richAccent = lastSwatches[2] || lastSwatches[1] || swatches[2] || richPrimary;
+                const primary = normalizeHexColor(richPrimary, '#050505');
+                const secondary = normalizeHexColor(softSecondary, '#bae6fd');
+                const accent = normalizeHexColor(richAccent, primary);
+                const averageDepth = ids.reduce((total, id) => total + getEditorColorDepth(id, depthInput), 0) / Math.max(ids.length, 1);
+                const darkMode = averageDepth > 64;
                 const softAlpha = darkMode ? '33' : '18';
                 const lighterAlpha = darkMode ? '22' : '12';
                 const activeText = readableTextFor(primary);
@@ -6551,7 +6587,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         };
                                         const goNext = () => goScene(scenes[Math.min(scenes.length - 1, activeIndex + 1)].id);
                                         const goPrev = () => goScene(scenes[Math.max(0, activeIndex - 1)].id);
-                                        const sceneProgress = `${Math.round(((activeIndex + 1) / scenes.length) * 100)}%`;
                                         return (
                                             <>
                                                 <section className="editor-cinema-hero">
@@ -6563,24 +6598,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     <div className="editor-cinema-hero-actions">
                                                         <button type="button" onClick={() => goScene('identity')}><Zap size={14} /> Start designing</button>
                                                         <button type="button" onClick={startEditorStudioPresentation}><Sparkles size={14} /> Play reveal</button>
-                                                    </div>
-                                                </section>
-
-                                                <section className="editor-cinema-timeline" aria-label="Editor studio timeline">
-                                                    <div className="editor-cinema-progress"><span style={{ width: sceneProgress }} /></div>
-                                                    <div className="editor-cinema-track">
-                                                        {scenes.map((scene, index) => {
-                                                            const SceneIcon = scene.icon;
-                                                            const isActive = scene.id === activeScene.id;
-                                                            const isComplete = index < activeIndex;
-                                                            return (
-                                                                <button key={scene.id} type="button" onClick={() => goScene(scene.id)} className={`${isActive ? 'is-active' : ''} ${isComplete ? 'is-complete' : ''}`}>
-                                                                    <i>{isComplete ? <Check size={13} /> : <SceneIcon size={14} />}</i>
-                                                                    <span>{scene.number}</span>
-                                                                    <strong>{scene.title}</strong>
-                                                                </button>
-                                                            );
-                                                        })}
                                                     </div>
                                                 </section>
 
@@ -6623,7 +6640,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     <span>{selectedPaletteName || 'Color direction'}</span>
                                                                     <h4>{selectedIndustryFilter ? `${selectedPalettePhrase} for ${selectedIndustryName}.` : 'Choose color after industry.'}</h4>
                                                                     <p>{selectedIndustryFilter ? 'Pick a broad color direction, custom color, or extract a palette from your uploaded logo and banner.' : 'The palette room becomes sharper once the industry room is complete.'}</p>
-                                                                    <div>{paletteFilterOptions.slice(0, 4).map(palette => <button key={palette.id} type="button" onClick={() => setThemeFilterValue('palette', palette.id)}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<small>{palette.name}</small></button>)}</div>
+                                                                    <div>{paletteFilterOptions.slice(0, 4).map(palette => <button key={palette.id} type="button" onClick={() => {
+                                                                        const nextMix = [palette.id];
+                                                                        handleSettingChange('editorColorMix', nextMix);
+                                                                        setThemeFilterValue('palette', palette.id);
+                                                                        applyColorDirection(palette.id, nextMix, settings.editorColorDepth || 45);
+                                                                    }}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<small>{palette.name}</small></button>)}</div>
                                                                 </div>
                                                             )}
 
@@ -6704,30 +6726,74 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             </>}
 
                                                             {activeScene.id === 'colours' && <>
-                                                                <div className="cinema-control-title"><span>Colour direction</span><small>Choose one or stack many colors. Later rooms can still fine tune exact calendar, time, and button colors.</small></div>
-                                                                <div className="cinema-color-grid cinema-color-grid-multi">{paletteFilterOptions.map(palette => {
-                                                                    const selectedMix = settings.editorColorMix || [];
-                                                                    const isActive = selectedMix.includes(palette.id) || (!selectedMix.length && themeGenerationInputs.palette === palette.id);
-                                                                    return (
-                                                                        <button key={palette.id} type="button" onClick={() => {
-                                                                            const current = settings.editorColorMix || [];
-                                                                            const nextMix = current.includes(palette.id) ? current.filter(id => id !== palette.id) : [...current, palette.id];
-                                                                            const usableMix = nextMix.length ? nextMix : [palette.id];
-                                                                            handleSettingChange('editorColorMix', usableMix);
-                                                                            setThemeFilterValue('palette', palette.id);
-                                                                            applyColorDirection(palette.id, usableMix, settings.editorColorDepth || 45);
-                                                                        }} className={isActive ? 'is-active' : ''}>
-                                                                            <span className="cinema-swatches">{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}</span>
-                                                                            <span>{palette.id === 'all' ? 'Spectrum' : palette.name}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                                <label className={(settings.editorColorMix || []).includes('custom') || themeGenerationInputs.palette === 'custom' ? 'is-active' : ''}><i style={{ backgroundColor: customThemeColor }} /><span>Custom</span><input type="color" value={customThemeColor} onChange={(event) => { setCustomThemeColor(event.target.value); const nextMix = Array.from(new Set([...(settings.editorColorMix || []), 'custom'])); handleSettingChange('editorColorMix', nextMix); setThemeFilterValue('palette', 'custom'); applyColorDirection('custom', nextMix, settings.editorColorDepth || 45); }} /></label></div>
-                                                                <label className="cinema-range-control">
-                                                                    <span>Light to dark range</span>
-                                                                    <input type="range" min="0" max="100" value={settings.editorColorDepth || 45} onChange={(event) => { const depth = Number(event.target.value); handleSettingChange('editorColorDepth', depth); applyColorDirection(themeGenerationInputs.palette || 'all', settings.editorColorMix || [themeGenerationInputs.palette || 'all'], depth); }} />
-                                                                    <small>{(settings.editorColorDepth || 45) < 50 ? 'Light direction' : 'Darker direction'}</small>
-                                                                </label>
+                                                                <div className="cinema-control-title"><span>Colour direction</span><small>Set the three colours clients notice first. Background, headings, and buttons update live in the preview.</small></div>
+                                                                <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
+                                                                    <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>Native gradient on</button>
+                                                                    <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>Custom accents</button>
+                                                                </div>
+                                                                <p className="cinema-native-gradient-note">Native gradient keeps the Build A Booking moving accent on selected dates, time slots, chips, and action moments. Switch to custom accents only when you want those accent areas to follow your own colours.</p>
+                                                                <div className="cinema-color-directors">
+                                                                    {[
+                                                                        {
+                                                                            id: 'background',
+                                                                            label: 'Background',
+                                                                            note: 'The main page surface behind the booking flow.',
+                                                                            value: settings.backgroundColor || '#ffffff',
+                                                                            onApply: (color) => handleSettingChange('backgroundColor', color)
+                                                                        },
+                                                                        {
+                                                                            id: 'headings',
+                                                                            label: 'Headings',
+                                                                            note: 'Business name, section titles, and strong text.',
+                                                                            value: settings.headingColor || '#050505',
+                                                                            onApply: (color) => {
+                                                                                handleSettingChange('headingColor', color);
+                                                                                handleSettingChange('dateActiveTextColor', readableTextFor(settings.dateActiveBgColor || color));
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            id: 'buttons',
+                                                                            label: 'Buttons',
+                                                                            note: 'Primary booking actions and key selectable controls.',
+                                                                            value: settings.buttonColor || settings.primaryColor || '#050505',
+                                                                            onApply: (color) => {
+                                                                                handleSettingChange('buttonColor', color);
+                                                                                handleSettingChange('primaryColor', color);
+                                                                                handleSettingChange('buttonTextColor', readableTextFor(color));
+                                                                                if (!settings.nativeAccent) {
+                                                                                    handleSettingChange('dateActiveBgColor', `${color}22`);
+                                                                                    handleSettingChange('slotActiveBgColor', `${color}22`);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    ].map((control) => {
+                                                                        const spectrum = Number(settings.editorColorSpectrums?.[control.id] ?? 50);
+                                                                        const displayColor = normalizeHexColor(control.value?.slice?.(0, 7), control.value || '#050505');
+                                                                        return (
+                                                                            <div key={control.id} className="cinema-color-director">
+                                                                                <div className="cinema-color-director-head">
+                                                                                    <span style={{ backgroundColor: displayColor }} />
+                                                                                    <div>
+                                                                                        <b>{control.label}</b>
+                                                                                        <small>{control.note}</small>
+                                                                                    </div>
+                                                                                    <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} />
+                                                                                </div>
+                                                                                <label className="cinema-spectrum-slider">
+                                                                                    <span>Soft</span>
+                                                                                    <input type="range" min="0" max="100" value={spectrum} onChange={(event) => {
+                                                                                        const depth = Number(event.target.value);
+                                                                                        const nextSpectrums = { ...(settings.editorColorSpectrums || {}), [control.id]: depth };
+                                                                                        const tuned = tuneColorByDepth(displayColor, depth);
+                                                                                        handleSettingChange('editorColorSpectrums', nextSpectrums);
+                                                                                        control.onApply(tuned);
+                                                                                    }} />
+                                                                                    <span>Deep</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                                 <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
                                                             </>}
 
@@ -6737,11 +6803,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
                                                             </>}
 
-                                                            {activeScene.id === 'introduction' && <div className="cinema-field-grid single">
-                                                                <p className="cinema-helper-copy">You can type here, or click the text directly on the mockup and edit it live.</p>
-                                                                <label>Booking page name<input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} /></label>
-                                                                <label>Text above heading<input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" /></label>
-                                                                <label>Header copy<textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." /></label>
+                                                            {activeScene.id === 'introduction' && <div className="cinema-intro-editor">
+                                                                <p className="cinema-editor-note">Edit the first words clients see. You can type here, or click the same text directly on the mockup.</p>
+                                                                <label className="cinema-text-card is-hero">
+                                                                    <span>Booking page name</span>
+                                                                    <input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} />
+                                                                </label>
+                                                                <div className="cinema-text-card-row">
+                                                                    <label className="cinema-text-card">
+                                                                        <span>Text above heading</span>
+                                                                        <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" />
+                                                                    </label>
+                                                                    <label className="cinema-text-card">
+                                                                        <span>Subtext under heading</span>
+                                                                        <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." />
+                                                                    </label>
+                                                                </div>
                                                             </div>}
 
                                                             {activeScene.id === 'calendar' && <>
@@ -6791,7 +6868,31 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <div className="cinema-toggle-grid"><button type="button" onClick={toggleFaqFeature} className={settings.features?.faqEnabled ? 'is-on' : ''}><span>Show FAQ section</span><i /></button></div>
                                                                 <VisualEditorGroup title="FAQ style" note="Question card shape."><StyleSegmentedControl value={settings.faqStyle || 'minimal'} onChange={(value) => handleSettingChange('faqStyle', value)} label="FAQ Style" /></VisualEditorGroup>
                                                                 <div className="cinema-field-grid"><label>FAQ background<input type="color" value={settings.faqBgColor === 'transparent' ? '#ffffff' : settings.faqBgColor || '#ffffff'} onChange={(event) => handleSettingChange('faqBgColor', event.target.value)} /></label><label>FAQ border<input type="color" value={settings.faqBorderColor || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('faqBorderColor', event.target.value)} /></label></div>
-                                                                <div className="cinema-faq-editor"><div><strong>Questions</strong><button type="button" onClick={addFaqItem}><Plus size={14}/> Add</button></div>{(settings.features?.faqs || []).map((faq, index) => <label key={index}><input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="Question" /><textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="Answer" /><button type="button" onClick={() => removeFaqItem(index)}><Trash2 size={13}/> Remove</button></label>)}</div>
+                                                                <div className="cinema-faq-editor">
+                                                                    <div className="cinema-faq-editor-head">
+                                                                        <div>
+                                                                            <strong>Questions clients ask</strong>
+                                                                            <small>Keep answers short, useful, and confidence-building.</small>
+                                                                        </div>
+                                                                        <button type="button" onClick={addFaqItem}><Plus size={14}/> Add question</button>
+                                                                    </div>
+                                                                    {(settings.features?.faqs || []).map((faq, index) => (
+                                                                        <article key={index} className="cinema-faq-card">
+                                                                            <div className="cinema-faq-card-head">
+                                                                                <span>FAQ {index + 1}</span>
+                                                                                <button type="button" onClick={() => removeFaqItem(index)}><Trash2 size={13}/> Remove</button>
+                                                                            </div>
+                                                                            <label>
+                                                                                <span>Question</span>
+                                                                                <input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="How do I know my booking is confirmed?" />
+                                                                            </label>
+                                                                            <label>
+                                                                                <span>Answer</span>
+                                                                                <textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="You will receive an update as soon as the business approves your request." />
+                                                                            </label>
+                                                                        </article>
+                                                                    ))}
+                                                                </div>
                                                             </>}
 
                                                             {activeScene.id === 'social' && <>

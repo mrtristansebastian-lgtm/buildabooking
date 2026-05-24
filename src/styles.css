@@ -1722,8 +1722,9 @@ body {
                 padding: 0.68rem !important;
             }
             .editor-preview-room-nav.is-desktop {
-                top: 3.85rem !important;
-                max-width: min(52vw, 24rem) !important;
+                top: 50% !important;
+                right: 0.65rem !important;
+                max-height: 62vh !important;
                 padding: 0.25rem !important;
                 gap: 0.2rem !important;
                 background: rgba(255,255,255,0.9) !important;
@@ -3739,6 +3740,8 @@ body {
         .cinema-copy-preview input,
         .cinema-field-grid input,
         .cinema-field-grid textarea,
+        .cinema-text-card input,
+        .cinema-text-card textarea,
         .cinema-faq-editor input,
         .cinema-faq-editor textarea {
             width: 100%;
@@ -3805,6 +3808,7 @@ body {
         .cinema-chip-scroll button,
         .cinema-color-grid button,
         .cinema-color-grid label,
+        .cinema-color-tile,
         .cinema-font-grid button,
         .cinema-toggle-grid button,
         .cinema-field-grid label,
@@ -3951,8 +3955,15 @@ body {
             border-color: #050505;
         }
 
+        .cinema-color-grid .cinema-color-tile.is-active {
+            background: #050505;
+            color: #fff;
+            border-color: #050505;
+        }
+
         .cinema-color-grid button,
-        .cinema-color-grid label {
+        .cinema-color-grid label,
+        .cinema-color-tile {
             min-height: 3rem;
             padding: 0 0.8rem;
             display: inline-flex;
@@ -3964,6 +3975,157 @@ body {
             text-transform: uppercase;
             position: relative;
             overflow: hidden;
+        }
+
+        .cinema-color-tile {
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            gap: 0.58rem;
+            padding: 0.68rem 0.8rem;
+            overflow: visible;
+        }
+
+        .cinema-color-tile > button,
+        .cinema-color-tile > label:not(.cinema-color-depth) {
+            min-height: auto;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            box-shadow: none;
+        }
+
+        .cinema-color-tile > button:hover,
+        .cinema-color-tile > label:not(.cinema-color-depth):hover {
+            transform: none;
+        }
+
+        .cinema-color-depth {
+            display: grid !important;
+            grid-template-columns: auto minmax(4rem, 1fr) auto;
+            align-items: center !important;
+            gap: 0.48rem !important;
+            min-height: auto !important;
+            padding: 0 !important;
+            border: 0 !important;
+            background: transparent !important;
+            color: inherit !important;
+            font-size: 0.48rem !important;
+            letter-spacing: 0.08em;
+            opacity: 0.92;
+        }
+
+        .cinema-color-depth input {
+            width: 100%;
+            accent-color: currentColor;
+        }
+
+        .cinema-gradient-mode {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+        }
+
+        .cinema-gradient-mode button {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 999px;
+            min-height: 3rem;
+            background: rgba(248,250,252,0.9);
+            color: #050505;
+            font-size: 0.58rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .cinema-gradient-mode button.is-active {
+            background: #050505;
+            color: #fff;
+            border-color: #050505;
+        }
+
+        .cinema-native-gradient-note {
+            margin: -0.1rem 0 0;
+            color: #64748b;
+            font-size: 0.72rem;
+            line-height: 1.45;
+            font-weight: 750;
+        }
+
+        .cinema-color-directors {
+            display: grid;
+            gap: 0.72rem;
+        }
+
+        .cinema-color-director {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 22px;
+            background: rgba(248,250,252,0.88);
+            padding: 0.82rem;
+            display: grid;
+            gap: 0.78rem;
+        }
+
+        .cinema-color-director-head {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.72rem;
+        }
+
+        .cinema-color-director-head > span {
+            width: 2.3rem;
+            height: 2.3rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            box-shadow: 0 14px 30px -22px currentColor;
+        }
+
+        .cinema-color-director-head b {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 950;
+            letter-spacing: -0.02em;
+        }
+
+        .cinema-color-director-head small {
+            display: block;
+            margin-top: 0.12rem;
+            color: #64748b;
+            font-size: 0.68rem;
+            font-weight: 750;
+            line-height: 1.35;
+        }
+
+        .cinema-color-director-head input[type="color"] {
+            width: 2.55rem;
+            height: 2.55rem;
+            border: 0;
+            padding: 0;
+            border-radius: 999px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .cinema-spectrum-slider {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 0.55rem;
+            align-items: center;
+            color: #94a3b8;
+            font-size: 0.56rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .cinema-spectrum-slider input {
+            width: 100%;
+            accent-color: #050505;
         }
 
         .cinema-color-grid i {
@@ -4136,11 +4298,20 @@ body {
         }
 
         .cinema-color-grid-multi button,
-        .cinema-color-grid-multi label {
+        .cinema-color-grid-multi label,
+        .cinema-color-grid-multi .cinema-color-tile {
             flex-direction: column;
             justify-content: center;
             align-items: flex-start;
             min-height: 4.2rem;
+        }
+
+        .cinema-color-grid-multi .cinema-color-tile > button,
+        .cinema-color-grid-multi .cinema-color-tile > label:not(.cinema-color-depth) {
+            min-height: auto;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: center;
         }
 
         .cinema-swatches {
@@ -4169,6 +4340,75 @@ body {
             text-transform: none;
         }
 
+        .cinema-intro-editor {
+            display: grid;
+            gap: 0.72rem;
+        }
+
+        .cinema-editor-note {
+            margin: 0;
+            border-radius: 18px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(248,250,252,0.78);
+            padding: 0.82rem 0.95rem;
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 760;
+            line-height: 1.45;
+        }
+
+        .cinema-text-card-row {
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            gap: 0.72rem;
+        }
+
+        .cinema-text-card {
+            border-radius: 22px;
+            border: 1px solid rgba(15, 23, 42, 0.09);
+            background: rgba(255,255,255,0.82);
+            padding: 0.82rem;
+            display: grid;
+            gap: 0.45rem;
+            box-shadow: 0 18px 44px -38px rgba(15, 23, 42, 0.28);
+        }
+
+        .cinema-text-card.is-hero {
+            padding: 0.95rem;
+        }
+
+        .cinema-text-card span {
+            color: #64748b;
+            font-size: 0.56rem;
+            font-weight: 950;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .cinema-text-card input,
+        .cinema-text-card textarea {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: #f8fafc;
+            border-radius: 14px;
+            color: #050505;
+            font-size: 0.9rem;
+            font-weight: 850;
+            line-height: 1.35;
+            padding: 0.75rem 0.82rem;
+        }
+
+        .cinema-text-card.is-hero input {
+            font-size: 1.08rem;
+            letter-spacing: -0.02em;
+        }
+
+        .cinema-text-card textarea {
+            min-height: 5.2rem;
+            resize: vertical;
+        }
+
         .cinema-field-grid.single {
             grid-template-columns: 1fr;
         }
@@ -4176,17 +4416,36 @@ body {
         .cinema-faq-editor {
             padding: 0.85rem;
             display: grid;
-            gap: 0.65rem;
+            gap: 0.76rem;
         }
 
-        .cinema-faq-editor > div {
+        .cinema-faq-editor-head,
+        .cinema-faq-card-head {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 0.75rem;
         }
 
-        .cinema-faq-editor button {
+        .cinema-faq-editor-head strong {
+            display: block;
+            font-size: 1rem;
+            font-weight: 950;
+            letter-spacing: -0.03em;
+        }
+
+        .cinema-faq-editor-head small {
+            display: block;
+            margin-top: 0.15rem;
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 750;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .cinema-faq-editor button,
+        .cinema-faq-card-head button {
             min-height: 2.25rem;
             border-radius: 999px;
             background: #050505;
@@ -4200,8 +4459,61 @@ body {
             text-transform: uppercase;
         }
 
-        .cinema-faq-editor textarea {
-            min-height: 4rem;
+        .cinema-faq-card {
+            border-radius: 20px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            padding: 0.72rem;
+            display: grid;
+            gap: 0.62rem;
+        }
+
+        .cinema-faq-card-head span {
+            color: #64748b;
+            font-size: 0.56rem;
+            font-weight: 950;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .cinema-faq-card-head button {
+            min-height: 2rem;
+            background: #fff1f2;
+            color: #be123c;
+            border: 1px solid rgba(244, 63, 94, 0.16);
+        }
+
+        .cinema-faq-card label {
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            background: #f8fafc;
+            padding: 0.68rem;
+            display: grid;
+            gap: 0.38rem;
+        }
+
+        .cinema-faq-card label span {
+            color: #94a3b8;
+            font-size: 0.52rem;
+            font-weight: 950;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .cinema-faq-card input,
+        .cinema-faq-card textarea {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #050505;
+            font-size: 0.86rem;
+            font-weight: 780;
+            line-height: 1.45;
+        }
+
+        .cinema-faq-card textarea {
+            min-height: 4.8rem;
             resize: vertical;
         }
 
@@ -4269,7 +4581,8 @@ body {
             .cinema-color-grid,
             .cinema-font-grid,
             .cinema-toggle-grid,
-            .cinema-field-grid {
+            .cinema-field-grid,
+            .cinema-text-card-row {
                 grid-template-columns: 1fr;
             }
 
@@ -4352,6 +4665,14 @@ body {
         .native-ui.dashboard-dark .cinema-setting-group,
         .native-ui.dashboard-dark .cinema-upload-line,
         .native-ui.dashboard-dark .cinema-range-control,
+        .native-ui.dashboard-dark .cinema-gradient-mode button,
+        .native-ui.dashboard-dark .cinema-color-director,
+        .native-ui.dashboard-dark .cinema-editor-note,
+        .native-ui.dashboard-dark .cinema-text-card,
+        .native-ui.dashboard-dark .cinema-text-card input,
+        .native-ui.dashboard-dark .cinema-text-card textarea,
+        .native-ui.dashboard-dark .cinema-faq-card,
+        .native-ui.dashboard-dark .cinema-faq-card label,
         .native-ui.dashboard-dark .cinema-align-grid button,
         .native-ui.dashboard-dark .cinema-industry-list button,
         .native-ui.dashboard-dark .cinema-banner-frame,
@@ -4364,6 +4685,7 @@ body {
         .native-ui.dashboard-dark .cinema-chip-scroll button,
         .native-ui.dashboard-dark .cinema-color-grid button,
         .native-ui.dashboard-dark .cinema-color-grid label,
+        .native-ui.dashboard-dark .cinema-color-tile,
         .native-ui.dashboard-dark .cinema-font-grid button,
         .native-ui.dashboard-dark .cinema-toggle-grid button,
         .native-ui.dashboard-dark .cinema-field-grid label,
@@ -4387,10 +4709,37 @@ body {
         .native-ui.dashboard-dark .editor-cinema-nav-buttons button:last-child,
         .native-ui.dashboard-dark .cinema-chip-scroll button.is-active,
         .native-ui.dashboard-dark .cinema-color-grid .is-active,
+        .native-ui.dashboard-dark .cinema-gradient-mode button.is-active,
         .native-ui.dashboard-dark .cinema-font-grid .is-active {
             background: #fff !important;
             color: #050505 !important;
             border-color: #fff !important;
+        }
+
+        .native-ui.dashboard-dark .cinema-color-tile > button,
+        .native-ui.dashboard-dark .cinema-color-tile > label:not(.cinema-color-depth),
+        .native-ui.dashboard-dark .cinema-color-depth {
+            background: transparent !important;
+            border-color: transparent !important;
+            color: inherit !important;
+        }
+
+        .native-ui.dashboard-dark .cinema-native-gradient-note {
+            color: #b6c2d1;
+        }
+
+        .native-ui.dashboard-dark .cinema-color-director-head small,
+        .native-ui.dashboard-dark .cinema-spectrum-slider,
+        .native-ui.dashboard-dark .cinema-editor-note,
+        .native-ui.dashboard-dark .cinema-faq-editor-head small,
+        .native-ui.dashboard-dark .cinema-text-card span,
+        .native-ui.dashboard-dark .cinema-faq-card label span,
+        .native-ui.dashboard-dark .cinema-faq-card-head span {
+            color: #a8b3c5;
+        }
+
+        .native-ui.dashboard-dark .cinema-spectrum-slider input {
+            accent-color: #f8fafc;
         }
 
         .native-ui.dashboard-dark .cinema-align-grid button.is-active,
@@ -4477,11 +4826,15 @@ body {
         }
 
         .editor-preview-room-nav.is-desktop {
-            top: 5.4rem;
-            left: 50%;
-            transform: translateX(-50%);
-            max-width: min(64vw, 46rem);
-            overflow-x: auto;
+            top: 50%;
+            right: clamp(1rem, 2vw, 1.75rem);
+            left: auto;
+            transform: translateY(-50%);
+            flex-direction: column;
+            border-radius: 1.35rem;
+            max-height: min(72vh, 36rem);
+            max-width: none;
+            overflow-y: auto;
             scrollbar-width: none;
         }
 
@@ -4518,7 +4871,13 @@ body {
         }
 
         .editor-preview-room-nav.is-desktop button {
-            padding: 0 0.75rem;
+            width: 2.35rem;
+            min-width: 2.35rem;
+            padding: 0;
+        }
+
+        .editor-preview-room-nav.is-desktop button span {
+            display: none;
         }
 
         .editor-preview-room-nav.is-phone button span {
