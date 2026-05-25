@@ -297,3 +297,6 @@ exports.createBillingPortalSession = onCall({ region: 'us-central1' }, async () 
   }
   throw new HttpsError('unimplemented', 'Billing portal wiring is ready for your Stripe customer IDs.');
 });
+
+const paymentFunctions = require('./payments');
+Object.assign(exports, paymentFunctions);

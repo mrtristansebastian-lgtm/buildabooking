@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState }
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowRight, BadgeCheck, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, FileText, Globe, HelpCircle, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, UserPlus, Users, Wifi, X, Zap
+  AlignCenter, AlignLeft, AlignRight, ArrowRight, BadgeCheck, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Eye, EyeOff, FileText, Globe, HelpCircle, History, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -57,6 +57,10 @@ const WorkspaceInbox = lazy(() => (
 
 const ServicesStudio = lazy(() => (
   import('./components/ServicesStudio').then((module) => ({ default: module.ServicesStudio }))
+));
+
+const FinancePaymentSettings = lazy(() => (
+  import('./components/FinancePaymentSettings').then((module) => ({ default: module.FinancePaymentSettings }))
 ));
 
 const BrandLoader = ({ label = 'Loading workspace', variant = 'dark' }) => (
@@ -985,7 +989,7 @@ const authRedirectStorageKey = 'build-a-booking-auth-return';
 const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
-const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'services', 'clients', 'staff', 'profile'];
+const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'services', 'finance', 'clients', 'staff', 'profile'];
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
 
 const safeJsonParse = (value, fallback = null) => {
@@ -2339,6 +2343,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 { id: 'communications', icon: MessageSquare, label: 'Support Inbox' },
                 { id: 'editor', icon: Paintbrush, label: 'Editor' },
                 { id: 'services', icon: Briefcase, label: 'My Services', mobileLabel: 'Services' },
+                { id: 'finance', icon: CreditCard, label: 'Finance' },
                 { id: 'clients', icon: Star, label: 'My Clients', mobileLabel: 'Clients', badge: clientMetrics.firstTimers > 0 },
                 { id: 'staff', icon: Users, label: 'Team' },
                 { id: 'profile', icon: User, label: 'Profile' }
@@ -6086,6 +6091,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         setSettings(nextSettings);
                                         await saveSettingsDraft(nextSettings, message || 'Services saved.');
                                     }}
+                                    showToast={showToast}
+                                />
+                            </Suspense>
+                        </div>
+                    )}
+
+                    {activeTab === 'finance' && (
+                        <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
+                            <Suspense fallback={<LazySectionFallback label="Loading finance" />}>
+                                <FinancePaymentSettings
+                                    appId={appId}
+                                    businessId={workspaceOwnerId}
+                                    canManageWorkspace={canManageWorkspace}
                                     showToast={showToast}
                                 />
                             </Suspense>

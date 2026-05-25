@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Briefcase, Camera, Check, Clock, DollarSign, Image, Layers, Plus, Search, Sparkles, Trash2, UserPlus, X } from 'lucide-react';
-import { getServiceIndustryOptions, getServiceTemplateGroup } from '../data/serviceTemplates';
+import { Briefcase, Camera, Check, Clock, DollarSign, Image, Plus, Search, Sparkles, Trash2, UserPlus, X } from 'lucide-react';
+import { getServiceIndustryOptions, getServiceTemplateGroup, resolveServiceIndustryId } from '../data/serviceTemplates';
 import { createServiceFromTemplate, formatServiceDuration, formatServicePrice, normalizeService, normalizeServiceList } from '../utils/services';
 
 const blankService = () => normalizeService({
@@ -34,7 +34,7 @@ export const ServicesStudio = ({
 }) => {
   const services = useMemo(() => normalizeServiceList(settings?.services || []), [settings?.services]);
   const industryOptions = useMemo(() => getServiceIndustryOptions(), []);
-  const [selectedIndustry, setSelectedIndustry] = useState(settings?.serviceIndustry || currentIndustry || 'hair');
+  const [selectedIndustry, setSelectedIndustry] = useState(resolveServiceIndustryId(settings?.serviceIndustry || currentIndustry || 'hair'));
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [draft, setDraft] = useState(blankService);
@@ -57,8 +57,9 @@ export const ServicesStudio = ({
 
   useEffect(() => {
     const nextIndustry = settings?.serviceIndustry || currentIndustry;
-    if (nextIndustry && nextIndustry !== selectedIndustry) {
-      setSelectedIndustry(nextIndustry);
+    const resolvedIndustry = resolveServiceIndustryId(nextIndustry);
+    if (resolvedIndustry && resolvedIndustry !== selectedIndustry) {
+      setSelectedIndustry(resolvedIndustry);
     }
   }, [currentIndustry, selectedIndustry, settings?.serviceIndustry]);
 
@@ -164,91 +165,99 @@ export const ServicesStudio = ({
   };
 
   return (
-    <div className="space-y-6">
-      <header className="page-heading">
-        <p className="page-kicker">Service Menu</p>
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div>
-            <h1 className="page-title">My Services</h1>
-            <p className="page-subtitle max-w-3xl">
-              Build the menu clients choose from. Add prices, durations, galleries, packages, and the staff who can deliver each service.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={addBlankService}
-            className="h-12 px-5 rounded-full bg-black text-white text-xs font-black uppercase tracking-[0.18em] inline-flex items-center justify-center gap-2 shadow-xl shadow-black/10"
-          >
-            <Plus size={16} /> Add Service
-          </button>
+    <div className="space-y-5">
+      <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">My Services</h2>
+          <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">
+            Build the menu clients book from. Add prices, durations, galleries, packages, and the staff who can deliver each service.
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={addBlankService}
+          className="h-11 md:h-12 px-5 md:px-6 rounded-lg bg-black text-white text-[10px] md:text-[11px] font-bold uppercase tracking-widest inline-flex items-center justify-center gap-2 shadow-xl shadow-black/10 hover:bg-neutral-800 transition-colors"
+        >
+          <Plus size={15} /> Add Service
+        </button>
       </header>
 
-      <section className="rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
-        <div className="p-5 lg:p-6 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <section className="rounded-lg border border-neutral-200 bg-white overflow-hidden shadow-sm">
+        <div className="p-4 md:p-5 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-400">Industry Templates</p>
-            <h2 className="text-2xl font-black tracking-tight text-black">{templateGroup.title} services</h2>
-            <p className="text-sm text-neutral-500 mt-1">{templateGroup.tone}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">Industry Templates</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black mt-1">{templateGroup.title}</h2>
+            <p className="text-sm text-neutral-500 mt-1 max-w-2xl">{templateGroup.tone}</p>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3">
-              <p className="text-2xl font-black text-black">{services.length}</p>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Services</p>
+          <div className="grid grid-cols-3 gap-2 text-center shrink-0">
+            <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 md:px-4 py-2.5">
+              <p className="text-xl md:text-2xl font-bold text-black">{services.length}</p>
+              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-neutral-400">Services</p>
             </div>
-            <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3">
-              <p className="text-2xl font-black text-black">{services.filter(service => service.active).length}</p>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Live</p>
+            <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 md:px-4 py-2.5">
+              <p className="text-xl md:text-2xl font-bold text-black">{services.filter(service => service.active).length}</p>
+              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-neutral-400">Live</p>
             </div>
-            <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3">
-              <p className="text-2xl font-black text-black">{staffOptions.length}</p>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Staff</p>
+            <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 md:px-4 py-2.5">
+              <p className="text-xl md:text-2xl font-bold text-black">{staffOptions.length}</p>
+              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-neutral-400">Staff</p>
             </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[280px,1fr]">
-          <aside className="border-b lg:border-b-0 lg:border-r border-neutral-100 p-4 bg-neutral-50/50">
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-400 mb-3">Choose an industry</p>
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-              {industryOptions.map(industry => {
-                const active = selectedIndustry === industry.id;
-                return (
-                  <button
-                    key={industry.id}
-                    type="button"
-                    onClick={() => chooseIndustry(industry.id)}
-                    className={`w-full text-left rounded-xl border px-4 py-3 transition-all ${active ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-neutral-300'}`}
-                  >
-                    <span className="block text-sm font-black">{industry.name}</span>
-                    <span className={`block text-[10px] font-bold uppercase tracking-[0.16em] mt-1 ${active ? 'text-white/50' : 'text-neutral-400'}`}>{industry.hint}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-
-          <div className="p-4 lg:p-6 space-y-5">
-            <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              {templateGroup.templates.map(template => (
+        <div className="p-3 md:p-4 border-b border-neutral-100 bg-neutral-50/60">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {industryOptions.map(industry => {
+              const active = selectedIndustry === industry.id;
+              return (
                 <button
-                  key={template.id}
+                  key={industry.id}
                   type="button"
-                  onClick={() => addTemplate(template)}
-                  className="group text-left rounded-2xl border border-neutral-200 bg-white p-4 hover:border-black hover:-translate-y-0.5 transition-all"
+                  onClick={() => chooseIndustry(industry.id)}
+                  className={`shrink-0 min-w-[9.5rem] rounded-xl border px-4 py-3 text-left transition-all ${active ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-neutral-300'}`}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-neutral-100 inline-flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
+                  <span className="block text-sm font-bold leading-tight">{industry.name}</span>
+                  <span className={`block text-[9px] font-bold uppercase tracking-[0.12em] mt-1 truncate ${active ? 'text-white/55' : 'text-neutral-400'}`}>{industry.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-6 space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">Tap to add a starter</p>
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">{templateGroup.title} menu starters</h3>
+            </div>
+            <p className="text-xs md:text-sm text-neutral-500 max-w-xl">
+              These are realistic starting points for this industry. Add one, then adjust price, duration, gallery, and staff.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+            {templateGroup.templates.map(template => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => addTemplate(template)}
+                className="group text-left rounded-2xl border border-neutral-200 bg-white p-4 hover:border-black hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/5 transition-all"
+              >
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neutral-100 inline-flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
                     <Sparkles size={17} />
                   </div>
-                  <h3 className="font-black text-black">{template.name}</h3>
-                  <p className="text-xs text-neutral-500 mt-2 line-clamp-2">{template.description}</p>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-neutral-500">{formatServiceDuration(template.duration)}</span>
-                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-neutral-500">{formatServicePrice(template)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  <span className="rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-neutral-500">
+                    {template.category}
+                  </span>
+                </div>
+                <h3 className="font-bold text-base text-black">{template.name}</h3>
+                <p className="text-xs text-neutral-500 mt-2 min-h-[2.5rem] line-clamp-2">{template.description}</p>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {formatServiceDuration(template.duration) && <span className="rounded-full bg-neutral-100 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-500">{formatServiceDuration(template.duration)}</span>}
+                  {formatServicePrice(template) && <span className="rounded-full bg-neutral-100 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-500">{formatServicePrice(template)}</span>}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </section>
