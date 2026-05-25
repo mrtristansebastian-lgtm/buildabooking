@@ -1645,9 +1645,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
             }, [settings.brandName, user, workspaceAccess]);
             const editorDraftOwnerKey = workspaceOwnerId || user?.uid || (isGuestWorkspace ? 'guest' : 'local');
+            const setBookingsAndCache = (updater) => {
+                setBookings(prev => {
+                    const nextBookings = typeof updater === 'function' ? updater(prev) : updater;
+                    if (workspaceOwnerId && Array.isArray(nextBookings)) {
+                        writeBookingsCache(workspaceOwnerId, nextBookings);
+                    }
+                    return nextBookings;
+                });
+            };
+            const isEditorWorkspaceOpen = view === 'dashboard' && activeTab === 'editor';
 
             useEffect(() => {
-                if (publicSlug || !editorDraftOwnerKey) return;
+                if (publicSlug || !editorDraftOwnerKey || !isEditorWorkspaceOpen) return;
                 const localDraft = readEditorDraft(editorDraftOwnerKey);
                 if (!localDraft?.settings) return;
                 const localDraftAgeMs = Date.now() - Number(localDraft.savedAt || 0);
@@ -1655,9 +1665,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const remoteUpdatedAt = getTimestampValue(settingsRef.current?.updatedAt || settings.updatedAt);
                 if (Number(localDraft.savedAt || 0) <= remoteUpdatedAt) return;
                 setSettings(prev => mergeStateIfChanged(prev, localDraft.settings));
-                if (localDraft.route?.activeTab) {
-                    saveWorkspaceRoute(localDraft.route);
-                }
                 if (localDraft.editorStudioScene) {
                     setEditorStudioScene(localDraft.editorStudioScene);
                 }
@@ -1665,11 +1672,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     editorDraftRecoveredRef.current = true;
                     showToast('Recovered your latest editor draft on this device.');
                 }
-            }, [editorDraftOwnerKey, publicSlug]);
+            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, publicSlug]);
 
             useEffect(() => {
-                if (publicSlug || !editorDraftOwnerKey) return undefined;
-                const route = { view, activeTab, editorTab };
+                if (publicSlug || !editorDraftOwnerKey || !isEditorWorkspaceOpen) {
+                    editorDraftFlushRef.current = null;
+                    return undefined;
+                }
+                const route = { view: 'dashboard', activeTab: 'editor', editorTab };
                 const persistDraft = () => {
                     const draftPayload = buildEditorDraftPayload(settingsRef.current || settings, {
                         route,
@@ -1691,7 +1701,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 window.clearTimeout(editorDraftSaveTimerRef.current);
                 editorDraftSaveTimerRef.current = window.setTimeout(persistDraft, 400);
                 return undefined;
-            }, [activeTab, editorDraftOwnerKey, editorStudioScene, editorTab, publicSlug, settings, themeTemplateName, view]);
+            }, [editorDraftOwnerKey, editorStudioScene, editorTab, isEditorWorkspaceOpen, publicSlug, settings, themeTemplateName]);
 
             useEffect(() => {
                 if (publicSlug || !isFirebaseConfigured || !db || !workspaceOwnerId || !canManageWorkspace || activeTab !== 'editor') return undefined;
@@ -3255,20 +3265,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             useEffect(() => {
                 if (publicSlug) {
-                    setBookingsReady(true);
                     return undefined;
                 }
                 if ((!user || !workspaceOwnerId) && isFirebaseConfigured) return undefined;
                 if (!isFirebaseConfigured) {
-                    setBookingsReady(true);
                     return undefined;
-                }
-                const cachedBookings = readBookingsCache(workspaceOwnerId);
-                if (cachedBookings?.bookings?.length) {
-                    setBookings(prev => areJsonEqual(prev, cachedBookings.bookings) ? prev : cachedBookings.bookings);
-                    setBookingsReady(true);
-                } else {
-                    setBookingsReady(false);
                 }
 
                 const handleSyncError = (label) => (error) => {
@@ -3287,21 +3288,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     const cloudDraftAt = getTimestampValue(cloudDraft?.savedAt || cloudDraft?.updatedAt);
                     let recoveredDraft = null;
 
-                    if (cloudDraft?.settings && cloudDraftAt > publishedUpdatedAt) {
+                    if (isEditorWorkspaceOpen && canManageWorkspace && cloudDraft?.settings && cloudDraftAt > publishedUpdatedAt) {
                         recoveredDraft = cloudDraft;
                         data = { ...data, ...cloudDraft.settings };
                     }
 
                     const localDraft = readEditorDraft(workspaceOwnerId);
                     const localDraftAt = getTimestampValue(localDraft?.savedAt);
-                    if (localDraft?.settings && localDraftAt > Math.max(publishedUpdatedAt, cloudDraftAt)) {
+                    if (isEditorWorkspaceOpen && canManageWorkspace && localDraft?.settings && localDraftAt > Math.max(publishedUpdatedAt, cloudDraftAt)) {
                         recoveredDraft = localDraft;
                         data = { ...data, ...localDraft.settings };
                     }
 
-                    if (recoveredDraft?.route?.activeTab) {
-                        saveWorkspaceRoute(recoveredDraft.route);
-                    }
                     if (recoveredDraft?.editorStudioScene) {
                         setEditorStudioScene(recoveredDraft.editorStudioScene);
                     }
@@ -3361,6 +3359,30 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         setClientRecords(prev => areJsonEqual(prev, nextClients) ? prev : nextClients);
                     }
                 }, handleSyncError('Client'));
+                return () => { unsubSettings(); unsubEditorDraft(); unsubStaff(); unsubComms(); unsubClients(); };
+            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL, isEditorWorkspaceOpen, canManageWorkspace]);
+
+            useEffect(() => {
+                if (publicSlug) {
+                    setBookingsReady(true);
+                    return undefined;
+                }
+                if (!isFirebaseConfigured || !db) {
+                    setBookingsReady(true);
+                    return undefined;
+                }
+                if (!user || !workspaceOwnerId) {
+                    setBookingsReady(!loading);
+                    return undefined;
+                }
+
+                const cachedBookings = readBookingsCache(workspaceOwnerId);
+                if (cachedBookings?.bookings?.length) {
+                    setBookings(prev => areJsonEqual(prev, cachedBookings.bookings) ? prev : cachedBookings.bookings);
+                    setBookingsReady(true);
+                } else {
+                    setBookingsReady(false);
+                }
 
                 const bookingsCol = FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings');
                 const bookingsQuery = FirebaseSDK.query(
@@ -3368,6 +3390,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     FirebaseSDK.orderBy('timestamp', 'desc'),
                     FirebaseSDK.limit(250)
                 );
+
                 const unsubBookings = FirebaseSDK.onSnapshot(bookingsQuery, (snap) => {
                     const nextBookings = snap.docs
                         .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -3376,11 +3399,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     setBookings(prev => areJsonEqual(prev, nextBookings) ? prev : nextBookings);
                     setBookingsReady(true);
                 }, (error) => {
-                    handleSyncError('Booking')(error);
+                    console.error('Booking sync failed', error);
+                    const fallbackBookings = readBookingsCache(workspaceOwnerId);
+                    if (fallbackBookings?.bookings?.length) {
+                        setBookings(prev => areJsonEqual(prev, fallbackBookings.bookings) ? prev : fallbackBookings.bookings);
+                    }
                     setBookingsReady(true);
                 });
-                return () => { unsubSettings(); unsubEditorDraft(); unsubStaff(); unsubComms(); unsubClients(); unsubBookings(); };
-            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL]);
+
+                return () => unsubBookings();
+            }, [loading, publicSlug, user?.uid, workspaceOwnerId]);
 
             const publishSettings = async (nextSettings = settings, successMessage = "Booking page published!", options = {}) => {
                 const silent = Boolean(options.silent);
@@ -4404,7 +4432,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 };
 
                 if (!isFirebaseConfigured || !user) {
-                    setBookings(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...prev]);
+                    setBookingsAndCache(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...prev]);
                     return true;
                 }
                 try {
@@ -4555,9 +4583,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const nextStaffId = updates.staffId ?? existingBooking?.staffId ?? '';
                 const nextAssignedStaff = nextStaffId ? staffList.find(staff => staff.id === nextStaffId) : null;
                 if (!isFirebaseConfigured || !user) {
-                    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
+                    setBookingsAndCache(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
                     return;
                 }
+                setBookingsAndCache(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
                 try {
                     await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates);
                     const threadId = updates.threadId ?? existingBooking?.threadId ?? '';
@@ -4665,9 +4694,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const deleteBooking = async (bookingId) => {
                 if (!isFirebaseConfigured || !user) {
-                    setBookings(prev => prev.filter(b => b.id !== bookingId));
+                    setBookingsAndCache(prev => prev.filter(b => b.id !== bookingId));
                     return;
                 }
+                setBookingsAndCache(prev => prev.filter(b => b.id !== bookingId));
                 try { await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId)); } 
                 catch (err) { console.error(err); }
             };
@@ -4900,7 +4930,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const markGoogleCalendarResults = async (results = []) => {
                 if (!results.length) return;
                 const syncedAt = Date.now();
-                setBookings(prev => prev.map(booking => {
+                setBookingsAndCache(prev => prev.map(booking => {
                     const match = results.find(result => result.bookingId === booking.id);
                     return match
                         ? { ...booking, googleCalendarEventId: match.eventId, googleCalendarSyncedAt: syncedAt, googleCalendarLink: match.htmlLink || '' }
