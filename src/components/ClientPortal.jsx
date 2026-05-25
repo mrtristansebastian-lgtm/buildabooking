@@ -605,6 +605,13 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
   const renderChatList = () => (
     <aside className={`client-chat-list ${mobileChatOpen ? 'hidden lg:block' : ''} lg:col-span-4 border-b lg:border-b-0 lg:border-r border-neutral-100 bg-neutral-50/70`}>
       <div className="client-chat-search p-4 border-b border-neutral-100 bg-white/80">
+        <div className="client-chat-rail-head flex items-center justify-between gap-3 mb-3">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Chats</p>
+            <h3 className="text-lg font-bold tracking-tight text-black">Your businesses</h3>
+          </div>
+          <span className="client-chat-count rounded-full border border-neutral-100 bg-white px-3 py-1 text-[10px] font-bold text-black">{filteredThreads.length}</span>
+        </div>
         <div className="relative">
           <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
           <input
@@ -657,7 +664,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
     <section className={`client-chat-pane ${mobileChatOpen ? 'fixed inset-0 z-[999]' : 'hidden lg:flex'} lg:col-span-8 flex flex-col min-h-[100dvh] lg:min-h-[620px] bg-white`}>
       {activeThread ? (
         <>
-          <div className="client-chat-pane-header p-3 md:p-5 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
+          <div className="client-chat-pane-header client-conversation-bar p-3 md:p-5 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
             <div className="flex items-center gap-3 min-w-0">
               <button type="button" onClick={() => setMobileChatOpen(false)} className="lg:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
                 <ArrowLeft size={18} />
@@ -673,7 +680,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap justify-start sm:justify-end gap-2 w-full sm:w-auto">
+            <div className="client-chat-actions flex items-center justify-start gap-2 w-full overflow-x-auto pb-1">
               <button
                 type="button"
                 onClick={openRescheduleDialog}
@@ -688,7 +695,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
                 disabled={!activeThread || sending}
                 className="h-9 px-3 rounded-full bg-white border border-neutral-200 text-black text-[8px] font-bold uppercase tracking-widest flex items-center gap-2 hover:border-black disabled:opacity-40 transition-colors"
               >
-                <Bell size={12} /> Running Late
+                <Bell size={12} /> Late
               </button>
               {activeThread.isExample && <span className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example</span>}
               <span className={`px-3 py-1.5 rounded-full border text-[9px] font-bold uppercase tracking-widest ${statusStyles[activeThread.bookingStatus] || statusStyles.pending}`}>

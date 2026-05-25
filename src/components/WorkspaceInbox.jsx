@@ -471,16 +471,16 @@ export function WorkspaceInbox({
 
   return (
     <>
-    <section data-tour="client-inbox" className={`support-inbox-card support-inbox-pro saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
+    <section data-tour="client-inbox" className={`support-inbox-card support-inbox-pro support-desk-shell saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
       <div className="h-1 native-gradient-line" />
-      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} support-inbox-topbar border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4`}>
+      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} support-inbox-topbar support-command-bar border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4`}>
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">
+          <div className="support-command-pill inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">
             <MessageCircle size={13} className="text-black" />
-            Live Support Desk
+            Live Support Inbox
           </div>
-          <h2 className="text-lg md:text-3xl font-bold tracking-tight text-black">Client conversations, linked to the booking.</h2>
-          <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Reply fast, confirm requests, send running-late updates, and settle reschedules without losing booking context.</p>
+          <h2 className="support-command-title text-lg md:text-3xl font-bold tracking-tight text-black">A calm desk for every client conversation.</h2>
+          <p className="support-command-copy hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Reply, confirm, reschedule, and send running-late updates with the booking context beside the chat.</p>
           {shouldShowExampleThread && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
         <div className="support-inbox-pulse grid grid-cols-3 gap-2 w-full lg:w-[360px] xl:w-[390px] shrink-0">
@@ -500,9 +500,16 @@ export function WorkspaceInbox({
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 xl:grid-cols-12 ${chatFullscreen ? 'min-h-0 flex-1' : 'min-h-[520px] xl:min-h-[640px]'}`}>
+      <div className={`support-workspace-grid grid grid-cols-1 xl:grid-cols-12 ${chatFullscreen ? 'min-h-0 flex-1' : 'min-h-[520px] xl:min-h-[640px]'}`}>
         <aside className={`support-thread-list ${mobileChatOpen ? 'hidden xl:block' : ''} xl:col-span-4 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-neutral-50/45`}>
           <div className="support-thread-search p-3 md:p-4 border-b border-neutral-100 bg-white/70">
+            <div className="support-rail-head flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Inbox</p>
+                <h3 className="text-lg font-bold tracking-tight text-black">Client threads</h3>
+              </div>
+              <span className="support-rail-count rounded-full border border-neutral-100 bg-white px-3 py-1 text-[10px] font-bold text-black">{filteredThreads.length}</span>
+            </div>
             <div className="relative">
               <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
               <input
@@ -563,7 +570,7 @@ export function WorkspaceInbox({
         <div className={`support-chat-panel ${mobileChatOpen ? 'fixed inset-0 z-[999] xl:static xl:z-auto' : 'hidden xl:flex'} xl:col-span-8 flex flex-col min-h-[100dvh] xl:min-h-[620px] bg-white`}>
           {activeThread ? (
             <>
-              <div className="support-chat-header p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
+              <div className="support-chat-header support-conversation-bar p-3 md:p-5 xl:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white">
                 <div className="flex items-center gap-3 min-w-0">
                   <button type="button" onClick={() => setMobileChatOpen(false)} className="xl:hidden w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0">
                     <ArrowLeft size={18} />
@@ -581,18 +588,18 @@ export function WorkspaceInbox({
                     </p>
                   </div>
                 </div>
-                <div className="support-chat-actions flex sm:flex-wrap sm:items-center sm:justify-end gap-2 shrink-0 w-full sm:w-auto overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
+                <div className="support-chat-actions flex items-center gap-2 shrink-0 w-full overflow-x-auto pb-1">
                   <button type="button" onClick={() => setChatFullscreen(value => !value)} className="hidden md:flex h-10 w-10 rounded-lg border border-neutral-200 bg-white items-center justify-center text-black hover:border-black transition-colors">
                     {chatFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                   </button>
                   <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2 shrink-0">
-                    <Calendar size={13} /> Open Bookings
+                    <Calendar size={13} /> Bookings
                   </button>
                   <button onClick={offerReschedule} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2 shrink-0">
                     <RefreshCw size={13} /> Reschedule
                   </button>
                   <button onClick={sendRunningLateUpdate} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2 shrink-0">
-                    <Clock size={13} /> Running Late
+                    <Clock size={13} /> Late
                   </button>
                   <button onClick={confirmLinkedBooking} disabled={bookingActionMeta.disabled} className={`h-10 px-3 md:px-4 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed shrink-0 ${bookingActionMeta.className}`}>
                     <Check size={13} /> {bookingActionMeta.label}
