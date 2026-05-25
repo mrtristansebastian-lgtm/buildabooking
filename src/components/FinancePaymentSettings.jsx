@@ -5,7 +5,6 @@ import {
   BarChart3,
   CalendarDays,
   Check,
-  ChevronRight,
   CreditCard,
   Download,
   KeyRound,
@@ -614,46 +613,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
         </div>
       </div>
 
-      <div className="grid xl:grid-cols-[0.75fr_1fr] gap-4 md:gap-5 mt-4 md:mt-5">
-        <section className="rounded-[1.25rem] border border-neutral-200 bg-white shadow-sm p-4 md:p-5">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Gateway status</p>
-              <h3 className="text-2xl font-black tracking-tight text-black mt-1">{enabledCount} enabled</h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => openGatewayModal()}
-              className="h-11 px-4 rounded-2xl native-gradient-button text-black text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
-            >
-              <Settings size={14} /> Setup
-            </button>
-          </div>
-          <div className="grid sm:grid-cols-2 xl:grid-cols-1 gap-2">
-            {gatewayCards.map((gateway) => {
-              const Icon = gateway.icon;
-              const enabled = Boolean(saved[gateway.id]?.enabled);
-              return (
-                <button
-                  key={gateway.id}
-                  type="button"
-                  onClick={() => openGatewayModal(gateway.id)}
-                  className="finance-gateway-row rounded-2xl border border-neutral-100 bg-white p-3 flex items-center gap-3 text-left hover:border-neutral-300 transition-colors"
-                >
-                  <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${enabled ? 'native-gradient-button text-black' : 'bg-neutral-50 text-black border border-neutral-100'}`}>
-                    <Icon size={18} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-black text-black truncate">{gateway.name}</span>
-                    <span className="block text-[9px] font-bold uppercase tracking-widest text-neutral-400">{enabled ? `${saved[gateway.id]?.mode || 'test'} mode` : gateway.region}</span>
-                  </span>
-                  <ChevronRight size={16} className="text-neutral-300" />
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
+      <div className="mt-4 md:mt-5">
         <section className="finance-desk rounded-[1.25rem] border border-neutral-200 bg-white shadow-sm overflow-hidden">
           <div className="p-4 md:p-5 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
@@ -728,8 +688,8 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
       </div>
 
       {gatewayModalOpen && (
-        <div className="finance-modal fixed inset-0 z-[120] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
-          <div className="finance-modal-panel w-full md:max-w-5xl max-h-[92vh] overflow-hidden rounded-t-[1.75rem] md:rounded-[1.5rem] bg-white border border-neutral-200 shadow-2xl shadow-black/30">
+        <div className="finance-modal fixed inset-0 z-[1400] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
+          <div className="finance-modal-panel w-full md:max-w-5xl max-h-[92vh] overflow-hidden rounded-t-[1.75rem] md:rounded-[1.5rem] bg-white border border-neutral-200 shadow-2xl shadow-black/30 flex flex-col">
             <div className="p-4 md:p-5 border-b border-neutral-100 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <button type="button" onClick={() => setGatewayModalOpen(false)} className="w-11 h-11 rounded-2xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black md:hidden">
@@ -748,7 +708,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
               </button>
             </div>
 
-            <div className="grid lg:grid-cols-[320px_1fr] min-h-0">
+            <div className="finance-modal-body grid lg:grid-cols-[320px_1fr] min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
               <aside className="finance-modal-gateway-list border-b lg:border-b-0 lg:border-r border-neutral-100 bg-neutral-50/60 p-3 overflow-x-auto lg:overflow-y-auto">
                 <div className="flex lg:flex-col gap-2 min-w-max lg:min-w-0">
                   {gatewayCards.map((gateway) => {
@@ -777,7 +737,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                 </div>
               </aside>
 
-              <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(92vh-90px)]">
+              <div className="finance-modal-config p-4 md:p-6 overflow-visible lg:overflow-y-auto lg:max-h-full">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <p className="text-sm text-neutral-500 max-w-xl">{selectedGateway.note}</p>
@@ -851,7 +811,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
       )}
 
       {rangeDialogOpen && (
-        <div className="finance-modal fixed inset-0 z-[130] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
+        <div className="finance-modal fixed inset-0 z-[1410] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
           <div className="finance-range-panel w-full md:max-w-lg rounded-t-[1.5rem] md:rounded-[1.25rem] bg-white border border-neutral-200 shadow-2xl shadow-black/30 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>

@@ -39,16 +39,13 @@ const manualSections = [
       'Examples are marked clearly and never count in real stats.'
     ],
     actions: [
-      { name: 'Intro Tour', meaning: 'Runs the guided product walkthrough for new owners or staff.' },
-      { name: 'Continue Setup', meaning: 'Reopens the setup flow so the business name, industry, and page identity can be finished later.' },
       { name: 'Owner Manual', meaning: 'Opens this guide from Dashboard or Profile whenever the user needs help.' },
       { name: 'Publish', meaning: 'Saves the current public booking page settings so clients see the latest version.' }
     ],
     workflow: [
-      'Start with Continue Setup if the workspace is new.',
       'Open Editor and choose an industry-first theme direction.',
       'Set schedule capacity before sharing the booking link.',
-      'Use My Bookings and Support Inbox daily once requests start arriving.'
+      'Use Bookings and Support Inbox daily once requests start arriving.'
     ],
     tips: [
       'If something is empty, the app shows a labelled example so the owner understands the future workflow.',
@@ -70,7 +67,7 @@ const manualSections = [
     ],
     actions: [
       { name: 'Today / Week / Month', meaning: 'Changes the stats and activity window.' },
-      { name: 'Review', meaning: 'Opens My Bookings filtered around pending work and waitlist activity.' },
+      { name: 'Review', meaning: 'Opens Bookings filtered around pending work and waitlist activity.' },
       { name: 'Schedule', meaning: 'Opens the schedule manager to tune capacity and slots.' },
       { name: 'Edit Page', meaning: 'Opens the public page editor.' },
       { name: 'Publish', meaning: 'Pushes the current booking page setup live.' }
@@ -88,15 +85,15 @@ const manualSections = [
   },
   {
     id: 'bookings',
-    label: 'My Bookings',
+    label: 'Bookings',
     kicker: 'Booking desk',
     title: 'Turn every request into the right next step.',
-    summary: 'My Bookings is where owners approve, waitlist, decline, reschedule, assign, and follow up on requests.',
+    summary: 'Bookings is where owners approve, waitlist, decline, reschedule, assign, and follow up on requests.',
     icon: BookOpen,
     target: { tab: 'bookings' },
     highlights: [
       'The queue separates pending, confirmed, waitlist, and declined records.',
-      'Client details sync into My Clients after the form is submitted.',
+      'Client details sync into Clients after the form is submitted.',
       'Example rows explain the workflow without affecting stats.'
     ],
     actions: [
@@ -168,7 +165,7 @@ const manualSections = [
       { name: 'Open Thread', meaning: 'Shows the full conversation and linked booking context.' },
       { name: 'Reply', meaning: 'Sends a message into the client portal thread.' },
       { name: 'Confirm Linked Booking', meaning: 'Approves the booking connected to that chat when appropriate.' },
-      { name: 'Open Bookings', meaning: 'Jumps to My Bookings for deeper booking action.' }
+      { name: 'Open Bookings', meaning: 'Jumps to Bookings for deeper booking action.' }
     ],
     workflow: [
       'Open unread threads first.',
@@ -261,10 +258,10 @@ const manualSections = [
   },
   {
     id: 'clients',
-    label: 'My Clients',
+    label: 'Clients',
     kicker: 'Client directory',
     title: 'Remember the people behind the bookings.',
-    summary: 'My Clients turns booking form submissions into lightweight client profiles with history, labels, notes, and photos.',
+    summary: 'Clients turns booking form submissions into lightweight client profiles with history, labels, notes, and photos.',
     icon: Star,
     target: { tab: 'clients' },
     highlights: [
@@ -361,13 +358,13 @@ const manualSections = [
     target: { tab: 'overview' },
     highlights: [
       'Chats keeps client updates, questions, and reschedules inside Build A Booking.',
-      'My Bookings shows status, requested time, and reschedule actions.',
-      'My Profile keeps client identity and contact details tidy.'
+      'Bookings shows status, requested time, and reschedule actions.',
+      'Profile keeps client identity and contact details tidy.'
     ],
     actions: [
       { name: 'Chats', meaning: 'Client-facing conversation threads with the business.' },
-      { name: 'My Bookings', meaning: 'Client view of booking requests, confirmations, waitlist, and reschedule status.' },
-      { name: 'My Profile', meaning: 'Client account details and sign-out controls.' },
+      { name: 'Bookings', meaning: 'Client view of booking requests, confirmations, waitlist, and reschedule status.' },
+      { name: 'Profile', meaning: 'Client account details and sign-out controls.' },
       { name: 'Open App CTA', meaning: 'Encourages clients to use the app for booking updates and chat.' }
     ],
     workflow: [
@@ -405,7 +402,7 @@ const manualSections = [
       'Client selects a date.',
       'Client selects a time.',
       'Client fills required details.',
-      'The request lands in My Bookings and the client profile syncs.',
+      'The request lands in Bookings and the client profile syncs.',
       'Support chat can continue the conversation afterward.'
     ],
     tips: [

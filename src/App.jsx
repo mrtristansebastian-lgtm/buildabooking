@@ -29,13 +29,9 @@ import {
   NOTIFICATION_TYPES
 } from './services/notifications';
 import { getLocalDateStr } from './utils/dates';
-import { buildBookingSlug, prepareOnboardingDraftSettings, prepareOnboardingSettings } from './utils/onboarding';
+import { buildBookingSlug } from './utils/slugs';
 import { formatServiceDuration, formatServicePrice, normalizeServiceList, summarizeService } from './utils/services';
 import { mixHexColors, normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
-
-const OnboardingShowroom = lazy(() => (
-  import('./components/OnboardingShowroom').then((module) => ({ default: module.OnboardingShowroom }))
-));
 
 const OwnerManual = lazy(() => (
   import('./components/OwnerManual').then((module) => ({ default: module.OwnerManual }))
@@ -1333,9 +1329,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [selectedStaffFileId, setSelectedStaffFileId] = useState(null);
             const [teamPanelMode, setTeamPanelMode] = useState('roster');
             const [activeProfileSection, setActiveProfileSection] = useState('');
-            const [showOnboarding, setShowOnboarding] = useState(false);
             const [showOwnerManual, setShowOwnerManual] = useState(false);
-            const [onboardingStartScene, setOnboardingStartScene] = useState('intro');
             const containerRef = useRef(null);
             const editorContentRef = useRef(null);
             const themePaletteRailRef = useRef(null);
@@ -1348,7 +1342,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const editorDraftLastFingerprintRef = useRef('');
             const editorDraftCloudFingerprintRef = useRef('');
             const editorDraftRecoveredRef = useRef(false);
-            const onboardingDraftSaveTimerRef = useRef(0);
             const themeBatchTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
@@ -1370,7 +1363,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
-            useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
             useEffect(() => {
                 safeLocalSet('build-a-booking-dashboard-theme', dashboardThemeMode);
@@ -1524,7 +1516,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 staffCalendars: {},
                 googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
                 features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientName: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
-                onboarding: {},
                 accountProfiles: {},
                 themeTemplates: [],
                 serviceIndustry: '',
@@ -1573,11 +1564,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const isWorkspaceOwner = Boolean(user && workspaceOwnerId === user.uid);
             const canManageWorkspace = isGuestWorkspace || workspaceRole === 'owner' || workspaceRole === 'admin';
             const canManageTeam = canManageWorkspace;
-            const canSetupWorkspace = !isFirebaseConfigured || canManageWorkspace;
-            const onboardingStorageKey = useMemo(
-                () => `build-a-booking-showroom-v1-${workspaceOwnerId || 'demo'}`,
-                [workspaceOwnerId]
-            );
             const workspaceChoices = useMemo(() => {
                 if (!user) return [];
                 return [
@@ -2526,38 +2512,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             }, [clientDirectory, db, isFirebaseConfigured, user?.uid, workspaceOwnerId]);
 
-            useEffect(() => {
-                if (publicSlug || loading || view !== 'dashboard' || !canSetupWorkspace || isGuestWorkspace) return;
-                const workspaceAlreadyHandled = Boolean(settings.onboarding?.completedAt || settings.onboarding?.skippedAt);
-                const locallyHandled = safeLocalGet(onboardingStorageKey) === 'done';
-                if (workspaceAlreadyHandled || locallyHandled || showOnboarding) return;
-
-                const timer = setTimeout(() => {
-                    setOnboardingStartScene('intro');
-                    setShowOnboarding(true);
-                }, 650);
-                return () => clearTimeout(timer);
-            }, [
-                publicSlug,
-                loading,
-                view,
-                canSetupWorkspace,
-                isGuestWorkspace,
-                settings.onboarding?.completedAt,
-                settings.onboarding?.skippedAt,
-                onboardingStorageKey,
-                showOnboarding
-            ]);
-
             const navItems = [
                 { id: 'overview', icon: Layout, label: 'Dashboard' },
-                { id: 'bookings', icon: BookOpen, label: 'My Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
+                { id: 'bookings', icon: BookOpen, label: 'Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
                 { id: 'business', icon: Calendar, label: 'Schedule' },
                 { id: 'communications', icon: MessageSquare, label: 'Support Inbox' },
                 { id: 'editor', icon: Paintbrush, label: 'Editor' },
-                { id: 'services', icon: Briefcase, label: 'My Services', mobileLabel: 'Services' },
+                { id: 'services', icon: Briefcase, label: 'Services' },
                 { id: 'finance', icon: CreditCard, label: 'Finance' },
-                { id: 'clients', icon: Star, label: 'My Clients', mobileLabel: 'Clients', badge: clientMetrics.firstTimers > 0 },
+                { id: 'clients', icon: Star, label: 'Clients', badge: clientMetrics.firstTimers > 0 },
                 { id: 'staff', icon: Users, label: 'Team' },
                 { id: 'profile', icon: User, label: 'Profile' }
             ];
@@ -3378,67 +3341,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
 
-            const markOnboardingHandled = () => {
-                safeLocalSet(onboardingStorageKey, 'done');
-            };
-
-            const handleOnboardingSkip = () => {
-                markOnboardingHandled();
-                setShowOnboarding(false);
-                showToast("Tour skipped. You can reopen it from Dashboard.");
-            };
-
-            const handleOnboardingNavigate = (tab) => {
-                setView('dashboard');
-                setActiveTab(tab);
-                if (tab === 'editor') setEditorTab('themes');
-            };
-
-            const handleOnboardingDraftChange = (draft) => {
-                const currentSettings = settingsRef.current || settings;
-                const nextSettings = prepareOnboardingDraftSettings(currentSettings, draft, { draftUpdatedAt: Date.now() });
-                const currentDraftKey = JSON.stringify(currentSettings.onboarding?.draft || {});
-                const nextDraftKey = JSON.stringify(nextSettings.onboarding?.draft || {});
-
-                if (
-                    currentDraftKey === nextDraftKey &&
-                    currentSettings.brandName === nextSettings.brandName &&
-                    currentSettings.slug === nextSettings.slug &&
-                    currentSettings.tagline === nextSettings.tagline
-                ) {
-                    return;
-                }
-
-                settingsRef.current = nextSettings;
-                setSettings(nextSettings);
-                safeLocalSet(`${onboardingStorageKey}-draft`, JSON.stringify({
-                    draft: nextSettings.onboarding?.draft || {},
-                    savedAt: Date.now()
-                }));
-
-                window.clearTimeout(onboardingDraftSaveTimerRef.current);
-                if (canSetupWorkspace && !isGuestWorkspace) {
-                    onboardingDraftSaveTimerRef.current = window.setTimeout(() => {
-                        publishSettings(settingsRef.current || nextSettings, 'Setup progress saved.', { silent: true })
-                            .catch(error => console.error('Setup progress save failed', error));
-                    }, 900);
-                }
-            };
-
-            const handleOnboardingComplete = async (draft, options = {}) => {
-                window.clearTimeout(onboardingDraftSaveTimerRef.current);
-                const nextSettings = prepareOnboardingSettings(settings, draft, { completedAt: Date.now() });
-                settingsRef.current = nextSettings;
-                setSettings(nextSettings);
-                markOnboardingHandled();
-                setShowOnboarding(false);
-                setView('dashboard');
-                setActiveTab(options.destination || 'overview');
-                if (canSetupWorkspace) {
-                    await publishSettings(nextSettings, "Workspace setup saved and published.");
-                }
-            };
-
             const writeStaffAccessGrant = async (staff) => {
                 const emailKey = normalizeEmail(staff.email);
                 if (!emailKey || !workspaceOwnerId) return;
@@ -3710,7 +3612,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const editorRoomPreviewTargets = {
                 identity: 'identity',
                 introduction: 'identity',
-                industry: 'identity',
                 services: 'services',
                 colours: 'identity',
                 typography: 'identity',
@@ -3723,21 +3624,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const editorRoomScenes = [
                 { id: 'identity', number: '01', icon: BadgeCheck, title: 'Brand Identity' },
-                { id: 'industry', number: '02', icon: Sparkles, title: 'Industry' },
-                { id: 'introduction', number: '03', icon: MessageSquare, title: 'Introduction' },
-                { id: 'services', number: '04', icon: Briefcase, title: 'Services' },
-                { id: 'colours', number: '05', icon: Pipette, title: 'Colour Direction' },
-                { id: 'typography', number: '06', icon: Type, title: 'Typography' },
-                { id: 'calendar', number: '07', icon: Calendar, title: 'Calendar Style' },
-                { id: 'time', number: '08', icon: Clock, title: 'Time Style' },
-                { id: 'faq', number: '09', icon: HelpCircle, title: 'FAQ Setup' },
-                { id: 'form', number: '10', icon: FileText, title: 'Client Form' },
-                { id: 'buttons', number: '11', icon: SlidersHorizontal, title: 'Action Buttons' },
-                { id: 'social', number: '12', icon: Globe, title: 'Social & Maps' }
+                { id: 'introduction', number: '02', icon: MessageSquare, title: 'Introduction' },
+                { id: 'services', number: '03', icon: Briefcase, title: 'Services' },
+                { id: 'colours', number: '04', icon: Pipette, title: 'Colour Direction' },
+                { id: 'typography', number: '05', icon: Type, title: 'Typography' },
+                { id: 'calendar', number: '06', icon: Calendar, title: 'Calendar Style' },
+                { id: 'time', number: '07', icon: Clock, title: 'Time Style' },
+                { id: 'faq', number: '08', icon: HelpCircle, title: 'FAQ Setup' },
+                { id: 'form', number: '09', icon: FileText, title: 'Client Form' },
+                { id: 'buttons', number: '10', icon: SlidersHorizontal, title: 'Action Buttons' },
+                { id: 'social', number: '11', icon: Globe, title: 'Social & Maps' }
             ];
             const roomTabMap = {
                 identity: 'identity',
-                industry: 'themes',
                 introduction: 'identity',
                 services: 'features',
                 colours: 'themes',
@@ -4381,7 +4280,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     await createOwnerNotification(makeOwnerNotification({
                         type: NOTIFICATION_TYPES.BOOKING_REQUEST,
                         title: `New booking request from ${bookingRecord.clientName}`,
-                        body: `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from My Bookings.`,
+                        body: `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from Bookings.`,
                         ownerId: workspaceOwnerId,
                         booking: { ...bookingRecord, id: bookingRef.id },
                         bookingId: bookingRef.id,
@@ -5323,35 +5222,49 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                           <p className="text-neutral-500 font-medium text-lg max-w-md relative z-10">Design your booking page in minutes. Change colors, try fonts, upload your logo, and preview every detail as you go.</p>
                         </div>
                         
-                        {/* Box 2: My Bookings (Span 1) */}
+                        {/* Box 2: Bookings (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
                           <BookOpen className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">My Bookings.</h3>
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Bookings.</h3>
                           <p className="text-neutral-500 font-medium flex-1">Review requests, confirm clients, manage waitlists, and keep every booking moving.</p>
                         </div>
                         
-                        {/* Box 3: Schedule (Span 1) */}
+                        {/* Box 3: Services (Span 1) */}
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
+                          <Briefcase className="mb-6 text-black" size={36} strokeWidth={1.5} />
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Services.</h3>
+                          <p className="text-neutral-500 font-medium">Build a clean service menu with prices, durations, galleries, packages, and assigned staff.</p>
+                        </div>
+
+                        {/* Box 4: Schedule (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <Calendar className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Schedule.</h3>
                           <p className="text-neutral-500 font-medium">Open days, close dates, adjust slots, and keep availability clear for clients.</p>
                         </div>
 
-                        {/* Box 4: Support Inbox (Span 1) */}
+                        {/* Box 5: Support Inbox (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <MessageSquare className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Support Inbox.</h3>
                           <p className="text-neutral-500 font-medium">Reply to clients, manage reschedule requests, and keep every booking conversation tied to the right request.</p>
                         </div>
 
-                        {/* Box 5: My Clients (Span 1) */}
+                        {/* Box 6: Clients (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
                           <Star className="mb-6 text-black" size={36} strokeWidth={1.5} />
-                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">My Clients.</h3>
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Clients.</h3>
                           <p className="text-neutral-500 font-medium">Build client profiles with notes, labels, photos, messages, and booking history.</p>
                         </div>
+
+                        {/* Box 7: Finance (Span 1) */}
+                        <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group">
+                          <CreditCard className="mb-6 text-black" size={36} strokeWidth={1.5} />
+                          <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Finance.</h3>
+                          <p className="text-neutral-500 font-medium">Connect payment gateways, track earnings, review invoices, and keep transactions tidy.</p>
+                        </div>
             
-                        {/* Box 6: Team/Staff (Span 2) */}
+                        {/* Box 8: Team/Staff (Span 2) */}
                         <div className="native-feature-card native-feature-hero-card md:col-span-2 bg-[#fafafa] text-black rounded-lg p-6 sm:p-8 md:p-16 border border-neutral-200/60 hover:shadow-xl transition-all relative overflow-hidden group">
                           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
                               <div className="max-w-xl">
@@ -5362,14 +5275,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                           </div>
                         </div>
 
-                        {/* Box 7: Profile (Span 1) */}
+                        {/* Box 9: Profile (Span 1) */}
                         <div className="native-feature-card bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-14 border border-neutral-200/60 hover:shadow-xl transition-all group flex flex-col">
                           <User className="mb-6 text-black" size={36} strokeWidth={1.5} />
                           <h3 className="text-2xl font-bold tracking-tight mb-4 text-black">Profile.</h3>
                           <p className="text-neutral-500 font-medium flex-1">Keep business details, logos, social links, and referral tools in one place.</p>
                         </div>
 
-                        {/* Box 8: Dashboard (Span 3) */}
+                        {/* Box 10: Dashboard (Span 3) */}
                         <div className="native-feature-card md:col-span-3 bg-[#fafafa] rounded-lg p-6 sm:p-8 md:p-12 border border-neutral-200/60 hover:shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 text-center md:text-left">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-black shadow-sm shrink-0"><Layout size={24}/></div>
@@ -5421,23 +5334,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 {legalDialog}
                 {confirmActionDialog}
                 {runningLateActionDialog}
-                {showOnboarding && (
-                    <Suspense fallback={<LazySectionFallback label="Loading setup" />}>
-                        <AppErrorBoundary compact label="Setup Tour" resetKey={onboardingStartScene}>
-                            <OnboardingShowroom
-                                open={showOnboarding}
-                                settings={settings}
-                                bookingOrigin={window.location.origin}
-                                initialSceneId={onboardingStartScene}
-                                canApply={canSetupWorkspace}
-                                onSkip={handleOnboardingSkip}
-                                onComplete={handleOnboardingComplete}
-                                onDraftChange={handleOnboardingDraftChange}
-                                onNavigate={handleOnboardingNavigate}
-                            />
-                        </AppErrorBoundary>
-                    </Suspense>
-                )}
                 {showOwnerManual && (
                     <Suspense fallback={<LazySectionFallback label="Loading manual" />}>
                         <AppErrorBoundary compact label="Owner Manual" resetKey={dashboardThemeMode}>
@@ -5597,13 +5493,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Dashboard</h1>
                                     <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
                                 </div>
-                                <div className="dashboard-overview-actions grid grid-cols-5 sm:flex sm:flex-row gap-1.5 sm:gap-3">
-                                    <button onClick={() => { setOnboardingStartScene('intro'); setShowOnboarding(true); }} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
-                                        <Sparkles size={14}/><span className="sm:hidden">Tour</span><span className="hidden sm:inline">Intro Tour</span>
-                                    </button>
-                                    <button onClick={() => { setOnboardingStartScene('name'); setShowOnboarding(true); }} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
-                                        <ArrowRight size={14}/><span className="sm:hidden">Setup</span><span className="hidden sm:inline">Continue Setup</span>
-                                    </button>
+                                <div className="dashboard-overview-actions grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-3">
                                     <button onClick={() => setShowOwnerManual(true)} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
                                         <BookOpen size={14}/><span className="sm:hidden">Manual</span><span className="hidden sm:inline">Owner Manual</span>
                                     </button>
@@ -6328,7 +6218,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     {activeTab === 'services' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <Suspense fallback={<LazySectionFallback label="Loading service studio" />}>
-                                <AppErrorBoundary compact label="My Services" resetKey={`${workspaceOwnerId}-${settings.serviceIndustry || 'services'}`}>
+                                <AppErrorBoundary compact label="Services" resetKey={`${workspaceOwnerId}-${settings.serviceIndustry || 'services'}`}>
                                     <ServicesStudio
                                         settings={settings}
                                         staffList={displayStaffList}
@@ -6368,7 +6258,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">My Clients</h2>
+                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Clients</h2>
                                     <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Profiles are built from bookings automatically, with space for notes, labels, photos, and manual walk-ins.</p>
                                 </div>
                                 <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
@@ -6894,7 +6784,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             <>
                             <header className="editor-panel-header editor-cinema-header flex-shrink-0">
                                 <div>
-                                    <span>Build A Booking Studio</span>
                                     <h2>Editor</h2>
                                 </div>
                             </header>
@@ -6915,7 +6804,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             ...scene,
                                             title: {
                                                 identity: 'Brand Identity',
-                                                industry: 'Industry',
                                                 introduction: 'Introduction',
                                                 services: 'Services',
                                                 colours: 'Colour direction',
@@ -6929,7 +6817,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             }[scene.id],
                                             prompt: {
                                                 identity: 'Logo, banner, and page alignment live here in tidy setup drawers.',
-                                                industry: 'Choose the business world so the editor can shape the right booking experience.',
                                                 introduction: 'Name the page and write the first words clients see. Type here or directly on the mockup.',
                                                 services: 'Build the bookable menu clients choose from before they request a time.',
                                                 colours: 'Build a live color direction from one color, many colors, or your uploaded brand media.',
@@ -6989,20 +6876,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             )}
 
-                                                            {activeScene.id === 'industry' && (
-                                                                <div className="cinema-theme-preview">
-                                                                    <span>{selectedIndustryFilter ? selectedIndustryName : 'Choose an industry'}</span>
-                                                                    <h4>{selectedIndustryFilter ? `${selectedIndustryName} gets its own rhythm.` : 'Start with the business type.'}</h4>
-                                                                    <p>{selectedIndustryFilter ? `The next rooms use ${selectedIndustryName.toLowerCase()} logic for layout, tone, fonts, and booking flow.` : 'No random templates. The page starts by understanding the kind of business being booked.'}</p>
-                                                                    <div>{industryFilterOptions.slice(0, 4).map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)}><small>{industry.name}</small><b>{industry.subtitle || industry.hint || 'Industry'}</b></button>)}</div>
-                                                                </div>
-                                                            )}
-
                                                             {activeScene.id === 'colours' && (
                                                                 <div className="cinema-theme-preview">
                                                                     <span>{selectedPaletteName || 'Color direction'}</span>
-                                                                    <h4>{selectedIndustryFilter ? `${selectedPalettePhrase} for ${selectedIndustryName}.` : 'Choose color after industry.'}</h4>
-                                                                    <p>{selectedIndustryFilter ? 'Pick a broad color direction, custom color, or extract a palette from your uploaded logo and banner.' : 'The palette room becomes sharper once the industry room is complete.'}</p>
+                                                                    <h4>{`${selectedPalettePhrase || 'Colour direction'} for your booking page.`}</h4>
+                                                                    <p>Pick the background, heading, and button colours clients notice first, or extract a palette from your uploaded logo and banner.</p>
                                                                     <div>{paletteFilterOptions.slice(0, 4).map(palette => <button key={palette.id} type="button" onClick={() => {
                                                                         const nextMix = [palette.id];
                                                                         handleSettingChange('editorColorMix', nextMix);
@@ -7034,7 +6912,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                         ['Services', workspaceServices.length],
                                                                         ['Live', workspaceServices.filter(service => service.active !== false).length],
                                                                         ['Staff matched', workspaceServices.filter(service => Array.isArray(service.staffIds) && service.staffIds.length > 0).length],
-                                                                        [selectedIndustryName || 'Industry', true]
+                                                                        ['Booking menu', true]
                                                                     ].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}
                                                                 </div>
                                                             )}
@@ -7094,18 +6972,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy booking link</button>
                                                             </>}
 
-                                                            {activeScene.id === 'industry' && <>
-                                                                <div className="cinema-control-title"><span>Industry</span><small>The theme starts here.</small></div>
-                                                                <div className="cinema-industry-list">{industryFilterOptions.map(industry => <button key={industry.id} type="button" onClick={() => setThemeFilterValue('industry', industry.id)} className={themeGenerationInputs.industry === industry.id ? 'is-active' : ''}><span>{industry.name}</span><small>{industry.subtitle || industry.hint || 'Booking industry'}</small><ChevronRight size={15}/></button>)}</div>
-                                                            </>}
-
                                                             {activeScene.id === 'services' && <>
                                                                 <div className="cinema-control-title"><span>Service menu</span><small>Services are edited in their own studio so pricing, galleries, and staff stay organized.</small></div>
                                                                 <div className="cinema-feature-preview">
                                                                     {workspaceServices.slice(0, 6).map(service => <span key={service.id} className={service.active !== false ? 'is-on' : ''}>{service.name}</span>)}
                                                                     {workspaceServices.length === 0 && <span>Add your first service</span>}
                                                                 </div>
-                                                                <button type="button" onClick={() => setActiveTab('services')}><Briefcase size={15}/> Open My Services</button>
+                                                                <button type="button" onClick={() => setActiveTab('services')}><Briefcase size={15}/> Open Services</button>
                                                             </>}
 
                                                             {activeScene.id === 'colours' && <>
@@ -7437,7 +7310,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                         <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                             <div>
-                                <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">My Bookings</h1>
+                                <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Bookings</h1>
                                 <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Review requests, confirm clients, assign your team, and keep every appointment moving.</p>
                             </div>
                         </header>

@@ -56,8 +56,8 @@ const LIVE_MESSAGE_LIMIT = 20;
 
 const navItems = [
   { id: 'chats', label: 'Chats', icon: MessageCircle },
-  { id: 'bookings', label: 'My Bookings', icon: BookOpen },
-  { id: 'profile', label: 'My Profile', icon: UserRound }
+  { id: 'bookings', label: 'Bookings', icon: BookOpen },
+  { id: 'profile', label: 'Profile', icon: UserRound }
 ];
 
 export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPreview = false, onSignOut, onOwnerLogin, onInstallApp }) {
@@ -850,19 +850,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
   );
 
   const renderBookings = () => (
-    <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">
-      <div className="h-1 native-gradient-line" />
-      <div className="p-5 md:p-7 border-b border-neutral-100 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Booking Timeline</p>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight">My <span className="native-accent-text">Bookings</span></h1>
-          <p className="text-sm md:text-base text-neutral-500 mt-2">Everything you have booked, requested, or need help with stays here.</p>
-          {!bookings.length && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
-        </div>
-        <div className="w-10 h-10 rounded-lg native-gradient-icon flex items-center justify-center">
-          <RefreshCw size={18} />
-        </div>
-      </div>
+    <section className="client-bookings-panel rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 md:p-6 bg-neutral-50/60">
         {bookingSource.length ? bookingSource.map(booking => {
           const serviceSummary = booking.serviceName
@@ -905,21 +893,18 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
 
   const renderProfile = () => (
     <section className="grid grid-cols-1 xl:grid-cols-12 gap-5 md:gap-6">
-      <div className="xl:col-span-7 rounded-[1.25rem] md:rounded-lg bg-black text-white p-6 md:p-9 overflow-hidden relative shadow-2xl shadow-black/10">
-        <div className="absolute inset-0 opacity-70 native-subtle-gradient" />
-        <div className="relative z-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-4">My Profile</p>
-          <div className="flex items-start gap-4 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-white text-black flex items-center justify-center overflow-hidden font-bold text-2xl shrink-0">
-              {user?.photoURL ? <img src={user.photoURL} alt="Client avatar" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || 'C')}
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-3xl md:text-5xl font-bold tracking-tight truncate">{user?.displayName || 'Client account'}</h1>
-              <p className="text-white/55 mt-2 break-all">{user?.email}</p>
-            </div>
+      <div className="native-stat-card xl:col-span-7 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-5 md:p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-neutral-50 border border-neutral-100 text-black flex items-center justify-center overflow-hidden font-bold text-2xl shrink-0">
+            {user?.photoURL ? <img src={user.photoURL} alt="Client avatar" className="w-full h-full object-cover" /> : (user?.email?.charAt(0)?.toUpperCase() || 'C')}
           </div>
-          <p className="text-white/65 text-base md:text-lg max-w-2xl">This is your client-side home for bookings, messages, updates, and reschedule requests across any business using Build A Booking.</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Account</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black truncate">{user?.displayName || 'Client account'}</h2>
+            <p className="text-sm text-neutral-500 mt-2 break-all">{user?.email}</p>
+          </div>
         </div>
+        <p className="text-sm md:text-base text-neutral-500 mt-6 max-w-2xl">Your bookings, messages, updates, and reschedule requests stay connected across any business using Build A Booking.</p>
       </div>
 
       <div className="xl:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
@@ -972,6 +957,24 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
     </section>
   );
 
+  const pageMeta = {
+    chats: {
+      title: 'Chats',
+      description: 'Message businesses you book with, follow approvals, and ask for help without hunting through old emails.'
+    },
+    bookings: {
+      title: 'Bookings',
+      description: 'Everything you have booked, requested, or need help with stays here.'
+    },
+    profile: {
+      title: 'Profile',
+      description: 'Manage your account, app access, and the email that links your bookings.'
+    }
+  }[activeView] || {
+    title: 'Client Portal',
+    description: ''
+  };
+
   return (
     <div className={`native-ui client-portal-shell min-h-screen pb-28 md:pb-0 ${themeMode === 'dark' ? 'dashboard-dark bg-[#050506] text-white' : 'bg-[#F7F7F5] text-black'}`}>
       <NotificationCenter
@@ -1011,37 +1014,27 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-4 md:py-10">
-        {activeView !== 'bookings' && (
-        <section className="client-portal-summary mb-4 md:mb-6 rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 p-4 md:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 native-gradient-ring">
-          <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-lg native-gradient-icon flex items-center justify-center shrink-0 shadow-xl shadow-black/10">
-              {activeView === 'chats' ? <MessageCircle size={18} /> : activeView === 'bookings' ? <BookOpen size={18} /> : <UserRound size={18} />}
-            </div>
-            <div>
-              <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Your Booking Home</p>
-              <h1 className="text-xl md:text-4xl font-bold tracking-tight">
-                {activeView === 'chats'
-                  ? <>My <span className="native-accent-text">Chats</span></>
-                  : activeView === 'bookings'
-                    ? 'Your bookings, all in one place.'
-                    : <>My <span className="native-accent-text">Profile</span></>}
-              </h1>
-              <p className="text-sm text-neutral-500 mt-1 max-w-2xl">
-                {activeView === 'chats'
-                  ? 'Message businesses you book with, follow approvals, and ask for help without hunting through old emails.'
-                  : activeView === 'bookings'
-                    ? 'See what is pending, confirmed, waitlisted, or ready to reschedule.'
-                    : 'Manage your account, app access, and the email that links your bookings.'}
-              </p>
-            </div>
+        <header className="dashboard-page-header client-portal-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">{pageMeta.title}</h1>
+            <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">{pageMeta.description}</p>
+            {activeView === 'bookings' && !bookings.length && (
+              <p className="mt-3 inline-flex rounded-full bg-white border border-neutral-200 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>
+            )}
           </div>
-          {activeView === 'chats' && threadSource.length > 0 && (
-            <button type="button" onClick={() => openThread(threadSource[0].id)} className="h-10 md:h-11 px-4 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors lg:ml-auto">
-              Open latest update <ArrowRight size={13} />
-            </button>
-          )}
-        </section>
-        )}
+          <div className="flex flex-wrap items-center gap-2">
+            {activeView === 'chats' && threadSource.length > 0 && (
+              <button type="button" onClick={() => openThread(threadSource[0].id)} className="h-10 md:h-11 px-4 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
+                Open latest update <ArrowRight size={13} />
+              </button>
+            )}
+            {activeView === 'bookings' && (
+              <button type="button" className="h-10 md:h-11 px-4 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-50 transition-colors">
+                <RefreshCw size={14} /> Refresh
+              </button>
+            )}
+          </div>
+        </header>
 
         {activeView === 'chats' && (
           <section className="client-chat-shell rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">
