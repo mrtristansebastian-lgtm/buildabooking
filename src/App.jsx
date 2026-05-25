@@ -7146,25 +7146,25 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             </>}
 
                                                             {activeScene.id === 'colours' && <>
-                                                                <div className="cinema-control-title"><span>Colour direction</span><small>Set the three colours clients notice first. Background, headings, and buttons update live in the preview.</small></div>
+                                                                <div className="cinema-control-title"><span>Colour direction</span><small>Set the page surface, text, and booking actions. Every change updates the preview live.</small></div>
                                                                 <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
                                                                     <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>Native gradient on</button>
                                                                     <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>Custom accents</button>
                                                                 </div>
-                                                                <p className="cinema-native-gradient-note">Native gradient keeps the Build A Booking moving accent on selected dates, time slots, chips, and action moments. Switch to custom accents only when you want those accent areas to follow your own colours.</p>
+                                                                <p className="cinema-native-gradient-note">Keep the Build A Booking gradient on for selected dates, time slots, chips, and action moments. Switch it off only when those accents should follow your own colours.</p>
                                                                 <div className="cinema-color-directors">
                                                                     {[
                                                                         {
                                                                             id: 'background',
                                                                             label: 'Background',
-                                                                            note: 'The main page surface behind the booking flow.',
+                                                                            note: 'Main page surface.',
                                                                             value: settings.backgroundColor || '#ffffff',
                                                                             onApply: (color) => handleSettingChange('backgroundColor', color)
                                                                         },
                                                                         {
                                                                             id: 'headings',
                                                                             label: 'Headings',
-                                                                            note: 'Business name, section titles, and strong text.',
+                                                                            note: 'Business name and section titles.',
                                                                             value: settings.headingColor || '#050505',
                                                                             onApply: (color) => {
                                                                                 handleSettingChange('headingColor', color);
@@ -7172,9 +7172,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                             }
                                                                         },
                                                                         {
+                                                                            id: 'body',
+                                                                            label: 'Body text',
+                                                                            note: 'Paragraphs, labels, and helper copy.',
+                                                                            value: settings.bodyColor || '#616672',
+                                                                            onApply: (color) => handleSettingChange('bodyColor', color)
+                                                                        },
+                                                                        {
                                                                             id: 'buttons',
                                                                             label: 'Buttons',
-                                                                            note: 'Primary booking actions and key selectable controls.',
+                                                                            note: 'Primary actions and selected controls.',
                                                                             value: settings.buttonColor || settings.primaryColor || '#050505',
                                                                             onApply: (color) => {
                                                                                 handleSettingChange('buttonColor', color);
@@ -7307,17 +7314,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             </>}
 
-                                                            {activeScene.id === 'social' && <>
-                                                                <div className="cinema-toggle-grid"><button type="button" onClick={() => handleFeatureChange('socialLinks', !settings.features?.socialLinks)} className={settings.features?.socialLinks ? 'is-on' : ''}><span>Show social footer</span><i /></button></div>
-                                                                <VisualEditorGroup title="Icon style" note="How social icons sit under the action."><StyleSegmentedControl value={settings.socialIconStyle || 'outline'} onChange={(value) => handleSettingChange('socialIconStyle', value)} label="Icon Style" /></VisualEditorGroup>
-                                                                <div className="cinema-field-grid single">
-                                                                    <label>Instagram<input value={settings.socials?.instagram || ''} onChange={(event) => handleSocialChange('instagram', event.target.value)} placeholder="@yourhandle" /></label>
-                                                                    <label>TikTok<input value={settings.socials?.tiktok || ''} onChange={(event) => handleSocialChange('tiktok', event.target.value)} placeholder="@yourtiktok" /></label>
-                                                                    <label>Facebook<input value={settings.socials?.facebook || ''} onChange={(event) => handleSocialChange('facebook', event.target.value)} placeholder="facebook page" /></label>
-                                                                    <label>Website<input value={settings.socials?.website || ''} onChange={(event) => handleSocialChange('website', event.target.value)} placeholder="https://yourwebsite.com" /></label>
-                                                                    <label>Google Maps / address<input value={settings.features?.location || ''} onChange={(event) => handleFeatureChange('location', event.target.value)} placeholder="Business address or maps link" /></label>
+                                                            {activeScene.id === 'social' && <div className="cinema-social-room">
+                                                                <div className="cinema-toggle-grid cinema-toggle-grid-compact"><button type="button" onClick={() => handleFeatureChange('socialLinks', !settings.features?.socialLinks)} className={settings.features?.socialLinks ? 'is-on' : ''}><span>Show social footer</span><i /></button></div>
+                                                                <section className="cinema-social-card">
+                                                                    <div className="cinema-social-card-head">
+                                                                        <strong>Social footer</strong>
+                                                                        <small>Choose how link icons appear below the booking action.</small>
+                                                                    </div>
+                                                                    <StyleSegmentedControl value={settings.socialIconStyle || 'outline'} onChange={(value) => handleSettingChange('socialIconStyle', value)} label="Icon style" />
+                                                                </section>
+                                                                <div className="cinema-social-fields">
+                                                                    <label><span>Instagram</span><input value={settings.socials?.instagram || ''} onChange={(event) => handleSocialChange('instagram', event.target.value)} placeholder="@yourhandle" /></label>
+                                                                    <label><span>TikTok</span><input value={settings.socials?.tiktok || ''} onChange={(event) => handleSocialChange('tiktok', event.target.value)} placeholder="@yourtiktok" /></label>
+                                                                    <label><span>Facebook</span><input value={settings.socials?.facebook || ''} onChange={(event) => handleSocialChange('facebook', event.target.value)} placeholder="facebook page" /></label>
+                                                                    <label><span>Website</span><input value={settings.socials?.website || ''} onChange={(event) => handleSocialChange('website', event.target.value)} placeholder="https://yourwebsite.com" /></label>
+                                                                    <label className="is-wide"><span>Google Maps / address</span><input value={settings.features?.location || ''} onChange={(event) => handleFeatureChange('location', event.target.value)} placeholder="Business address or maps link" /></label>
                                                                 </div>
-                                                            </>}
+                                                            </div>}
                                                         </div>
                                                     </div>
                                                 </section>
