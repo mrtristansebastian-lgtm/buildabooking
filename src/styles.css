@@ -246,6 +246,127 @@ body {
             background-position: var(--native-accent-x) 50%;
         }
 
+        .support-inbox-pro,
+        .client-chat-shell {
+            --chat-panel: #ffffff;
+            --chat-rail: rgba(248, 250, 252, 0.72);
+            --chat-canvas: #f7f7f5;
+            --chat-border: rgba(15, 23, 42, 0.08);
+            --chat-soft-border: rgba(15, 23, 42, 0.06);
+            --chat-muted: #64748b;
+            --chat-ink: #050505;
+        }
+
+        .support-inbox-pro .support-inbox-topbar {
+            background:
+                radial-gradient(circle at 0% 0%, rgba(20, 167, 255, 0.06), transparent 30%),
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,249,0.98));
+        }
+
+        .support-inbox-pro .support-pulse-chip {
+            box-shadow: 0 18px 48px -42px rgba(15, 23, 42, 0.42);
+        }
+
+        .support-inbox-pro .support-thread-list,
+        .client-chat-shell .client-chat-list {
+            background:
+                linear-gradient(180deg, rgba(250,250,249,0.88), rgba(245,245,244,0.88)),
+                var(--chat-rail);
+        }
+
+        .support-inbox-pro .support-thread-search,
+        .client-chat-shell .client-chat-search {
+            background: rgba(255,255,255,0.84);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .support-inbox-pro .support-thread-row,
+        .client-chat-shell .client-thread-row {
+            isolation: isolate;
+        }
+
+        .support-inbox-pro .support-thread-row.is-active,
+        .client-chat-shell .client-thread-row.is-active {
+            background:
+                linear-gradient(90deg, rgba(57,255,20,0.045), rgba(20,167,255,0.035), rgba(255,79,216,0.025)),
+                #ffffff !important;
+        }
+
+        .support-inbox-pro .support-chat-header,
+        .client-chat-shell .client-chat-pane-header {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .support-inbox-pro .support-chat-meta {
+            background: #fbfbfa;
+        }
+
+        .support-inbox-pro .support-chat-canvas,
+        .client-chat-shell .client-chat-canvas {
+            background:
+                radial-gradient(circle at 4% 0%, rgba(20,167,255,0.04), transparent 24%),
+                linear-gradient(180deg, #fbfbfa 0%, #f6f6f3 100%) !important;
+        }
+
+        .support-inbox-pro .support-message-bubble,
+        .client-chat-shell .client-message-bubble {
+            box-shadow: 0 18px 46px -40px rgba(15, 23, 42, 0.5) !important;
+        }
+
+        .support-inbox-pro .support-message-system,
+        .client-chat-shell .client-message-system {
+            color: #334155 !important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            background-size: auto, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            border: 1px solid transparent !important;
+        }
+
+        .support-inbox-pro .support-message-owner,
+        .client-chat-shell .client-message-client {
+            background: #101114 !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+        }
+
+        .support-inbox-pro .support-message-client,
+        .client-chat-shell .client-message-owner {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+        }
+
+        .support-inbox-pro .support-chat-composer,
+        .client-chat-shell .client-chat-composer {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .support-inbox-pro .support-chat-actions {
+            scrollbar-width: none;
+        }
+
+        .support-inbox-pro .support-chat-actions::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (max-width: 767px) {
+            .support-inbox-pro .support-inbox-pulse {
+                display: none;
+            }
+
+            .support-inbox-pro .support-chat-header,
+            .client-chat-shell .client-chat-pane-header {
+                padding-top: calc(0.75rem + env(safe-area-inset-top));
+            }
+        }
+
         .native-ui.dashboard-dark {
             background: #050506 !important;
             color: #f8fafc !important;
@@ -7580,4 +7701,274 @@ body {
         .native-home.native-home-dark .bg-\[\#39FF14\] svg {
             color: #050505 !important;
             stroke: currentColor !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-inbox-card,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-inbox-topbar,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-list,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-search,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-panel,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-header,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-meta,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-composer {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-pulse-chip,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-meta .bg-white,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-meta .bg-neutral-50,
+        .client-portal-shell.dashboard-dark .client-chat-shell,
+        .client-portal-shell.dashboard-dark .client-thread-row.is-active {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-chat-canvas,
+        .client-portal-shell.dashboard-dark .client-chat-shell .client-chat-canvas {
+            background:
+                radial-gradient(circle at 14% 0%, rgba(20,167,255,0.08), transparent 28%),
+                linear-gradient(180deg, #0b0c10, #07080a) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-row,
+        .client-portal-shell.dashboard-dark .client-thread-row {
+            background: transparent !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-thread-row:hover,
+        .client-portal-shell.dashboard-dark .client-thread-row:hover {
+            background: #17191d !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-owner,
+        .client-portal-shell.dashboard-dark .client-message-client {
+            background: #20242c !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-client,
+        .client-portal-shell.dashboard-dark .client-message-owner {
+            background: #121419 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-system,
+        .client-portal-shell.dashboard-dark .client-message-system {
+            color: #dbeafe !important;
+            background:
+                linear-gradient(180deg, rgba(18,24,32,0.95), rgba(13,18,25,0.95)) padding-box,
+                var(--native-accent-gradient) border-box !important;
+            background-size: auto, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            border: 1px solid transparent !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-bubble :where(*),
+        .client-portal-shell.dashboard-dark .client-message-bubble :where(*) {
+            color: inherit !important;
+        }
+
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-bubble .bg-white,
+        .native-ui.dashboard-dark [data-tour="client-inbox"] .support-message-bubble .bg-neutral-50,
+        .client-portal-shell.dashboard-dark .client-message-bubble .bg-white,
+        .client-portal-shell.dashboard-dark .client-message-bubble .bg-neutral-50 {
+            background: rgba(255,255,255,0.07) !important;
+            color: inherit !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .client-portal-shell.dashboard-dark .client-chat-search,
+        .client-portal-shell.dashboard-dark .client-chat-list,
+        .client-portal-shell.dashboard-dark .client-chat-pane,
+        .client-portal-shell.dashboard-dark .client-chat-pane-header,
+        .client-portal-shell.dashboard-dark .client-chat-composer {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        .finance-studio {
+            color: #050505;
+        }
+
+        .finance-toggle {
+            position: relative;
+            width: 3.5rem;
+            height: 2rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: #f4f4f5;
+            transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+            flex-shrink: 0;
+        }
+
+        .finance-toggle span {
+            position: absolute;
+            left: 0.22rem;
+            top: 0.22rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 999px;
+            background: #ffffff;
+            box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.65);
+            transition: transform 0.22s ease, background 0.22s ease;
+        }
+
+        .finance-toggle.is-on {
+            border-color: transparent;
+            background-image:
+                linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.1)),
+                var(--native-accent-button-gradient);
+            background-size: 100% 100%, 420% 420%;
+            background-position: 0 0, var(--native-accent-x) 50%;
+            box-shadow: 0 16px 36px -28px var(--native-accent-glow);
+        }
+
+        .finance-toggle.is-on span {
+            transform: translateX(1.48rem);
+            background: #050505;
+        }
+
+        .finance-export-button {
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            color: #050505;
+        }
+
+        .finance-chart-bar {
+            background-image:
+                linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.05)),
+                var(--native-accent-button-gradient);
+            background-size: 100% 100%, 420% 420%;
+            background-position: 0 0, var(--native-accent-x) 50%;
+            min-height: 0.5rem;
+            box-shadow: 0 20px 48px -32px var(--native-accent-glow);
+        }
+
+        .finance-metric-card,
+        .finance-gateway-row,
+        .finance-desk-row {
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .finance-gateway-row:hover,
+        .finance-desk-row:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 20px 54px -44px rgba(15, 23, 42, 0.35);
+        }
+
+        .finance-modal-panel,
+        .finance-range-panel {
+            color: #050505;
+        }
+
+        @media (max-width: 767px) {
+            .finance-studio .dashboard-page-header h2 {
+                font-size: 2.6rem;
+                line-height: 0.95;
+            }
+
+            .finance-chart {
+                height: 13rem !important;
+            }
+
+            .finance-modal-gateway-list {
+                scroll-snap-type: x mandatory;
+            }
+
+            .finance-modal-gateway-list button {
+                scroll-snap-align: start;
+            }
+        }
+
+        .native-ui.dashboard-dark .finance-studio,
+        .native-ui.dashboard-dark .finance-modal-panel,
+        .native-ui.dashboard-dark .finance-range-panel {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .finance-hero,
+        .native-ui.dashboard-dark .finance-desk,
+        .native-ui.dashboard-dark .finance-metric-card,
+        .native-ui.dashboard-dark .finance-gateway-row,
+        .native-ui.dashboard-dark .finance-modal-panel,
+        .native-ui.dashboard-dark .finance-range-panel {
+            background: #101114 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.1) !important;
+            box-shadow: 0 28px 80px -58px rgba(0,0,0,0.9) !important;
+        }
+
+        .native-ui.dashboard-dark .finance-studio .bg-neutral-50,
+        .native-ui.dashboard-dark .finance-studio .bg-neutral-100,
+        .native-ui.dashboard-dark .finance-modal .bg-neutral-50,
+        .native-ui.dashboard-dark .finance-modal .bg-neutral-100 {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+
+        .native-ui.dashboard-dark .finance-chart {
+            background: #17191d !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+
+        .native-ui.dashboard-dark .finance-export-button {
+            background: #17191d !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .finance-studio input,
+        .native-ui.dashboard-dark .finance-modal input {
+            background: transparent !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .finance-studio input::placeholder,
+        .native-ui.dashboard-dark .finance-modal input::placeholder {
+            color: rgba(248,250,252,0.35) !important;
+        }
+
+        .native-ui.dashboard-dark .finance-studio .text-black,
+        .native-ui.dashboard-dark .finance-modal .text-black {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .finance-studio .native-gradient-button,
+        .native-ui.dashboard-dark .finance-studio .native-gradient-button *,
+        .native-ui.dashboard-dark .finance-modal .native-gradient-button,
+        .native-ui.dashboard-dark .finance-modal .native-gradient-button * {
+            color: #050505 !important;
+        }
+
+        .native-ui.dashboard-dark .finance-toggle {
+            background: #24272d;
+            border-color: rgba(255,255,255,0.14);
+        }
+
+        .native-ui.dashboard-dark .finance-toggle.is-on {
+            border-color: transparent !important;
+            background-image:
+                linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.1)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+        }
+
+        .native-ui.dashboard-dark .finance-toggle span {
+            background: #f8fafc;
+        }
+
+        .native-ui.dashboard-dark .finance-toggle.is-on span {
+            background: #050505;
         }

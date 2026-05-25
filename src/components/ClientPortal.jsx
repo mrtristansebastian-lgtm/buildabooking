@@ -623,7 +623,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
               key={thread.id}
               type="button"
               onClick={() => openThread(thread.id)}
-              className={`w-full text-left p-4 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-black text-white' : 'hover:bg-white text-black'}`}
+              className={`client-thread-row w-full text-left p-4 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'is-active bg-white text-black shadow-sm' : 'hover:bg-white text-black'}`}
             >
               {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
               <div className="flex items-start gap-3">
@@ -632,12 +632,12 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{thread.workspaceName || thread.clientName || 'Booking chat'}</p>
+                    <p className="font-bold truncate text-black">{thread.workspaceName || thread.clientName || 'Booking chat'}</p>
                     {Number(thread.clientUnread || 0) > 0 && <span className="min-w-5 h-5 rounded-full bg-[#39FF14] text-black text-[9px] font-bold flex items-center justify-center">{thread.clientUnread}</span>}
                   </div>
-                  <p className={`text-xs mt-1 truncate ${active ? 'text-white/50' : 'text-neutral-400'}`}>{thread.isExample ? 'Example only - real chats replace this' : thread.clientName || emailKey}</p>
-                  <p className={`text-sm mt-3 line-clamp-2 ${active ? 'text-white/65' : 'text-neutral-500'}`}>{thread.lastMessage || 'No messages yet.'}</p>
-                  {thread.isExample && <span className={`inline-flex mt-3 px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${active ? 'bg-white/10 text-white/70' : 'bg-neutral-100 text-neutral-500'}`}>Preview</span>}
+                  <p className="text-xs mt-1 truncate text-neutral-400">{thread.isExample ? 'Example only - real chats replace this' : thread.clientName || emailKey}</p>
+                  <p className="text-sm mt-3 line-clamp-2 text-neutral-500">{thread.lastMessage || 'No messages yet.'}</p>
+                  {thread.isExample && <span className="inline-flex mt-3 px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Preview</span>}
                 </div>
               </div>
             </button>
@@ -668,6 +668,9 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
               <div className="min-w-0">
                 <h2 className="text-lg md:text-xl font-bold text-black truncate">{activeThread.workspaceName || 'Booking chat'}</h2>
                 <p className="text-xs text-neutral-400 truncate">{chatStaffName ? `${chatStaffName} is helping you` : activeBooking ? `${activeBooking.date} / ${activeBooking.time}` : 'Active support thread'}</p>
+                <p className="mt-1 hidden md:flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
+                  <span className="w-2 h-2 rounded-full native-gradient-line" /> Live booking thread
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap justify-start sm:justify-end gap-2 w-full sm:w-auto">
@@ -709,7 +712,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
               const clientCanRespond = pendingProposal && proposal.requestedBy !== 'client';
               return (
                 <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`client-message-bubble ${mine ? 'client-message-client bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'client-message-system native-stat-card bg-white border border-neutral-200 text-neutral-500' : 'client-message-owner bg-white text-black border border-neutral-200 rounded-bl-md'} max-w-[84%] rounded-3xl px-4 py-3 shadow-sm`}>
+                  <div className={`client-message-bubble ${mine ? 'client-message-client bg-[#111214] text-white rounded-br-md' : message.senderRole === 'system' ? 'client-message-system bg-white border border-neutral-200 text-neutral-500' : 'client-message-owner bg-white text-black border border-neutral-200 rounded-bl-md'} max-w-[84%] rounded-3xl px-4 py-3 shadow-sm`}>
                     <p className="text-[8px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'Update' : message.senderName || message.senderRole}</p>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                     {proposal && (
@@ -981,7 +984,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
         )}
 
         {activeView === 'chats' && (
-          <section className="rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">
+          <section className="client-chat-shell rounded-[1.25rem] md:rounded-lg bg-white border border-neutral-200 shadow-sm overflow-hidden native-gradient-ring">
             <div className="h-1 native-gradient-line" />
             <div className="grid grid-cols-1 lg:grid-cols-12">
               {renderChatList()}

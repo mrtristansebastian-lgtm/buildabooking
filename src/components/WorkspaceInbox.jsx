@@ -471,26 +471,26 @@ export function WorkspaceInbox({
 
   return (
     <>
-    <section data-tour="client-inbox" className={`support-inbox-card saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
+    <section data-tour="client-inbox" className={`support-inbox-card support-inbox-pro saas-card overflow-hidden bg-white native-gradient-ring ${chatFullscreen ? 'fixed inset-3 z-[80] flex flex-col rounded-[1.25rem] shadow-2xl' : ''}`}>
       <div className="h-1 native-gradient-line" />
-      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} border-b border-neutral-100 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4`}>
+      <div className={`${chatFullscreen ? 'hidden' : 'p-3 md:p-5'} support-inbox-topbar border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4`}>
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">
             <MessageCircle size={13} className="text-black" />
-            Support Inbox
+            Live Support Desk
           </div>
-          <h2 className="text-lg md:text-3xl font-bold tracking-tight text-black">Chat with your clients & manage their bookings!</h2>
-          <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Reply, confirm, reschedule, and keep every client conversation beside the booking it belongs to.</p>
+          <h2 className="text-lg md:text-3xl font-bold tracking-tight text-black">Client conversations, linked to the booking.</h2>
+          <p className="hidden sm:block text-sm text-neutral-500 mt-1 max-w-2xl">Reply fast, confirm requests, send running-late updates, and settle reschedules without losing booking context.</p>
           {shouldShowExampleThread && <p className="mt-3 inline-flex rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400">Example preview only - not saved or counted</p>}
         </div>
-        <div className="grid grid-cols-3 gap-2 w-full lg:w-[360px] xl:w-[390px] shrink-0">
+        <div className="support-inbox-pulse grid grid-cols-3 gap-2 w-full lg:w-[360px] xl:w-[390px] shrink-0">
           {[
             ['Needs Reply', needsReplyCount, Bell],
             ['Open Requests', openRequestCount, MessageCircle],
             ['Linked Bookings', linkedBookingCount, Calendar]
           ].map(([label, value, IconCmp]) => (
-            <div key={label} className="native-stat-card rounded-lg border border-neutral-100 bg-neutral-50 p-2.5 md:p-3">
-              <div className="w-7 h-7 md:w-8 md:h-8 native-gradient-icon rounded-lg flex items-center justify-center mb-2">
+            <div key={label} className="support-pulse-chip rounded-lg border border-neutral-100 bg-white p-2.5 md:p-3">
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center mb-2 text-black">
                 <IconCmp size={14} />
               </div>
               <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
@@ -502,7 +502,7 @@ export function WorkspaceInbox({
 
       <div className={`grid grid-cols-1 xl:grid-cols-12 ${chatFullscreen ? 'min-h-0 flex-1' : 'min-h-[520px] xl:min-h-[640px]'}`}>
         <aside className={`support-thread-list ${mobileChatOpen ? 'hidden xl:block' : ''} xl:col-span-4 border-b xl:border-b-0 xl:border-r border-neutral-100 bg-neutral-50/45`}>
-          <div className="p-3 md:p-4 border-b border-neutral-100 bg-white/70">
+          <div className="support-thread-search p-3 md:p-4 border-b border-neutral-100 bg-white/70">
             <div className="relative">
               <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
               <input
@@ -525,7 +525,7 @@ export function WorkspaceInbox({
                     setActiveThreadId(thread.id);
                     setMobileChatOpen(true);
                   }}
-                  className={`w-full text-left p-3.5 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'bg-white text-black shadow-sm' : 'bg-transparent hover:bg-white text-black'}`}
+                  className={`support-thread-row w-full text-left p-3.5 md:p-5 border-b border-neutral-100 transition-colors relative overflow-hidden ${active ? 'is-active bg-white text-black shadow-sm' : 'bg-transparent hover:bg-white text-black'}`}
                 >
                   {active && <span className="absolute inset-y-0 left-0 w-1 native-gradient-line" />}
                   <div className="flex items-start justify-between gap-3">
@@ -576,22 +576,25 @@ export function WorkspaceInbox({
                     <p className="text-xs md:text-sm text-neutral-500 truncate">
                       {assignedStaff ? `Assigned to ${assignedStaff.name}` : activeThread.clientEmail || 'Active support thread'}
                     </p>
+                    <p className="mt-1 hidden md:flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
+                      <span className="w-2 h-2 rounded-full native-gradient-line" /> Realtime synced
+                    </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-2 shrink-0 w-full sm:w-auto">
+                <div className="support-chat-actions flex sm:flex-wrap sm:items-center sm:justify-end gap-2 shrink-0 w-full sm:w-auto overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
                   <button type="button" onClick={() => setChatFullscreen(value => !value)} className="hidden md:flex h-10 w-10 rounded-lg border border-neutral-200 bg-white items-center justify-center text-black hover:border-black transition-colors">
                     {chatFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                   </button>
-                  <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
+                  <button onClick={() => setActiveTab?.('bookings')} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2 shrink-0">
                     <Calendar size={13} /> Open Bookings
                   </button>
-                  <button onClick={offerReschedule} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
+                  <button onClick={offerReschedule} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2 shrink-0">
                     <RefreshCw size={13} /> Reschedule
                   </button>
-                  <button onClick={sendRunningLateUpdate} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2">
+                  <button onClick={sendRunningLateUpdate} className="h-10 px-3 rounded-lg border border-neutral-200 bg-white text-[9px] font-bold uppercase tracking-widest hover:border-black transition-colors flex items-center justify-center gap-2 shrink-0">
                     <Clock size={13} /> Running Late
                   </button>
-                  <button onClick={confirmLinkedBooking} disabled={bookingActionMeta.disabled} className={`h-10 px-3 md:px-4 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed ${bookingActionMeta.className}`}>
+                  <button onClick={confirmLinkedBooking} disabled={bookingActionMeta.disabled} className={`h-10 px-3 md:px-4 rounded-lg text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed shrink-0 ${bookingActionMeta.className}`}>
                     <Check size={13} /> {bookingActionMeta.label}
                   </button>
                 </div>
@@ -625,7 +628,7 @@ export function WorkspaceInbox({
                   const messageTone = mine ? 'support-message-owner' : message.senderRole === 'system' ? 'support-message-system' : 'support-message-client';
                   return (
                     <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`support-message-bubble ${messageTone} max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-black text-white rounded-br-md' : message.senderRole === 'system' ? 'native-stat-card bg-neutral-50 border border-neutral-100 text-neutral-500' : 'bg-neutral-50 text-black border border-neutral-100 rounded-bl-md'}`}>
+                      <div className={`support-message-bubble ${messageTone} max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-[#111214] text-white rounded-br-md' : message.senderRole === 'system' ? 'bg-white border border-neutral-100 text-neutral-500' : 'bg-white text-black border border-neutral-100 rounded-bl-md'}`}>
                         <p className="text-[9px] font-bold uppercase tracking-widest opacity-45 mb-1">{message.senderRole === 'system' ? 'System' : message.senderName || message.senderRole}</p>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                         {proposal && (
