@@ -23,6 +23,12 @@ const safeLockId = (dateKey, time) => (
     .slice(0, 120)
 );
 
+const safeDocumentId = (value, max = 180) => (
+  cleanString(value, max)
+    .replace(/[^a-zA-Z0-9@._:-]/g, '-')
+    .slice(0, max) || `id-${Date.now()}`
+);
+
 const safeThreadId = (ownerId, bookingId) => (
   `${cleanString(ownerId, 80)}_${cleanString(bookingId, 80)}`
     .replace(/[^a-zA-Z0-9_-]/g, '-')
@@ -33,6 +39,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   const appId = requireString(request.data?.appId, 'App ID', 120);
   const workspaceSlug = requireString(request.data?.workspaceSlug, 'Workspace slug', 120).toLowerCase();
   const incoming = request.data?.booking || {};
+  const idempotencyKey = cleanString(request.data?.idempotencyKey || incoming.idempotencyKey, 180);
 
   const clientName = requireString(incoming.clientName, 'Client name', 120);
   const clientPhone = cleanString(incoming.clientPhone, 60);
@@ -104,6 +111,12 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     : null;
   const shouldLockSlot = status !== 'waitlist' && dateKey && time !== 'Waitlist';
   const slotLockRef = shouldLockSlot ? workspaceRef.collection('slotLocks').doc(safeLockId(dateKey, time)) : null;
+  const idempotencyRef = idempotencyKey
+    ? db
+      .collection('artifacts').doc(appId)
+      .collection('users').doc(ownerId)
+      .collection('idempotencyKeys').doc(safeDocumentId(idempotencyKey))
+    : null;
 
   const bookingRecord = {
     ownerId,
@@ -134,7 +147,17 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     createdAt: serverTimestamp()
   };
 
+  let transactionResult = null;
   await db.runTransaction(async (transaction) => {
+    if (idempotencyRef) {
+      const idempotencySnap = await transaction.get(idempotencyRef);
+      if (idempotencySnap.exists) {
+        const stored = idempotencySnap.data() || {};
+        transactionResult = stored.result || { ok: true, bookingId: stored.bookingId, reused: true };
+        return;
+      }
+    }
+
     if (slotLockRef) {
       const lockSnap = await transaction.get(slotLockRef);
       if (lockSnap.exists) {
@@ -256,9 +279,21 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    transactionResult = { ok: true, bookingId: bookingRef.id, reused: false };
+    if (idempotencyRef) {
+      transaction.set(idempotencyRef, {
+        key: idempotencyKey,
+        bookingId: bookingRef.id,
+        ownerId,
+        workspaceSlug,
+        result: transactionResult,
+        createdAtMs: bookingRecord.timestamp,
+        createdAt: serverTimestamp()
+      });
+    }
   });
 
-  return { ok: true, bookingId: bookingRef.id };
+  return transactionResult || { ok: true, bookingId: bookingRef.id };
 });
 
 exports.processNotificationJob = onDocumentCreated({

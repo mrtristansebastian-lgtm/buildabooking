@@ -7,12 +7,14 @@ import {
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
 import { NotificationCenter } from './components/NotificationCenter';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
 import { PRESET_THEMES, generateThemeCollection } from './data/themes';
 import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, functions, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
+import { drainClientErrorQueue, reportClientError } from './services/errorReporting';
 import {
   GOOGLE_CALENDAR_EVENTS_SCOPE,
   syncConfirmedBookingsToGoogleCalendar
@@ -989,7 +991,19 @@ const authRedirectStorageKey = 'build-a-booking-auth-return';
 const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
+const editorDraftStoragePrefix = 'build-a-booking-editor-draft-v2';
 const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'services', 'finance', 'clients', 'staff', 'profile'];
+const workspaceTabAliases = {
+  schedule: 'business',
+  calendar: 'business',
+  team: 'staff',
+  'my-clients': 'clients',
+  support: 'communications',
+  inbox: 'communications',
+  'support-inbox': 'communications',
+  'my-services': 'services',
+  payments: 'finance'
+};
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
 
 const safeJsonParse = (value, fallback = null) => {
@@ -1015,14 +1029,68 @@ const mergeStateIfChanged = (current, incoming) => {
   return areJsonEqual(current, next) ? current : next;
 };
 
+const getEditorDraftKey = (ownerId = 'guest') => (
+  `${editorDraftStoragePrefix}-${String(ownerId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '-')}`
+);
+
+const readEditorDraft = (ownerId) => {
+  const draft = safeJsonParse(safeLocalGet(getEditorDraftKey(ownerId)));
+  if (!draft || typeof draft !== 'object' || !draft.settings) return null;
+  return draft;
+};
+
+const writeEditorDraft = (ownerId, payload = {}) => {
+  const settingsPayload = payload.settings || {};
+  const draft = {
+    version: 2,
+    savedAt: Date.now(),
+    ...payload,
+    settings: {
+      ...settingsPayload,
+      // Local drafts should not keep changing their own fingerprint only because sync metadata moved.
+      updatedAt: settingsPayload.updatedAt || 0,
+      draftAutosavedAt: settingsPayload.draftAutosavedAt || 0
+    }
+  };
+  return safeLocalSet(getEditorDraftKey(ownerId), JSON.stringify(draft));
+};
+
+const clearEditorDraft = (ownerId) => {
+  safeLocalRemove(getEditorDraftKey(ownerId));
+};
+
+const stableSettingsFingerprint = (settings = {}) => {
+  const { updatedAt, draftAutosavedAt, publishedAt, ...stable } = settings || {};
+  try {
+    return JSON.stringify(stable);
+  } catch {
+    return '';
+  }
+};
+
+const buildPublicBookingIdempotencyKey = ({ workspaceSlug, formData = {}, dateKey, date, time, serviceId }) => {
+  const identity = normalizeEmail(formData.email || '') || String(formData.phone || formData.name || 'guest').trim().toLowerCase();
+  return [
+    workspaceSlug || 'workspace',
+    identity || 'client',
+    serviceId || formData.serviceId || 'service',
+    dateKey || date || 'date',
+    time || 'time'
+  ]
+    .join('|')
+    .replace(/[^a-zA-Z0-9|@._:-]/g, '-')
+    .slice(0, 180);
+};
+
 const normalizeWorkspaceRoute = (route = {}, fallback = {}) => {
   const source = route || {};
   const requestedView = source.view || source.return || source.returnTarget;
   const nextView = ['dashboard', 'client', 'landing'].includes(requestedView)
     ? requestedView
     : fallback.view || 'landing';
-  const nextActiveTab = workspaceTabIds.includes(source.activeTab || source.tab)
-    ? (source.activeTab || source.tab)
+  const requestedTab = workspaceTabAliases[source.activeTab || source.tab] || source.activeTab || source.tab;
+  const nextActiveTab = workspaceTabIds.includes(requestedTab)
+    ? requestedTab
     : fallback.activeTab || 'overview';
   const nextEditorTab = editorTabIds.includes(source.editorTab)
     ? source.editorTab
@@ -1274,6 +1342,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const scaleRef = useRef(1);
             const compactViewportRef = useRef(false);
             const settingsRef = useRef(null);
+            const editorDraftSaveTimerRef = useRef(0);
+            const editorDraftCloudTimerRef = useRef(0);
+            const editorDraftFlushRef = useRef(null);
+            const editorDraftLastFingerprintRef = useRef('');
+            const editorDraftCloudFingerprintRef = useRef('');
+            const editorDraftRecoveredRef = useRef(false);
             const onboardingDraftSaveTimerRef = useRef(0);
             const themeBatchTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
@@ -1294,6 +1368,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
+            useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
+            useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(onboardingDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(themeBatchTimerRef.current), []);
             useEffect(() => {
@@ -1509,6 +1585,143 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ...workspaceAccess
                 ].filter((workspace, index, list) => list.findIndex(item => item.ownerId === workspace.ownerId) === index);
             }, [settings.brandName, user, workspaceAccess]);
+            const editorDraftOwnerKey = workspaceOwnerId || user?.uid || (isGuestWorkspace ? 'guest' : 'local');
+
+            useEffect(() => {
+                if (publicSlug || !editorDraftOwnerKey) return;
+                const localDraft = readEditorDraft(editorDraftOwnerKey);
+                if (!localDraft?.settings) return;
+                const localDraftAgeMs = Date.now() - Number(localDraft.savedAt || 0);
+                if (localDraftAgeMs > 1000 * 60 * 60 * 24 * 14) return;
+                const remoteUpdatedAt = getTimestampValue(settingsRef.current?.updatedAt || settings.updatedAt);
+                if (Number(localDraft.savedAt || 0) <= remoteUpdatedAt) return;
+                setSettings(prev => mergeStateIfChanged(prev, localDraft.settings));
+                if (localDraft.route?.activeTab) {
+                    saveWorkspaceRoute(localDraft.route);
+                }
+                if (localDraft.editorStudioScene) {
+                    setEditorStudioScene(localDraft.editorStudioScene);
+                }
+                if (!editorDraftRecoveredRef.current) {
+                    editorDraftRecoveredRef.current = true;
+                    showToast('Recovered your latest editor draft on this device.');
+                }
+            }, [editorDraftOwnerKey, publicSlug]);
+
+            useEffect(() => {
+                if (publicSlug || !editorDraftOwnerKey) return undefined;
+                const route = { view, activeTab, editorTab };
+                const persistDraft = () => {
+                    writeEditorDraft(editorDraftOwnerKey, {
+                        settings: settingsRef.current || settings,
+                        route,
+                        editorStudioScene,
+                        savedAt: Date.now()
+                    });
+                };
+                editorDraftFlushRef.current = persistDraft;
+                const fingerprint = JSON.stringify({
+                    owner: editorDraftOwnerKey,
+                    route,
+                    scene: editorStudioScene,
+                    settings: stableSettingsFingerprint(settings)
+                });
+                if (fingerprint === editorDraftLastFingerprintRef.current) return undefined;
+                editorDraftLastFingerprintRef.current = fingerprint;
+                window.clearTimeout(editorDraftSaveTimerRef.current);
+                editorDraftSaveTimerRef.current = window.setTimeout(persistDraft, 400);
+                return undefined;
+            }, [activeTab, editorDraftOwnerKey, editorStudioScene, editorTab, publicSlug, settings, view]);
+
+            useEffect(() => {
+                if (publicSlug || !isFirebaseConfigured || !db || !workspaceOwnerId || !canManageWorkspace || activeTab !== 'editor') return undefined;
+                const fingerprint = stableSettingsFingerprint(settings);
+                if (!fingerprint || fingerprint === editorDraftCloudFingerprintRef.current) return undefined;
+                window.clearTimeout(editorDraftCloudTimerRef.current);
+                editorDraftCloudTimerRef.current = window.setTimeout(async () => {
+                    try {
+                        const nextSettings = {
+                            ...(settingsRef.current || settings),
+                            draftAutosavedAt: Date.now(),
+                            updatedAt: Date.now()
+                        };
+                        await FirebaseSDK.setDoc(
+                            FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'),
+                            nextSettings,
+                            { merge: true }
+                        );
+                        editorDraftCloudFingerprintRef.current = stableSettingsFingerprint(nextSettings);
+                    } catch (error) {
+                        console.warn('Editor cloud draft sync paused.', error);
+                    }
+                }, 7000);
+                return undefined;
+            }, [activeTab, canManageWorkspace, publicSlug, settings, workspaceOwnerId]);
+
+            useEffect(() => {
+                const flushLocalDraft = () => {
+                    editorDraftFlushRef.current?.();
+                };
+                const handleVisibility = () => {
+                    if (document.visibilityState !== 'visible') flushLocalDraft();
+                };
+                document.addEventListener('visibilitychange', handleVisibility);
+                window.addEventListener('pagehide', flushLocalDraft);
+                window.addEventListener('beforeunload', flushLocalDraft);
+                return () => {
+                    document.removeEventListener('visibilitychange', handleVisibility);
+                    window.removeEventListener('pagehide', flushLocalDraft);
+                    window.removeEventListener('beforeunload', flushLocalDraft);
+                };
+            }, []);
+
+            useEffect(() => {
+                const handleWindowError = (event) => {
+                    reportClientError(event.error || event.message, { source: 'window-error' });
+                };
+                const handleUnhandledRejection = (event) => {
+                    reportClientError(event.reason || 'Unhandled promise rejection', { source: 'unhandled-rejection' });
+                };
+                window.addEventListener('error', handleWindowError);
+                window.addEventListener('unhandledrejection', handleUnhandledRejection);
+                return () => {
+                    window.removeEventListener('error', handleWindowError);
+                    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+                };
+            }, []);
+
+            useEffect(() => {
+                if (!isFirebaseConfigured || !db || !workspaceOwnerId) return undefined;
+                let cancelled = false;
+                const ownerIdForReports = workspaceOwnerId;
+                const writeErrorReport = async (report) => {
+                    if (cancelled) return;
+                    await FirebaseSDK.addDoc(
+                        FirebaseSDK.collection(db, 'artifacts', appId, 'users', ownerIdForReports, 'clientErrors'),
+                        {
+                            ...report,
+                            ownerId: ownerIdForReports,
+                            uid: user?.uid || '',
+                            email: user?.email || '',
+                            createdAt: FirebaseSDK.serverTimestamp()
+                        }
+                    );
+                };
+                drainClientErrorQueue(writeErrorReport).catch((error) => {
+                    console.warn('Queued client errors could not be sent yet.', error);
+                });
+                const handleOnline = () => {
+                    drainClientErrorQueue(writeErrorReport).catch((error) => {
+                        console.warn('Queued client errors could not be sent after reconnect.', error);
+                    });
+                };
+                window.addEventListener('online', handleOnline);
+                return () => {
+                    cancelled = true;
+                    window.removeEventListener('online', handleOnline);
+                };
+            }, [user?.email, user?.uid, workspaceOwnerId]);
+
             const workspaceServices = useMemo(() => normalizeServiceList(settings.services || []), [settings.services]);
             const serviceById = useMemo(() => new Map(workspaceServices.map(service => [service.id, service])), [workspaceServices]);
             const getBookingService = (booking = {}) => {
@@ -3020,11 +3233,20 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const settingsRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings');
                 const unsubSettings = FirebaseSDK.onSnapshot(settingsRef, (docSnap) => { 
                     if (docSnap.exists()) {
-                        const data = { ...docSnap.data() };
+                        let data = { ...docSnap.data() };
                         if(data.fontFamily === 'sans') data.fontFamily = 'inter';
                         if(data.fontFamily === 'serif') data.fontFamily = 'playfair';
                         if(data.fontFamily === 'mono') data.fontFamily = 'space-mono';
                         if(data.fontFamily === 'display') data.fontFamily = 'syne';
+                        const localDraft = readEditorDraft(workspaceOwnerId);
+                        const remoteUpdatedAt = Math.max(getTimestampValue(data.updatedAt), getTimestampValue(data.draftAutosavedAt), getTimestampValue(data.publishedAt));
+                        if (localDraft?.settings && Number(localDraft.savedAt || 0) > remoteUpdatedAt) {
+                            data = { ...data, ...localDraft.settings };
+                            if (!editorDraftRecoveredRef.current) {
+                                editorDraftRecoveredRef.current = true;
+                                showToast('Recovered your latest editor draft on this device.');
+                            }
+                        }
                         setSettings(prev => mergeStateIfChanged(prev, data));
                     }
                 }, handleSyncError('Settings'));
@@ -3063,7 +3285,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }, handleSyncError('Client'));
 
                 const bookingsCol = FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings');
-                const unsubBookings = FirebaseSDK.onSnapshot(bookingsCol, (snap) => {
+                const bookingsQuery = FirebaseSDK.query(
+                    bookingsCol,
+                    FirebaseSDK.orderBy('timestamp', 'desc'),
+                    FirebaseSDK.limit(250)
+                );
+                const unsubBookings = FirebaseSDK.onSnapshot(bookingsQuery, (snap) => {
                     const nextBookings = snap.docs
                         .map(doc => ({ id: doc.id, ...doc.data() }))
                         .sort((a, b) => getTimestampValue(b.timestamp) - getTimestampValue(a.timestamp));
@@ -3106,6 +3333,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         ownerEmail: user?.email || '',
                         workspaceName: publicSettingsToPublish.brandName || 'Build A Booking Workspace'
                     });
+                    clearEditorDraft(workspaceOwnerId || editorDraftOwnerKey);
                     if (!silent) showToast(successMessage);
                     return true;
                 } catch (err) {
@@ -3140,6 +3368,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         { merge: true }
                     );
                     setSettings(prev => ({ ...prev, ...draftSettings }));
+                    clearEditorDraft(workspaceOwnerId || editorDraftOwnerKey);
                     showToast(successMessage);
                     return true;
                 } catch (err) {
@@ -4201,6 +4430,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     timestamp: Date.now(),
                     createdAt: FirebaseSDK.serverTimestamp()
                 };
+                const idempotencyKey = buildPublicBookingIdempotencyKey({
+                    workspaceSlug: publicSlug,
+                    formData,
+                    dateKey: bookingRecord.dateKey,
+                    date: bookingRecord.date,
+                    time: bookingRecord.time,
+                    serviceId: bookingRecord.serviceId
+                });
 
                 try {
                     if (functions && FirebaseSDK.httpsCallable) {
@@ -4209,6 +4446,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             await createPublicBookingRequest({
                                 appId,
                                 workspaceSlug: publicSlug,
+                                idempotencyKey,
                                 booking: {
                                     clientName: bookingRecord.clientName,
                                     clientPhone: bookingRecord.clientPhone,
@@ -4953,7 +5191,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 return (
                     <div className="h-screen w-screen overflow-x-hidden overflow-y-auto" style={{ backgroundColor: publicWorkspace.backgroundColor || '#ffffff' }}>
                         <Suspense fallback={<LazySectionFallback label="Loading booking page" />}>
-                            <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} onInstallApp={handleAddToHomeScreen} />
+                            <AppErrorBoundary compact label="Booking Page" resetKey={publicSlug}>
+                                <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} onInstallApp={handleAddToHomeScreen} />
+                            </AppErrorBoundary>
                         </Suspense>
                     </div>
                 );
@@ -4991,19 +5231,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 return (
                     <Suspense fallback={<LazySectionFallback label="Loading client portal" />}>
-                        <ClientPortal
-                            appId={appId}
-                            db={clientGuestMode ? null : db}
-                            user={clientPortalUser}
-                            themeMode={dashboardThemeMode}
-                            isGuestPreview={clientGuestMode}
-                            onSignOut={clientGuestMode ? () => {
-                                setClientGuestMode(false);
-                                applyWorkspaceRoute({ view: 'landing' });
-                            } : handleSignOut}
-                            onOwnerLogin={() => applyWorkspaceRoute({ view: 'dashboard', activeTab: 'overview', editorTab })}
-                            onInstallApp={handleAddToHomeScreen}
-                        />
+                        <AppErrorBoundary compact label="Client Portal" resetKey={`${clientPortalUser?.uid || 'guest'}-${dashboardThemeMode}`}>
+                            <ClientPortal
+                                appId={appId}
+                                db={clientGuestMode ? null : db}
+                                user={clientPortalUser}
+                                themeMode={dashboardThemeMode}
+                                isGuestPreview={clientGuestMode}
+                                onSignOut={clientGuestMode ? () => {
+                                    setClientGuestMode(false);
+                                    applyWorkspaceRoute({ view: 'landing' });
+                                } : handleSignOut}
+                                onOwnerLogin={() => applyWorkspaceRoute({ view: 'dashboard', activeTab: 'overview', editorTab })}
+                                onInstallApp={handleAddToHomeScreen}
+                            />
+                        </AppErrorBoundary>
                     </Suspense>
                 );
             }
@@ -5181,30 +5423,34 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 {runningLateActionDialog}
                 {showOnboarding && (
                     <Suspense fallback={<LazySectionFallback label="Loading setup" />}>
-                        <OnboardingShowroom
-                            open={showOnboarding}
-                            settings={settings}
-                            bookingOrigin={window.location.origin}
-                            initialSceneId={onboardingStartScene}
-                            canApply={canSetupWorkspace}
-                            onSkip={handleOnboardingSkip}
-                            onComplete={handleOnboardingComplete}
-                            onDraftChange={handleOnboardingDraftChange}
-                            onNavigate={handleOnboardingNavigate}
-                        />
+                        <AppErrorBoundary compact label="Setup Tour" resetKey={onboardingStartScene}>
+                            <OnboardingShowroom
+                                open={showOnboarding}
+                                settings={settings}
+                                bookingOrigin={window.location.origin}
+                                initialSceneId={onboardingStartScene}
+                                canApply={canSetupWorkspace}
+                                onSkip={handleOnboardingSkip}
+                                onComplete={handleOnboardingComplete}
+                                onDraftChange={handleOnboardingDraftChange}
+                                onNavigate={handleOnboardingNavigate}
+                            />
+                        </AppErrorBoundary>
                     </Suspense>
                 )}
                 {showOwnerManual && (
                     <Suspense fallback={<LazySectionFallback label="Loading manual" />}>
-                        <OwnerManual
-                            themeMode={dashboardThemeMode}
-                            onClose={() => setShowOwnerManual(false)}
-                            onNavigate={(targetTab, targetEditorTab) => {
-                                setShowOwnerManual(false);
-                                setActiveTab(targetTab);
-                                if (targetEditorTab) setEditorTab(targetEditorTab);
-                            }}
-                        />
+                        <AppErrorBoundary compact label="Owner Manual" resetKey={dashboardThemeMode}>
+                            <OwnerManual
+                                themeMode={dashboardThemeMode}
+                                onClose={() => setShowOwnerManual(false)}
+                                onNavigate={(targetTab, targetEditorTab) => {
+                                    setShowOwnerManual(false);
+                                    setActiveTab(targetTab);
+                                    if (targetEditorTab) setEditorTab(targetEditorTab);
+                                }}
+                            />
+                        </AppErrorBoundary>
                     </Suspense>
                 )}
                 {user && !publicSlug && (
@@ -6012,27 +6258,29 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Open days, tune staff calendars, and keep booking capacity clear.</p>
                             </header>
                             <Suspense fallback={<LazySectionFallback label="Loading schedule" />}>
-                                <BusinessCalendar
-                                    settings={settings}
-                                    setSettings={setSettings}
-                                    onSave={saveSettings}
-                                    showToast={showToast}
-                                    bookings={visibleBookings}
-                                    clientDirectory={clientDirectory}
-                                    staffList={displayStaffList}
-                                    activeStaffId={activeStaffProfile?.id || 'owner'}
-                                    workspaceRole={workspaceRole}
-                                    googleCalendarState={{
-                                        connected: Boolean(googleCalendarAuth.accessToken),
-                                        email: googleCalendarAuth.email || settings.googleCalendar?.connectedEmail || '',
-                                        connectedAt: googleCalendarAuth.connectedAt || settings.googleCalendar?.connectedAt || 0,
-                                        lastSyncedAt: settings.googleCalendar?.lastSyncedAt || 0,
-                                        lastSyncCount: settings.googleCalendar?.lastSyncCount || 0,
-                                        syncing: googleCalendarSyncing
-                                    }}
-                                    onConnectGoogleCalendar={connectGoogleCalendar}
-                                    onSyncGoogleCalendar={syncGoogleCalendarBookings}
-                                />
+                                <AppErrorBoundary compact label="Schedule" resetKey={`${activeTab}-${workspaceOwnerId}-${dashboardThemeMode}`}>
+                                    <BusinessCalendar
+                                        settings={settings}
+                                        setSettings={setSettings}
+                                        onSave={saveSettings}
+                                        showToast={showToast}
+                                        bookings={visibleBookings}
+                                        clientDirectory={clientDirectory}
+                                        staffList={displayStaffList}
+                                        activeStaffId={activeStaffProfile?.id || 'owner'}
+                                        workspaceRole={workspaceRole}
+                                        googleCalendarState={{
+                                            connected: Boolean(googleCalendarAuth.accessToken),
+                                            email: googleCalendarAuth.email || settings.googleCalendar?.connectedEmail || '',
+                                            connectedAt: googleCalendarAuth.connectedAt || settings.googleCalendar?.connectedAt || 0,
+                                            lastSyncedAt: settings.googleCalendar?.lastSyncedAt || 0,
+                                            lastSyncCount: settings.googleCalendar?.lastSyncCount || 0,
+                                            syncing: googleCalendarSyncing
+                                        }}
+                                        onConnectGoogleCalendar={connectGoogleCalendar}
+                                        onSyncGoogleCalendar={syncGoogleCalendarBookings}
+                                    />
+                                </AppErrorBoundary>
                             </Suspense>
                         </div>
                     )}
@@ -6057,19 +6305,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                             <div className="support-page-shell max-w-[88rem] mx-auto">
                                 <Suspense fallback={<LazySectionFallback label="Loading client inbox" />}>
-                                    <WorkspaceInbox
-                                        appId={appId}
-                                        db={db}
-                                        user={user}
-                                        workspaceOwnerId={workspaceOwnerId}
-                                        bookings={visibleBookings}
-                                        clientDirectory={clientDirectory}
-                                        staffList={displayStaffList}
-                                        updateBooking={updateBooking}
-                                        setActiveTab={setActiveTab}
-                                        focusTarget={supportThreadFocus}
-                                        showToast={showToast}
-                                    />
+                                    <AppErrorBoundary compact label="Support Inbox" resetKey={`${workspaceOwnerId}-${supportThreadFocus?.requestId || 'inbox'}`}>
+                                        <WorkspaceInbox
+                                            appId={appId}
+                                            db={db}
+                                            user={user}
+                                            workspaceOwnerId={workspaceOwnerId}
+                                            bookings={visibleBookings}
+                                            clientDirectory={clientDirectory}
+                                            staffList={displayStaffList}
+                                            updateBooking={updateBooking}
+                                            setActiveTab={setActiveTab}
+                                            focusTarget={supportThreadFocus}
+                                            showToast={showToast}
+                                        />
+                                    </AppErrorBoundary>
                                 </Suspense>
                             </div>
                         </div>
@@ -6078,21 +6328,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     {activeTab === 'services' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <Suspense fallback={<LazySectionFallback label="Loading service studio" />}>
-                                <ServicesStudio
-                                    settings={settings}
-                                    staffList={displayStaffList}
-                                    currentIndustry={themeGenerationInputs.industry || settings.serviceIndustry}
-                                    canManageWorkspace={canManageWorkspace}
-                                    onChooseIndustry={(industryId) => {
-                                        handleSettingChange('serviceIndustry', industryId);
-                                        if (industryId) setThemeFilterValue('industry', industryId);
-                                    }}
-                                    onUpdateSettings={async (nextSettings, message) => {
-                                        setSettings(nextSettings);
-                                        await saveSettingsDraft(nextSettings, message || 'Services saved.');
-                                    }}
-                                    showToast={showToast}
-                                />
+                                <AppErrorBoundary compact label="My Services" resetKey={`${workspaceOwnerId}-${settings.serviceIndustry || 'services'}`}>
+                                    <ServicesStudio
+                                        settings={settings}
+                                        staffList={displayStaffList}
+                                        currentIndustry={themeGenerationInputs.industry || settings.serviceIndustry}
+                                        canManageWorkspace={canManageWorkspace}
+                                        onChooseIndustry={(industryId) => {
+                                            handleSettingChange('serviceIndustry', industryId);
+                                            if (industryId) setThemeFilterValue('industry', industryId);
+                                        }}
+                                        onUpdateSettings={async (nextSettings, message) => {
+                                            setSettings(nextSettings);
+                                            await saveSettingsDraft(nextSettings, message || 'Services saved.');
+                                        }}
+                                        showToast={showToast}
+                                    />
+                                </AppErrorBoundary>
                             </Suspense>
                         </div>
                     )}
@@ -6100,12 +6352,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     {activeTab === 'finance' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <Suspense fallback={<LazySectionFallback label="Loading finance" />}>
-                                <FinancePaymentSettings
-                                    appId={appId}
-                                    businessId={workspaceOwnerId}
-                                    canManageWorkspace={canManageWorkspace}
-                                    showToast={showToast}
-                                />
+                                <AppErrorBoundary compact label="Finance" resetKey={`${workspaceOwnerId}-${dashboardThemeMode}`}>
+                                    <FinancePaymentSettings
+                                        appId={appId}
+                                        businessId={workspaceOwnerId}
+                                        canManageWorkspace={canManageWorkspace}
+                                        showToast={showToast}
+                                    />
+                                </AppErrorBoundary>
                             </Suspense>
                         </div>
                     )}
@@ -7163,7 +7417,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <MousePointerClick size={12} /> Design Inspector Live
                                 </div>
                                 <Suspense fallback={<LazySectionFallback label="Loading preview" />}>
-                                    <BookingFlow key={previewKey} settings={settings} isPreview={true} onInspect={handleInspect} onSettingChange={handleSettingChange} onComplete={handleBookingComplete} />
+                                    <AppErrorBoundary compact label="Live Preview" resetKey={previewKey}>
+                                        <BookingFlow key={previewKey} settings={settings} isPreview={true} onInspect={handleInspect} onSettingChange={handleSettingChange} onComplete={handleBookingComplete} />
+                                    </AppErrorBoundary>
                                 </Suspense>
                                 </>
                             ) : (

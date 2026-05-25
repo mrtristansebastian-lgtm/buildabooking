@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportClientError } from '../services/errorReporting';
 
 export class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,10 +13,39 @@ export class AppErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('Build A Booking recovered from a render error.', error, info);
+    reportClientError(error, {
+      source: this.props.label || 'react-boundary',
+      info
+    });
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
   }
 
   render() {
     if (!this.state.error) return this.props.children;
+
+    if (this.props.compact) {
+      return (
+        <section className="min-h-[18rem] w-full rounded-2xl border border-neutral-200 bg-white p-6 flex flex-col items-center justify-center text-center shadow-xl shadow-black/5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-3">{this.props.label || 'Section Recovery'}</p>
+          <h2 className="text-2xl font-bold tracking-tight mb-3">This area paused safely.</h2>
+          <p className="text-sm leading-relaxed text-neutral-500 max-w-md mb-5">
+            The rest of the workspace is still running. Your latest local edits are kept on this device.
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ error: null })}
+            className="h-11 px-6 rounded-full bg-black text-white text-[10px] font-bold uppercase tracking-widest"
+          >
+            Retry Section
+          </button>
+        </section>
+      );
+    }
 
     return (
       <main className="min-h-screen bg-white text-black flex items-center justify-center p-6">

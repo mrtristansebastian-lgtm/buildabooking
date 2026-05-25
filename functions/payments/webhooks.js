@@ -1,6 +1,5 @@
 const crypto = require('crypto');
 const { onRequest } = require('firebase-functions/v2/https');
-const Stripe = require('stripe');
 const { PAYMENT_SETTINGS_ENCRYPTION_KEY, hashHex, hmacHex, safeCompareHex } = require('./crypto');
 const { ozowHash, payfastSignature, queryString } = require('./gatewayFactory');
 const {
@@ -93,6 +92,7 @@ const wrapWebhook = (gatewayType, handler) => onRequest({
 });
 
 const stripeWebhook = wrapWebhook('stripe', async ({ req, credentials }) => {
+  const Stripe = require('stripe');
   const signature = req.headers['stripe-signature'];
   const webhookSecret = cleanString(credentials.webhookSecret, 2000);
   if (!signature || !webhookSecret) throw new Error('INVALID_SIGNATURE');

@@ -1,4 +1,3 @@
-const Stripe = require('stripe');
 const { HttpsError } = require('firebase-functions/v2/https');
 const { hashHex } = require('./crypto');
 const {
@@ -71,6 +70,7 @@ const makeCheckoutUrls = ({ data, paymentId, baseUrl }) => {
 
 const gatewayHandlers = {
   stripe: async ({ credentials, payment, request }) => {
+    const Stripe = require('stripe');
     const secretKey = requireCredential(credentials, 'secretKey', 'Stripe');
     const stripe = new Stripe(secretKey);
     const urls = makeCheckoutUrls({

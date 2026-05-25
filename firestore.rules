@@ -103,6 +103,20 @@ service cloud.firestore {
       allow create: if canStaff(appId, userId) || validPublicBookingCreate(appId, userId);
     }
 
+    match /artifacts/{appId}/users/{userId}/clientErrors/{errorId} {
+      allow read, delete: if canAdmin(appId, userId);
+      allow create: if canStaff(appId, userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.ownerId == userId &&
+        request.resource.data.error is map &&
+        request.resource.data.error.message is string;
+      allow update: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/idempotencyKeys/{keyId} {
+      allow read, write: if false;
+    }
+
     match /artifacts/{appId}/users/{userId}/payment_settings/{gatewayId} {
       allow read: if canPaymentAdmin(appId, userId);
       allow create, update: if canPaymentAdmin(appId, userId) &&
