@@ -94,7 +94,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
     date: 'Thursday, May 28',
     time: '14:30',
     status: 'pending',
-    serviceName: 'Private Styling Session',
+    serviceName: 'Signature Blowout',
     serviceDuration: '60',
     servicePrice: '650',
     servicePriceType: 'from',
@@ -104,8 +104,8 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
   const exampleThread = useMemo(() => ({
     id: 'example-client-thread',
     workspaceName: 'Studio Noir',
-    clientName: user?.displayName || 'Example Client',
-    clientEmail: emailKey || 'client@example.com',
+    clientName: user?.displayName || 'Maya Nkosi',
+    clientEmail: emailKey || 'maya.nkosi@example.com',
     bookingId: 'example-client-booking',
     bookingStatus: 'pending',
     lastMessage: 'We received your request. You can chat here or request a new time.',
@@ -119,7 +119,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
       id: 'example-client-system',
       senderRole: 'system',
       senderName: 'Booking update',
-      text: 'Example request sent for Thursday, May 28 at 14:30.'
+      text: 'Example Signature Blowout request sent for Thursday, May 28 at 14:30.'
     },
     {
       id: 'example-client-owner',

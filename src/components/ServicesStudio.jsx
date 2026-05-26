@@ -50,6 +50,8 @@ export const ServicesStudio = ({
   settings,
   staffList = [],
   onUpdateSettings,
+  onImageUpload,
+  onImageDelete,
   canManageWorkspace = true,
   showToast
 }) => {
@@ -176,6 +178,17 @@ export const ServicesStudio = ({
   const handleGalleryUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (onImageUpload) {
+      onImageUpload(file, {
+        folder: 'services',
+        title: 'Crop service image',
+        ratioKey: 'gallery'
+      }, (url) => {
+        setDraft(prev => ({ ...prev, imageUrls: [...(prev.imageUrls || []), url] }));
+      });
+      event.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       setDraft(prev => ({ ...prev, imageUrls: [...(prev.imageUrls || []), String(reader.result || '')] }));
@@ -185,6 +198,8 @@ export const ServicesStudio = ({
   };
 
   const removeGalleryImage = (index) => {
+    const url = (draft.imageUrls || [])[index];
+    onImageDelete?.(url);
     setDraft(prev => ({
       ...prev,
       imageUrls: (prev.imageUrls || []).filter((_, itemIndex) => itemIndex !== index)

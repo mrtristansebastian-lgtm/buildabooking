@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState }
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-    AlignCenter, AlignLeft, AlignRight, ArrowRight, BadgeCheck, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Eye, EyeOff, FileText, Globe, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, UserPlus, Users, Wifi, X, Zap
+    AlignCenter, AlignLeft, AlignRight, ArrowRight, BadgeCheck, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, EyeOff, FileText, Globe, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, UserPlus, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -75,6 +75,104 @@ const LazySectionFallback = ({ label = 'Loading workspace', variant = 'dark' }) 
     <BrandLoader label={label} variant={variant} />
   </div>
 );
+
+const IMAGE_CROP_RATIOS = {
+  square: { ratio: '1 / 1', width: 900, height: 900 },
+  banner: { ratio: '16 / 7', width: 1600, height: 700 },
+  gallery: { ratio: '4 / 3', width: 1200, height: 900 },
+  wide: { ratio: '16 / 9', width: 1600, height: 900 }
+};
+
+const loadImageForCrop = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = reject;
+  image.src = src;
+});
+
+const buildCroppedImageFile = async (crop) => {
+  const preset = IMAGE_CROP_RATIOS[crop?.ratioKey || 'square'] || IMAGE_CROP_RATIOS.square;
+  const image = await loadImageForCrop(crop.source);
+  const canvas = document.createElement('canvas');
+  canvas.width = preset.width;
+  canvas.height = preset.height;
+  const ctx = canvas.getContext('2d');
+  const zoom = Math.max(1, Number(crop.zoom || 1));
+  const coverScale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight) * zoom;
+  const drawWidth = image.naturalWidth * coverScale;
+  const drawHeight = image.naturalHeight * coverScale;
+  const offsetX = Math.max(0, drawWidth - canvas.width) * (Number(crop.positionX || 50) / 100);
+  const offsetY = Math.max(0, drawHeight - canvas.height) * (Number(crop.positionY || 50) / 100);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, -offsetX, -offsetY, drawWidth, drawHeight);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+  if (!blob) throw new Error('Could not crop image.');
+  const cleanName = String(crop.fileName || 'image.jpg').replace(/\.[a-z0-9]+$/i, '');
+  return new File([blob], `${cleanName || 'image'}-cropped.jpg`, { type: 'image/jpeg' });
+};
+
+const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
+  if (!crop) return null;
+  const preset = IMAGE_CROP_RATIOS[crop.ratioKey || 'square'] || IMAGE_CROP_RATIOS.square;
+  return (
+    <div className="image-crop-overlay" role="dialog" aria-modal="true">
+      <div className="image-crop-sheet">
+        <div className="image-crop-head">
+          <div>
+            <p>Image crop</p>
+            <h3>{crop.title || 'Crop image'}</h3>
+            <span>Position the image once, then save it cleanly across the app.</span>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close cropper">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="image-crop-body">
+          <div className="image-crop-preview">
+            <div className={`image-crop-frame ${crop.shape === 'circle' ? 'is-circle' : ''}`} style={{ aspectRatio: preset.ratio }}>
+              <img
+                src={crop.source}
+                alt=""
+                style={{
+                  objectPosition: `${crop.positionX || 50}% ${crop.positionY || 50}%`,
+                  transform: `scale(${crop.zoom || 1})`
+                }}
+              />
+            </div>
+          </div>
+          <div className="image-crop-controls">
+            {[
+              ['zoom', 'Zoom', 1, 2.2, 0.01],
+              ['positionX', 'Horizontal position', 0, 100, 1],
+              ['positionY', 'Vertical position', 0, 100, 1]
+            ].map(([key, label, min, max, step]) => (
+              <label key={key}>
+                <span>{label}</span>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={crop[key] ?? (key === 'zoom' ? 1 : 50)}
+                  onChange={(event) => onChange({ [key]: Number(event.target.value) })}
+                />
+              </label>
+            ))}
+            <div className="image-crop-actions">
+              <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
+              <button type="button" onClick={onSave} disabled={saving}>
+                <Crop size={15} /> {saving ? 'Saving...' : 'Save Crop'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const getPublicBookingSlug = () => {
   const url = new URL(window.location.href);
@@ -1495,9 +1593,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [teamPanelMode, setTeamPanelMode] = useState('roster');
             const [activeProfileSection, setActiveProfileSection] = useState('');
             const [showOwnerManual, setShowOwnerManual] = useState(false);
+            const [imageCropModal, setImageCropModal] = useState(null);
+            const [imageCropSaving, setImageCropSaving] = useState(false);
+            const [accountDeleteOpen, setAccountDeleteOpen] = useState(false);
+            const [accountDeleteText, setAccountDeleteText] = useState('');
             const containerRef = useRef(null);
             const editorContentRef = useRef(null);
             const themePaletteRailRef = useRef(null);
+            const imageCropCommitRef = useRef(null);
             const scaleRef = useRef(1);
             const compactViewportRef = useRef(false);
             const settingsRef = useRef(null);
@@ -1989,12 +2092,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const visibleBookings = bookings;
             const exampleBooking = useMemo(() => ({
                 id: 'example-booking',
-                clientName: 'Example Client',
-                clientPhone: '+27 82 000 0000',
-                clientEmail: 'client@example.com',
-                clientNote: 'Example only. A real client note, app chat, and reschedule request can sit on the record.',
-                clientBirthday: '',
-                date: 'Example date',
+                clientName: 'Maya Nkosi',
+                clientPhone: '+27 72 555 0194',
+                clientEmail: 'maya.nkosi@example.com',
+                clientNote: 'Example only. Maya prefers morning slots and asked to be notified if an earlier time opens.',
+                clientBirthday: '23 June 1996',
+                clientPhotoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
+                clientAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
+                avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
+                serviceName: 'Signature Blowout',
+                serviceDuration: '60',
+                servicePrice: '650',
+                paymentMethod: 'cash',
+                paymentGateway: 'cash',
+                paymentStatus: 'manual_pending',
+                paymentProviderName: 'Cash',
+                date: 'Thursday, May 28',
                 time: '10:30',
                 status: 'pending',
                 timestamp: 0,
@@ -2003,12 +2116,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }), []);
             const exampleClient = useMemo(() => ({
                 id: 'example-client',
-                name: 'Example Client',
-                phone: '+27 82 000 0000',
-                email: 'client@example.com',
-                birthday: '',
-                notes: 'Example only. Real notes, labels, photos, and booking history will appear here once clients book or are added manually.',
-                avatar: '',
+                name: 'Maya Nkosi',
+                phone: '+27 72 555 0194',
+                email: 'maya.nkosi@example.com',
+                birthday: '23 June 1996',
+                notes: 'Example only. Maya likes quiet morning appointments and usually books finishing services before events.',
+                avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
                 labels: ['Example'],
                 autoLabels: ['First Time'],
                 bookings: [{ ...exampleBooking, id: 'example-client-history', status: 'confirmed' }],
@@ -3794,15 +3907,17 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const handleClientAvatarUpload = async (clientId, file) => {
                 if (!file) return;
-                try {
-                    showToast('Uploading client photo...');
-                    const avatarUrl = await uploadAsset(file, 'client-avatars');
+                const previousAvatar = clientDirectory.find(client => client.id === clientId)?.avatar || '';
+                requestImageCropUpload(file, {
+                    folder: 'client-avatars',
+                    title: 'Crop client photo',
+                    ratioKey: 'square',
+                    shape: 'circle'
+                }, async (avatarUrl) => {
+                    if (previousAvatar && previousAvatar !== avatarUrl) await deleteStorageAsset(previousAvatar);
                     upsertClientRecord(clientId, { avatar: avatarUrl });
                     showToast("Client photo updated");
-                } catch (error) {
-                    console.error(error);
-                    showToast('Client photo upload failed');
-                }
+                });
             };
 
             const handleManualClientSubmit = (event) => {
@@ -4268,6 +4383,56 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 await FirebaseSDK.uploadBytes(assetRef, file);
                 return FirebaseSDK.getDownloadURL(assetRef);
             };
+            const deleteStorageAsset = async (url) => {
+                if (!url || !isFirebaseConfigured || !storage || !FirebaseSDK.deleteObject) return;
+                if (!String(url).startsWith('http')) return;
+                try {
+                    await FirebaseSDK.deleteObject(FirebaseSDK.ref(storage, url));
+                } catch (error) {
+                    console.warn('Storage asset delete skipped.', error);
+                }
+            };
+            const requestImageCropUpload = async (file, options = {}, onComplete) => {
+                if (!file) return;
+                try {
+                    const source = await readFileAsDataUrl(file);
+                    imageCropCommitRef.current = {
+                        folder: options.folder || 'uploads',
+                        onComplete
+                    };
+                    setImageCropModal({
+                        source,
+                        fileName: file.name || 'image.jpg',
+                        title: options.title || 'Crop image',
+                        ratioKey: options.ratioKey || 'square',
+                        shape: options.shape || 'rounded',
+                        zoom: 1,
+                        positionX: 50,
+                        positionY: 50
+                    });
+                } catch (error) {
+                    console.error(error);
+                    showToast('Image could not be opened.');
+                }
+            };
+            const handleImageCropSave = async () => {
+                if (!imageCropModal || !imageCropCommitRef.current) return;
+                setImageCropSaving(true);
+                try {
+                    const croppedFile = await buildCroppedImageFile(imageCropModal);
+                    const { folder, onComplete } = imageCropCommitRef.current;
+                    const url = await uploadAsset(croppedFile, folder);
+                    setImageCropModal(null);
+                    imageCropCommitRef.current = null;
+                    await onComplete?.(url, croppedFile);
+                    showToast('Image saved.');
+                } catch (error) {
+                    console.error(error);
+                    showToast('Image crop could not be saved.');
+                } finally {
+                    setImageCropSaving(false);
+                }
+            };
             const updatePersonalProfile = (updates = {}) => {
                 const nextProfile = {
                     ...personalProfile,
@@ -4308,15 +4473,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const handlePersonalProfilePhotoUpload = async (file) => {
                 if (!file) return;
-                try {
-                    showToast('Uploading profile photo...');
-                    const url = await uploadAsset(file, 'account-avatars');
+                const previousPhoto = personalProfile.photoURL || '';
+                requestImageCropUpload(file, {
+                    folder: 'account-avatars',
+                    title: 'Crop profile photo',
+                    ratioKey: 'square',
+                    shape: 'circle'
+                }, async (url) => {
+                    if (previousPhoto && previousPhoto !== url) await deleteStorageAsset(previousPhoto);
                     updatePersonalProfile({ photoURL: url });
                     showToast('Profile photo updated');
-                } catch (error) {
-                    console.error(error);
-                    showToast('Profile photo upload failed');
-                }
+                });
+            };
+            const removePersonalProfilePhoto = async () => {
+                const previousPhoto = personalProfile.photoURL || '';
+                updatePersonalProfile({ photoURL: '' });
+                await deleteStorageAsset(previousPhoto);
+                showToast('Profile photo removed');
             };
             const saveProfileChanges = async () => {
                 const displayName = [personalProfile.firstName, personalProfile.lastName].filter(Boolean).join(' ').trim() || personalDisplayName;
@@ -4363,37 +4536,52 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const handleSettingImageUpload = async (key, file, folder) => {
                 if (!file) return;
-                try {
-                    showToast('Uploading image...');
-                    const url = await uploadAsset(file, folder);
+                const ratioKey = key === 'bannerImage' ? 'banner' : 'square';
+                const previousUrl = settingsRef.current?.[key] || '';
+                requestImageCropUpload(file, {
+                    folder,
+                    title: key === 'bannerImage' ? 'Crop booking banner' : 'Crop business logo',
+                    ratioKey,
+                    shape: key === 'bannerImage' ? 'rounded' : 'square'
+                }, async (url) => {
+                    if (previousUrl && previousUrl !== url) await deleteStorageAsset(previousUrl);
                     handleSettingChange(key, url);
-                    showToast('Image uploaded');
-                } catch (error) {
-                    console.error(error);
-                    showToast('Image upload failed');
-                }
+                    showToast(key === 'bannerImage' ? 'Banner image updated' : 'Logo updated');
+                });
+            };
+            const removeSettingImage = async (key) => {
+                const previousUrl = settingsRef.current?.[key] || '';
+                handleSettingChange(key, '');
+                await deleteStorageAsset(previousUrl);
+                showToast('Image removed');
             };
             const handleVenuePhotoUpload = async (files) => {
                 const photoFiles = Array.from(files || []).filter(Boolean).slice(0, 8);
                 if (!photoFiles.length) return;
-                try {
-                    showToast(photoFiles.length > 1 ? 'Uploading venue photos...' : 'Uploading venue photo...');
-                    const uploadedUrls = [];
-                    for (const file of photoFiles) {
-                        uploadedUrls.push(await uploadAsset(file, 'venue'));
-                    }
-                    const currentPhotos = Array.isArray(settingsRef.current.venuePhotos) ? settingsRef.current.venuePhotos : [];
-                    const nextPhotos = [...currentPhotos, ...uploadedUrls].filter(Boolean).slice(0, 12);
-                    handleSettingChange('venuePhotos', nextPhotos);
-                    showToast(photoFiles.length > 1 ? 'Venue photos added' : 'Venue photo added');
-                } catch (error) {
-                    console.error(error);
-                    showToast('Venue photo upload failed');
-                }
+                const openVenueCrop = (index = 0) => {
+                    const file = photoFiles[index];
+                    if (!file) return;
+                    requestImageCropUpload(file, {
+                        folder: 'venue',
+                        title: photoFiles.length > 1 ? `Crop venue photo ${index + 1}` : 'Crop venue photo',
+                        ratioKey: 'gallery'
+                    }, async (url) => {
+                        const currentPhotos = Array.isArray(settingsRef.current.venuePhotos) ? settingsRef.current.venuePhotos : [];
+                        const nextPhotos = [...currentPhotos, url].filter(Boolean).slice(0, 12);
+                        handleSettingChange('venuePhotos', nextPhotos);
+                        if (index + 1 < photoFiles.length) {
+                            window.setTimeout(() => openVenueCrop(index + 1), 150);
+                        } else {
+                            showToast(photoFiles.length > 1 ? 'Venue photos added' : 'Venue photo added');
+                        }
+                    });
+                };
+                openVenueCrop();
             };
-            const removeVenuePhoto = (photoUrl) => {
+            const removeVenuePhoto = async (photoUrl) => {
                 const currentPhotos = Array.isArray(settingsRef.current.venuePhotos) ? settingsRef.current.venuePhotos : [];
                 handleSettingChange('venuePhotos', currentPhotos.filter(photo => photo !== photoUrl));
+                await deleteStorageAsset(photoUrl);
                 showToast('Venue photo removed');
             };
             const openDashboard = () => {
@@ -4584,6 +4772,59 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (typeof window !== 'undefined') {
                     const url = new URL(window.location.href);
                     window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+                }
+            };
+            const handleDeleteAccount = async () => {
+                if (isGuestWorkspace) {
+                    setAccountDeleteOpen(false);
+                    setAccountDeleteText('');
+                    await handleSignOut();
+                    return;
+                }
+                if (!user?.uid || !isFirebaseConfigured) {
+                    showToast('Sign in before deleting an account.');
+                    return;
+                }
+                if (accountDeleteText.trim().toUpperCase() !== 'DELETE') {
+                    showToast('Type DELETE to confirm account deletion.');
+                    return;
+                }
+                setAuthBusy(true);
+                try {
+                    const uid = user.uid;
+                    const emailKey = normalizeEmail(user.email || personalProfile.email || '');
+                    await Promise.allSettled([
+                        FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accounts', uid)),
+                        emailKey ? FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'accountLookup', emailKey)) : Promise.resolve()
+                    ]);
+                    if (personalProfile.photoURL) await deleteStorageAsset(personalProfile.photoURL);
+                    await FirebaseSDK.deleteUser(auth.currentUser);
+                    setAccountDeleteOpen(false);
+                    setAccountDeleteText('');
+                    showToast('Account deleted.');
+                    clearAuthReturnState();
+                    setAuthRedirectPending(false);
+                    setGuestMode(false);
+                    setClientGuestMode(false);
+                    safeLocalRemove(guestModeStorageKey);
+                    setWorkspaceAccess([]);
+                    setActiveWorkspaceOwnerId('');
+                    saveWorkspaceRoute({ view: 'landing', activeTab: 'overview', editorTab: 'themes' });
+                    setView('landing');
+                    setActiveTab('overview');
+                    if (typeof window !== 'undefined') {
+                        const url = new URL(window.location.href);
+                        window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    if (error?.code === 'auth/requires-recent-login') {
+                        showToast('Please sign out and sign in again before deleting your account.');
+                    } else {
+                        showToast('Account deletion could not finish.');
+                    }
+                } finally {
+                    setAuthBusy(false);
                 }
             };
 
@@ -5435,6 +5676,42 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 </div>
             );
 
+            const accountDeleteDialog = accountDeleteOpen && (
+                <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="w-full sm:max-w-lg bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-6 md:p-7 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="flex items-start justify-between gap-4 mb-5">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-red-500 mb-3">Delete Account</p>
+                                <h2 className="text-2xl font-bold text-black">Permanently remove this account?</h2>
+                                <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                                    This removes the signed-in account profile from Build A Booking. Type DELETE to confirm.
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => { setAccountDeleteOpen(false); setAccountDeleteText(''); }} className="w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <label className="block mb-6">
+                            <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-400 mb-2">Confirmation</span>
+                            <input
+                                value={accountDeleteText}
+                                onChange={(event) => setAccountDeleteText(event.target.value)}
+                                placeholder="Type DELETE"
+                                className="w-full h-12 rounded-lg bg-neutral-50 border border-neutral-100 px-4 text-sm font-bold text-black outline-none focus:bg-white focus:border-black transition-colors"
+                            />
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button type="button" onClick={() => { setAccountDeleteOpen(false); setAccountDeleteText(''); }} className="h-12 rounded-full bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-[0.12em] hover:border-black transition-colors">
+                                Cancel
+                            </button>
+                            <button type="button" onClick={handleDeleteAccount} disabled={authBusy || accountDeleteText.trim().toUpperCase() !== 'DELETE'} className="h-12 rounded-full bg-red-500 text-white text-[10px] font-bold uppercase tracking-[0.12em] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-600 transition-colors">
+                                Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
             const editorPreviewFrame = getEditorPreviewFrame(device, isCompactEditorViewport);
             const editorPreviewFrameClass = device === 'desktop'
                 ? (isCompactEditorViewport ? 'rounded-lg border-[12px]' : 'rounded-lg border-[22px]')
@@ -5517,9 +5794,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             if (view === 'client') {
                 const clientPortalUser = user || (clientGuestMode ? {
                     uid: 'guest-client-preview',
-                    displayName: 'Guest Client',
-                    email: 'client@example.com',
-                    photoURL: ''
+                    displayName: 'Maya Nkosi',
+                    email: 'maya.nkosi@example.com',
+                    photoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80'
                 } : null);
 
                 if (!clientPortalUser) {
@@ -5750,6 +6027,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 {legalDialog}
                 {confirmActionDialog}
                 {runningLateActionDialog}
+                {accountDeleteDialog}
+                <ImageCropModal
+                    crop={imageCropModal}
+                    saving={imageCropSaving}
+                    onChange={(updates) => setImageCropModal(prev => (prev ? { ...prev, ...updates } : prev))}
+                    onClose={() => {
+                        if (imageCropSaving) return;
+                        setImageCropModal(null);
+                        imageCropCommitRef.current = null;
+                    }}
+                    onSave={handleImageCropSave}
+                />
                 {showOwnerManual && (
                     <Suspense fallback={<LazySectionFallback label="Loading manual" />}>
                         <AppErrorBoundary compact label="Owner Manual" resetKey={dashboardThemeMode}>
@@ -6282,15 +6571,26 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     <h3 className="text-2xl font-bold tracking-tight text-black">Your account details</h3>
                                                     <p className="text-sm text-neutral-500 mt-1">Separate from business details. This is the person behind the workspace.</p>
                                                 </div>
-                                                <label className="hidden sm:flex h-10 px-4 rounded-full bg-neutral-50 border border-neutral-100 text-black text-[10px] font-bold uppercase tracking-widest items-center gap-2 cursor-pointer hover:border-black transition-colors shrink-0">
-                                                    <Camera size={14} /> Photo
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        className="hidden"
-                                                        onChange={(event) => handlePersonalProfilePhotoUpload(event.target.files?.[0])}
-                                                    />
-                                                </label>
+                                                <div className="hidden sm:flex items-center gap-2 shrink-0">
+                                                    <label className="h-10 px-4 rounded-full bg-neutral-50 border border-neutral-100 text-black text-[10px] font-bold uppercase tracking-widest inline-flex items-center gap-2 cursor-pointer hover:border-black transition-colors">
+                                                        <Crop size={14} /> Photo
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={(event) => handlePersonalProfilePhotoUpload(event.target.files?.[0])}
+                                                        />
+                                                    </label>
+                                                    {personalProfile.photoURL && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={removePersonalProfilePhoto}
+                                                            className="h-10 px-4 rounded-full bg-red-50 border border-red-100 text-red-600 text-[10px] font-bold uppercase tracking-widest"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
@@ -6386,6 +6686,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         >
                                             <X size={14}/> {isGuestWorkspace ? 'Exit Guest' : 'Sign Out'}
                                         </button>
+                                        {!isGuestWorkspace && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setAccountDeleteText('');
+                                                    setAccountDeleteOpen(true);
+                                                }}
+                                                disabled={authBusy}
+                                                className="mt-3 w-full h-12 rounded-full bg-red-50 border border-red-100 text-red-600 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                            >
+                                                <Trash2 size={14}/> Delete Account
+                                            </button>
+                                        )}
                                     </section>
                                 </div>
 
@@ -6437,7 +6750,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         }}/>
                                                     </label>
                                                     <p className="text-xs text-neutral-400 font-medium">Recommended: 400x400px (JPG/PNG)</p>
-                                                    {settings.logo && <button onClick={() => handleSettingChange('logo', '')} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline mt-2">Remove Image</button>}
+                                                    {settings.logo && <button type="button" onClick={() => removeSettingImage('logo')} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline mt-2">Remove Image</button>}
                                                 </div>
                                             </div>
                                         </div>
@@ -6467,7 +6780,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 e.target.value = '';
                                                             }}/>
                                                         </label>
-                                                        {settings.bannerImage && <button onClick={() => handleSettingChange('bannerImage', '')} className="px-5 py-3 text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Remove</button>}
+                                                        {settings.bannerImage && <button type="button" onClick={() => removeSettingImage('bannerImage')} className="px-5 py-3 text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Remove</button>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -6700,6 +7013,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             setSettings(nextSettings);
                                             await saveSettingsDraft(nextSettings, message || 'Services saved.');
                                         }}
+                                        onImageUpload={requestImageCropUpload}
+                                        onImageDelete={deleteStorageAsset}
                                         showToast={showToast}
                                     />
                                 </AppErrorBoundary>
@@ -6716,6 +7031,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         businessId={workspaceOwnerId}
                                         canManageWorkspace={canManageWorkspace}
                                         showToast={showToast}
+                                        bookings={bookings}
+                                        onMarkBookingPaid={markBookingPaid}
                                     />
                                 </AppErrorBoundary>
                             </Suspense>

@@ -145,25 +145,27 @@ const exampleTransactions = [
   {
     id: 'example-paid-1',
     isExample: true,
-    gatewayType: 'payfast',
+    gatewayType: 'manual_eft',
     status: 'paid',
-    amountInCents: 85000,
+    amountInCents: 65000,
     currency: 'ZAR',
-    customerName: 'Example Client',
-    description: 'Consultation deposit',
-    bookingId: 'preview-booking',
+    customerName: 'Maya Nkosi',
+    customerEmail: 'maya.nkosi@example.com',
+    description: 'Signature Blowout - manual EFT',
+    bookingId: 'EXAMPLE-1028',
     updatedAtMs: Date.now() - 1000 * 60 * 45
   },
   {
     id: 'example-ready-1',
     isExample: true,
-    gatewayType: 'stripe',
-    status: 'checkout_ready',
-    amountInCents: 120000,
+    gatewayType: 'cash',
+    status: 'manual_pending',
+    amountInCents: 45000,
     currency: 'ZAR',
-    customerName: 'Preview Booking',
-    description: 'Service package',
-    bookingId: 'preview-checkout',
+    customerName: 'Liam Petersen',
+    customerEmail: 'liam.petersen@example.com',
+    description: 'Private training session - cash on arrival',
+    bookingId: 'EXAMPLE-1031',
     updatedAtMs: Date.now() - 1000 * 60 * 60 * 6
   }
 ];
@@ -238,6 +240,22 @@ const normalizeAttempt = (docSnap) => {
     checkoutUrl: data.checkoutUrl || '',
     updatedAtMs: dateToMs(data.paidAt || data.updatedAt || data.createdAt)
   };
+};
+
+const manualGatewayIds = new Set(['manual_eft', 'cash']);
+
+const parseAmountToCents = (value) => {
+  if (Number.isSafeInteger(Number(value)) && Number(value) > 1000) return Number(value);
+  const cleaned = String(value ?? '').replace(/[^\d.,-]/g, '').replace(',', '.');
+  const parsed = Number.parseFloat(cleaned);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.round(parsed * 100));
+};
+
+const getBookingAmountInCents = (booking = {}) => {
+  const direct = Number(booking.amountInCents ?? booking.amountPaidInCents ?? booking.totalInCents);
+  if (Number.isSafeInteger(direct) && direct > 0) return direct;
+  return parseAmountToCents(booking.total || booking.servicePrice || booking.price || booking.deposit || 0);
 };
 
 const getPeriodRange = (period, customRange) => {
@@ -323,7 +341,7 @@ const StatusPill = ({ status }) => {
   return <span className={`rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${tone}`}>{label}</span>;
 };
 
-export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, showToast }) => {
+export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, showToast, bookings = [], onMarkBookingPaid }) => {
   const [saved, setSaved] = useState({});
   const [drafts, setDrafts] = useState(emptyDrafts);
   const [saving, setSaving] = useState('');
@@ -389,6 +407,8 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
   const selectedGateway = gatewayById[selectedGatewayId] || gatewayCards[0];
   const selectedDraft = drafts[selectedGateway.id] || emptyDrafts[selectedGateway.id];
   const selectedPublicConfig = saved[selectedGateway.id] || {};
+  const isManualGateway = manualGatewayIds.has(selectedGateway.id);
+  const isCashGateway = selectedGateway.id === 'cash';
 
   const enabledCount = useMemo(() => (
     gatewayCards.filter((gateway) => saved[gateway.id]?.enabled).length
@@ -396,14 +416,46 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
 
   const periodRange = useMemo(() => getPeriodRange(period, customRange), [period, customRange]);
 
+  const manualBookingRows = useMemo(() => (
+    (bookings || [])
+      .filter((booking) => {
+        if (!booking || booking.isExample) return false;
+        const method = booking.paymentGateway || booking.paymentMethod || '';
+        return manualGatewayIds.has(method) || booking.paymentStatus === 'manual_pending';
+      })
+      .map((booking) => {
+        const method = booking.paymentGateway || booking.paymentMethod || 'cash';
+        const paid = booking.paymentStatus === 'paid';
+        return {
+          id: `manual-${booking.id}`,
+          gatewayType: manualGatewayIds.has(method) ? method : 'cash',
+          status: paid ? 'paid' : 'manual_pending',
+          amountInCents: getBookingAmountInCents(booking),
+          currency: booking.currency || 'ZAR',
+          customerName: booking.clientName || booking.name || 'Client',
+          customerEmail: booking.clientEmail || booking.email || '',
+          description: booking.serviceName || booking.description || 'Manual booking payment',
+          bookingId: booking.id || '',
+          updatedAtMs: dateToMs(booking.paidAt || booking.updatedAt || booking.timestamp || booking.createdAt) || Date.now(),
+          originalBooking: booking,
+          canMarkPaid: !paid
+        };
+      })
+  ), [bookings]);
+
+  const financeRecords = useMemo(() => (
+    [...manualBookingRows, ...paymentAttempts]
+      .sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0))
+  ), [manualBookingRows, paymentAttempts]);
+
   const periodRecords = useMemo(() => {
     const startMs = periodRange.start.getTime();
     const endMs = periodRange.end.getTime();
-    return paymentAttempts.filter((record) => {
+    return financeRecords.filter((record) => {
       if (!record.updatedAtMs) return false;
       return record.updatedAtMs >= startMs && record.updatedAtMs < endMs;
     });
-  }, [paymentAttempts, periodRange]);
+  }, [financeRecords, periodRange]);
 
   const financeMetrics = useMemo(() => {
     const paid = periodRecords.filter((record) => record.status === 'paid');
@@ -422,7 +474,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
   const maxChartValue = Math.max(...chartBuckets.map((bucket) => bucket.value), 1);
 
   const visibleDeskRows = useMemo(() => {
-    const rows = paymentAttempts.length ? paymentAttempts : exampleTransactions;
+    const rows = financeRecords.length ? financeRecords : exampleTransactions;
     const queryText = search.trim().toLowerCase();
     return rows.filter((row) => {
       const typeMatches = deskView === 'transactions'
@@ -441,7 +493,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
         row.status
       ].some((value) => String(value || '').toLowerCase().includes(queryText));
     }).slice(0, 12);
-  }, [deskView, paymentAttempts, search]);
+  }, [deskView, financeRecords, search]);
 
   const updateDraft = (gatewayId, patch) => {
     setDrafts((current) => ({
@@ -462,10 +514,15 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
       showToast?.('Only owners and admins can manage finance settings.');
       return;
     }
+    if (!businessId) {
+      showToast?.('Sign in or save this workspace before saving payment settings.');
+      return;
+    }
     if (!functions) {
       showToast?.('Firebase Functions are not connected yet.');
       return;
     }
+    const manual = manualGatewayIds.has(gateway.id);
     setSaving(gateway.id);
     try {
       const callable = FirebaseSDK.httpsCallable(functions, 'savePaymentGatewaySettings');
@@ -474,7 +531,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
         businessId,
         gatewayType: gateway.id,
         enabled: drafts[gateway.id]?.enabled || false,
-        mode: drafts[gateway.id]?.mode || 'test',
+        mode: manual ? 'live' : (drafts[gateway.id]?.mode || 'test'),
         providerName: gateway.name,
         credentials: drafts[gateway.id]?.credentials || {}
       });
@@ -508,7 +565,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
   };
 
   const downloadFinanceCsv = () => {
-    const rows = (paymentAttempts.length ? paymentAttempts : exampleTransactions).map((row) => ({
+    const rows = (financeRecords.length ? financeRecords : exampleTransactions).map((row) => ({
       id: row.id,
       status: row.status,
       gateway: gatewayById[row.gatewayType]?.name || row.gatewayType || 'Gateway',
@@ -691,6 +748,9 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                         <StatusPill status={row.status} />
                       </div>
                       <p className="mt-1 text-sm text-neutral-500 truncate">{row.description || 'Booking payment'} / {gateway.name}</p>
+                      {row.bookingId && (
+                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-neutral-300">Reference: {row.bookingId}</p>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:flex md:items-center gap-3 md:text-right">
@@ -702,8 +762,13 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                       <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Updated</p>
                       <p className="font-bold text-sm text-neutral-500">{formatDateTime(row.updatedAtMs)}</p>
                     </div>
-                    <button type="button" className="h-10 px-3 rounded-xl border border-neutral-200 bg-white text-black text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                      View <ArrowUpRight size={13} />
+                    <button
+                      type="button"
+                      onClick={() => row.canMarkPaid ? onMarkBookingPaid?.(row.originalBooking) : null}
+                      disabled={!row.canMarkPaid}
+                      className={`h-10 px-3 rounded-xl border text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${row.canMarkPaid ? 'native-gradient-button text-black border-transparent' : 'border-neutral-200 bg-white text-black opacity-60'}`}
+                    >
+                      {row.canMarkPaid ? 'Mark Paid' : 'View'} <ArrowUpRight size={13} />
                     </button>
                   </div>
                 </div>
@@ -768,30 +833,32 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                   <div>
                     <p className="text-sm text-neutral-500 max-w-xl">{selectedGateway.note}</p>
                     <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
-                      <LockKeyhole size={13} /> Secrets save through Cloud Functions
+                      <LockKeyhole size={13} /> {isManualGateway ? (isCashGateway ? 'No API keys needed' : 'Bank details show to clients') : 'Secrets save through Cloud Functions'}
                     </p>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-100 bg-neutral-50 p-3 md:min-w-[220px]">
                     <div>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Gateway</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">{isManualGateway ? 'Payment method' : 'Gateway'}</p>
                       <p className="text-sm font-black text-black">{selectedDraft.enabled ? 'Enabled' : 'Disabled'}</p>
                     </div>
                     <Toggle checked={selectedDraft.enabled} onChange={(enabled) => updateDraft(selectedGateway.id, { enabled })} />
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-2 rounded-2xl border border-neutral-100 bg-neutral-50 p-1">
-                  {['test', 'live'].map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => updateDraft(selectedGateway.id, { mode })}
-                      className={`h-11 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${selectedDraft.mode === mode ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-400'}`}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
+                {!isManualGateway && (
+                  <div className="mt-5 grid grid-cols-2 rounded-2xl border border-neutral-100 bg-neutral-50 p-1">
+                    {['test', 'live'].map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => updateDraft(selectedGateway.id, { mode })}
+                        className={`h-11 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${selectedDraft.mode === mode ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-400'}`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-5 grid md:grid-cols-2 gap-3">
                   {selectedGateway.fields.map((field) => (
@@ -825,8 +892,20 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                   <div className="flex items-start gap-3">
                     <ShieldCheck size={18} className="text-neutral-400 mt-0.5" />
                     <div>
-                      <p className="text-sm font-black text-black">{selectedPublicConfig.configured ? 'Saved keys are masked' : 'Add keys once, then save'}</p>
-                      <p className="text-sm text-neutral-500 mt-1">Public settings sync to the dashboard. Secret values are stored only by the backend.</p>
+                      <p className="text-sm font-black text-black">
+                        {isCashGateway
+                          ? 'Cash instructions are ready for clients'
+                          : selectedGateway.id === 'manual_eft'
+                            ? 'Use the booking ID as payment reference'
+                            : selectedPublicConfig.configured ? 'Saved keys are masked' : 'Add keys once, then save'}
+                      </p>
+                      <p className="text-sm text-neutral-500 mt-1">
+                        {isCashGateway
+                          ? 'Clients can choose cash, then your team marks the booking paid once money is received.'
+                          : selectedGateway.id === 'manual_eft'
+                            ? 'Your bank details appear after booking. The finance desk tracks it until you mark it paid.'
+                            : 'Public settings sync to the dashboard. Secret values are stored only by the backend.'}
+                      </p>
                     </div>
                   </div>
                   <button
@@ -836,7 +915,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                     className="h-12 px-6 rounded-2xl native-gradient-button text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {saving === selectedGateway.id ? <RefreshCw size={15} className="animate-spin" /> : <Check size={15} />}
-                    Save Gateway
+                    {isCashGateway ? 'Save Cash' : selectedGateway.id === 'manual_eft' ? 'Save EFT' : 'Save Gateway'}
                   </button>
                 </div>
               </div>

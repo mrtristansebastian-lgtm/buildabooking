@@ -61,12 +61,14 @@ export function WorkspaceInbox({
 
   const exampleThread = useMemo(() => ({
     id: 'example-support-thread',
-    clientName: 'Example Client',
-    clientEmail: 'client@example.com',
+    clientName: 'Maya Nkosi',
+    clientEmail: 'maya.nkosi@example.com',
+    clientPhotoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
     workspaceName: 'Studio Noir',
-    lastMessage: 'Could I move my booking to later in the afternoon?',
+    lastMessage: 'Could I move my blowout to later in the afternoon?',
     bookingId: 'example-support-booking',
     bookingStatus: 'pending',
+    serviceName: 'Signature Blowout',
     ownerUnread: 1,
     clientUnread: 0,
     rescheduleStatus: 'requested',
@@ -75,11 +77,13 @@ export function WorkspaceInbox({
 
   const exampleBooking = useMemo(() => ({
     id: 'example-support-booking',
-    clientName: 'Example Client',
-    clientEmail: 'client@example.com',
+    clientName: 'Maya Nkosi',
+    clientEmail: 'maya.nkosi@example.com',
+    clientPhotoURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
     date: 'Thursday, May 28',
     time: '10:30',
     status: 'pending',
+    serviceName: 'Signature Blowout',
     isExample: true
   }), []);
 
@@ -88,13 +92,13 @@ export function WorkspaceInbox({
       id: 'example-system',
       senderRole: 'system',
       senderName: 'Booking update',
-      text: 'Example booking request received for Thursday, May 28 at 10:30.'
+      text: 'Example Signature Blowout request received for Thursday, May 28 at 10:30.'
     },
     {
       id: 'example-client',
       senderRole: 'client',
-      senderName: 'Example Client',
-      text: 'Hey, could I move this to later in the afternoon if anything is open?'
+      senderName: 'Maya Nkosi',
+      text: 'Hey, could I move my blowout to later in the afternoon if anything opens?'
     },
     {
       id: 'example-owner',

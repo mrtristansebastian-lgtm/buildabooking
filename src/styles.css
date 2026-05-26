@@ -1983,8 +1983,8 @@ body {
         .dashboard-page-header h1,
         .dashboard-page-header h2 {
             font-family: inherit;
-            font-weight: 700;
-            letter-spacing: -0.025em !important;
+            font-weight: 800;
+            letter-spacing: 0 !important;
             line-height: 0.95;
         }
 
@@ -2007,7 +2007,7 @@ body {
         .native-ui h2,
         .native-ui h3,
         .editor-panel-header h2 {
-            letter-spacing: -0.025em !important;
+            letter-spacing: 0 !important;
         }
 
         .editor-tab-button {
@@ -2015,14 +2015,225 @@ body {
         }
 
         .native-ui .metric-value {
-            letter-spacing: -0.025em !important;
+            letter-spacing: 0 !important;
+        }
+
+        .native-ui input,
+        .native-ui textarea,
+        .native-ui select,
+        .booking-flow-public-shell input,
+        .booking-flow-public-shell textarea,
+        .booking-flow-public-shell select {
+            font-family: inherit;
+            letter-spacing: 0 !important;
+            line-height: 1.35;
+        }
+
+        .native-ui button,
+        .native-ui a,
+        .booking-flow-public-shell button,
+        .booking-flow-public-shell a {
+            align-items: center;
+        }
+
+        .image-crop-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.46);
+            backdrop-filter: blur(18px);
+        }
+
+        .image-crop-sheet {
+            width: min(920px, 100%);
+            max-height: min(780px, calc(100dvh - 2rem));
+            overflow: hidden;
+            border-radius: 1.4rem;
+            background: #fff;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .image-crop-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.35rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .image-crop-head p,
+        .image-crop-controls span {
+            margin: 0;
+            font-size: 0.62rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .image-crop-head h3 {
+            margin: 0.2rem 0;
+            font-size: 1.65rem;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: 0;
+            color: #050505;
+        }
+
+        .image-crop-head span {
+            display: block;
+            color: #64748b;
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
+        .image-crop-head button,
+        .image-crop-actions button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-crop-head button {
+            width: 2.55rem;
+            height: 2.55rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            color: #64748b;
+        }
+
+        .image-crop-body {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+        }
+
+        .image-crop-preview {
+            min-height: 420px;
+            padding: 1.35rem;
+            background: linear-gradient(135deg, rgba(216, 255, 205, 0.44), rgba(194, 240, 255, 0.36), rgba(247, 213, 255, 0.42));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-crop-frame {
+            width: min(100%, 520px);
+            max-height: 520px;
+            overflow: hidden;
+            border-radius: 1rem;
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+        }
+
+        .image-crop-frame.is-circle {
+            width: min(78vw, 420px);
+            border-radius: 999px;
+        }
+
+        .image-crop-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform-origin: center;
+            transition: transform 160ms ease, object-position 160ms ease;
+        }
+
+        .image-crop-controls {
+            padding: 1.35rem;
+            display: grid;
+            align-content: center;
+            gap: 1rem;
+            background: #fff;
+        }
+
+        .image-crop-controls label {
+            display: grid;
+            gap: 0.6rem;
+            padding: 0.9rem;
+            border-radius: 1rem;
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .image-crop-controls input[type="range"] {
+            width: 100%;
+            accent-color: #050505;
+        }
+
+        .image-crop-actions {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 0.75rem;
+            margin-top: 0.4rem;
+        }
+
+        .image-crop-actions button {
+            min-height: 3.1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .image-crop-actions button:first-child {
+            background: #fff;
+            color: #050505;
+        }
+
+        .image-crop-actions button:last-child {
+            gap: 0.45rem;
+            background: #050505;
+            color: #fff;
+            box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+        }
+
+        @media (max-width: 760px) {
+            .image-crop-overlay {
+                align-items: flex-end;
+                padding: 0;
+            }
+
+            .image-crop-sheet {
+                width: 100%;
+                max-height: calc(100dvh - 1rem);
+                border-radius: 1.5rem 1.5rem 0 0;
+            }
+
+            .image-crop-body {
+                grid-template-columns: 1fr;
+                overflow-y: auto;
+            }
+
+            .image-crop-preview {
+                min-height: 310px;
+            }
+
+            .image-crop-actions {
+                position: sticky;
+                bottom: 0;
+                padding-top: 0.25rem;
+                background: #fff;
+            }
         }
 
         @media (max-width: 767px) {
             .dashboard-page-header h1,
             .dashboard-page-header h2 {
                 font-size: 2.45rem !important;
-                letter-spacing: -0.025em !important;
+                letter-spacing: 0 !important;
                 line-height: 0.92 !important;
             }
 
@@ -6681,6 +6892,10 @@ body {
             z-index: 20;
         }
 
+        .native-ui:has(.finance-modal) .dashboard-sidebar {
+            z-index: 0;
+        }
+
         .mobile-editor-panel:has(.editor-studio-modal-backdrop) .editor-panel-scroll {
             overflow: visible;
         }
@@ -9381,6 +9596,12 @@ body {
             padding-bottom: 0.72rem !important;
         }
 
+        .booking-flow-public-shell {
+            width: min(100%, 1180px);
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         .booking-faq-cards .space-y-3,
         .booking-faq-split .space-y-3 {
             display: grid;
@@ -9425,10 +9646,23 @@ body {
 
         .booking-venue-gallery-header {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
             margin-bottom: 0.9rem;
+        }
+
+        .booking-venue-gallery-header-center {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .booking-venue-gallery-header-right {
+            text-align: right;
+        }
+
+        .booking-venue-gallery-copy {
+            max-width: 40rem;
         }
 
         .booking-venue-gallery-kicker,
@@ -9441,6 +9675,14 @@ body {
             letter-spacing: 0.22em;
             text-transform: uppercase;
             opacity: 0.62;
+        }
+
+        .booking-venue-gallery-title {
+            margin-top: 0.55rem;
+            font-size: clamp(1.45rem, 2vw, 2rem);
+            font-weight: 900;
+            line-height: 0.98;
+            letter-spacing: -0.03em;
         }
 
         .booking-venue-gallery-grid {
@@ -9635,6 +9877,15 @@ body {
             .booking-venue-photo {
                 min-height: 6.5rem;
                 border-radius: 1rem;
+            }
+
+            .booking-flow-public-shell {
+                width: 100%;
+            }
+
+            .booking-venue-gallery-header,
+            .booking-venue-gallery-header-right {
+                text-align: left;
             }
 
             .booking-venue-gallery-count {

@@ -105,7 +105,10 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const activeServices = useMemo(() => normalizeServiceList(settings.services || []).filter(service => service.active !== false), [settings.services]);
             const selectedService = activeServices.find(service => service.id === selectedServiceId) || activeServices[0] || null;
             const serviceReady = activeServices.length === 0 || Boolean(selectedService?.id);
-            const detailsStepNumber = activeServices.length > 0 ? '04' : '03';
+            const dateStepNumber = activeServices.length > 0 ? '02' : '01';
+            const timeStepNumber = activeServices.length > 0 ? '03' : '02';
+            const faqStepNumber = activeServices.length > 0 ? '04' : '03';
+            const detailsStepNumber = activeServices.length > 0 ? '05' : '04';
             const detailsReady = Boolean(
                 (!collectClientName || formData.name) &&
                 (!collectClientPhone || formData.phone) &&
@@ -416,9 +419,9 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             if (!activeDate) return <div className="h-full w-full flex items-center justify-center font-bold text-xl opacity-20">No Availability</div>;
 
             return (
-                <div className={`w-full h-full flex flex-col transition-all duration-1000 select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''}`} style={dynamicStyles}>
+                <div className={`w-full h-full flex flex-col transition-all duration-1000 select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''} ${!isPreview ? 'booking-flow-public' : ''}`} style={dynamicStyles}>
                 {step === 1 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-20 duration-1000 min-h-full flex flex-col p-6 md:p-12 relative z-10">
+                    <div className={`animate-in fade-in slide-in-from-bottom-20 duration-1000 min-h-full flex flex-col p-6 md:p-12 relative z-10 ${!isPreview ? 'booking-flow-public-shell' : ''}`}>
                     
                     {/* BRAND HEADER */}
                     <header className="mb-10 flex-shrink-0" data-preview-section="introduction">
@@ -511,13 +514,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         </div>
                     </header>
 
-                    <div className="space-y-16 flex-1">
+                    <div className="flex flex-col gap-16 flex-1">
                         
                         {/* DATE SLIDER */}
-                        <section data-preview-section="calendar">
-                        <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('introduction')}>
+                        <section data-preview-section="calendar" style={{ order: activeServices.length > 0 ? 2 : 1 }}>
+                        <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('calendar')}>
                             <div className={`flex flex-col ${pageItems} ${pageTextClass}`}>
-                                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.replace(/^01\s*\/\/\s*/i, '').trim())}>01 // {settings.dateLabel || "Which day?"}</h3>
+                                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{dateStepNumber} // {settings.dateLabel || "Which day?"}</h3>
                                 <div className="flex flex-wrap items-center gap-4" style={{ justifyContent: pageJustify }}>
                                     <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                         {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
@@ -553,9 +556,9 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         </section>
 
                         {/* TIME GRID OR WAITLIST */}
-                        <section data-preview-section="time">
-                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="introduction" onClick={() => isPreview && onInspect('introduction')}>
-                            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('timeLabel', event.currentTarget.textContent.replace(/^02\s*\/\/\s*/i, '').trim())}>02 // {settings.timeLabel || "Select Time"}</h3>
+                        <section data-preview-section="time" style={{ order: activeServices.length > 0 ? 3 : 2 }}>
+                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="time" onClick={() => isPreview && onInspect('time')}>
+                            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('timeLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{timeStepNumber} // {settings.timeLabel || "Select Time"}</h3>
                             <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                 {isWaitlistMode ? 'Day Full - Join Waitlist' : 'Available Slots'}
                             </h4>
@@ -592,9 +595,9 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         </section>
 
                         {activeServices.length > 0 && (
-                            <section data-preview-section="services" className="pt-2">
+                            <section data-preview-section="services" className="pt-2" style={{ order: 1 }}>
                                 <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('services')}>
-                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>03 // Choose Service</h3>
+                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>01 // Choose Service</h3>
                                     <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                                         What would you like to book?
                                     </h4>
@@ -642,8 +645,44 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             </section>
                         )}
 
+                        {faqItems.length > 0 && (
+                            <section
+                                className={`booking-faq-section booking-faq-${faqDisplayStyle} pt-2 ${inspectClass}`}
+                                data-preview-section="faq"
+                                onClick={() => isPreview && onInspect('faq')}
+                                style={{ order: activeServices.length > 0 ? 4 : 3 }}
+                            >
+                                <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1`}>
+                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>{faqStepNumber} // Good to know</h3>
+                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
+                                        Questions before booking
+                                    </h4>
+                                </div>
+                                <div className="space-y-3">
+                                    {faqItems.map((faq, i) => (
+                                        <button
+                                            key={`${faq.q}-${i}`}
+                                            type="button"
+                                            className="w-full text-left transition-all"
+                                            style={getFaqItemStyle()}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                setOpenFaq(openFaq === i ? null : i);
+                                            }}
+                                        >
+                                            <span className="flex justify-between items-center gap-4">
+                                                <span className="font-bold text-sm" style={{ color: settings.faqTextColor || settings.headingColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
+                                                {openFaq === i ? <ChevronUp size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} />}
+                                            </span>
+                                            {openFaq === i && <span className="block mt-3 text-sm opacity-85 leading-relaxed" style={{ color: settings.faqAnswerColor || settings.bodyColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.bodyFontFamily || settings.fontFamily) }}>{faq.a}</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
                         {/* DETAILS FORM */}
-                        <section className="pt-10">
+                        <section className="pt-10" style={{ order: activeServices.length > 0 ? 5 : 4 }}>
                             <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} data-preview-section="form" onClick={() => isPreview && onInspect('form')}>
                                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={isPreview} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('detailsHeading', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{detailsStepNumber} // {settings.detailsHeading || "Your Details"}</h3>
                                 <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
@@ -664,31 +703,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                     <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Mobile Number</label>
                                     <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
                                     <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
-                                </div>
-                                )}
-                                {faqItems.length > 0 && (
-                                <div className={`booking-faq-section booking-faq-${faqDisplayStyle} pt-2 ${inspectClass}`} data-preview-section="faq" onClick={() => isPreview && onInspect('faq')}>
-                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-5 opacity-40" style={{ color: settings.bodyColor }}>Questions</h3>
-                                    <div className="space-y-3">
-                                        {faqItems.map((faq, i) => (
-                                            <button
-                                                key={`${faq.q}-${i}`}
-                                                type="button"
-                                                className="w-full text-left transition-all"
-                                                style={getFaqItemStyle()}
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setOpenFaq(openFaq === i ? null : i);
-                                                }}
-                                            >
-                                                <span className="flex justify-between items-center gap-4">
-                                                    <span className="font-bold text-sm" style={{ color: settings.faqTextColor || settings.headingColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
-                                                    {openFaq === i ? <ChevronUp size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} />}
-                                                </span>
-                                                {openFaq === i && <span className="block mt-3 text-sm opacity-85 leading-relaxed" style={{ color: settings.faqAnswerColor || settings.bodyColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.bodyFontFamily || settings.fontFamily) }}>{faq.a}</span>}
-                                            </button>
-                                        ))}
-                                    </div>
                                 </div>
                                 )}
                                 {collectClientEmail && (
@@ -715,7 +729,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             </div>
                         </section>
 
-                        <div className="pt-16 pb-12 mt-auto text-center" data-preview-section="action">
+                        <div className="pt-16 pb-12 mt-auto text-center" data-preview-section="action" style={{ order: activeServices.length > 0 ? 6 : 5 }}>
                             {emailOptInEnabled && (
                                 <label
                                     className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${inspectClass}`}
@@ -902,12 +916,29 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                         backgroundColor: `${settings.headingColor || '#000000'}04`
                                     }}
                                 >
-                                    <div className="booking-venue-gallery-header">
-                                        <div>
+                                    <div className={`booking-venue-gallery-header booking-venue-gallery-header-${pageAlignment}`}>
+                                        <div className="booking-venue-gallery-copy">
                                             <span className="booking-venue-gallery-kicker" style={{ color: settings.bodyColor }}>
-                                                <Images size={13} /> {settings.venueTitle || 'Inside the space'}
+                                                <Images size={13} /> Venue gallery
                                             </span>
-                                            <p className="booking-venue-gallery-intro" style={{ color: settings.bodyColor }}>
+                                            <h4
+                                                className="booking-venue-gallery-title"
+                                                style={{
+                                                    color: settings.headingColor,
+                                                    fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily),
+                                                    ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {})
+                                                }}
+                                            >
+                                                {settings.venueTitle || 'Inside the space'}
+                                            </h4>
+                                            <p
+                                                className="booking-venue-gallery-intro"
+                                                style={{
+                                                    color: settings.bodyColor,
+                                                    fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily),
+                                                    ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {})
+                                                }}
+                                            >
                                                 {settings.venueIntro || 'See the place before you book.'}
                                             </p>
                                         </div>
