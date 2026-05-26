@@ -533,13 +533,15 @@ import { getLocalDateStr } from '../utils/dates';
             }, [calendarViewMode, expandedDate, hidePastDays, todayStr, daysInMonth, calendarWeekStart, calendarWeekEnd]);
             const calendarGridClass = calendarViewMode === 'day'
                 ? 'grid-cols-1'
-                : 'grid-cols-1';
-            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : calendarViewMode === 'week' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7';
-            const calendarHeaderVisibilityClass = 'hidden';
+                : 'grid-cols-2 md:grid-cols-7';
+            const calendarHeaderClass = calendarViewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7';
+            const calendarHeaderVisibilityClass = calendarViewMode === 'day' ? 'hidden' : 'hidden md:grid';
             const calendarFrameClass = 'min-w-0';
             const calendarCellSizeClass = calendarViewMode === 'day'
                 ? 'min-h-[420px] md:min-h-[460px]'
-                : 'min-h-[96px]';
+                : calendarViewMode === 'week'
+                    ? 'min-h-[172px] md:min-h-[220px]'
+                    : 'min-h-[148px] md:min-h-[174px]';
 
             const setSchedulePeriod = (period) => {
                 setScheduleStatsPeriod(period);
@@ -1063,14 +1065,14 @@ import { getLocalDateStr } from '../utils/dates';
 
                             <div className={`schedule-calendar-scroll-zone ${calendarViewMode === 'day' ? 'schedule-day-scroll-zone' : ''} p-4 md:p-6 no-scrollbar bg-gradient-to-b from-white to-neutral-50/60`}>
                                 <div className={calendarFrameClass}>
-                                {calendarViewMode === 'month' && (
+                                {(calendarViewMode === 'month' || calendarViewMode === 'week') && (
                                     <div className="schedule-rotate-prompt mb-3 rounded-lg border border-neutral-100 bg-white/85 px-3 py-3 text-black">
                                         <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
                                             <RefreshCw size={14} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Rotate for full month</p>
-                                            <p className="text-xs font-semibold text-neutral-600 leading-snug">Portrait keeps this as a clean forward list. Turn sideways for the classic calendar grid.</p>
+                                            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Rotate for full calendar</p>
+                                            <p className="text-xs font-semibold text-neutral-600 leading-snug">Portrait keeps days in two clean columns. Turn sideways for the full calendar board.</p>
                                         </div>
                                     </div>
                                 )}
@@ -1090,6 +1092,10 @@ import { getLocalDateStr } from '../utils/dates';
                                         const isPastDay = dateStr < todayStr;
                                         const isCustom = Boolean(activeSchedule?.[dateStr]);
                                         const staffCoverage = isWorkspaceCalendar ? getStaffCoverageForDate(dateStr) : [];
+                                        const dayBookings = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
+                                        const openSlots = Math.max(0, (config.times?.length || 0) - dayBookings.reserved);
+                                        const monthLabel = new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { month: 'short' });
+                                        const weekdayLabel = new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
 
                                         if (calendarViewMode === 'day') {
                                             const activeDayFocusId = isWorkspaceCalendar && staffCoverage.some(staff => staff.id === overviewDayFocusStaffId)
@@ -1306,76 +1312,104 @@ import { getLocalDateStr } from '../utils/dates';
                                                         setExpandedDate(dateStr);
                                                     }
                                                 }}
-                                                className={`schedule-day-cell schedule-day-row-card group relative ${calendarCellSizeClass} rounded-lg border transition-all duration-500 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.006]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
+                                                className={`schedule-day-cell schedule-calendar-tile group relative ${calendarCellSizeClass} rounded-lg border transition-all duration-500 text-left overflow-hidden cursor-pointer ${isSelected ? 'schedule-day-selected bg-white text-black border-transparent scale-[1.004]' : config.available ? 'bg-white border-neutral-200 hover:-translate-y-0.5' : 'bg-neutral-50/90 border-neutral-100 text-neutral-300 grayscale'}`}
                                             >
-                                                <div className="schedule-day-row-date">
-                                                    <p className="text-[9px] font-bold uppercase text-neutral-400">
-                                                        {new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                    </p>
-                                                    <div className="flex items-end gap-2">
-                                                        <span className={`metric-value text-3xl md:text-[34px] font-bold tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
-                                                        <div className="flex flex-wrap items-center gap-1 pb-1">
-                                                            {isToday && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-black text-white">Today</span>}
-                                                            {isCustom && <span className="rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-400">Custom</span>}
+                                                <div className="schedule-calendar-tile-top">
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-black uppercase text-neutral-400">{weekdayLabel}, {monthLabel}</p>
+                                                        <div className="flex items-end gap-2 mt-1">
+                                                            <span className={`metric-value schedule-calendar-date-number text-4xl font-black tracking-tight leading-none ${!config.available ? 'line-through opacity-40' : ''}`}>{dayNum}</span>
+                                                            <div className="flex flex-wrap items-center gap-1 pb-1">
+                                                                {isToday && <span className="schedule-calendar-micro-chip is-today">Today</span>}
+                                                                {isCustom && <span className="schedule-calendar-micro-chip">Custom</span>}
+                                                            </div>
                                                         </div>
+                                                    </div>
+                                                    <div className="schedule-calendar-actions">
+                                                        {!isPastDay && (
+                                                            <button
+                                                                type="button"
+                                                                aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
+                                                                title={config.available ? 'Mark unavailable' : 'Mark available'}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleDateAvailability(dateStr);
+                                                                }}
+                                                                className={`schedule-day-availability-chip ${config.available ? 'is-open' : 'is-closed'}`}
+                                                            >
+                                                                {config.available ? <Check size={12}/> : <X size={12}/>}
+                                                                <span>{config.available ? 'Open' : 'Closed'}</span>
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                setExpandedDate(dateStr);
+                                                                setSchedulePeriod('day');
+                                                            }}
+                                                            className="schedule-day-row-action"
+                                                            aria-label={`Open full view for ${dateStr}`}
+                                                            title="Full day view"
+                                                        >
+                                                            <Eye size={14}/>
+                                                        </button>
                                                     </div>
                                                 </div>
 
-                                                <div className="schedule-day-row-staff">
-                                                    {staffCoverage.length > 0 ? (
-                                                        <>
-                                                            <div className="flex -space-x-2">
-                                                                {staffCoverage.slice(0, 4).map(staff => (
-                                                                    <span
-                                                                        key={staff.id}
-                                                                        className="w-7 h-7 rounded-full border border-white bg-neutral-100 text-[8px] font-black text-black flex items-center justify-center overflow-hidden shadow-sm"
-                                                                        title={getStaffDisplayName(staff)}
-                                                                    >
-                                                                        {staff.photoURL ? <img src={staff.photoURL} alt="" className="w-full h-full object-cover" /> : getStaffInitials(getStaffDisplayName(staff))}
-                                                                    </span>
-                                                                ))}
+                                                <div className="schedule-calendar-tile-body">
+                                                    <div className="schedule-calendar-staff-line">
+                                                        {staffCoverage.length > 0 ? (
+                                                            <>
+                                                                <div className="schedule-calendar-avatar-stack">
+                                                                    {staffCoverage.slice(0, 4).map(staff => (
+                                                                        <span
+                                                                            key={staff.id}
+                                                                            className="schedule-calendar-avatar"
+                                                                            title={getStaffDisplayName(staff)}
+                                                                        >
+                                                                            {staff.photoURL ? <img src={staff.photoURL} alt="" /> : getStaffInitials(getStaffDisplayName(staff))}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[9px] font-black uppercase text-neutral-400">Coverage</p>
+                                                                    <p className="text-xs font-bold text-black truncate">{staffCoverage.length} staff active</p>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="schedule-calendar-empty-coverage">
+                                                                Business availability
                                                             </div>
-                                                            <div>
-                                                                <p className="text-[9px] font-bold uppercase text-neutral-400">Staff Coverage</p>
-                                                                <p className="text-xs font-bold text-black">{staffCoverage.length} covering this day</p>
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <div className="rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase text-neutral-400">
-                                                            Business availability
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                    </div>
+                                                    <div className="schedule-calendar-events">
+                                                        {dayBookings.confirmed > 0 && (
+                                                            <span className="schedule-calendar-event-pill is-confirmed">
+                                                                {dayBookings.confirmed} confirmed
+                                                            </span>
+                                                        )}
+                                                        {dayBookings.pending > 0 && (
+                                                            <span className="schedule-calendar-event-pill is-pending">
+                                                                {dayBookings.pending} request{dayBookings.pending === 1 ? '' : 's'}
+                                                            </span>
+                                                        )}
+                                                        {dayBookings.waitlist > 0 && (
+                                                            <span className="schedule-calendar-event-pill is-waitlist">
+                                                                {dayBookings.waitlist} waitlist
+                                                            </span>
+                                                        )}
+                                                        {!dayBookings.total && (
+                                                            <span className="schedule-calendar-event-pill is-open">
+                                                                {config.available ? `${openSlots} open slots` : 'Closed'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
 
-                                                <div className="schedule-day-row-capacity">
-                                                    {!isPastDay && (
-                                                        <button
-                                                            type="button"
-                                                            aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
-                                                            title={config.available ? 'Mark unavailable' : 'Mark available'}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleDateAvailability(dateStr);
-                                                            }}
-                                                            className={`schedule-day-availability-chip ${config.available ? 'is-open' : 'is-closed'}`}
-                                                        >
-                                                            {config.available ? <Check size={12}/> : <X size={12}/>}
-                                                            <span>{config.available ? 'Open' : 'Closed'}</span>
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            setExpandedDate(dateStr);
-                                                            setSchedulePeriod('day');
-                                                        }}
-                                                        className="schedule-day-row-action"
-                                                        aria-label={`Open full view for ${dateStr}`}
-                                                        title="Open day view"
-                                                    >
-                                                        <Eye size={14}/>
-                                                    </button>
+                                                <div className="schedule-calendar-tile-footer">
+                                                    <span>{config.available ? `${openSlots} open` : 'Closed'}</span>
+                                                    <span>{dayBookings.confirmed} booked</span>
                                                 </div>
                                             </div>
                                         );
