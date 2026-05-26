@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
+  Banknote,
   BarChart3,
   CalendarDays,
   Check,
@@ -94,6 +95,31 @@ const gatewayCards = [
     fields: [
       { key: 'publicKey', label: 'Public key', type: 'text' },
       { key: 'secretKey', label: 'Secret key', type: 'password' }
+    ]
+  },
+  {
+    id: 'manual_eft',
+    name: 'Manual EFT',
+    region: 'South Africa',
+    icon: Landmark,
+    note: 'Show your bank details to clients and ask them to use their booking ID as the payment reference.',
+    fields: [
+      { key: 'accountHolder', label: 'Account holder', type: 'text' },
+      { key: 'bankName', label: 'Bank name', type: 'text' },
+      { key: 'accountNumber', label: 'Account number', type: 'text' },
+      { key: 'branchCode', label: 'Branch code', type: 'text' },
+      { key: 'accountType', label: 'Account type', type: 'text' },
+      { key: 'instructions', label: 'Client instructions', type: 'textarea' }
+    ]
+  },
+  {
+    id: 'cash',
+    name: 'Cash',
+    region: 'Manual',
+    icon: Banknote,
+    note: 'Let clients choose cash and keep the booking unpaid until your team marks it paid.',
+    fields: [
+      { key: 'instructions', label: 'Client instructions', type: 'textarea' }
     ]
   }
 ];
@@ -771,16 +797,25 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
                   {selectedGateway.fields.map((field) => (
                     <label key={field.key} className="block">
                       <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">{field.label}</span>
-                      <div className="mt-2 flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-3 focus-within:border-black transition-colors">
+                      <div className={`mt-2 flex gap-2 rounded-2xl border border-neutral-200 bg-white px-3 focus-within:border-black transition-colors ${field.type === 'textarea' ? 'items-start py-3' : 'items-center'}`}>
                         <KeyRound size={15} className="text-neutral-300 shrink-0" />
-                        <input
-                          type={field.type}
-                          value={selectedDraft.credentials?.[field.key] || ''}
-                          onChange={(event) => updateDraft(selectedGateway.id, { credentials: { [field.key]: event.target.value } })}
-                          placeholder={selectedPublicConfig.credentialSummary?.[field.key] || `Enter ${field.label.toLowerCase()}`}
-                          className="h-12 flex-1 min-w-0 bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
-                          autoComplete="off"
-                        />
+                        {field.type === 'textarea' ? (
+                          <textarea
+                            value={selectedDraft.credentials?.[field.key] || ''}
+                            onChange={(event) => updateDraft(selectedGateway.id, { credentials: { [field.key]: event.target.value } })}
+                            placeholder={selectedPublicConfig.credentialSummary?.[field.key] || `Enter ${field.label.toLowerCase()}`}
+                            className="min-h-24 flex-1 min-w-0 resize-none bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
+                          />
+                        ) : (
+                          <input
+                            type={field.type}
+                            value={selectedDraft.credentials?.[field.key] || ''}
+                            onChange={(event) => updateDraft(selectedGateway.id, { credentials: { [field.key]: event.target.value } })}
+                            placeholder={selectedPublicConfig.credentialSummary?.[field.key] || `Enter ${field.label.toLowerCase()}`}
+                            className="h-12 flex-1 min-w-0 bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
+                            autoComplete="off"
+                          />
+                        )}
                       </div>
                     </label>
                   ))}

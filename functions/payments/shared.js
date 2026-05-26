@@ -2,7 +2,7 @@ const admin = require('firebase-admin');
 const { HttpsError } = require('firebase-functions/v2/https');
 const { decryptJson } = require('./crypto');
 
-const GATEWAYS = Object.freeze(['stripe', 'payfast', 'peach', 'yoco', 'ozow', 'paystack']);
+const GATEWAYS = Object.freeze(['stripe', 'payfast', 'peach', 'yoco', 'ozow', 'paystack', 'manual_eft', 'cash']);
 
 const gatewayDisplayNames = Object.freeze({
   stripe: 'Stripe',
@@ -10,7 +10,9 @@ const gatewayDisplayNames = Object.freeze({
   peach: 'Peach Payments',
   yoco: 'Yoco',
   ozow: 'Ozow',
-  paystack: 'Paystack'
+  paystack: 'Paystack',
+  manual_eft: 'Manual EFT',
+  cash: 'Cash'
 });
 
 const allowedCredentialFields = Object.freeze({
@@ -19,7 +21,9 @@ const allowedCredentialFields = Object.freeze({
   peach: ['entityId', 'accessToken', 'secretKey', 'webhookSecret', 'checkoutEndpoint'],
   yoco: ['publicKey', 'secretKey', 'webhookSecret'],
   ozow: ['siteCode', 'privateKey', 'apiKey'],
-  paystack: ['publicKey', 'secretKey']
+  paystack: ['publicKey', 'secretKey'],
+  manual_eft: ['accountHolder', 'bankName', 'accountNumber', 'branchCode', 'accountType', 'referencePrefix', 'instructions'],
+  cash: ['instructions']
 });
 
 const cleanString = (value, max = 500) => String(value || '').trim().slice(0, max);

@@ -967,7 +967,9 @@ body {
         }
 
         .schedule-calendar-tile-body {
-            display: grid;
+            display: flex;
+            flex: 1;
+            align-items: flex-start;
             gap: 0.7rem;
             min-height: 0;
         }
@@ -1032,7 +1034,13 @@ body {
             display: flex;
             flex-direction: column;
             gap: 0.36rem;
-            min-height: 2.15rem;
+            width: 100%;
+            min-height: 0;
+        }
+
+        .schedule-calendar-events:empty {
+            flex: 1;
+            min-height: 1.8rem;
         }
 
         .schedule-calendar-event-pill {
@@ -1076,18 +1084,30 @@ body {
             border-color: rgba(228,231,236,0.88);
         }
 
-        .schedule-calendar-tile-footer {
+        .schedule-calendar-card-controls {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 0.5rem;
             padding-top: 0.55rem;
             border-top: 1px solid rgba(228,231,236,0.72);
-            color: rgb(82 82 91);
-            font-size: 0.56rem;
-            font-weight: 950;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
+        }
+
+        .schedule-calendar-card-controls .schedule-day-availability-chip {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .schedule-calendar-card-controls .schedule-day-row-action {
+            flex: 0 0 2rem;
+        }
+
+        .schedule-calendar-card-controls .schedule-day-row-action:only-child {
+            margin-left: auto;
+        }
+
+        .schedule-calendar-tile-footer {
+            display: none;
         }
 
         .schedule-day-row-card {
@@ -1800,8 +1820,12 @@ body {
             }
 
             .schedule-calendar-grid.grid-cols-2 .schedule-calendar-events {
-                min-height: 1.82rem;
+                min-height: 0;
                 gap: 0.26rem;
+            }
+
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-events:empty {
+                min-height: 1.35rem;
             }
 
             .schedule-calendar-grid.grid-cols-2 .schedule-calendar-event-pill {
@@ -1811,9 +1835,15 @@ body {
                 font-size: 0.46rem;
             }
 
-            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-tile-footer {
-                padding-top: 0.42rem;
-                font-size: 0.46rem;
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-card-controls {
+                gap: 0.36rem;
+                padding-top: 0.46rem;
+            }
+
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-card-controls .schedule-day-availability-chip {
+                min-height: 1.78rem;
+                padding-inline: 0.56rem;
+                font-size: 0.5rem;
             }
         }
 
@@ -1862,8 +1892,12 @@ body {
             }
 
             .schedule-calendar-grid.grid-cols-2 .schedule-calendar-events {
-                min-height: 1.35rem;
+                min-height: 0;
                 gap: 0.22rem;
+            }
+
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-events:empty {
+                min-height: 0.95rem;
             }
 
             .schedule-calendar-grid.grid-cols-2 .schedule-calendar-event-pill {
@@ -1873,8 +1907,22 @@ body {
                 border-radius: 0.36rem;
             }
 
-            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-tile-footer {
-                display: none;
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-card-controls {
+                gap: 0.24rem;
+                padding-top: 0.28rem;
+            }
+
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-card-controls .schedule-day-availability-chip {
+                min-height: 1.42rem;
+                padding-inline: 0.4rem;
+                font-size: 0.42rem;
+            }
+
+            .schedule-calendar-grid.grid-cols-2 .schedule-calendar-card-controls .schedule-day-row-action {
+                width: 1.42rem;
+                min-width: 1.42rem;
+                flex-basis: 1.42rem;
+                min-height: 1.42rem;
             }
         }
 
@@ -2742,6 +2790,10 @@ body {
             background: #17191d !important;
             color: #f8fafc !important;
             border-color: rgba(255, 255, 255, 0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-calendar-card-controls {
+            border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
         .native-ui.dashboard-dark .schedule-calendar-card .schedule-calendar-tile-footer {
@@ -4722,6 +4774,90 @@ body {
             border-color: #050505;
         }
 
+        .cinema-display-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.9rem;
+        }
+
+        .cinema-display-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 20px;
+            background: rgba(248, 250, 252, 0.84);
+            padding: 0.95rem;
+        }
+
+        .cinema-display-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .cinema-display-card-head strong,
+        .cinema-range-row span,
+        .cinema-profile-note {
+            color: #64748b;
+            font-size: 0.62rem;
+            font-weight: 950;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .cinema-display-card-head button,
+        .cinema-banner-crop-grid button {
+            min-height: 2.35rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            color: #050505;
+            padding: 0 0.85rem;
+            font-size: 0.62rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .cinema-display-card-head button.is-active,
+        .cinema-banner-crop-grid button.is-active {
+            background: #050505;
+            color: #fff;
+            border-color: #050505;
+        }
+
+        .cinema-range-row {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .cinema-range-row input[type="range"] {
+            width: 100%;
+            accent-color: #050505;
+        }
+
+        .cinema-range-row b {
+            color: #050505;
+            font-size: 0.75rem;
+            font-weight: 950;
+        }
+
+        .cinema-banner-crop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.45rem;
+            margin-top: 0.85rem;
+        }
+
+        .cinema-profile-note {
+            display: block;
+            margin-top: 0.85rem;
+            color: #94a3b8;
+            letter-spacing: 0.06em;
+        }
+
         .cinema-industry-list {
             max-height: 26rem;
             overflow-y: auto;
@@ -5243,6 +5379,9 @@ body {
         .native-ui.dashboard-dark .cinema-text-card,
         .native-ui.dashboard-dark .cinema-text-card input,
         .native-ui.dashboard-dark .cinema-text-card textarea,
+        .native-ui.dashboard-dark .cinema-display-card,
+        .native-ui.dashboard-dark .cinema-display-card-head button,
+        .native-ui.dashboard-dark .cinema-banner-crop-grid button,
         .native-ui.dashboard-dark .cinema-faq-card,
         .native-ui.dashboard-dark .cinema-faq-card label,
         .native-ui.dashboard-dark .cinema-align-grid button,
@@ -5307,6 +5446,9 @@ body {
         .native-ui.dashboard-dark .cinema-editor-note,
         .native-ui.dashboard-dark .cinema-faq-editor-head small,
         .native-ui.dashboard-dark .cinema-text-card span,
+        .native-ui.dashboard-dark .cinema-display-card-head strong,
+        .native-ui.dashboard-dark .cinema-range-row span,
+        .native-ui.dashboard-dark .cinema-profile-note,
         .native-ui.dashboard-dark .cinema-faq-card label span,
         .native-ui.dashboard-dark .cinema-faq-card-head span {
             color: #a8b3c5;
@@ -5323,6 +5465,8 @@ body {
         }
 
         .native-ui.dashboard-dark .cinema-align-grid button.is-active,
+        .native-ui.dashboard-dark .cinema-display-card-head button.is-active,
+        .native-ui.dashboard-dark .cinema-banner-crop-grid button.is-active,
         .native-ui.dashboard-dark .cinema-industry-list button.is-active {
             background: #f8fafc !important;
             color: #050505 !important;
@@ -5388,7 +5532,8 @@ body {
         .mobile-editor-panel .cinema-color-grid,
         .mobile-editor-panel .cinema-font-grid,
         .mobile-editor-panel .cinema-toggle-grid,
-        .mobile-editor-panel .cinema-field-grid {
+        .mobile-editor-panel .cinema-field-grid,
+        .mobile-editor-panel .cinema-display-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 

@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Bell, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flame, Globe, Images, Instagram, Mail, MapPin } from 'lucide-react';
+import { ArrowRight, Banknote, Bell, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flame, Globe, Images, Instagram, Landmark, Mail, MapPin, ReceiptText } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
 import { formatServiceDuration, formatServicePrice, normalizeServiceList } from '../utils/services';
@@ -38,6 +38,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const [selectedTime, setSelectedTime] = useState(null);
             const [selectedServiceId, setSelectedServiceId] = useState('');
             const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', emailOptIn: false });
+            const [selectedManualPayment, setSelectedManualPayment] = useState('');
+            const [submittedBooking, setSubmittedBooking] = useState(null);
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [submitError, setSubmitError] = useState('');
             const [isInitialLoading, setIsInitialLoading] = useState(settings.features?.loadingScreen);
@@ -215,6 +217,28 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const venuePhotos = Array.isArray(settings.venuePhotos)
                 ? settings.venuePhotos.filter(Boolean).slice(0, 8)
                 : [];
+            const manualPaymentOptions = useMemo(() => (
+                Array.isArray(settings.manualPaymentOptions)
+                    ? settings.manualPaymentOptions.filter(option => option?.enabled !== false)
+                    : []
+            ), [settings.manualPaymentOptions]);
+            const selectedManualPaymentOption = manualPaymentOptions.find(option => option.id === selectedManualPayment) || null;
+            const bannerDisplay = useMemo(() => {
+                const display = settings.bannerDisplay || {};
+                const height = Number(display.height);
+                const position = ['top', 'center', 'bottom'].includes(display.position) ? display.position : 'center';
+                return {
+                    visible: display.visible !== false,
+                    height: Number.isFinite(height) ? Math.min(360, Math.max(120, height)) : 220,
+                    objectPosition: position === 'top' ? 'center top' : position === 'bottom' ? 'center bottom' : 'center center'
+                };
+            }, [settings.bannerDisplay]);
+
+            useEffect(() => {
+                if (selectedManualPayment && !manualPaymentOptions.some(option => option.id === selectedManualPayment)) {
+                    setSelectedManualPayment('');
+                }
+            }, [manualPaymentOptions, selectedManualPayment]);
 
             const handleAction = async () => {
                 if (isPreview) { onInspect('buttons'); return; }
@@ -236,7 +260,10 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 servicePrice: selectedService?.price || '',
                                 servicePriceType: selectedService?.priceType || '',
                                 serviceDuration: selectedService?.duration || '',
-                                serviceCategory: selectedService?.category || ''
+                                serviceCategory: selectedService?.category || '',
+                                paymentMethod: selectedManualPaymentOption?.id || '',
+                                paymentGateway: selectedManualPaymentOption?.gatewayType || selectedManualPaymentOption?.id || '',
+                                paymentProviderName: selectedManualPaymentOption?.name || ''
                             },
                             activeDate.full,
                             isWaitlistMode ? 'Waitlist' : selectedTime,
@@ -247,6 +274,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             setSubmitError('Booking could not be sent. Please try again.');
                             return;
                         }
+                        setSubmittedBooking(completed && typeof completed === 'object' ? completed : null);
                         setStep(2);
                     } catch (error) {
                         console.error(error);
@@ -372,7 +400,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                     <div className="animate-in fade-in slide-in-from-bottom-20 duration-1000 min-h-full flex flex-col p-6 md:p-12 relative z-10">
                     
                     {/* BRAND HEADER */}
-                    <header className="mb-10 flex-shrink-0" data-preview-section="identity">
+                    <header className="mb-10 flex-shrink-0" data-preview-section="introduction">
                         <div
                             className={`flex items-center gap-4 mb-8 ${inspectClass}`}
                             style={{ justifyContent: pageJustify }}
@@ -387,12 +415,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             </span>
                         </div>
 
-                        {settings.bannerImage && (
+                        {settings.bannerImage && bannerDisplay.visible && (
                             <img
                                 src={settings.bannerImage}
-                                className={`w-full aspect-[16/7] max-h-64 rounded-lg object-cover shadow-sm mb-8 border border-neutral-100/10 ${inspectClass}`}
+                                className={`w-full rounded-lg object-cover shadow-sm mb-8 border border-neutral-100/10 ${inspectClass}`}
+                                style={{ height: `${bannerDisplay.height}px`, objectPosition: bannerDisplay.objectPosition }}
                                 alt="Booking page banner"
-                                onClick={() => isPreview && onInspect('identity')}
+                                onClick={() => isPreview && onInspect('introduction')}
                             />
                         )}
                         
@@ -403,7 +432,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                     className={`rounded-lg object-contain shadow-sm border border-neutral-100/10 ${inspectClass}`}
                                     style={{ width: logoDisplay.size, height: logoDisplay.size, maxWidth: '45vw', maxHeight: '45vw' }}
                                     alt="Brand Logo"
-                                    onClick={() => isPreview && onInspect('identity')}
+                                    onClick={() => isPreview && onInspect('introduction')}
                                 />
                             </div>
                         )}
@@ -419,7 +448,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 overflowWrap: 'anywhere',
                                 ...getBlockMargins(pageAlignment)
                             }}
-                            onClick={() => isPreview && onInspect('identity')}
+                            onClick={() => isPreview && onInspect('introduction')}
                             contentEditable={isPreview}
                             suppressContentEditableWarning
                             onBlur={(event) => isPreview && onSettingChange?.('brandName', event.currentTarget.textContent.trim())}
@@ -436,7 +465,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 textAlign: pageAlignment,
                                 ...getBlockMargins(pageAlignment)
                             }}
-                            onClick={() => isPreview && onInspect('identity')}
+                            onClick={() => isPreview && onInspect('introduction')}
                             contentEditable={isPreview}
                             suppressContentEditableWarning
                             onBlur={(event) => isPreview && onSettingChange?.('welcomeMessage', event.currentTarget.textContent.trim())}
@@ -706,6 +735,73 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                     </span>
                                 </label>
                             )}
+                            {manualPaymentOptions.length > 0 && (
+                                <div
+                                    className="mb-5 rounded-2xl border px-4 py-4 text-left"
+                                    style={{
+                                        borderColor: `${settings.headingColor || '#000000'}14`,
+                                        backgroundColor: `${settings.headingColor || '#000000'}05`
+                                    }}
+                                >
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <span className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>
+                                            <ReceiptText size={14} /> Payment option
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedManualPayment('')}
+                                            className="text-[9px] font-bold uppercase tracking-widest opacity-45 hover:opacity-100"
+                                            style={{ color: settings.headingColor }}
+                                        >
+                                            Pay later
+                                        </button>
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        {manualPaymentOptions.map((option) => {
+                                            const isSelected = selectedManualPayment === option.id;
+                                            const Icon = option.id === 'cash' ? Banknote : Landmark;
+                                            return (
+                                                <button
+                                                    key={option.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedManualPayment(isSelected ? '' : option.id)}
+                                                    className={`rounded-xl border p-3 text-left transition-all ${isSelected ? nativeAccentBorderClass : ''}`}
+                                                    style={{
+                                                        borderColor: isSelected ? (settings.primaryColor || settings.headingColor || '#000000') : `${settings.headingColor || '#000000'}16`,
+                                                        backgroundColor: isSelected ? `${settings.primaryColor || settings.headingColor || '#000000'}12` : `${settings.backgroundColor || '#ffffff'}AA`
+                                                    }}
+                                                >
+                                                    <span className="flex items-center gap-2">
+                                                        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${isSelected ? nativeAccentFillClass : ''}`} style={{ backgroundColor: isSelected ? (settings.primaryColor || '#000000') : `${settings.headingColor || '#000000'}08`, color: isSelected ? (settings.buttonTextColor || '#000000') : settings.headingColor }}>
+                                                            <Icon size={15} />
+                                                        </span>
+                                                        <span>
+                                                            <span className="block text-xs font-black" style={{ color: settings.headingColor }}>{option.name}</span>
+                                                            <span className="block text-[10px] font-bold uppercase tracking-widest opacity-45" style={{ color: settings.bodyColor }}>{option.id === 'manual_eft' ? 'Bank transfer' : 'Pay at venue'}</span>
+                                                        </span>
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedManualPaymentOption && (
+                                        <div className="mt-3 rounded-xl border p-3 text-xs leading-relaxed" style={{ borderColor: `${settings.headingColor || '#000000'}12`, color: settings.bodyColor }}>
+                                            {selectedManualPaymentOption.id === 'manual_eft' ? (
+                                                <>
+                                                    <p className="font-bold" style={{ color: settings.headingColor }}>Use your booking ID as payment reference after submitting.</p>
+                                                    {selectedManualPaymentOption.credentialSummary?.bankName && <p className="mt-1">Bank: {selectedManualPaymentOption.credentialSummary.bankName}</p>}
+                                                    {selectedManualPaymentOption.credentialSummary?.accountHolder && <p>Account holder: {selectedManualPaymentOption.credentialSummary.accountHolder}</p>}
+                                                    {selectedManualPaymentOption.credentialSummary?.accountNumber && <p>Account: {selectedManualPaymentOption.credentialSummary.accountNumber}</p>}
+                                                    {selectedManualPaymentOption.credentialSummary?.branchCode && <p>Branch: {selectedManualPaymentOption.credentialSummary.branchCode}</p>}
+                                                </>
+                                            ) : (
+                                                <p>Pay in cash when the business confirms your booking. They can mark the booking paid once received.</p>
+                                            )}
+                                            {selectedManualPaymentOption.instructions && <p className="mt-2 opacity-70">{selectedManualPaymentOption.instructions}</p>}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div
                                 className="mb-5 rounded-2xl border px-4 py-3.5 md:py-4 text-left"
                                 style={{
@@ -779,7 +875,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 <section
                                     className={`booking-venue-gallery mt-8 ${inspectClass}`}
                                     data-preview-section="venue-gallery"
-                                    onClick={() => isPreview && onInspect('identity')}
+                                    onClick={() => isPreview && onInspect('introduction')}
                                     style={{
                                         borderColor: `${settings.headingColor || '#000000'}18`,
                                         backgroundColor: `${settings.headingColor || '#000000'}04`
@@ -853,6 +949,17 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                     <p className="opacity-60 text-xl font-light mb-24 max-w-sm leading-relaxed" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
                         {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. We will text you if a slot opens.` : `Access confirmed for ${selectedTime} on ${activeDate.dayNum} ${activeDate.month}.`}
                     </p>
+                    {selectedManualPaymentOption && (
+                        <div className="mb-10 w-full max-w-lg rounded-3xl border p-5" style={{ borderColor: `${settings.primaryColor || settings.headingColor || '#000000'}24`, backgroundColor: `${settings.primaryColor || settings.headingColor || '#000000'}08` }}>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.28em]" style={{ color: settings.headingColor }}>Payment reference</p>
+                            <p className="mt-2 text-2xl font-black tracking-tight" style={{ color: settings.headingColor }}>{submittedBooking?.paymentReference || submittedBooking?.bookingId || 'Use your booking ID'}</p>
+                            <p className="mt-2 text-sm leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
+                                {selectedManualPaymentOption.id === 'manual_eft'
+                                    ? 'Use this reference for your EFT so the business can match and mark the booking paid.'
+                                    : 'The business can mark the booking paid after receiving cash.'}
+                            </p>
+                        </div>
+                    )}
                     <div className="mb-12 grid w-full max-w-lg grid-cols-1 gap-3 md:grid-cols-3">
                         {[
                             ['Saved', 'Your request is in the system.'],

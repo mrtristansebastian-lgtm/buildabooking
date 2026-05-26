@@ -501,6 +501,26 @@ const getLogoDisplay = (settings = {}) => {
   };
 };
 
+const parseAmountToCents = (value) => {
+  const normalized = String(value || '')
+    .replace(/[^0-9.,-]/g, '')
+    .replace(',', '.');
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100)) : 0;
+};
+
+const getBannerDisplay = (settings = {}) => {
+  const bannerDisplay = settings.bannerDisplay || {};
+  const height = Number(bannerDisplay.height);
+  const position = ['top', 'center', 'bottom'].includes(bannerDisplay.position) ? bannerDisplay.position : 'center';
+  return {
+    visible: bannerDisplay.visible !== false,
+    height: Number.isFinite(height) ? Math.min(360, Math.max(120, height)) : 220,
+    position,
+    objectPosition: position === 'top' ? 'center top' : position === 'bottom' ? 'center bottom' : 'center center'
+  };
+};
+
 const identityTextControls = [
   {
     id: 'brandName',
@@ -1329,6 +1349,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [clientGuestMode, setClientGuestMode] = useState(false);
             const [publicSlug, setPublicSlug] = useState(getPublicBookingSlug);
             const [publicWorkspace, setPublicWorkspace] = useState(null);
+            const [publicManualPaymentOptions, setPublicManualPaymentOptions] = useState([]);
             const [publicLoading, setPublicLoading] = useState(false);
             const [publicError, setPublicError] = useState('');
             const [publicReloadKey, setPublicReloadKey] = useState(0);
@@ -1341,7 +1362,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [editorStudioModal, setEditorStudioModal] = useState(null);
             const editorStudioAudioRef = useRef(null);
             const editorStudioPresentationRef = useRef([]);
-            const [editorStudioScene, setEditorStudioScene] = useState('identity');
+            const [editorStudioScene, setEditorStudioScene] = useState('introduction');
             const [editorStudioSoundEnabled, setEditorStudioSoundEnabled] = useState(true);
             const [editorStudioPresenting, setEditorStudioPresenting] = useState(false);
             const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
@@ -1594,6 +1615,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 serviceIndustry: '',
                 services: [],
                 logoDisplay: { visible: true, alignment: 'left', size: 96 },
+                bannerDisplay: { visible: true, height: 220, position: 'center' },
                 logo: '', bannerImage: '', venuePhotos: [], address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
             });
 
@@ -3264,6 +3286,40 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [publicSlug, publicReloadKey]);
 
             useEffect(() => {
+                let cancelled = false;
+                if (!publicSlug || !isFirebaseConfigured || !publicWorkspace?.ownerId) {
+                    setPublicManualPaymentOptions([]);
+                    return () => { cancelled = true; };
+                }
+
+                const gatewayIds = ['manual_eft', 'cash'];
+                Promise.all(gatewayIds.map(async (gatewayId) => {
+                    const snap = await FirebaseSDK.getDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'payment_settings', gatewayId));
+                    if (!snap.exists()) return null;
+                    const data = snap.data() || {};
+                    if (data.enabled !== true) return null;
+                    return {
+                        id: gatewayId,
+                        gatewayType: gatewayId,
+                        name: data.providerName || (gatewayId === 'manual_eft' ? 'Manual EFT' : 'Cash'),
+                        enabled: true,
+                        mode: data.mode || 'live',
+                        credentialSummary: data.credentialSummary || {},
+                        instructions: data.credentialSummary?.instructions || ''
+                    };
+                }))
+                    .then((options) => {
+                        if (!cancelled) setPublicManualPaymentOptions(options.filter(Boolean));
+                    })
+                    .catch((error) => {
+                        console.error('Could not load manual payment options', error);
+                        if (!cancelled) setPublicManualPaymentOptions([]);
+                    });
+
+                return () => { cancelled = true; };
+            }, [publicSlug, publicWorkspace?.ownerId]);
+
+            useEffect(() => {
                 if (publicSlug) {
                     return undefined;
                 }
@@ -3772,7 +3828,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             const editorRoomPreviewTargets = {
-                identity: 'identity',
                 introduction: 'identity',
                 services: 'services',
                 colours: 'identity',
@@ -3785,20 +3840,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 social: 'social'
             };
             const editorRoomScenes = [
-                { id: 'identity', number: '01', icon: BadgeCheck, title: 'Brand Identity' },
-                { id: 'introduction', number: '02', icon: MessageSquare, title: 'Introduction' },
-                { id: 'services', number: '03', icon: Briefcase, title: 'Services' },
-                { id: 'colours', number: '04', icon: Pipette, title: 'Colour Direction' },
-                { id: 'typography', number: '05', icon: Type, title: 'Typography' },
-                { id: 'calendar', number: '06', icon: Calendar, title: 'Calendar Style' },
-                { id: 'time', number: '07', icon: Clock, title: 'Time Style' },
-                { id: 'faq', number: '08', icon: HelpCircle, title: 'FAQ Setup' },
-                { id: 'form', number: '09', icon: FileText, title: 'Client Form' },
-                { id: 'buttons', number: '10', icon: SlidersHorizontal, title: 'Action Buttons' },
-                { id: 'social', number: '11', icon: Globe, title: 'Social & Maps' }
+                { id: 'introduction', number: '01', icon: MessageSquare, title: 'Introduction' },
+                { id: 'services', number: '02', icon: Briefcase, title: 'Services' },
+                { id: 'colours', number: '03', icon: Pipette, title: 'Colour Direction' },
+                { id: 'typography', number: '04', icon: Type, title: 'Typography' },
+                { id: 'calendar', number: '05', icon: Calendar, title: 'Calendar Style' },
+                { id: 'time', number: '06', icon: Clock, title: 'Time Style' },
+                { id: 'faq', number: '07', icon: HelpCircle, title: 'FAQ Setup' },
+                { id: 'form', number: '08', icon: FileText, title: 'Client Form' },
+                { id: 'buttons', number: '09', icon: SlidersHorizontal, title: 'Action Buttons' },
+                { id: 'social', number: '10', icon: Globe, title: 'Social & Maps' }
             ];
             const roomTabMap = {
-                identity: 'identity',
                 introduction: 'identity',
                 services: 'features',
                 colours: 'themes',
@@ -3846,9 +3899,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             };
             const openEditorRoom = (roomId) => {
-                setEditorStudioModal(roomId);
-                setEditorTab(roomTabMap[roomId] || 'identity');
-                if (roomId === 'faq') {
+                const normalizedRoomId = roomId === 'identity' ? 'introduction' : roomId;
+                setEditorStudioModal(normalizedRoomId);
+                setEditorTab(roomTabMap[normalizedRoomId] || 'identity');
+                if (normalizedRoomId === 'faq') {
                     setSettings(prev => ({
                         ...prev,
                         features: {
@@ -3859,9 +3913,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 : defaultFaqItems
                         }
                     }));
-                    window.setTimeout(() => focusEditorPreviewRoom(roomId), 360);
+                    window.setTimeout(() => focusEditorPreviewRoom(normalizedRoomId), 360);
                 } else {
-                    focusEditorPreviewRoom(roomId);
+                    focusEditorPreviewRoom(normalizedRoomId);
                 }
                 playEditorStudioSound('step');
             };
@@ -3869,7 +3923,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (activeTab !== 'editor') setActiveTab('editor');
                 setEditorCollapsed(false);
                 const inspectRoomMap = {
-                    identity: 'identity',
+                    identity: 'introduction',
                     introduction: 'introduction',
                     services: 'services',
                     calendar: 'calendar',
@@ -4048,6 +4102,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         alignment: 'left',
                         size: 96,
                         ...(prev.logoDisplay || {}),
+                        [key]: value
+                    }
+                }));
+            };
+            const handleBannerDisplayChange = (key, value) => {
+                setSettings(prev => ({
+                    ...prev,
+                    bannerDisplay: {
+                        visible: true,
+                        height: 220,
+                        position: 'center',
+                        ...(prev.bannerDisplay || {}),
                         [key]: value
                     }
                 }));
@@ -4442,6 +4508,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     servicePriceType: formData.servicePriceType || '',
                     serviceDuration: formData.serviceDuration || '',
                     serviceCategory: formData.serviceCategory || '',
+                    paymentMethod: formData.paymentMethod || '',
+                    paymentGateway: formData.paymentGateway || '',
+                    paymentProviderName: formData.paymentProviderName || '',
+                    paymentStatus: formData.paymentMethod ? 'manual_pending' : 'unpaid',
+                    paymentReference: '',
                     notificationChannels: {
                         email: Boolean(formData.email && formData.emailOptIn),
                         portal: Boolean(formData.email)
@@ -4500,6 +4571,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     servicePriceType: formData.servicePriceType || '',
                     serviceDuration: formData.serviceDuration || '',
                     serviceCategory: formData.serviceCategory || '',
+                    paymentMethod: formData.paymentMethod || '',
+                    paymentGateway: formData.paymentGateway || '',
+                    paymentProviderName: formData.paymentProviderName || '',
+                    paymentStatus: formData.paymentMethod ? 'manual_pending' : 'unpaid',
+                    paymentReference: '',
                     notificationChannels: {
                         email: Boolean(formData.email && formData.emailOptIn),
                         portal: Boolean(formData.email)
@@ -4527,7 +4603,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     if (functions && FirebaseSDK.httpsCallable) {
                         try {
                             const createPublicBookingRequest = FirebaseSDK.httpsCallable(functions, 'createPublicBookingRequest');
-                            await createPublicBookingRequest({
+                            const result = await createPublicBookingRequest({
                                 appId,
                                 workspaceSlug: publicSlug,
                                 idempotencyKey,
@@ -4545,6 +4621,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     servicePriceType: bookingRecord.servicePriceType,
                                     serviceDuration: bookingRecord.serviceDuration,
                                     serviceCategory: bookingRecord.serviceCategory,
+                                    paymentMethod: bookingRecord.paymentMethod,
+                                    paymentGateway: bookingRecord.paymentGateway,
+                                    paymentProviderName: bookingRecord.paymentProviderName,
+                                    paymentStatus: bookingRecord.paymentStatus,
                                     date: bookingRecord.date,
                                     dateKey: bookingRecord.dateKey,
                                     time: bookingRecord.time,
@@ -4552,7 +4632,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     notificationChannels: bookingRecord.notificationChannels
                                 }
                             });
-                            return true;
+                            return result?.data || true;
                         } catch (functionError) {
                             const fallbackCodes = new Set(['functions/not-found', 'functions/unavailable']);
                             if (!fallbackCodes.has(functionError?.code)) {
@@ -4567,9 +4647,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             console.warn('Falling back to direct public booking write until Functions are deployed.', functionError);
                         }
                     }
-                    await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'bookings'), bookingRecord);
-                    await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug, 'bookingSubmissions'), bookingRecord);
-                    return true;
+                    const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'bookings'), bookingRecord);
+                    const paymentReference = bookingRecord.paymentMethod ? bookingRef.id : '';
+                    if (paymentReference) {
+                        await FirebaseSDK.updateDoc(bookingRef, { paymentReference });
+                    }
+                    await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug, 'bookingSubmissions'), {
+                        ...bookingRecord,
+                        paymentReference
+                    });
+                    return { ok: true, bookingId: bookingRef.id, paymentReference, reused: false };
                 } catch (error) {
                     console.error(error);
                     showToast('Booking could not be submitted.');
@@ -4640,6 +4727,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 servicePriceType: updates.servicePriceType ?? existingBooking?.servicePriceType ?? '',
                                 serviceDuration: updates.serviceDuration ?? existingBooking?.serviceDuration ?? '',
                                 serviceCategory: updates.serviceCategory ?? existingBooking?.serviceCategory ?? '',
+                                paymentMethod: updates.paymentMethod ?? existingBooking?.paymentMethod ?? '',
+                                paymentGateway: updates.paymentGateway ?? existingBooking?.paymentGateway ?? '',
+                                paymentProviderName: updates.paymentProviderName ?? existingBooking?.paymentProviderName ?? '',
+                                paymentStatus: updates.paymentStatus ?? existingBooking?.paymentStatus ?? '',
+                                paymentReference: updates.paymentReference ?? existingBooking?.paymentReference ?? '',
+                                amountPaidInCents: updates.amountPaidInCents ?? existingBooking?.amountPaidInCents ?? 0,
+                                paidAt: updates.paidAt ?? existingBooking?.paidAt ?? null,
                                 status: updates.status ?? existingBooking?.status ?? 'pending',
                                 staffId: nextStaffId,
                                 staffName: nextAssignedStaff?.name || '',
@@ -4713,6 +4807,46 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
                 } 
                 catch (err) { console.error(err); }
+            };
+
+            const markBookingPaid = async (booking) => {
+                if (!booking?.id || booking.isExample) {
+                    showToast('Example previews cannot be marked paid.');
+                    return;
+                }
+
+                const amountInCents = Number.isSafeInteger(Number(booking.amountInCents))
+                    ? Number(booking.amountInCents)
+                    : parseAmountToCents(booking.servicePrice);
+                const paymentMethod = booking.paymentMethod || booking.paymentGateway || 'manual';
+                const updates = {
+                    paymentStatus: 'paid',
+                    paymentMethod,
+                    paymentGateway: booking.paymentGateway || paymentMethod,
+                    paymentProviderName: booking.paymentProviderName || (paymentMethod === 'cash' ? 'Cash' : 'Manual payment'),
+                    manualPayment: true,
+                    amountPaidInCents: amountInCents,
+                    paidAt: Date.now()
+                };
+
+                if (functions && FirebaseSDK.httpsCallable && isFirebaseConfigured && user) {
+                    try {
+                        const callable = FirebaseSDK.httpsCallable(functions, 'markManualBookingPaid');
+                        await callable({
+                            appId,
+                            businessId: workspaceOwnerId,
+                            bookingId: booking.id,
+                            paymentMethod,
+                            amountInCents,
+                            currency: booking.currency || 'ZAR'
+                        });
+                    } catch (error) {
+                        console.error('markManualBookingPaid failed, applying local booking status update', error);
+                    }
+                }
+
+                await updateBooking(booking.id, updates);
+                showToast(`${booking.clientName || 'Booking'} marked as paid.`);
             };
 
             const deleteBooking = async (bookingId) => {
@@ -5279,7 +5413,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     <div className="h-screen w-screen overflow-x-hidden overflow-y-auto" style={{ backgroundColor: publicWorkspace.backgroundColor || '#ffffff' }}>
                         <Suspense fallback={<LazySectionFallback label="Loading booking page" />}>
                             <AppErrorBoundary compact label="Booking Page" resetKey={publicSlug}>
-                                <BookingFlow settings={publicWorkspace} onComplete={handlePublicBookingComplete} onInstallApp={handleAddToHomeScreen} />
+                                <BookingFlow settings={{ ...publicWorkspace, manualPaymentOptions: publicManualPaymentOptions }} onComplete={handlePublicBookingComplete} onInstallApp={handleAddToHomeScreen} />
                             </AppErrorBoundary>
                         </Suspense>
                     </div>
@@ -7043,7 +7177,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         const scenes = editorRoomScenes.map(scene => ({
                                             ...scene,
                                             title: {
-                                                identity: 'Brand Identity',
                                                 introduction: 'Introduction',
                                                 services: 'Services',
                                                 colours: 'Colour direction',
@@ -7056,7 +7189,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 social: 'Social & maps'
                                             }[scene.id],
                                             prompt: {
-                                                identity: 'Logo, banner, and page alignment live here in tidy setup drawers.',
                                                 introduction: 'Name the page and write the first words clients see. Type here or directly on the mockup.',
                                                 services: 'Build the bookable menu clients choose from before they request a time.',
                                                 colours: 'Build a live color direction from one color, many colors, or your uploaded brand media.',
@@ -7069,7 +7201,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 social: 'Add social links and maps so clients can keep moving after booking.'
                                             }[scene.id]
                                         }));
-                                        const activeSceneId = editorStudioModal || 'identity';
+                                        const activeSceneId = editorStudioModal || 'introduction';
                                         const activeIndex = Math.max(0, scenes.findIndex(scene => scene.id === activeSceneId));
                                         const activeScene = scenes[activeIndex] || scenes[0];
                                         const ActiveSceneIcon = activeScene.icon;
@@ -7106,16 +7238,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                                                     <div className="editor-cinema-stage-body">
                                                         <div className="editor-cinema-live-card">
-                                                            {activeScene.id === 'identity' && (
-                                                                <div className="cinema-brand-preview" style={{ textAlign: getLogoDisplay(settings).alignment }}>
-                                                                    <div className="cinema-banner-frame">{settings.bannerImage ? <img src={settings.bannerImage} alt="" /> : <span>Optional banner</span>}</div>
-                                                                    {getLogoDisplay(settings).visible && <div className="cinema-logo-frame" style={{ width: `${Math.min(88, getLogoDisplay(settings).size)}px`, height: `${Math.min(88, getLogoDisplay(settings).size)}px` }}>{settings.logo ? <img src={settings.logo} alt="" /> : <BuildABookingMark className="w-10 h-10" />}</div>}
-                                                                    <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Atelier 7B / Private" />
-                                                                    <textarea value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder="Studio Noir" style={{ fontFamily: getFontFamily(settings.brandNameFontFamily || settings.headingFontFamily || settings.fontFamily) }} />
-                                                                    <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Reserve your private session." />
-                                                                </div>
-                                                            )}
-
                                                             {activeScene.id === 'colours' && (
                                                                 <div className="cinema-theme-preview">
                                                                     <span>{selectedPaletteName || 'Color direction'}</span>
@@ -7185,33 +7307,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         </div>
 
                                                         <div className="editor-cinema-control-panel">
-                                                            {activeScene.id === 'identity' && <>
-                                                                <details className="cinema-setting-group" open>
-                                                                    <summary><Camera size={15}/> Upload Logo</summary>
-                                                                    <label className="cinema-upload-line">Choose a logo image<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('logo', file, 'brand'); e.target.value = ''; }} /></label>
-                                                                </details>
-                                                                <details className="cinema-setting-group">
-                                                                    <summary><Monitor size={15}/> Upload Banner</summary>
-                                                                    <label className="cinema-upload-line">Choose a landscape banner<input type="file" accept="image/*" onChange={(e) => { const file = e.target.files[0]; handleSettingImageUpload('bannerImage', file, 'brand'); e.target.value = ''; }} /></label>
-                                                                </details>
-                                                                <details className="cinema-setting-group" open>
-                                                                    <summary><AlignCenter size={15}/> Page Alignment</summary>
-                                                                    <div className="cinema-control-title"><span>How would you like to align the page?</span><small>This controls the logo position and the rhythm of the booking page.</small></div>
-                                                                    <div className="cinema-align-grid">
-                                                                        {[
-                                                                            ['left', AlignLeft],
-                                                                            ['center', AlignCenter],
-                                                                            ['right', AlignRight]
-                                                                        ].map(([alignment, Icon]) => (
-                                                                            <button key={alignment} type="button" onClick={() => handleLogoDisplayChange('alignment', alignment)} className={getLogoDisplay(settings).alignment === alignment ? 'is-active' : ''}>
-                                                                                <Icon size={15}/>{alignment}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                </details>
-                                                                <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}><Share2 size={15}/> Copy booking link</button>
-                                                            </>}
-
                                                             {activeScene.id === 'services' && <>
                                                                 <div className="cinema-control-title"><span>Service menu</span><small>Services are edited in their own studio so pricing, galleries, and staff stay organized.</small></div>
                                                                 <div className="cinema-feature-preview">
@@ -7298,23 +7393,75 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
                                                             </>}
 
-                                                            {activeScene.id === 'introduction' && <div className="cinema-intro-editor">
-                                                                <p className="cinema-editor-note">Write the first words clients see. Type here, or click the same copy directly on the mockup.</p>
-                                                                <label className="cinema-text-card is-hero">
-                                                                    <span>Booking page name</span>
-                                                                    <input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} />
-                                                                </label>
-                                                                <div className="cinema-text-card-row">
-                                                                    <label className="cinema-text-card">
-                                                                        <span>Text above heading</span>
-                                                                        <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" />
-                                                                    </label>
-                                                                    <label className="cinema-text-card">
-                                                                        <span>Header copy</span>
-                                                                        <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." />
-                                                                    </label>
-                                                                </div>
-                                                            </div>}
+                                                            {activeScene.id === 'introduction' && (() => {
+                                                                const logoDisplay = getLogoDisplay(settings);
+                                                                const bannerDisplay = getBannerDisplay(settings);
+                                                                return (
+                                                                    <div className="cinema-intro-editor">
+                                                                        <p className="cinema-editor-note">Edit the first words clients see here, or click the same text directly on the mockup.</p>
+                                                                        <label className="cinema-text-card is-hero">
+                                                                            <span>Booking page name</span>
+                                                                            <input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} />
+                                                                        </label>
+                                                                        <div className="cinema-text-card-row">
+                                                                            <label className="cinema-text-card">
+                                                                                <span>Text above heading</span>
+                                                                                <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" />
+                                                                            </label>
+                                                                            <label className="cinema-text-card">
+                                                                                <span>Subtext under heading</span>
+                                                                                <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." />
+                                                                            </label>
+                                                                        </div>
+                                                                        <details className="cinema-setting-group" open>
+                                                                            <summary><AlignCenter size={15}/> Page alignment</summary>
+                                                                            <div className="cinema-control-title"><span>How should the page line up?</span><small>This controls the page rhythm and logo position.</small></div>
+                                                                            <div className="cinema-align-grid">
+                                                                                {[
+                                                                                    ['left', AlignLeft],
+                                                                                    ['center', AlignCenter],
+                                                                                    ['right', AlignRight]
+                                                                                ].map(([alignment, Icon]) => (
+                                                                                    <button key={alignment} type="button" onClick={() => handleLogoDisplayChange('alignment', alignment)} className={logoDisplay.alignment === alignment ? 'is-active' : ''}>
+                                                                                        <Icon size={15}/>{alignment}
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                        </details>
+                                                                        <div className="cinema-display-grid">
+                                                                            <section className="cinema-display-card">
+                                                                                <div className="cinema-display-card-head">
+                                                                                    <strong>Logo display</strong>
+                                                                                    <button type="button" onClick={() => handleLogoDisplayChange('visible', !logoDisplay.visible)} className={logoDisplay.visible ? 'is-active' : ''}>{logoDisplay.visible ? 'Shown' : 'Hidden'}</button>
+                                                                                </div>
+                                                                                <label className="cinema-range-row">
+                                                                                    <span>Size</span>
+                                                                                    <input type="range" min="48" max="176" value={logoDisplay.size} onChange={(event) => handleLogoDisplayChange('size', Number(event.target.value))} />
+                                                                                    <b>{logoDisplay.size}px</b>
+                                                                                </label>
+                                                                                <p className="cinema-profile-note">Upload or replace the logo in Business Profile.</p>
+                                                                            </section>
+                                                                            <section className="cinema-display-card">
+                                                                                <div className="cinema-display-card-head">
+                                                                                    <strong>Banner display</strong>
+                                                                                    <button type="button" onClick={() => handleBannerDisplayChange('visible', !bannerDisplay.visible)} className={bannerDisplay.visible ? 'is-active' : ''}>{bannerDisplay.visible ? 'Shown' : 'Hidden'}</button>
+                                                                                </div>
+                                                                                <label className="cinema-range-row">
+                                                                                    <span>Height</span>
+                                                                                    <input type="range" min="120" max="360" value={bannerDisplay.height} onChange={(event) => handleBannerDisplayChange('height', Number(event.target.value))} />
+                                                                                    <b>{bannerDisplay.height}px</b>
+                                                                                </label>
+                                                                                <div className="cinema-banner-crop-grid">
+                                                                                    {['top', 'center', 'bottom'].map(position => (
+                                                                                        <button key={position} type="button" onClick={() => handleBannerDisplayChange('position', position)} className={bannerDisplay.position === position ? 'is-active' : ''}>{position}</button>
+                                                                                    ))}
+                                                                                </div>
+                                                                                <p className="cinema-profile-note">Upload or replace the banner in Business Profile.</p>
+                                                                            </section>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
 
                                                             {activeScene.id === 'calendar' && <>
                                                                 <VisualEditorGroup title="Calendar frame" note="Date cards, active state, background, and glow."><StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" /></VisualEditorGroup>
@@ -7484,7 +7631,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         <div className={`editor-preview-room-nav ${device === 'mobile' ? 'is-phone' : 'is-desktop'}`} aria-label="Preview editing rooms">
                             {editorRoomScenes.map((scene) => {
                                 const SceneIcon = scene.icon;
-                                const isActive = (editorStudioModal || 'identity') === scene.id;
+                                const isActive = (editorStudioModal || 'introduction') === scene.id;
                                 return (
                                     <button
                                         key={scene.id}
@@ -7649,6 +7796,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             : b.status === 'declined'
                                                 ? 'bg-red-50 text-red-600'
                                                 : 'bg-black text-white';
+                                    const hasManualPayment = Boolean(b.paymentMethod || b.paymentGateway || b.paymentStatus === 'manual_pending');
+                                    const isPaid = b.paymentStatus === 'paid';
                                     return (
                                         <div key={b.id} className={`booking-record-row p-4 md:p-5 transition-all hover:bg-neutral-50/70 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
                                             <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
@@ -7734,6 +7883,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             >
                                                                 <Clock size={14} /> Late
                                                             </button>
+                                                            {hasManualPayment && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => markBookingPaid(b)}
+                                                                    disabled={isPaid}
+                                                                    className={`h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 cursor-default' : 'native-gradient-button text-black hover:-translate-y-0.5'}`}
+                                                                >
+                                                                    <CreditCard size={14} /> {isPaid ? 'Paid' : 'Mark Paid'}
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => sendReviewToBooking(b)}
                                                                 className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"

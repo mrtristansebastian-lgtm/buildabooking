@@ -1325,64 +1325,9 @@ import { getLocalDateStr } from '../utils/dates';
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="schedule-calendar-actions">
-                                                        {!isPastDay && (
-                                                            <button
-                                                                type="button"
-                                                                aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
-                                                                title={config.available ? 'Mark unavailable' : 'Mark available'}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    toggleDateAvailability(dateStr);
-                                                                }}
-                                                                className={`schedule-day-availability-chip ${config.available ? 'is-open' : 'is-closed'}`}
-                                                            >
-                                                                {config.available ? <Check size={12}/> : <X size={12}/>}
-                                                                <span>{config.available ? 'Open' : 'Closed'}</span>
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            type="button"
-                                                            onClick={(event) => {
-                                                                event.stopPropagation();
-                                                                setExpandedDate(dateStr);
-                                                                setSchedulePeriod('day');
-                                                            }}
-                                                            className="schedule-day-row-action"
-                                                            aria-label={`Open full view for ${dateStr}`}
-                                                            title="Full day view"
-                                                        >
-                                                            <Eye size={14}/>
-                                                        </button>
-                                                    </div>
                                                 </div>
 
                                                 <div className="schedule-calendar-tile-body">
-                                                    <div className="schedule-calendar-staff-line">
-                                                        {staffCoverage.length > 0 ? (
-                                                            <>
-                                                                <div className="schedule-calendar-avatar-stack">
-                                                                    {staffCoverage.slice(0, 4).map(staff => (
-                                                                        <span
-                                                                            key={staff.id}
-                                                                            className="schedule-calendar-avatar"
-                                                                            title={getStaffDisplayName(staff)}
-                                                                        >
-                                                                            {staff.photoURL ? <img src={staff.photoURL} alt="" /> : getStaffInitials(getStaffDisplayName(staff))}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <p className="text-[9px] font-black uppercase text-neutral-400">Coverage</p>
-                                                                    <p className="text-xs font-bold text-black truncate">{staffCoverage.length} staff active</p>
-                                                                </div>
-                                                            </>
-                                                        ) : (
-                                                            <div className="schedule-calendar-empty-coverage">
-                                                                Business availability
-                                                            </div>
-                                                        )}
-                                                    </div>
                                                     <div className="schedule-calendar-events">
                                                         {dayBookings.confirmed > 0 && (
                                                             <span className="schedule-calendar-event-pill is-confirmed">
@@ -1399,17 +1344,38 @@ import { getLocalDateStr } from '../utils/dates';
                                                                 {dayBookings.waitlist} waitlist
                                                             </span>
                                                         )}
-                                                        {!dayBookings.total && (
-                                                            <span className="schedule-calendar-event-pill is-open">
-                                                                {config.available ? `${openSlots} open slots` : 'Closed'}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
 
-                                                <div className="schedule-calendar-tile-footer">
-                                                    <span>{config.available ? `${openSlots} open` : 'Closed'}</span>
-                                                    <span>{dayBookings.confirmed} booked</span>
+                                                <div className="schedule-calendar-card-controls">
+                                                    {!isPastDay && (
+                                                        <button
+                                                            type="button"
+                                                            aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
+                                                            title={config.available ? 'Mark unavailable' : 'Mark available'}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleDateAvailability(dateStr);
+                                                            }}
+                                                            className={`schedule-day-availability-chip ${config.available ? 'is-open' : 'is-closed'}`}
+                                                        >
+                                                            {config.available ? <Check size={12}/> : <X size={12}/>}
+                                                            <span>{config.available ? 'Open' : 'Closed'}</span>
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            setExpandedDate(dateStr);
+                                                            setSchedulePeriod('day');
+                                                        }}
+                                                        className="schedule-day-row-action"
+                                                        aria-label={`Open full view for ${dateStr}`}
+                                                        title="Full day view"
+                                                    >
+                                                        <Eye size={14}/>
+                                                    </button>
                                                 </div>
                                             </div>
                                         );

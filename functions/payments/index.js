@@ -76,6 +76,12 @@ const initiatePayment = onCall({
     const appId = requireAppId(request.data?.appId);
     const businessId = requireBusinessId(request.data?.businessId);
     const gatewayType = normalizeGatewayType(request.data?.gatewayType);
+    if (gatewayType === 'manual_eft' || gatewayType === 'cash') {
+      throw new HttpsError(
+        'failed-precondition',
+        'Manual payment methods are tracked on bookings and do not create hosted checkout sessions.'
+      );
+    }
     const amountInCents = assertSafeCents(request.data?.amountInCents);
     const currency = normalizeCurrency(request.data?.currency || 'ZAR');
     const bookingId = cleanString(request.data?.bookingId, 180);
@@ -167,8 +173,96 @@ const initiatePayment = onCall({
   }
 });
 
+const markManualBookingPaid = onCall({
+  region: 'us-central1'
+}, async (request) => {
+  try {
+    const appId = requireAppId(request.data?.appId);
+    const businessId = requireBusinessId(request.data?.businessId);
+    const bookingId = cleanString(request.data?.bookingId, 180);
+    if (!bookingId) {
+      throw new HttpsError('invalid-argument', 'bookingId is required.');
+    }
+
+    const paymentMethod = cleanString(request.data?.paymentMethod || 'manual_eft', 40).toLowerCase();
+    if (!['manual_eft', 'cash', 'manual'].includes(paymentMethod)) {
+      throw new HttpsError('invalid-argument', 'Only cash and manual EFT can be marked paid manually.');
+    }
+
+    const amountRaw = Number(request.data?.amountInCents || 0);
+    const requestedAmount = Number.isSafeInteger(amountRaw) && amountRaw >= 0 ? amountRaw : 0;
+    const currency = normalizeCurrency(request.data?.currency || 'ZAR');
+
+    await assertWorkspaceAdmin({ appId, businessId, auth: request.auth });
+
+    const refs = pathRefs(appId, businessId, paymentMethod === 'manual' ? 'manual_eft' : paymentMethod);
+    const bookingRef = refs.userRef.collection('bookings').doc(bookingId);
+    const processedRef = refs.userRef.collection('processed_transactions').doc(`manual_${bookingId}`);
+
+    await admin.firestore().runTransaction(async (transaction) => {
+      const bookingSnap = await transaction.get(bookingRef);
+      if (!bookingSnap.exists) {
+        throw new HttpsError('not-found', 'Booking not found.');
+      }
+
+      const booking = bookingSnap.data() || {};
+      const alreadyPaid = booking.paymentStatus === 'paid';
+      const finalAmount = requestedAmount ||
+        Number(booking.amountInCents || booking.amountPaidInCents || 0) ||
+        0;
+
+      transaction.set(bookingRef, {
+        paymentStatus: 'paid',
+        paymentMethod,
+        paymentGateway: paymentMethod,
+        paymentProviderName: paymentMethod === 'cash' ? 'Cash' : 'Manual EFT',
+        manualPayment: true,
+        amountPaidInCents: finalAmount,
+        currency,
+        paidAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      const processedSnap = await transaction.get(processedRef);
+      if (!alreadyPaid && !processedSnap.exists) {
+        transaction.set(processedRef, {
+          gatewayType: paymentMethod,
+          eventId: `manual_${bookingId}`,
+          paymentId: '',
+          bookingId,
+          amountInCents: finalAmount,
+          currency,
+          providerReference: booking.paymentReference || bookingId,
+          rawEvent: {
+            source: 'manual-mark-paid',
+            uid: request.auth.uid
+          },
+          processedAt: serverTimestamp()
+        });
+
+        transaction.set(refs.financeSummaryRef, {
+          totalRevenueInCents: admin.firestore.FieldValue.increment(finalAmount),
+          paidTransactionCount: admin.firestore.FieldValue.increment(1),
+          manualRevenueInCents: admin.firestore.FieldValue.increment(finalAmount),
+          manualPaymentCount: admin.firestore.FieldValue.increment(1),
+          currency,
+          lastPaymentAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
+    });
+
+    return { ok: true, bookingId, paymentStatus: 'paid' };
+  } catch (error) {
+    console.error('markManualBookingPaid failed', error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', error?.message || 'Booking could not be marked paid.');
+  }
+});
+
 module.exports = {
   initiatePayment,
+  markManualBookingPaid,
   savePaymentGatewaySettings,
   ...webhooks
 };

@@ -59,6 +59,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   const time = requireString(incoming.time, 'Booking time', 80);
   const allowedStatuses = new Set(['pending', 'confirmed', 'waitlist']);
   const status = allowedStatuses.has(incoming.status) ? incoming.status : 'pending';
+  const paymentMethod = cleanString(incoming.paymentMethod, 60).toLowerCase();
+  const paymentGateway = cleanString(incoming.paymentGateway || paymentMethod, 60).toLowerCase();
+  const paymentProviderName = cleanString(incoming.paymentProviderName, 120);
+  const isManualPayment = ['manual_eft', 'cash'].includes(paymentMethod) || ['manual_eft', 'cash'].includes(paymentGateway);
+  const paymentStatus = isManualPayment ? 'manual_pending' : 'unpaid';
   const notificationChannels = {
     email: clientEmailOptIn,
     portal: Boolean(clientEmail)
@@ -139,6 +144,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     time,
     status,
     source: 'public-booking-page',
+    paymentMethod,
+    paymentGateway,
+    paymentProviderName,
+    paymentStatus,
+    paymentReference: isManualPayment ? bookingRef.id : '',
     workspaceSlug,
     workspaceName: workspace.workspaceName || workspace.brandName || '',
     workspaceLogo: workspace.logo || workspace.businessLogo || '',
@@ -195,6 +205,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
         servicePriceType,
         serviceDuration,
         serviceCategory,
+        paymentMethod,
+        paymentGateway,
+        paymentProviderName,
+        paymentStatus,
+        paymentReference: isManualPayment ? bookingRef.id : '',
         status,
         timestamp: bookingRecord.timestamp,
         createdAt: serverTimestamp(),
@@ -211,6 +226,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       workspaceLogo: bookingRecord.workspaceLogo,
       serviceId,
       serviceName,
+      paymentMethod,
+      paymentGateway,
+      paymentProviderName,
+      paymentStatus,
+      paymentReference: isManualPayment ? bookingRef.id : '',
       bookingStatus: status,
       status: 'open',
       lastMessage: `Booking request received${serviceName ? ` for ${serviceName}` : ''} on ${date} at ${time}.`,
@@ -279,7 +299,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    transactionResult = { ok: true, bookingId: bookingRef.id, reused: false };
+    transactionResult = { ok: true, bookingId: bookingRef.id, paymentReference: bookingRecord.paymentReference || '', reused: false };
     if (idempotencyRef) {
       transaction.set(idempotencyRef, {
         key: idempotencyKey,
