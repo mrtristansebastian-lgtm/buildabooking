@@ -41,7 +41,8 @@ export function WorkspaceInbox({
   updateBooking,
   setActiveTab,
   focusTarget,
-  showToast
+  showToast,
+  showExamples = false
 }) {
   const [threads, setThreads] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -108,7 +109,7 @@ export function WorkspaceInbox({
     }
   ]), []);
 
-  const shouldShowExampleThread = threadsReady && threads.length === 0 && bookings.length === 0;
+  const shouldShowExampleThread = showExamples && threadsReady && threads.length === 0 && bookings.length === 0;
   const threadSource = threads.length ? threads : (shouldShowExampleThread ? [exampleThread] : []);
   const clientProfileByEmail = useMemo(() => {
     const profiles = new Map();

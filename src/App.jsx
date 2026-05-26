@@ -72,6 +72,7 @@ import {
   getGoogleAuthIntent,
   getInitialWorkspaceRoute,
   getPublicBookingSlug,
+  getWorkspaceRouteFromUrl,
   getTimestampValue,
   googleCalendarRedirectStorageKey,
   guestModeStorageKey,
@@ -943,7 +944,7 @@ const FinancePaymentSettings = lazy(() => (
             }, [bookingDeskPeriod, bookingFilter, bookingSearch, visibleBookings, staffList, bookingCustomRange]);
 
             const filteredBookings = bookingDesk.filteredRows;
-            const showBookingExample = bookingsReady && visibleBookings.length === 0;
+            const showBookingExample = isGuestWorkspace && bookingsReady && visibleBookings.length === 0;
             const bookingRows = showBookingExample ? [exampleBooking] : filteredBookings;
 
             const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers Chat', 'High Value', 'No-show Risk'];
@@ -1329,7 +1330,7 @@ const FinancePaymentSettings = lazy(() => (
             const selectedClient = useMemo(() => (
                 clientDirectory.find(client => client.id === selectedClientId) || null
             ), [clientDirectory, selectedClientId]);
-            const showClientExample = bookingsReady && clientDirectory.length === 0 && !clientSearch.trim();
+            const showClientExample = isGuestWorkspace && bookingsReady && clientDirectory.length === 0 && !clientSearch.trim();
             const displayClients = showClientExample ? [exampleClient] : filteredClientDirectory;
             const activeClient = selectedClient || (showClientExample && selectedClientId === exampleClient.id ? exampleClient : null);
 
@@ -5612,6 +5613,7 @@ const FinancePaymentSettings = lazy(() => (
                                             setActiveTab={setActiveTab}
                                             focusTarget={supportThreadFocus}
                                             showToast={showToast}
+                                            showExamples={isGuestWorkspace}
                                         />
                                     </AppErrorBoundary>
                                 </Suspense>
@@ -5656,6 +5658,7 @@ const FinancePaymentSettings = lazy(() => (
                                         showToast={showToast}
                                         bookings={bookings}
                                         onMarkBookingPaid={markBookingPaid}
+                                        showExamples={isGuestWorkspace}
                                     />
                                 </AppErrorBoundary>
                             </Suspense>

@@ -36,7 +36,7 @@ const manualSections = [
       'Dashboard is the daily command center.',
       'Editor controls the public booking page.',
       'Support Inbox keeps client conversations inside Build A Booking.',
-      'Examples are marked clearly and never count in real stats.'
+      'Guest mode can show labelled examples; signed-in workspaces stay real-data only.'
     ],
     actions: [
       { name: 'Owner Manual', meaning: 'Opens this guide from Dashboard or Profile whenever the user needs help.' },
@@ -48,7 +48,7 @@ const manualSections = [
       'Use Bookings and Support Inbox daily once requests start arriving.'
     ],
     tips: [
-      'If something is empty, the app shows a labelled example so the owner understands the future workflow.',
+      'If something is empty in a real account, it stays empty until live data exists. Guest mode is the only place examples appear.',
       'Guest mode is for browsing. Owners should sign in before relying on saved production data.'
     ]
   },
@@ -94,7 +94,7 @@ const manualSections = [
     highlights: [
       'The queue separates pending, confirmed, waitlist, and declined records.',
       'Client details sync into Clients after the form is submitted.',
-      'Example rows explain the workflow without affecting stats.'
+      'Guest mode examples explain the workflow without affecting stats.'
     ],
     actions: [
       { name: 'Approve', meaning: 'Confirms the booking and moves it into the confirmed flow.' },
@@ -159,7 +159,7 @@ const manualSections = [
     highlights: [
       'Owners can reply to client questions without leaving the dashboard.',
       'Threads can link to a booking so staff see the context instantly.',
-      'Example chats show how the inbox works before the business has real messages.'
+      'Guest mode examples show how the inbox works before the business has real messages.'
     ],
     actions: [
       { name: 'Open Thread', meaning: 'Shows the full conversation and linked booking context.' },
@@ -282,7 +282,7 @@ const manualSections = [
       'Review regulars before campaigns or busy weeks.'
     ],
     tips: [
-      'Example clients are labelled and excluded from real stats.',
+      'Example clients only appear in Guest Mode and are excluded from real stats.',
       'Client profile photos should stay business-appropriate and consent-friendly.'
     ]
   },
@@ -375,7 +375,7 @@ const manualSections = [
     ],
     tips: [
       'If a client uses a different email, their bookings may not match automatically.',
-      'Empty client states show realistic examples so the portal still teaches the workflow.'
+      'Guest mode shows realistic examples; signed-in client accounts only show their own bookings and chats.'
     ]
   },
   {
@@ -455,14 +455,14 @@ const manualSections = [
     ],
     actions: [
       { name: 'Google sign-in returns home', meaning: 'Try again once, then check authorized domains and redirect setup if it repeats.' },
-      { name: 'No bookings showing', meaning: 'Confirm the booking was submitted under the current workspace and not only an example.' },
+      { name: 'No bookings showing', meaning: 'Confirm the booking was submitted under the current workspace and not only in Guest Mode.' },
       { name: 'Client cannot see booking', meaning: 'Check that the client signs in with the same email used on the booking form.' },
       { name: 'Theme looks wrong', meaning: 'Open Editor, confirm the selected theme, then Publish.' },
       { name: 'Email updates missing', meaning: 'Check the email field toggle and email opt-in setting in Editor Features.' }
     ],
     workflow: [
       'Check the active workspace first.',
-      'Check whether the data is real or an example.',
+      'Check whether the user is in Guest Mode or a signed-in workspace.',
       'Check whether the latest settings were saved or published.',
       'Use Profile Sign Out only when session state needs a clean reset.'
     ],
