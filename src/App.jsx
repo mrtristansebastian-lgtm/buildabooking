@@ -769,49 +769,136 @@ const createDefaultSettings = () => ({
   socials: { instagram: '', tiktok: '', facebook: '', website: '' }
 });
 
-const demoImage = (id, width = 1200, height = 900, fit = 'crop') => (
-  `https://images.unsplash.com/${id}?auto=format&fit=${fit}&crop=faces&w=${width}&h=${height}&q=82`
+const demoImage = (id, width = 1200, height = 900, fit = 'crop', extra = '') => (
+  `https://images.unsplash.com/${id}?auto=format&fit=${fit}&w=${width}&h=${height}&q=84${extra}`
+);
+
+const createDemoLogoDataUrl = () => (
+  `data:image/svg+xml,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#f7f3ea"/>
+          <stop offset="0.55" stop-color="#d9f99d"/>
+          <stop offset="1" stop-color="#bae6fd"/>
+        </linearGradient>
+      </defs>
+      <rect width="600" height="600" rx="150" fill="#09090b"/>
+      <rect x="34" y="34" width="532" height="532" rx="126" fill="url(#g)"/>
+      <path d="M182 382c74-156 154-156 228 0" fill="none" stroke="#09090b" stroke-width="34" stroke-linecap="round"/>
+      <path d="M226 228c38-30 104-30 142 0" fill="none" stroke="#09090b" stroke-width="26" stroke-linecap="round"/>
+      <text x="300" y="478" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="900" letter-spacing="3" fill="#09090b">NORTH</text>
+    </svg>
+  `)}`
 );
 
 const guestDemoAssets = {
-  logo: demoImage('photo-1522337360788-8b13dee7a37e', 700, 700),
-  banner: demoImage('photo-1560066984-138dadb4c035', 1600, 700),
+  logo: createDemoLogoDataUrl(),
+  banner: demoImage('photo-1560066984-138dadb4c035', 1800, 780, 'crop', '&crop=entropy'),
   venue: [
-    demoImage('photo-1522337360788-8b13dee7a37e', 1200, 900),
-    demoImage('photo-1560066984-138dadb4c035', 1200, 900),
-    demoImage('photo-1521590832167-7bcbfaa6381f', 1200, 900),
-    demoImage('photo-1527799820374-dcf8d9d4a388', 1200, 900),
-    demoImage('photo-1487412947147-5cebf100ffc2', 1200, 900),
-    demoImage('photo-1516975080664-ed2fc6a32937', 1200, 900)
+    demoImage('photo-1560066984-138dadb4c035', 1200, 900, 'crop', '&crop=entropy'),
+    demoImage('photo-1522337360788-8b13dee7a37e', 1200, 900, 'crop', '&crop=entropy'),
+    demoImage('photo-1521590832167-7bcbfaa6381f', 1200, 900, 'crop', '&crop=entropy'),
+    demoImage('photo-1516975080664-ed2fc6a32937', 1200, 900, 'crop', '&crop=entropy'),
+    demoImage('photo-1470259078422-826894b933aa', 1200, 900, 'crop', '&crop=entropy'),
+    demoImage('photo-1527799820374-dcf8d9d4a388', 1200, 900, 'crop', '&crop=entropy')
   ],
   services: [
-    demoImage('photo-1560066984-138dadb4c035', 900, 720),
-    demoImage('photo-1522337360788-8b13dee7a37e', 900, 720),
-    demoImage('photo-1521590832167-7bcbfaa6381f', 900, 720),
-    demoImage('photo-1527799820374-dcf8d9d4a388', 900, 720),
-    demoImage('photo-1487412947147-5cebf100ffc2', 900, 720),
-    demoImage('photo-1516975080664-ed2fc6a32937', 900, 720)
+    demoImage('photo-1560066984-138dadb4c035', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1522337360788-8b13dee7a37e', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1521590832167-7bcbfaa6381f', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1527799820374-dcf8d9d4a388', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1487412947147-5cebf100ffc2', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1516975080664-ed2fc6a32937', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1519699047748-de8e457a634e', 900, 720, 'crop', '&crop=entropy'),
+    demoImage('photo-1487412720507-e7ab37603c6f', 900, 720, 'crop', '&crop=entropy')
   ],
-  people: [
-    demoImage('photo-1494790108377-be9c29b29330', 320, 320),
-    demoImage('photo-1534528741775-53994a69daeb', 320, 320),
-    demoImage('photo-1507003211169-0a1dd7228f2d', 320, 320),
-    demoImage('photo-1544005313-94ddf0286df2', 320, 320),
-    demoImage('photo-1524504388940-b1c1722653e1', 320, 320),
-    demoImage('photo-1506794778202-cad84cf45f1d', 320, 320),
-    demoImage('photo-1517841905240-472988babdf9', 320, 320),
-    demoImage('photo-1547425260-76bcadfb4f2c', 320, 320)
+  staffPeople: [
+    demoImage('photo-1494790108377-be9c29b29330', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1534528741775-53994a69daeb', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1507003211169-0a1dd7228f2d', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1544005313-94ddf0286df2', 320, 320, 'crop', '&crop=faces')
+  ],
+  clientPeople: [
+    demoImage('photo-1524504388940-b1c1722653e1', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1506794778202-cad84cf45f1d', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1517841905240-472988babdf9', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1547425260-76bcadfb4f2c', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1531123897727-8f129e1688ce', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1508214751196-bcfd4ca60f91', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1520813792240-56fc4a3765a7', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1531891437562-4301cf35b7e4', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1499952127939-9bbf5af6c51c', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1488426862026-3ee34a7d66df', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1502685104226-ee32379fefbe', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1517365830460-955ce3ccd263', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1534751516642-a1af1ef26a56', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1512316609839-ce289d3eba0a', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1544723795-3fb6469f5b39', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1500648767791-00dcc994a43e', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1548142813-c348350df52b', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1507101105822-7472b28e22ac', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1541647376583-8934aaf3448a', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1527980965255-d3b416303d12', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1554151228-14d9def656e4', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1552058544-f2b08422138a', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1560250097-0b93528c311a', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1549351512-c5e12b11e283', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1546961329-78bef0414d7c', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1521119989659-a83eee488004', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1573496359142-b8d87734a5a2', 320, 320, 'crop', '&crop=faces'),
+    demoImage('photo-1542909168-82c3e7fdca5c', 320, 320, 'crop', '&crop=faces')
   ]
 };
 
 const guestDemoServices = [
-  { id: 'demo-cut-finish', name: 'Signature Cut & Finish', category: 'Hair Styling', description: 'Consultation, precision cut, luxe wash, scalp massage, and polished blow finish.', price: '680', duration: '75', staffIds: ['owner', 'staff-zara', 'staff-neo'], imageUrls: [guestDemoAssets.services[0]] },
-  { id: 'demo-colour-gloss', name: 'Colour Gloss Ritual', category: 'Colour', description: 'Tonal refresh, shine glaze, bond treatment, and soft editorial styling.', price: '1250', duration: '120', staffIds: ['staff-zara'], imageUrls: [guestDemoAssets.services[1]] },
-  { id: 'demo-balayage', name: 'Balayage Transformation', category: 'Colour', description: 'Dimensional hand-painted colour with toner, bond care, and finish.', price: '2450', duration: '210', staffIds: ['staff-zara', 'owner'], imageUrls: [guestDemoAssets.services[2]] },
-  { id: 'demo-silk-press', name: 'Silk Press & Hydration', category: 'Texture', description: 'Steam hydration, heat protection, smooth silk press, and movement finish.', price: '920', duration: '105', staffIds: ['staff-ama'], imageUrls: [guestDemoAssets.services[3]] },
-  { id: 'demo-bridal-trial', name: 'Bridal Hair Trial', category: 'Events', description: 'Moodboard consult, two style directions, veil test, and photo-ready finish.', price: '1450', duration: '150', staffIds: ['owner', 'staff-ama'], imageUrls: [guestDemoAssets.services[4]] },
-  { id: 'demo-treatment', name: 'Repair Treatment Bar', category: 'Treatments', description: 'Bond repair, gloss mask, and a quick finish for busy regulars.', price: '520', duration: '45', staffIds: ['staff-neo'], imageUrls: [guestDemoAssets.services[5]] }
+  { id: 'demo-cut-finish', name: 'Signature Cut & Finish', category: 'Hair Styling', description: 'Consultation, precision cut, signature wash, scalp massage, and polished finish.', price: '760', duration: '75', staffIds: ['owner', 'staff-zara', 'staff-neo'], imageUrls: [guestDemoAssets.services[0]] },
+  { id: 'demo-colour-gloss', name: 'Colour Gloss Ritual', category: 'Colour', description: 'Tonal refresh, shine glaze, bond treatment, and soft editorial styling.', price: '1450', duration: '120', staffIds: ['staff-zara'], imageUrls: [guestDemoAssets.services[1]] },
+  { id: 'demo-balayage', name: 'Balayage Transformation', category: 'Colour', description: 'Dimensional hand-painted colour with toner, bond care, and finish.', price: '2850', duration: '210', staffIds: ['staff-zara', 'owner'], imageUrls: [guestDemoAssets.services[2]] },
+  { id: 'demo-silk-press', name: 'Silk Press & Hydration', category: 'Texture', description: 'Steam hydration, heat protection, smooth silk press, and movement finish.', price: '1120', duration: '105', staffIds: ['staff-ama'], imageUrls: [guestDemoAssets.services[3]] },
+  { id: 'demo-bridal-trial', name: 'Bridal Hair Trial', category: 'Events', description: 'Moodboard consult, two style directions, veil test, and photo-ready finish.', price: '1850', duration: '150', staffIds: ['owner', 'staff-ama'], imageUrls: [guestDemoAssets.services[4]] },
+  { id: 'demo-treatment', name: 'Repair Treatment Bar', category: 'Treatments', description: 'Bond repair, gloss mask, and a quick finish for busy regulars.', price: '620', duration: '45', staffIds: ['staff-neo'], imageUrls: [guestDemoAssets.services[5]] },
+  { id: 'demo-extensions', name: 'Tape Extension Refresh', category: 'Extensions', description: 'Removal, re-tape, placement refresh, finish, and aftercare plan.', price: '2350', duration: '180', staffIds: ['owner', 'staff-ama'], imageUrls: [guestDemoAssets.services[6]] },
+  { id: 'demo-event-style', name: 'Event Styling Suite', category: 'Events', description: 'Red-carpet waves, pinning, shine prep, and day-of polish.', price: '980', duration: '90', staffIds: ['staff-ama', 'staff-neo'], imageUrls: [guestDemoAssets.services[7]] }
 ];
+
+const guestDemoClientPool = [
+  ['Maya Nkosi', '+27 72 555 0194', 'maya.nkosi@example.com', '23 June 1996', 'VIP'],
+  ['Ava Jacobs', '+27 82 440 9011', 'ava.jacobs@example.com', '4 April 1993', 'Prefers Chat'],
+  ['Thando Mokoena', '+27 71 221 7604', 'thando.mokoena@example.com', '19 August 1989', 'High Value'],
+  ['Leila Khan', '+27 83 119 4410', 'leila.khan@example.com', '12 January 1998', 'Regular'],
+  ['Nandi Dlamini', '+27 79 880 3412', 'nandi.dlamini@example.com', '8 September 1994', 'VIP'],
+  ['Sofia Williams', '+27 73 602 8890', 'sofia.williams@example.com', '15 February 1991', 'Bridal'],
+  ['Zoe Adams', '+27 81 771 2017', 'zoe.adams@example.com', '28 May 1997', 'Regular'],
+  ['Kuhle Maseko', '+27 76 309 1188', 'kuhle.maseko@example.com', '7 July 1995', 'Waitlist'],
+  ['Lina Pretorius', '+27 84 902 3301', 'lina.pretorius@example.com', '3 December 1992', 'VIP'],
+  ['Imani Daniels', '+27 74 556 2109', 'imani.daniels@example.com', '9 October 1990', 'High Value'],
+  ['Priya Naidoo', '+27 72 119 7780', 'priya.naidoo@example.com', '30 March 1988', 'Regular'],
+  ['Cara Meyer', '+27 83 909 1502', 'cara.meyer@example.com', '11 November 1999', 'Prefers Chat'],
+  ['Lerato Botha', '+27 78 442 9001', 'lerato.botha@example.com', '2 June 1993', 'VIP'],
+  ['Mila Davids', '+27 79 445 3002', 'mila.davids@example.com', '17 April 1996', 'Regular'],
+  ['Noa Pillay', '+27 72 443 6003', 'noa.pillay@example.com', '5 May 1991', 'High Value'],
+  ['Sade Koopman', '+27 81 220 1004', 'sade.koopman@example.com', '25 September 1994', 'Waitlist'],
+  ['Ella Naicker', '+27 73 887 2005', 'ella.naicker@example.com', '14 August 1997', 'Regular'],
+  ['Tara Mthembu', '+27 74 665 7006', 'tara.mthembu@example.com', '1 February 1990', 'Bridal'],
+  ['Bianca Solomons', '+27 82 300 7007', 'bianca.solomons@example.com', '20 June 1995', 'VIP'],
+  ['Aaliyah Forbes', '+27 71 909 8008', 'aaliyah.forbes@example.com', '6 October 1998', 'Regular'],
+  ['Gemma Oosthuizen', '+27 84 774 6009', 'gemma.oosthuizen@example.com', '13 January 1987', 'High Value'],
+  ['Rene Williams', '+27 76 552 4010', 'rene.williams@example.com', '18 December 1991', 'Regular'],
+  ['Anika Patel', '+27 72 118 9011', 'anika.patel@example.com', '22 July 1996', 'Prefers Chat'],
+  ['Chloe September', '+27 79 771 3012', 'chloe.september@example.com', '10 March 1999', 'First Time'],
+  ['Keira Daniels', '+27 83 120 4013', 'keira.daniels@example.com', '27 May 1994', 'VIP'],
+  ['Nomsa Khumalo', '+27 73 491 5014', 'nomsa.khumalo@example.com', '16 April 1992', 'Regular'],
+  ['Megan Isaacs', '+27 71 339 6015', 'megan.isaacs@example.com', '29 September 1990', 'High Value'],
+  ['Farah Omar', '+27 82 449 7016', 'farah.omar@example.com', '24 November 1997', 'Bridal']
+].map(([name, phone, email, birthday, label], index) => ({
+  name,
+  phone,
+  email,
+  birthday,
+  label,
+  avatar: guestDemoAssets.clientPeople[index % guestDemoAssets.clientPeople.length]
+}));
 
 const createGuestDemoDate = (offset = 0) => {
   const date = new Date();
@@ -828,7 +915,7 @@ const createGuestDemoSchedule = () => {
   const schedule = {};
   const busyTimes = ['08:30', '09:30', '10:30', '11:30', '13:00', '14:00', '15:30', '16:30', '17:30'];
   const expressTimes = ['09:00', '10:00', '12:00', '14:30', '16:00'];
-  for (let offset = 0; offset < 28; offset += 1) {
+  for (let offset = -92; offset < 35; offset += 1) {
     const { date, dateKey } = createGuestDemoDate(offset);
     const isSunday = date.getDay() === 0;
     const isMonday = date.getDay() === 1;
@@ -842,41 +929,53 @@ const createGuestDemoSchedule = () => {
 
 const createGuestDemoBookings = () => {
   const now = Date.now();
-  const rows = [
-    ['booking-aurora-1001', 'Maya Nkosi', '+27 72 555 0194', 'maya.nkosi@example.com', 0, '10:30', 'demo-colour-gloss', 'Colour Gloss Ritual', '1250', 'confirmed', 'paid', 'manual_eft', 125000, 2],
-    ['booking-aurora-1002', 'Ava Jacobs', '+27 82 440 9011', 'ava.jacobs@example.com', 0, '14:00', 'demo-cut-finish', 'Signature Cut & Finish', '680', 'pending', 'manual_pending', 'cash', 68000, 4],
-    ['booking-aurora-1003', 'Thando Mokoena', '+27 71 221 7604', 'thando.mokoena@example.com', 1, '09:30', 'demo-silk-press', 'Silk Press & Hydration', '920', 'confirmed', 'paid', 'manual_eft', 92000, 8],
-    ['booking-aurora-1004', 'Leila Khan', '+27 83 119 4410', 'leila.khan@example.com', 1, '16:30', 'demo-treatment', 'Repair Treatment Bar', '520', 'confirmed', 'paid', 'cash', 52000, 12],
-    ['booking-aurora-1005', 'Nandi Dlamini', '+27 79 880 3412', 'nandi.dlamini@example.com', 2, '11:30', 'demo-balayage', 'Balayage Transformation', '2450', 'waitlist', 'manual_pending', 'manual_eft', 245000, 15],
-    ['booking-aurora-1006', 'Sofia Williams', '+27 73 602 8890', 'sofia.williams@example.com', 3, '13:00', 'demo-bridal-trial', 'Bridal Hair Trial', '1450', 'confirmed', 'paid', 'manual_eft', 145000, 20],
-    ['booking-aurora-1007', 'Zoe Adams', '+27 81 771 2017', 'zoe.adams@example.com', 4, '15:30', 'demo-cut-finish', 'Signature Cut & Finish', '680', 'confirmed', 'paid', 'cash', 68000, 24],
-    ['booking-aurora-1008', 'Kuhle Maseko', '+27 76 309 1188', 'kuhle.maseko@example.com', 5, '10:30', 'demo-colour-gloss', 'Colour Gloss Ritual', '1250', 'pending', 'manual_pending', 'manual_eft', 125000, 28],
-    ['booking-aurora-1009', 'Lina Pretorius', '+27 84 902 3301', 'lina.pretorius@example.com', -2, '09:30', 'demo-treatment', 'Repair Treatment Bar', '520', 'confirmed', 'paid', 'cash', 52000, 34],
-    ['booking-aurora-1010', 'Imani Daniels', '+27 74 556 2109', 'imani.daniels@example.com', -4, '14:00', 'demo-silk-press', 'Silk Press & Hydration', '920', 'confirmed', 'paid', 'manual_eft', 92000, 42],
-    ['booking-aurora-1011', 'Priya Naidoo', '+27 72 119 7780', 'priya.naidoo@example.com', -7, '12:00', 'demo-balayage', 'Balayage Transformation', '2450', 'confirmed', 'paid', 'manual_eft', 245000, 58],
-    ['booking-aurora-1012', 'Cara Meyer', '+27 83 909 1502', 'cara.meyer@example.com', -11, '15:30', 'demo-cut-finish', 'Signature Cut & Finish', '680', 'declined', 'unpaid', 'cash', 68000, 70]
-  ];
-
-  return rows.map((row, index) => {
-    const [id, clientName, clientPhone, clientEmail, offset, time, serviceId, serviceName, servicePrice, status, paymentStatus, paymentGateway, amountInCents, hoursAgo] = row;
-    const { dateKey, label } = createGuestDemoDate(offset);
-    const paidAt = paymentStatus === 'paid' ? now - hoursAgo * 60 * 60 * 1000 : null;
-    return {
+  const timeCycle = ['08:30', '09:30', '10:30', '11:30', '13:00', '14:00', '15:30', '16:30', '17:30'];
+  const bookings = [];
+  const pushBooking = (offset, seed, extra = false) => {
+    const { date, dateKey, label } = createGuestDemoDate(offset);
+    if (date.getDay() === 0) return;
+    const client = guestDemoClientPool[Math.abs(seed) % guestDemoClientPool.length];
+    const service = guestDemoServices[Math.abs(seed * 3 + (extra ? 2 : 0)) % guestDemoServices.length];
+    const amountInCents = Number(service.price) * 100;
+    const status = offset < -3
+      ? (seed % 23 === 0 ? 'declined' : 'confirmed')
+      : offset <= 2
+        ? (seed % 6 === 0 ? 'waitlist' : seed % 5 === 0 ? 'pending' : 'confirmed')
+        : (seed % 4 === 0 ? 'waitlist' : seed % 3 === 0 ? 'pending' : 'confirmed');
+    const paymentStatus = status === 'declined'
+      ? 'unpaid'
+      : status === 'confirmed' && (offset <= 0 || seed % 2 === 0)
+        ? 'paid'
+        : 'manual_pending';
+    const paymentGateway = seed % 5 === 0 ? 'cash' : 'manual_eft';
+    const appointmentAt = new Date(date);
+    const [hour, minute] = timeCycle[Math.abs(seed) % timeCycle.length].split(':').map(Number);
+    appointmentAt.setHours(hour, minute, 0, 0);
+    const paidAt = paymentStatus === 'paid'
+      ? Math.min(appointmentAt.getTime() + 1000 * 60 * 75, now - 1000 * 60 * Math.max(10, Math.abs(seed) + 2))
+      : null;
+    const updatedAt = paymentStatus === 'paid' ? paidAt : Math.min(now - 1000 * 60 * (Math.abs(seed) + 20), appointmentAt.getTime());
+    const id = `booking-aurora-${String(1000 + bookings.length + 1).padStart(4, '0')}`;
+    bookings.push({
       id,
-      clientName,
-      clientPhone,
-      clientEmail,
-      clientBirthday: ['23 June 1996', '4 April 1993', '19 August 1989', '12 January 1998'][index % 4],
-      clientNote: index % 3 === 0 ? 'Prefers sparkling water, quiet chair, and a soft wave finish.' : 'Demo booking. Use the status and payment actions to explore the workflow.',
-      clientPhotoURL: guestDemoAssets.people[index % guestDemoAssets.people.length],
-      clientAvatar: guestDemoAssets.people[index % guestDemoAssets.people.length],
-      avatar: guestDemoAssets.people[index % guestDemoAssets.people.length],
-      serviceId,
-      serviceName,
-      serviceDuration: guestDemoServices.find(service => service.id === serviceId)?.duration || '60',
-      servicePrice,
-      servicePriceType: 'fixed',
-      serviceCategory: guestDemoServices.find(service => service.id === serviceId)?.category || 'Salon',
+      clientName: client.name,
+      clientPhone: client.phone,
+      clientEmail: client.email,
+      clientBirthday: client.birthday,
+      clientNote: extra
+        ? 'Added from support chat after a stylist follow-up. Client wants a premium finish and product advice.'
+        : seed % 4 === 0
+          ? 'Prefers sparkling water, quiet chair, and a soft wave finish.'
+          : 'Client profile includes preferences so the team can personalize each visit.',
+      clientPhotoURL: client.avatar,
+      clientAvatar: client.avatar,
+      avatar: client.avatar,
+      serviceId: service.id,
+      serviceName: service.name,
+      serviceDuration: service.duration,
+      servicePrice: service.price,
+      servicePriceType: service.priceType || 'fixed',
+      serviceCategory: service.category,
       amountInCents,
       currency: 'ZAR',
       paymentMethod: paymentGateway,
@@ -889,62 +988,76 @@ const createGuestDemoBookings = () => {
       paidAt,
       date: label,
       dateKey,
-      time: status === 'waitlist' ? 'Waitlist' : time,
+      time: status === 'waitlist' ? 'Waitlist' : timeCycle[Math.abs(seed) % timeCycle.length],
       status,
-      timestamp: now - hoursAgo * 60 * 60 * 1000,
-      createdAt: now - (hoursAgo + 2) * 60 * 60 * 1000,
-      updatedAt: now - hoursAgo * 60 * 60 * 1000,
-      staffId: ['owner', 'staff-zara', 'staff-ama', 'staff-neo'][index % 4],
-      noShowHistory: index === 7,
+      timestamp: appointmentAt.getTime(),
+      createdAt: appointmentAt.getTime() - 1000 * 60 * 60 * 36,
+      updatedAt,
+      staffId: service.staffIds[Math.abs(seed) % service.staffIds.length] || 'owner',
+      noShowHistory: seed % 31 === 0,
       source: 'guest-demo'
-    };
-  });
+    });
+  };
+
+  for (let offset = -88; offset <= 24; offset += 1) {
+    pushBooking(offset, offset + 143);
+    if (offset < 4 && offset % 3 === 0) pushBooking(offset, offset + 267, true);
+    if (offset < -12 && offset % 7 === 0) pushBooking(offset, offset + 389, true);
+  }
+
+  return bookings.sort((a, b) => (b.updatedAt || b.timestamp || 0) - (a.updatedAt || a.timestamp || 0));
 };
 
 const createGuestDemoClients = (bookings = []) => (
-  bookings.slice(0, 8).map((booking, index) => ({
-    id: `guest-client-${index + 1}`,
-    name: booking.clientName,
-    phone: booking.clientPhone,
-    email: booking.clientEmail,
-    birthday: booking.clientBirthday,
-    notes: index % 2 === 0
-      ? 'High-intent client. Likes visual references, warm blonde tones, and pre-booking before events.'
-      : 'Regular guest profile with preferences, notes, and booking history for the demo workspace.',
-    avatar: booking.avatar,
-    labels: index < 3 ? ['VIP', 'High Value'] : index === 7 ? ['No-show Risk'] : ['Prefers Chat'],
-    source: 'guest-demo',
-    createdAt: booking.createdAt,
-    updatedAt: booking.updatedAt
-  }))
+  guestDemoClientPool.map((client, index) => {
+    const clientBookings = bookings.filter(booking => booking.clientEmail === client.email);
+    const lastBooking = [...clientBookings].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] || null;
+    return {
+      id: `guest-client-${index + 1}`,
+      name: client.name,
+      phone: client.phone,
+      email: client.email,
+      birthday: client.birthday,
+      notes: client.label === 'VIP'
+        ? 'VIP regular. Pre-books colour maintenance, likes reference photos, and buys aftercare products.'
+        : client.label === 'Bridal'
+          ? 'Event client. Needs timelines, trial notes, and calm communication before the appointment.'
+          : 'Saved guest profile with preferences, contact details, and booking history for the showroom workspace.',
+      avatar: client.avatar,
+      labels: [client.label, clientBookings.length >= 4 ? 'Regular' : 'Needs Follow-up'].filter(Boolean),
+      source: 'guest-demo',
+      createdAt: clientBookings[clientBookings.length - 1]?.createdAt || Date.now() - (index + 12) * 86400000,
+      updatedAt: lastBooking?.updatedAt || Date.now() - index * 3600000
+    };
+  })
 );
 
 const createGuestDemoStaff = () => ([
-  { id: 'owner', uid: 'guest-owner', name: 'Aurora Vale', email: 'aurora@luxeandloom.example', phone: '+27 21 555 0144', photoURL: guestDemoAssets.people[0], role: 'owner', status: 'connected', color: '#111827', speciality: 'Colour direction' },
-  { id: 'staff-zara', name: 'Zara Mbele', email: 'zara@luxeandloom.example', phone: '+27 72 555 0172', photoURL: guestDemoAssets.people[1], role: 'stylist', status: 'access-ready', color: '#8B5CF6', speciality: 'Balayage and gloss' },
-  { id: 'staff-ama', name: 'Ama Jacobs', email: 'ama@luxeandloom.example', phone: '+27 82 555 0182', photoURL: guestDemoAssets.people[3], role: 'stylist', status: 'access-ready', color: '#06B6D4', speciality: 'Texture and bridal' },
-  { id: 'staff-neo', name: 'Neo Daniels', email: 'neo@luxeandloom.example', phone: '+27 73 555 0193', photoURL: guestDemoAssets.people[5], role: 'assistant', status: 'access-ready', color: '#22C55E', speciality: 'Treatment bar' }
+  { id: 'owner', uid: 'guest-owner', name: 'Jordan Vale', email: 'jordan@northlinestudio.example', phone: '+27 21 555 0144', photoURL: guestDemoAssets.staffPeople[0], role: 'owner', status: 'connected', color: '#111827', speciality: 'Cut and colour direction' },
+  { id: 'staff-zara', name: 'Zara Mbele', email: 'zara@northlinestudio.example', phone: '+27 72 555 0172', photoURL: guestDemoAssets.staffPeople[1], role: 'stylist', status: 'access-ready', color: '#8B5CF6', speciality: 'Balayage and gloss' },
+  { id: 'staff-ama', name: 'Ama Jacobs', email: 'ama@northlinestudio.example', phone: '+27 82 555 0182', photoURL: guestDemoAssets.staffPeople[2], role: 'stylist', status: 'access-ready', color: '#06B6D4', speciality: 'Texture and event styling' },
+  { id: 'staff-neo', name: 'Neo Daniels', email: 'neo@northlinestudio.example', phone: '+27 73 555 0193', photoURL: guestDemoAssets.staffPeople[3], role: 'assistant', status: 'access-ready', color: '#22C55E', speciality: 'Treatment bar' }
 ]);
 
 const createGuestDemoSettings = () => ({
   ...createDefaultSettings(),
-  guestDemoVersion: 2,
-  slug: 'luxe-and-loom',
-  brandName: 'Luxe & Loom',
-  businessName: 'Luxe & Loom Hair House',
-  tagline: 'Cape Town colour house / fully booked energy',
-  welcomeMessage: 'Book polished colour, healthy hair rituals, and event-ready styling from a salon clients keep coming back to.',
-  primaryColor: '#111827',
+  guestDemoVersion: 3,
+  slug: 'northline-studio',
+  brandName: 'Northline Studio',
+  businessName: 'Northline Studio',
+  tagline: 'Cape Town hair studio / booked-out operations',
+  welcomeMessage: 'Modern cuts, colour work, texture care, and event styling from a busy studio that runs on clear bookings, client notes, and paid appointments.',
+  primaryColor: '#0B0B0D',
   headingColor: '#050505',
-  bodyColor: '#4B5563',
-  backgroundColor: '#FBFAF7',
+  bodyColor: '#505763',
+  backgroundColor: '#FCFBF8',
   slotBgColor: '#FFFFFF',
   slotTextColor: '#111827',
   dateBgColor: '#FFFFFF',
   dateTextColor: '#6B7280',
-  dateActiveBgColor: '#DDFCE8',
+  dateActiveBgColor: '#DDF9C6',
   dateActiveTextColor: '#050505',
-  buttonColor: '#111827',
+  buttonColor: '#050505',
   buttonTextColor: '#FFFFFF',
   fontFamily: 'figtree',
   headingFontFamily: 'bricolage',
@@ -952,23 +1065,23 @@ const createGuestDemoSettings = () => ({
   buttonFontFamily: 'space-grotesk',
   slotFontFamily: 'figtree',
   dateFontFamily: 'bricolage',
-  brandNameSize: 82,
+  brandNameSize: 86,
   taglineSize: 10,
-  welcomeSize: 19,
+  welcomeSize: 20,
   nativeAccent: true,
-  calendarDisplayStyle: 'glow',
-  timeDisplayStyle: 'blocks',
+  calendarDisplayStyle: 'editorial',
+  timeDisplayStyle: 'luxury',
   serviceDisplayStyle: 'gallery',
   serviceBorderStyle: 'solid',
-  faqDisplayStyle: 'cards',
+  faqDisplayStyle: 'split',
   faqStyle: 'outline',
   venueGalleryStyle: 'editorial',
   mapDisplayStyle: 'card',
-  socialDisplayStyle: 'dock',
+  socialDisplayStyle: 'solid',
   socialIconStyle: 'solid',
-  dateLabel: 'Pick a date with good hair energy',
-  timeLabel: 'Choose your chair time',
-  buttonText: 'Book The Look',
+  dateLabel: 'Choose your salon day',
+  timeLabel: 'Pick your chair time',
+  buttonText: 'Book Northline',
   confirmButtonText: 'Reserve Appointment',
   detailsHeading: 'Client Details',
   detailsSubHeading: 'So the team can prepare your visit',
@@ -999,37 +1112,37 @@ const createGuestDemoSettings = () => ({
   accountProfiles: {
     'guest-workspace': {
       uid: 'guest-workspace',
-      firstName: 'Aurora',
+      firstName: 'Jordan',
       lastName: 'Vale',
-      email: 'aurora@luxeandloom.example',
+      email: 'jordan@northlinestudio.example',
       mobile: '+27 21 555 0144',
-      photoURL: guestDemoAssets.people[0],
+      photoURL: guestDemoAssets.staffPeople[0],
       updatedAt: Date.now()
     }
   },
   services: guestDemoServices,
   serviceIndustry: 'hair_salon',
-  logoDisplay: { visible: true, alignment: 'left', size: 112 },
-  bannerDisplay: { visible: true, height: 260, position: 'center' },
+  logoDisplay: { visible: true, alignment: 'left', size: 104 },
+  bannerDisplay: { visible: true, height: 284, position: 'center' },
   logo: guestDemoAssets.logo,
   bannerImage: guestDemoAssets.banner,
   venuePhotos: guestDemoAssets.venue,
-  venueTitle: 'Inside the colour house',
-  venueIntro: 'Light-filled chairs, a treatment bar, and client-ready corners that make the booking page feel real.',
+  venueTitle: 'Inside the studio',
+  venueIntro: 'A real studio feel: working chairs, treatment bar, product wall, and client-ready corners before they book.',
   address: '77 Bree Street, Cape Town',
   socials: {
-    instagram: '@luxeandloomhair',
-    tiktok: '@luxeandloom',
-    facebook: 'luxeandloomhair',
-    website: 'https://luxeandloom.example'
+    instagram: '@northlinestudio',
+    tiktok: '@northlinestudio',
+    facebook: 'northlinestudio',
+    website: 'https://northlinestudio.example'
   }
 });
 
 const createGuestDemoCommunications = () => ({
   ...createDefaultCommunications(),
-  confirmed: { active: true, text: 'Your Luxe & Loom appointment is confirmed. We have saved your chair and your stylist is prepping your notes.' },
-  review: { active: true, text: 'Thank you for visiting Luxe & Loom. If your hair is feeling lovely, a quick review helps the salon grow.' },
-  waitlist: { active: true, text: 'A Luxe & Loom slot opened up. Reply quickly and we can move you from waitlist to confirmed.' },
+  confirmed: { active: true, text: 'Your Northline Studio appointment is confirmed. We have saved your chair and your stylist is prepping your notes.' },
+  review: { active: true, text: 'Thank you for visiting Northline Studio. If the visit felt sharp, a quick review helps the studio grow.' },
+  waitlist: { active: true, text: 'A Northline Studio slot opened up. Reply quickly and we can move you from waitlist to confirmed.' },
   runningLate: { active: true, text: 'The salon is running about 10 minutes behind. Your stylist still has your full appointment protected.' }
 });
 

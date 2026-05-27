@@ -146,7 +146,7 @@ const guestDemoGatewaySettings = {
     enabled: true,
     mode: 'demo',
     public: {
-      accountHolder: 'Luxe & Loom Hair House',
+      accountHolder: 'Northline Studio',
       bankName: 'Demo Bank',
       accountNumber: '000 123 456',
       branchCode: '250655',

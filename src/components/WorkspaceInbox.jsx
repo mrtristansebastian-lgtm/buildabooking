@@ -109,8 +109,51 @@ export function WorkspaceInbox({
     }
   ]), []);
 
+  const guestDemoThreads = useMemo(() => {
+    if (!isGuestWorkspace || !Array.isArray(bookings) || bookings.length === 0) return [];
+    const messageCopy = [
+      'Can you add a gloss treatment to my appointment if there is time?',
+      'I paid the deposit now. Please confirm that it reflects on your side.',
+      'Could I move this to a later chair time if anything opens?',
+      'I uploaded reference photos and would love a warmer tone than last time.',
+      'Running 10 minutes late, but I am on my way.',
+      'Can I join the waitlist for Saturday morning?'
+    ];
+    const seenClients = new Set();
+    return bookings
+      .filter((booking) => ['pending', 'confirmed', 'waitlist'].includes(String(booking.status || '').toLowerCase()))
+      .filter((booking) => {
+        const key = notificationEmailKey(booking.clientEmail || '') || String(booking.clientName || '').toLowerCase();
+        if (!key || seenClients.has(key)) return false;
+        seenClients.add(key);
+        return true;
+      })
+      .slice(0, 18)
+      .map((booking, index) => ({
+        id: `guest-thread-${booking.id}`,
+        clientName: booking.clientName,
+        clientEmail: booking.clientEmail,
+        clientPhotoURL: booking.clientPhotoURL || booking.avatar,
+        workspaceName: booking.workspaceName || 'Northline Studio',
+        lastMessage: messageCopy[index % messageCopy.length],
+        bookingId: booking.id,
+        bookingStatus: booking.status,
+        serviceName: booking.serviceName,
+        ownerUnread: index % 4 === 0 ? 2 : index % 3 === 0 ? 1 : 0,
+        clientUnread: 0,
+        staffId: booking.staffId || '',
+        rescheduleStatus: index % 5 === 0 ? 'requested' : '',
+        clientOnline: index < 2,
+        clientLastSeenMs: Date.now() - (index + 1) * 38 * 60 * 1000,
+        lastMessageAt: booking.updatedAt || booking.timestamp,
+        updatedAt: booking.updatedAt || booking.timestamp,
+        isExample: true,
+        isGuestDemo: true
+      }));
+  }, [bookings, isGuestWorkspace]);
+
   const shouldShowExampleThread = isGuestWorkspace && threadsReady && threads.length === 0 && bookings.length === 0;
-  const threadSource = threads.length ? threads : (shouldShowExampleThread ? [exampleThread] : []);
+  const threadSource = threads.length ? threads : (guestDemoThreads.length ? guestDemoThreads : (shouldShowExampleThread ? [exampleThread] : []));
   const clientProfileByEmail = useMemo(() => {
     const profiles = new Map();
     clientDirectory.forEach(client => {
@@ -134,6 +177,10 @@ export function WorkspaceInbox({
   );
 
   useEffect(() => {
+    if (isGuestWorkspace) {
+      setThreadsReady(true);
+      return undefined;
+    }
     if (!db || !workspaceOwnerId) {
       setThreadsReady(true);
       return undefined;
@@ -155,17 +202,51 @@ export function WorkspaceInbox({
       setThreadsReady(true);
     });
     return () => unsub();
-  }, [appId, db, workspaceOwnerId]);
+  }, [appId, db, isGuestWorkspace, workspaceOwnerId]);
+
+  useEffect(() => {
+    if (!isGuestWorkspace || !threadSource.length) return;
+    setActiveThreadId(current => (current && threadSource.some(thread => thread.id === current)) ? current : threadSource[0].id);
+  }, [isGuestWorkspace, threadSource]);
 
   const activeThread = useMemo(
     () => threadSource.find(thread => thread.id === activeThreadId) || threadSource[0] || null,
     [activeThreadId, threadSource]
   );
   const linkedBooking = useMemo(
-    () => activeThread?.isExample ? exampleBooking : bookings.find(booking => booking.id === activeThread?.bookingId) || null,
+    () => activeThread?.isExample
+      ? bookings.find(booking => booking.id === activeThread?.bookingId) || exampleBooking
+      : bookings.find(booking => booking.id === activeThread?.bookingId) || null,
     [activeThread?.bookingId, activeThread?.isExample, bookings, exampleBooking]
   );
-  const visibleMessages = activeThread?.isExample ? exampleMessages : [...olderMessages, ...messages];
+  const guestDemoMessages = useMemo(() => {
+    if (!activeThread?.isExample || activeThread.id === 'example-support-thread') return exampleMessages;
+    const clientName = activeThread.clientName || 'Client';
+    const serviceName = activeThread.serviceName || linkedBooking?.serviceName || 'appointment';
+    return [
+      {
+        id: `${activeThread.id}-system`,
+        senderRole: 'system',
+        senderName: 'Booking update',
+        text: `${serviceName} request is linked to this support thread. Status: ${activeThread.bookingStatus || 'pending'}.`
+      },
+      {
+        id: `${activeThread.id}-client`,
+        senderRole: 'client',
+        senderName: clientName,
+        text: activeThread.lastMessage || 'Hi, can you help with my booking?'
+      },
+      {
+        id: `${activeThread.id}-owner`,
+        senderRole: 'owner',
+        senderName: 'Northline Studio',
+        text: activeThread.rescheduleStatus
+          ? 'Absolutely. We can offer a new time and keep your booking history updated.'
+          : 'Thanks, we have your notes on the booking and the stylist will prep before you arrive.'
+      }
+    ];
+  }, [activeThread, exampleMessages, linkedBooking?.serviceName]);
+  const visibleMessages = activeThread?.isExample ? guestDemoMessages : [...olderMessages, ...messages];
   const activeStaff = useMemo(() => {
     const emailKey = notificationEmailKey(user?.email || '');
     return staffList.find(staff => notificationEmailKey(staff.email || '') === emailKey || staff.uid === user?.uid) || staffList[0] || null;
@@ -624,7 +705,7 @@ export function WorkspaceInbox({
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold truncate text-black">{thread.clientName || 'Client'}</p>
-                        <p className="text-xs mt-1 truncate text-neutral-500">{thread.isExample ? 'Example only - live chats replace this' : thread.workspaceName || thread.clientEmail}</p>
+                        <p className="text-xs mt-1 truncate text-neutral-500">{thread.isGuestDemo ? 'Showroom support thread' : thread.isExample ? 'Preview support thread' : thread.workspaceName || thread.clientEmail}</p>
                       </div>
                     </div>
                     {Number(thread.ownerUnread || 0) > 0 && <span className="min-w-6 h-6 rounded-full bg-[#39FF14] text-black text-[10px] font-bold flex items-center justify-center">{thread.ownerUnread}</span>}
@@ -634,7 +715,7 @@ export function WorkspaceInbox({
                     <span className={`px-2 py-1 rounded-md border text-[8px] font-bold uppercase tracking-widest ${statusStyles[thread.bookingStatus] || statusStyles.pending}`}>
                       {thread.bookingStatus || 'pending'}
                     </span>
-                    {thread.isExample && <span className="px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Example</span>}
+                    {thread.isExample && <span className="px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">{thread.isGuestDemo ? 'Showroom' : 'Example'}</span>}
                     {['requested', 'countered'].includes(thread.rescheduleStatus) && <span className="px-2 py-1 rounded-md bg-violet-50 text-violet-700 text-[8px] font-bold uppercase tracking-widest">Reschedule</span>}
                   </div>
                 </button>
