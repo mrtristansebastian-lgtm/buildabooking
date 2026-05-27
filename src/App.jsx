@@ -637,6 +637,84 @@ const normalizeCommunications = (communications = {}) => {
   };
 };
 
+const createDefaultSettings = () => ({
+  slug: 'studio-noir',
+  brandName: 'Studio Noir',
+  welcomeMessage: 'Reserve your private session.',
+  tagline: 'Atelier 7B / Private',
+  primaryColor: '#755CFF',
+  headingColor: '#000000',
+  bodyColor: '#666666',
+  backgroundColor: '#ffffff',
+  slotBgColor: '#F8FAFC',
+  slotTextColor: '#000000',
+  dateBgColor: 'transparent',
+  dateTextColor: '#666666',
+  dateActiveBgColor: '#EEF7FF',
+  dateActiveTextColor: '#000000',
+  buttonTextColor: '#000000',
+  fontFamily: 'inter',
+  nativeAccent: true,
+  headingFontFamily: '',
+  bodyFontFamily: '',
+  buttonFontFamily: '',
+  slotFontFamily: '',
+  dateFontFamily: '',
+  brandNameSize: 76,
+  brandNameFontFamily: '',
+  taglineSize: 9,
+  taglineFontFamily: '',
+  welcomeSize: 20,
+  welcomeFontFamily: '',
+  buttonStyle: 'pill',
+  availabilityStyle: 'solid',
+  dateStyle: 'solid',
+  timeSlotStyle: 'solid',
+  actionButtonStyle: 'solid',
+  calendarDisplayStyle: 'studio',
+  timeDisplayStyle: 'pill',
+  serviceDisplayStyle: 'cards',
+  faqStyle: 'minimal',
+  faqDisplayStyle: 'accordion',
+  faqBgColor: 'transparent',
+  faqBorderColor: '#00000020',
+  faqTextColor: '',
+  faqAnswerColor: '',
+  faqFontFamily: '',
+  venueGalleryStyle: 'mosaic',
+  venueTitle: 'Inside the space',
+  venueIntro: 'See the place before you book.',
+  mapDisplayStyle: 'card',
+  socialIconStyle: 'outline',
+  socialDisplayStyle: 'icons',
+  socialIconBgColor: 'transparent',
+  socialIconColor: '',
+  socialIconTextColor: '',
+  dateLabel: 'Which day are you looking to book ?',
+  timeLabel: 'Lets see what time works',
+  buttonText: 'Book Now',
+  confirmButtonText: 'Confirm Booking',
+  detailsHeading: 'Your Details',
+  detailsSubHeading: 'Secure Your Slot',
+  successHeading: 'Booking Confirmed!',
+  availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
+  schedule: {},
+  staffCalendars: {},
+  googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
+  features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientName: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
+  accountProfiles: {},
+  themeTemplates: [],
+  serviceIndustry: '',
+  services: [],
+  logoDisplay: { visible: true, alignment: 'left', size: 96 },
+  bannerDisplay: { visible: true, height: 220, position: 'center' },
+  logo: '',
+  bannerImage: '',
+  venuePhotos: [],
+  address: '',
+  socials: { instagram: '', tiktok: '', facebook: '', website: '' }
+});
+
 const clampNumber = (value, min, max, fallback) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -1788,39 +1866,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 };
             }, [isNativeAppRuntime]);
 
-            const [settings, setSettings] = useState({
-                slug: 'studio-noir', brandName: 'Studio Noir',
-                welcomeMessage: 'Reserve your private session.', tagline: 'Atelier 7B / Private',
-                primaryColor: '#755CFF', headingColor: '#000000', bodyColor: '#666666', backgroundColor: '#ffffff',
-                slotBgColor: '#F8FAFC', slotTextColor: '#000000',
-                dateBgColor: 'transparent', dateTextColor: '#666666', dateActiveBgColor: '#EEF7FF', dateActiveTextColor: '#000000',
-                buttonTextColor: '#000000', 
-                fontFamily: 'inter', 
-                nativeAccent: true,
-                headingFontFamily: '', bodyFontFamily: '', buttonFontFamily: '', slotFontFamily: '', dateFontFamily: '',
-                brandNameSize: 76, brandNameFontFamily: '',
-                taglineSize: 9, taglineFontFamily: '',
-                welcomeSize: 20, welcomeFontFamily: '',
-                buttonStyle: 'pill', availabilityStyle: 'solid', dateStyle: 'solid', timeSlotStyle: 'solid', actionButtonStyle: 'solid',
-                calendarDisplayStyle: 'studio', timeDisplayStyle: 'pill', serviceDisplayStyle: 'cards',
-                faqStyle: 'minimal', faqDisplayStyle: 'accordion', faqBgColor: 'transparent', faqBorderColor: '#00000020', faqTextColor: '', faqAnswerColor: '', faqFontFamily: '',
-                venueGalleryStyle: 'mosaic', venueTitle: 'Inside the space', venueIntro: 'See the place before you book.', mapDisplayStyle: 'card',
-                socialIconStyle: 'outline', socialDisplayStyle: 'icons', socialIconBgColor: 'transparent', socialIconColor: '', socialIconTextColor: '',
-                dateLabel: 'Which day are you looking to book ?', timeLabel: 'Lets see what time works', buttonText: 'Book Now', confirmButtonText: 'Confirm Booking', 
-                detailsHeading: 'Your Details', detailsSubHeading: 'Secure Your Slot', successHeading: 'Booking Confirmed!', 
-                availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
-                schedule: {},
-                staffCalendars: {},
-                googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
-                features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientName: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },
-                accountProfiles: {},
-                themeTemplates: [],
-                serviceIndustry: '',
-                services: [],
-                logoDisplay: { visible: true, alignment: 'left', size: 96 },
-                bannerDisplay: { visible: true, height: 220, position: 'center' },
-                logo: '', bannerImage: '', venuePhotos: [], address: '', socials: { instagram: '', tiktok: '', facebook: '', website: '' }
-            });
+            const [settings, setSettings] = useState(createDefaultSettings);
 
             useEffect(() => {
                 settingsRef.current = settings;
@@ -1880,6 +1926,31 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             };
             const isEditorWorkspaceOpen = view === 'dashboard' && activeTab === 'editor';
+            const resetWorkspaceRuntimeState = () => {
+                publishedSettingsSnapshotRef.current = null;
+                cloudEditorDraftRef.current = null;
+                editorDraftRecoveredRef.current = false;
+                editorDraftLastFingerprintRef.current = '';
+                editorDraftCloudFingerprintRef.current = '';
+                ownerNotificationSeenRef.current = new Set();
+                ownerNotificationsReadyRef.current = false;
+                setSettings(createDefaultSettings());
+                setCommunications(createDefaultCommunications());
+                setBookings([]);
+                setBookingsReady(true);
+                setClientRecords([]);
+                setStaffList([{ id: 'owner', name: 'Admin', color: '#39FF14' }]);
+                setOwnerNotifications([]);
+                setSupportThreadFocus(null);
+                setSelectedClientId(null);
+                setClientMobileView('directory');
+                setSelectedStaffFileId(null);
+            };
+
+            useEffect(() => {
+                if (publicSlug || loading || user) return;
+                resetWorkspaceRuntimeState();
+            }, [publicSlug, loading, user?.uid, guestMode]);
 
             useEffect(() => {
                 if (publicSlug || !editorDraftOwnerKey || !isEditorWorkspaceOpen) return;
@@ -3424,6 +3495,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         if (!u) {
                             setWorkspaceAccess([]);
                             setActiveWorkspaceOwnerId('');
+                            safeLocalRemove('build-a-booking-active-workspace');
+                            resetWorkspaceRuntimeState();
                             const redirectStillStarting = hasFreshAuthRedirectStart();
                             setAuthRedirectPending(redirectStillStarting);
                             return;
@@ -3585,6 +3658,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         const data = { ...docSnap.data() };
                         publishedSettingsSnapshotRef.current = data;
                         applyWorkspaceSettings(data);
+                    } else {
+                        publishedSettingsSnapshotRef.current = null;
+                        setSettings(prev => mergeStateIfChanged(prev, createDefaultSettings()));
                     }
                 }, handleSyncError('Settings'));
 
@@ -3610,6 +3686,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             phoneNumber: personalProfile.mobile || user?.phoneNumber || ''
                         })];
                         setStaffList(prev => areJsonEqual(prev, ownerProfile) ? prev : ownerProfile);
+                    } else {
+                        setStaffList(prev => areJsonEqual(prev, [{ id: 'owner', name: 'Admin', color: '#39FF14' }]) ? prev : [{ id: 'owner', name: 'Admin', color: '#39FF14' }]);
                     }
                 }, handleSyncError('Staff'));
 
@@ -3617,6 +3695,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const unsubComms = FirebaseSDK.onSnapshot(commsRef, (docSnap) => { 
                     if (docSnap.exists()) {
                         const nextComms = normalizeCommunications(docSnap.data());
+                        setCommunications(prev => areJsonEqual(prev, nextComms) ? prev : nextComms);
+                    } else {
+                        const nextComms = createDefaultCommunications();
                         setCommunications(prev => areJsonEqual(prev, nextComms) ? prev : nextComms);
                     }
                 }, handleSyncError('Communication'));
@@ -3626,6 +3707,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     if (docSnap.exists()) {
                         const nextClients = docSnap.data().list || [];
                         setClientRecords(prev => areJsonEqual(prev, nextClients) ? prev : nextClients);
+                    } else {
+                        setClientRecords(prev => prev.length ? [] : prev);
                     }
                 }, handleSyncError('Client'));
                 return () => { unsubSettings(); unsubEditorDraft(); unsubStaff(); unsubComms(); unsubClients(); };
@@ -3641,6 +3724,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     return undefined;
                 }
                 if (!user || !workspaceOwnerId) {
+                    setBookings([]);
                     setBookingsReady(!loading);
                     return undefined;
                 }
@@ -3650,6 +3734,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     setBookings(prev => areJsonEqual(prev, cachedBookings.bookings) ? prev : cachedBookings.bookings);
                     setBookingsReady(true);
                 } else {
+                    setBookings([]);
                     setBookingsReady(false);
                 }
 
@@ -4657,6 +4742,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
             const openGuestDashboard = () => {
+                setActiveWorkspaceOwnerId('');
+                setWorkspaceAccess([]);
+                safeLocalRemove('build-a-booking-active-workspace');
+                resetWorkspaceRuntimeState();
                 setGuestMode(true);
                 setClientGuestMode(false);
                 safeLocalSet(guestModeStorageKey, 'true');
@@ -4783,6 +4872,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 safeLocalRemove(guestModeStorageKey);
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
+                safeLocalRemove('build-a-booking-active-workspace');
+                resetWorkspaceRuntimeState();
                 saveWorkspaceRoute({ view: 'landing', activeTab: 'overview', editorTab: 'themes' });
                 setView('landing');
                 setActiveTab('overview');
