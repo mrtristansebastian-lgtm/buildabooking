@@ -135,7 +135,7 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
     }
   ]), [user?.displayName]);
 
-  const showExamplePortal = isGuestPreview || (bookingsReady && threadsReady && bookings.length === 0 && threads.length === 0);
+  const showExamplePortal = Boolean(isGuestPreview);
   const bookingSource = bookings.length ? bookings : (showExamplePortal ? [exampleBooking] : []);
   const mergedThreads = useMemo(() => {
     const byId = new Map();

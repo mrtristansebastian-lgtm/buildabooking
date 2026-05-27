@@ -341,7 +341,7 @@ const StatusPill = ({ status }) => {
   return <span className={`rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${tone}`}>{label}</span>;
 };
 
-export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, showToast, bookings = [], onMarkBookingPaid }) => {
+export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = false, canManageWorkspace, showToast, bookings = [], onMarkBookingPaid }) => {
   const [saved, setSaved] = useState({});
   const [drafts, setDrafts] = useState(emptyDrafts);
   const [saving, setSaving] = useState('');
@@ -474,7 +474,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
   const maxChartValue = Math.max(...chartBuckets.map((bucket) => bucket.value), 1);
 
   const visibleDeskRows = useMemo(() => {
-    const rows = financeRecords.length ? financeRecords : exampleTransactions;
+    const rows = financeRecords.length ? financeRecords : (isGuestWorkspace ? exampleTransactions : []);
     const queryText = search.trim().toLowerCase();
     return rows.filter((row) => {
       const typeMatches = deskView === 'transactions'
@@ -565,7 +565,7 @@ export const FinancePaymentSettings = ({ appId, businessId, canManageWorkspace, 
   };
 
   const downloadFinanceCsv = () => {
-    const rows = (financeRecords.length ? financeRecords : exampleTransactions).map((row) => ({
+    const rows = (financeRecords.length ? financeRecords : (isGuestWorkspace ? exampleTransactions : [])).map((row) => ({
       id: row.id,
       status: row.status,
       gateway: gatewayById[row.gatewayType]?.name || row.gatewayType || 'Gateway',

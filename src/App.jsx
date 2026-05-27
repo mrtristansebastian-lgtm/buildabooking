@@ -2330,7 +2330,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [bookingDeskPeriod, bookingFilter, bookingSearch, visibleBookings, staffList, bookingCustomRange]);
 
             const filteredBookings = bookingDesk.filteredRows;
-            const showBookingExample = bookingsReady && visibleBookings.length === 0;
+            const showBookingExample = isGuestWorkspace && bookingsReady && visibleBookings.length === 0;
             const bookingRows = showBookingExample ? [exampleBooking] : filteredBookings;
 
             const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers Chat', 'High Value', 'No-show Risk'];
@@ -2716,7 +2716,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const selectedClient = useMemo(() => (
                 clientDirectory.find(client => client.id === selectedClientId) || null
             ), [clientDirectory, selectedClientId]);
-            const showClientExample = bookingsReady && clientDirectory.length === 0 && !clientSearch.trim();
+            const showClientExample = isGuestWorkspace && bookingsReady && clientDirectory.length === 0 && !clientSearch.trim();
             const displayClients = showClientExample ? [exampleClient] : filteredClientDirectory;
             const activeClient = selectedClient || (showClientExample && selectedClientId === exampleClient.id ? exampleClient : null);
 
@@ -2736,14 +2736,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             useEffect(() => {
                 if (!clientDirectory.length) {
-                    if (selectedClientId !== exampleClient.id) setSelectedClientId(null);
+                    if (selectedClientId && (!showClientExample || selectedClientId !== exampleClient.id)) setSelectedClientId(null);
                     return;
                 }
                 if (selectedClientId && !clientDirectory.some(client => client.id === selectedClientId)) {
                     setSelectedClientId(null);
                     setClientMobileView('directory');
                 }
-            }, [clientDirectory, exampleClient.id, selectedClientId]);
+            }, [clientDirectory, exampleClient.id, selectedClientId, showClientExample]);
 
             useEffect(() => {
                 setClientNoteDraft(selectedClient?.notes || '');
@@ -6999,6 +6999,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             db={db}
                                             user={user}
                                             workspaceOwnerId={workspaceOwnerId}
+                                            isGuestWorkspace={isGuestWorkspace}
                                             bookings={visibleBookings}
                                             clientDirectory={clientDirectory}
                                             staffList={displayStaffList}
@@ -7046,6 +7047,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <FinancePaymentSettings
                                         appId={appId}
                                         businessId={workspaceOwnerId}
+                                        isGuestWorkspace={isGuestWorkspace}
                                         canManageWorkspace={canManageWorkspace}
                                         showToast={showToast}
                                         bookings={bookings}

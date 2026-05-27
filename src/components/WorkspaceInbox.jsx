@@ -35,6 +35,7 @@ export function WorkspaceInbox({
   db,
   user,
   workspaceOwnerId,
+  isGuestWorkspace = false,
   bookings,
   clientDirectory = [],
   staffList = [],
@@ -108,7 +109,7 @@ export function WorkspaceInbox({
     }
   ]), []);
 
-  const shouldShowExampleThread = threadsReady && threads.length === 0 && bookings.length === 0;
+  const shouldShowExampleThread = isGuestWorkspace && threadsReady && threads.length === 0 && bookings.length === 0;
   const threadSource = threads.length ? threads : (shouldShowExampleThread ? [exampleThread] : []);
   const clientProfileByEmail = useMemo(() => {
     const profiles = new Map();
