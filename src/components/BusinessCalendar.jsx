@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, ChevronLeft, ChevronRight, Clock, Eye, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
+import { CalendarCheck, Check, ChevronLeft, ChevronRight, Clock, Maximize2, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
 import { getLocalDateStr } from '../utils/dates';
 
 // --- CALENDAR ENGINE (Business Settings) ---
@@ -1122,7 +1122,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                             aria-label={config.available ? `Mark ${dateStr} unavailable` : `Mark ${dateStr} available`}
                                                             title={config.available ? 'Mark unavailable' : 'Mark available'}
                                                             onClick={() => toggleDateAvailability(dateStr)}
-                                                            className={`absolute right-4 top-4 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-300 shadow-sm z-10 ${config.available ? 'bg-[#39FF14] border-transparent text-black' : 'bg-red-500 border-red-500 text-white'}`}
+                                                            className={`schedule-day-agenda-availability ${config.available ? 'is-open' : 'is-closed'}`}
                                                         >
                                                             {config.available ? <Check size={14}/> : <X size={14}/>}
                                                         </button>
@@ -1360,7 +1360,6 @@ import { getLocalDateStr } from '../utils/dates';
                                                             className={`schedule-day-availability-chip ${config.available ? 'is-open' : 'is-closed'}`}
                                                         >
                                                             {config.available ? <Check size={12}/> : <X size={12}/>}
-                                                            <span>{config.available ? 'Open' : 'Closed'}</span>
                                                         </button>
                                                     )}
                                                     <button
@@ -1374,7 +1373,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                         aria-label={`Open full view for ${dateStr}`}
                                                         title="Full day view"
                                                     >
-                                                        <Eye size={14}/>
+                                                        <Maximize2 size={14}/>
                                                     </button>
                                                 </div>
                                             </div>

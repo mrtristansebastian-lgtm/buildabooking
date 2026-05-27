@@ -116,8 +116,47 @@ const buildCroppedImageFile = async (crop) => {
 };
 
 const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
+  const dragStateRef = useRef(null);
+
   if (!crop) return null;
+
   const preset = IMAGE_CROP_RATIOS[crop.ratioKey || 'square'] || IMAGE_CROP_RATIOS.square;
+  const clampPercent = (value) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 50));
+  const currentZoom = Math.max(1, Number(crop.zoom || 1));
+  const currentPositionX = clampPercent(Number(crop.positionX ?? 50));
+  const currentPositionY = clampPercent(Number(crop.positionY ?? 50));
+  const handleDragStart = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      positionX: currentPositionX,
+      positionY: currentPositionY,
+      width: rect.width || 1,
+      height: rect.height || 1,
+      zoom: currentZoom
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  };
+  const handleDragMove = (event) => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const dragSensitivity = 100 / Math.max(dragState.zoom, 1);
+    const nextPositionX = clampPercent(dragState.positionX - ((event.clientX - dragState.startX) / dragState.width) * dragSensitivity);
+    const nextPositionY = clampPercent(dragState.positionY - ((event.clientY - dragState.startY) / dragState.height) * dragSensitivity);
+    onChange({ positionX: nextPositionX, positionY: nextPositionY });
+    event.preventDefault();
+  };
+  const handleDragEnd = (event) => {
+    if (dragStateRef.current?.pointerId === event.pointerId) {
+      dragStateRef.current = null;
+    }
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  };
+
   return (
     <div className="image-crop-overlay" role="dialog" aria-modal="true">
       <div className="image-crop-sheet">
@@ -133,35 +172,45 @@ const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
         </div>
         <div className="image-crop-body">
           <div className="image-crop-preview">
-            <div className={`image-crop-frame ${crop.shape === 'circle' ? 'is-circle' : ''}`} style={{ aspectRatio: preset.ratio }}>
+            <div
+              className={`image-crop-frame ${crop.shape === 'circle' ? 'is-circle' : ''}`}
+              style={{ aspectRatio: preset.ratio }}
+              role="group"
+              aria-label="Drag image to reposition crop"
+              onPointerDown={handleDragStart}
+              onPointerMove={handleDragMove}
+              onPointerUp={handleDragEnd}
+              onPointerCancel={handleDragEnd}
+            >
               <img
                 src={crop.source}
                 alt=""
                 style={{
-                  objectPosition: `${crop.positionX || 50}% ${crop.positionY || 50}%`,
-                  transform: `scale(${crop.zoom || 1})`
+                  objectPosition: `${currentPositionX}% ${currentPositionY}%`,
+                  transform: `scale(${currentZoom})`
                 }}
               />
             </div>
           </div>
           <div className="image-crop-controls">
-            {[
-              ['zoom', 'Zoom', 1, 2.2, 0.01],
-              ['positionX', 'Horizontal position', 0, 100, 1],
-              ['positionY', 'Vertical position', 0, 100, 1]
-            ].map(([key, label, min, max, step]) => (
-              <label key={key}>
-                <span>{label}</span>
-                <input
-                  type="range"
-                  min={min}
-                  max={max}
-                  step={step}
-                  value={crop[key] ?? (key === 'zoom' ? 1 : 50)}
-                  onChange={(event) => onChange({ [key]: Number(event.target.value) })}
-                />
-              </label>
-            ))}
+            <div className="image-crop-guidance">
+              <MousePointerClick size={18} />
+              <div>
+                <strong>Drag to position</strong>
+                <span>Move the image inside the frame, then zoom until it feels right.</span>
+              </div>
+            </div>
+            <label className="image-crop-zoom-control">
+              <span>Zoom</span>
+              <input
+                type="range"
+                min={1}
+                max={2.2}
+                step={0.01}
+                value={currentZoom}
+                onChange={(event) => onChange({ zoom: Number(event.target.value) })}
+              />
+            </label>
             <div className="image-crop-actions">
               <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
               <button type="button" onClick={onSave} disabled={saving}>
@@ -229,39 +278,39 @@ const visualStyleOptions = [
 
 const editorInterfaceLooks = {
   services: [
-    { id: 'cards', label: 'Signature Cards', note: 'Image, price, and detail led service cards.' },
-    { id: 'menu', label: 'Clean Menu', note: 'Compact list for quick service selection.' },
-    { id: 'gallery', label: 'Gallery Lead', note: 'Visual-first cards for beauty, tattoos, and venues.' },
-    { id: 'compact', label: 'Fast List', note: 'Dense rows for high-volume service menus.' },
-    { id: 'luxury', label: 'Editorial', note: 'More premium spacing and quiet details.' }
+    { id: 'cards', label: 'Studio Cards', note: 'Balanced cards with clear price and detail hierarchy.' },
+    { id: 'menu', label: 'Price Menu', note: 'Restaurant-style rows for fast service scanning.' },
+    { id: 'gallery', label: 'Visual Tiles', note: 'Image-led editorial blocks for visual brands.' },
+    { id: 'compact', label: 'Command List', note: 'Dense pro rows for long menus and repeat clients.' },
+    { id: 'luxury', label: 'Atelier', note: 'Premium spacing with boutique editorial rhythm.' }
   ],
   calendar: [
-    { id: 'studio', label: 'Studio Strip', note: 'Clean horizontal booking dates.' },
-    { id: 'classic', label: 'Classic Calendar', note: 'Familiar day cards with soft separation.' },
-    { id: 'editorial', label: 'Editorial Dates', note: 'Large type and minimal controls.' },
-    { id: 'compact', label: 'Compact Board', note: 'Smaller cards for busy schedules.' },
-    { id: 'glow', label: 'Glow Select', note: 'More visible selected-day accent.' }
+    { id: 'studio', label: 'Native Rail', note: 'App-like date rail with soft selected states.' },
+    { id: 'classic', label: 'Planner Cards', note: 'Structured day cards with familiar rhythm.' },
+    { id: 'editorial', label: 'Date Poster', note: 'Large-number editorial date selection.' },
+    { id: 'compact', label: 'Ops Board', note: 'Tighter board for high-volume availability.' },
+    { id: 'glow', label: 'Signal Glow', note: 'High-confidence accent state for bold brands.' }
   ],
   time: [
-    { id: 'pill', label: 'Soft Pills', note: 'Friendly rounded bookable times.' },
-    { id: 'blocks', label: 'Time Blocks', note: 'Structured tiles for sessions and classes.' },
-    { id: 'minimal', label: 'Line List', note: 'Quiet text-led choices.' },
-    { id: 'luxury', label: 'Luxury Slots', note: 'Premium spacing and subtle border work.' },
-    { id: 'compact', label: 'Quick Slots', note: 'Dense rows for many available times.' }
+    { id: 'pill', label: 'Native Pills', note: 'Friendly rounded slots with mobile polish.' },
+    { id: 'blocks', label: 'Session Blocks', note: 'Strong tiles for classes, consults, and rooms.' },
+    { id: 'minimal', label: 'Quiet Lines', note: 'Refined line-list for calm premium pages.' },
+    { id: 'luxury', label: 'Gallery Slots', note: 'Spacious boutique time selection.' },
+    { id: 'compact', label: 'Fast Grid', note: 'Dense scheduling for many open times.' }
   ],
   faq: [
-    { id: 'accordion', label: 'Accordion', note: 'Classic expandable questions.' },
-    { id: 'cards', label: 'Answer Cards', note: 'Soft boxed answers with extra clarity.' },
-    { id: 'minimal', label: 'Minimal Lines', note: 'Clean dividers and quiet type.' },
-    { id: 'numbered', label: 'Numbered Help', note: 'Guided FAQ for policies and prep.' },
-    { id: 'split', label: 'Split Guide', note: 'Question and answer feel more editorial.' }
+    { id: 'accordion', label: 'Clean Accordion', note: 'Modern expandable help with tight rhythm.' },
+    { id: 'cards', label: 'Trust Cards', note: 'Soft answer cards that feel reassuring.' },
+    { id: 'minimal', label: 'Policy Lines', note: 'Crisp divider style for refined brands.' },
+    { id: 'numbered', label: 'Guided Steps', note: 'Numbered help for prep and policies.' },
+    { id: 'split', label: 'Editorial Guide', note: 'Magazine-like question and answer layout.' }
   ],
   venue: [
-    { id: 'mosaic', label: 'Mosaic', note: 'A polished gallery wall with a hero photo.' },
-    { id: 'editorial', label: 'Editorial', note: 'Large first image and magazine-style captions.' },
-    { id: 'filmstrip', label: 'Filmstrip', note: 'Horizontal scroll for mobile-friendly browsing.' },
-    { id: 'postcard', label: 'Postcard', note: 'Warm framed venue highlights.' },
-    { id: 'minimal', label: 'Minimal Grid', note: 'Simple, clean image tiles.' }
+    { id: 'mosaic', label: 'Mosaic Wall', note: 'Polished gallery wall with a hero image.' },
+    { id: 'editorial', label: 'Magazine Lead', note: 'Large lead image with designer pacing.' },
+    { id: 'filmstrip', label: 'Mobile Reel', note: 'Horizontal swipe gallery for phone-first pages.' },
+    { id: 'postcard', label: 'Postcards', note: 'Framed venue moments with personality.' },
+    { id: 'minimal', label: 'Grid System', note: 'Sharp modern grid with quiet spacing.' }
   ],
   maps: [
     { id: 'button', label: 'Map Button', note: 'A single directions button.' },
@@ -380,82 +429,82 @@ const themeStyleLabel = (styleId) => (
 
 const fontStylePresets = [
   {
-    id: 'modern',
-    label: 'Modern',
-    note: 'Clean SaaS polish',
+    id: 'system',
+    label: 'System',
+    note: 'iOS clean',
     fontFamily: 'inter',
     headingFontFamily: 'plus-jakarta',
     bodyFontFamily: 'inter',
-    buttonFontFamily: 'space-grotesk',
+    buttonFontFamily: 'inter',
     slotFontFamily: 'plus-jakarta',
     dateFontFamily: 'plus-jakarta',
     headingLetterSpacing: 0,
     subtextLetterSpacing: 0
   },
   {
-    id: 'editorial',
-    label: 'Editorial',
-    note: 'Magazine calm',
-    fontFamily: 'source-sans-3',
-    headingFontFamily: 'newsreader',
-    bodyFontFamily: 'source-sans-3',
-    buttonFontFamily: 'work-sans',
-    slotFontFamily: 'source-sans-3',
-    dateFontFamily: 'newsreader',
-    headingLetterSpacing: 0,
-    subtextLetterSpacing: 1
-  },
-  {
-    id: 'luxury',
-    label: 'Luxury',
-    note: 'Premium boutique',
-    fontFamily: 'manrope',
-    headingFontFamily: 'marcellus',
-    bodyFontFamily: 'manrope',
-    buttonFontFamily: 'cinzel',
-    slotFontFamily: 'manrope',
-    dateFontFamily: 'marcellus',
-    headingLetterSpacing: 1,
-    subtextLetterSpacing: 2
-  },
-  {
-    id: 'bold',
-    label: 'Bold',
-    note: 'High impact',
-    fontFamily: 'manrope',
-    headingFontFamily: 'unbounded',
-    bodyFontFamily: 'manrope',
-    buttonFontFamily: 'space-grotesk',
-    slotFontFamily: 'space-grotesk',
-    dateFontFamily: 'unbounded',
+    id: 'studio',
+    label: 'Studio',
+    note: 'Creative sans',
+    fontFamily: 'outfit',
+    headingFontFamily: 'outfit',
+    bodyFontFamily: 'dm-sans',
+    buttonFontFamily: 'outfit',
+    slotFontFamily: 'dm-sans',
+    dateFontFamily: 'outfit',
     headingLetterSpacing: 0,
     subtextLetterSpacing: 0
   },
   {
-    id: 'organic',
-    label: 'Organic',
-    note: 'Warm and soft',
-    fontFamily: 'source-sans-3',
-    headingFontFamily: 'spectral',
-    bodyFontFamily: 'source-sans-3',
-    buttonFontFamily: 'figtree',
-    slotFontFamily: 'source-sans-3',
-    dateFontFamily: 'spectral',
+    id: 'boutique',
+    label: 'Boutique',
+    note: 'Soft premium',
+    fontFamily: 'manrope',
+    headingFontFamily: 'bricolage',
+    bodyFontFamily: 'manrope',
+    buttonFontFamily: 'manrope',
+    slotFontFamily: 'manrope',
+    dateFontFamily: 'bricolage',
     headingLetterSpacing: 0,
-    subtextLetterSpacing: 0.5
+    subtextLetterSpacing: 0.2
   },
   {
-    id: 'tech',
-    label: 'Tech',
-    note: 'Precise mono',
+    id: 'impact',
+    label: 'Impact',
+    note: 'Confident brand',
+    fontFamily: 'urbanist',
+    headingFontFamily: 'urbanist',
+    bodyFontFamily: 'figtree',
+    buttonFontFamily: 'space-grotesk',
+    slotFontFamily: 'space-grotesk',
+    dateFontFamily: 'urbanist',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 0
+  },
+  {
+    id: 'friendly',
+    label: 'Friendly',
+    note: 'Warm modern',
+    fontFamily: 'figtree',
+    headingFontFamily: 'lexend',
+    bodyFontFamily: 'figtree',
+    buttonFontFamily: 'figtree',
+    slotFontFamily: 'lexend',
+    dateFontFamily: 'lexend',
+    headingLetterSpacing: 0,
+    subtextLetterSpacing: 0
+  },
+  {
+    id: 'precision',
+    label: 'Precision',
+    note: 'Tech calm',
     fontFamily: 'ibm-plex-sans',
     headingFontFamily: 'space-grotesk',
     bodyFontFamily: 'ibm-plex-sans',
-    buttonFontFamily: 'ibm-plex-mono',
-    slotFontFamily: 'ibm-plex-mono',
-    dateFontFamily: 'ibm-plex-mono',
+    buttonFontFamily: 'ibm-plex-sans',
+    slotFontFamily: 'ibm-plex-sans',
+    dateFontFamily: 'space-grotesk',
     headingLetterSpacing: 0,
-    subtextLetterSpacing: 1.5
+    subtextLetterSpacing: 0.4
   }
 ];
 
