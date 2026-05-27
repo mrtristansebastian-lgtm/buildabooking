@@ -985,12 +985,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
         </div>
 
         <div className="p-4 md:p-6">
-          <div className="mb-5 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Earnings timeline</p>
-              <h4 className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-black">Paid revenue over time</h4>
-              <p className="mt-1 text-sm text-neutral-500">Live payment records grouped by the selected period.</p>
-            </div>
+          <div className="mb-5 flex justify-end">
             <div className="finance-report-strip grid grid-cols-2 sm:grid-cols-4 gap-2 lg:min-w-[520px]">
               {[
                 ['Paid', financeMetrics.paidCount],

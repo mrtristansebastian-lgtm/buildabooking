@@ -1409,13 +1409,208 @@ body {
             height: 100%;
         }
 
-        .schedule-month-switcher {
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 16px 44px -36px rgba(15, 23, 42, 0.34);
+        .schedule-team-card {
+            overflow: hidden;
         }
 
-        .schedule-scope-toggle,
+        .schedule-team-layout {
+            align-items: center;
+        }
+
+        .schedule-team-copy {
+            flex: 0 0 min(18rem, 100%);
+        }
+
+        .schedule-team-eyebrow,
+        .schedule-calendar-command > div > div:first-child > p {
+            letter-spacing: 0.08em !important;
+            color: #9aa3b2 !important;
+        }
+
+        .schedule-team-title,
+        .schedule-calendar-command h3 {
+            letter-spacing: -0.035em !important;
+            line-height: 1 !important;
+        }
+
+        .schedule-team-subcopy,
+        .schedule-calendar-command > div > div:first-child > p:last-child {
+            color: #687386 !important;
+            font-weight: 620;
+        }
+
+        .schedule-team-rail {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 100%;
+            padding: 0.08rem 0.08rem 0.2rem;
+            scrollbar-width: none;
+        }
+
+        .schedule-team-chip {
+            min-width: 7.1rem !important;
+            height: 3.05rem !important;
+            border-radius: 0.95rem !important;
+            border-color: rgba(15, 23, 42, 0.075) !important;
+            background: rgba(255, 255, 255, 0.86) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 14px 34px -32px rgba(15,23,42,0.48) !important;
+        }
+
+        .schedule-team-chip.is-active {
+            background: #050505 !important;
+            border-color: #050505 !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 36px -26px rgba(0,0,0,0.58) !important;
+        }
+
+        .schedule-team-avatar {
+            width: 2rem !important;
+            height: 2rem !important;
+        }
+
+        .schedule-team-name {
+            font-size: 0.88rem !important;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+
+        .schedule-calendar-command {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(251,252,253,0.96)),
+                radial-gradient(circle at 9% 0%, rgba(217,249,157,0.16), transparent 28%),
+                radial-gradient(circle at 96% 8%, rgba(186,230,253,0.14), transparent 30%) !important;
+        }
+
+        .schedule-calendar-command-inner {
+            min-height: 4.9rem;
+        }
+
+        .schedule-calendar-title-block {
+            align-self: center;
+        }
+
+        .schedule-calendar-controls {
+            position: relative;
+            padding: 0;
+            border-radius: 0;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        .schedule-calendar-controls .schedule-period-tabs,
+        .schedule-calendar-controls .schedule-month-switcher,
+        .schedule-calendar-controls .schedule-hide-toggle {
+            box-shadow: none !important;
+        }
+
+        @media (min-width: 1024px) {
+            .schedule-calendar-controls {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                gap: 0.55rem !important;
+                min-width: 0;
+            }
+
+            .schedule-calendar-controls .schedule-period-tabs {
+                width: auto !important;
+            }
+
+            .schedule-calendar-controls .schedule-calendar-toolbar {
+                flex-direction: row !important;
+                align-items: center !important;
+                width: auto !important;
+                gap: 0.55rem !important;
+            }
+
+            .schedule-calendar-controls .schedule-month-switcher {
+                width: auto !important;
+            }
+
+            .schedule-calendar-controls .schedule-hide-toggle {
+                height: 3.05rem !important;
+                min-width: 6.55rem;
+                flex-direction: row;
+                align-self: center;
+                justify-content: center;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .schedule-team-rail {
+                flex-wrap: wrap;
+                overflow: visible !important;
+                justify-content: flex-end;
+            }
+
+            .schedule-team-chip {
+                min-width: 6.85rem !important;
+                max-width: 8.2rem;
+                flex: 0 0 auto;
+            }
+        }
+
+        .schedule-period-tabs,
+        .schedule-month-switcher,
         .schedule-hide-toggle {
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 16px 44px -38px rgba(15, 23, 42, 0.34);
+            border-radius: 1rem !important;
+            border-color: rgba(15, 23, 42, 0.08) !important;
+            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,248,250,0.88)) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 18px 44px -38px rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(18px) saturate(1.1);
+            -webkit-backdrop-filter: blur(18px) saturate(1.1);
+        }
+
+        .schedule-period-tabs {
+            min-height: 3rem;
+            padding: 0.25rem !important;
+            gap: 0.2rem;
+        }
+
+        .schedule-period-tab {
+            min-width: 3.55rem;
+            min-height: 2.42rem;
+            border-radius: 0.76rem !important;
+            font-size: 0.64rem !important;
+            font-weight: 840 !important;
+            letter-spacing: 0.025em !important;
+            color: #667085 !important;
+            box-shadow: none !important;
+        }
+
+        .schedule-period-tab:hover {
+            background: rgba(255,255,255,0.76) !important;
+            color: #050505 !important;
+        }
+
+        .schedule-period-tab.is-active,
+        .schedule-hide-toggle.is-active {
+            background: #050505 !important;
+            color: #fff !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 28px -20px rgba(0,0,0,0.62) !important;
+        }
+
+        .schedule-month-switcher {
+            min-height: 3.05rem;
+            padding: 0.25rem !important;
+            gap: 0.22rem !important;
+        }
+
+        .schedule-month-switcher span {
+            min-width: 7rem !important;
+            letter-spacing: 0.08em !important;
+        }
+
+        .schedule-hide-toggle {
+            min-height: 3.05rem !important;
+            border-radius: 1rem !important;
+            min-width: 5.8rem !important;
+            padding-inline: 0.72rem !important;
+            letter-spacing: 0.04em !important;
+            font-size: 0.66rem !important;
+            font-weight: 860 !important;
         }
 
         .schedule-rotate-prompt {
@@ -1878,6 +2073,142 @@ body {
                 radial-gradient(circle at 92% 10%, rgba(222, 91, 255, 0.08), transparent 34%);
         }
 
+        .booking-desk-head {
+            align-items: flex-start;
+        }
+
+        .booking-desk-eyebrow {
+            letter-spacing: 0.08em !important;
+            font-size: 0.62rem !important;
+            color: #9aa3b2 !important;
+        }
+
+        .booking-desk-title {
+            letter-spacing: -0.035em !important;
+            line-height: 0.98 !important;
+        }
+
+        .booking-desk-subcopy {
+            color: #687386 !important;
+            font-weight: 620;
+        }
+
+        .booking-period-tabs {
+            min-height: 3.15rem;
+            padding: 0.28rem !important;
+            gap: 0.2rem;
+            border-radius: 1rem !important;
+            border-color: rgba(15, 23, 42, 0.08) !important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,248,250,0.88)) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                0 18px 44px -38px rgba(15,23,42,0.45);
+            backdrop-filter: blur(18px) saturate(1.1);
+            -webkit-backdrop-filter: blur(18px) saturate(1.1);
+        }
+
+        .booking-period-tab {
+            min-width: 5.4rem;
+            min-height: 2.5rem;
+            border-radius: 0.76rem !important;
+            letter-spacing: 0.02em !important;
+            font-size: 0.64rem !important;
+            font-weight: 820 !important;
+            text-transform: uppercase;
+            color: #667085 !important;
+            box-shadow: none !important;
+        }
+
+        .booking-period-tab:hover {
+            background: rgba(255,255,255,0.76) !important;
+            color: #050505 !important;
+        }
+
+        .booking-period-tab.is-active {
+            background: #050505 !important;
+            color: #ffffff !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.14),
+                0 14px 28px -20px rgba(0,0,0,0.62) !important;
+        }
+
+        .booking-desk-controls {
+            display: grid !important;
+            grid-template-columns: minmax(16rem, 1fr) minmax(20rem, 26rem);
+            align-items: start;
+            gap: 0.75rem !important;
+        }
+
+        .booking-filter-rail {
+            grid-column: 1 / -1;
+            width: 100%;
+            padding: 0.35rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(15, 23, 42, 0.055);
+            background: rgba(248, 250, 252, 0.58);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.74);
+        }
+
+        .booking-desk-input,
+        .booking-desk-select {
+            height: 3rem !important;
+            border-radius: 0.9rem !important;
+            border-color: rgba(15, 23, 42, 0.08) !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                0 14px 34px -32px rgba(15,23,42,0.5) !important;
+            letter-spacing: 0 !important;
+        }
+
+        .booking-desk-select {
+            color: #050505 !important;
+            font-size: 0.68rem !important;
+            font-weight: 840 !important;
+            letter-spacing: 0.015em !important;
+            text-transform: uppercase;
+        }
+
+        .booking-filter-chip {
+            min-height: 2.45rem !important;
+            height: 2.45rem !important;
+            border-radius: 0.78rem !important;
+            padding-inline: 0.78rem !important;
+            gap: 0.48rem !important;
+            border: 1px solid transparent;
+            background: rgba(255,255,255,0.68) !important;
+            color: #667085 !important;
+            font-size: 0.62rem !important;
+            font-weight: 840 !important;
+            letter-spacing: 0.025em !important;
+            box-shadow: none !important;
+        }
+
+        .booking-filter-chip:hover {
+            background: rgba(255,255,255,0.96) !important;
+            border-color: rgba(15, 23, 42, 0.08);
+            color: #050505 !important;
+        }
+
+        .booking-filter-chip.is-active {
+            background: #050505 !important;
+            color: #ffffff !important;
+            border-color: #050505;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.12),
+                0 16px 34px -24px rgba(0,0,0,0.6) !important;
+        }
+
+        .booking-filter-count {
+            min-width: 1.55rem !important;
+            height: 1.55rem !important;
+            padding-inline: 0.38rem;
+            font-size: 0.62rem !important;
+            font-weight: 850 !important;
+            letter-spacing: 0 !important;
+        }
+
         .booking-desk-metric,
         .booking-search-field input,
         .booking-filter-rail button,
@@ -1889,6 +2220,305 @@ body {
             max-height: min(70vh, 58rem);
             overflow-y: auto;
             scrollbar-gutter: stable;
+        }
+
+        .manual-booking-overlay {
+            position: absolute !important;
+            animation: manualBookingOverlayIn 180ms ease-out;
+        }
+
+        .manual-booking-sheet {
+            max-width: min(58rem, calc(100% - 1.5rem)) !important;
+            animation: manualBookingSheetIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .manual-booking-header,
+        .manual-booking-footer {
+            box-shadow: 0 1px 0 rgba(255,255,255,0.9);
+        }
+
+        .manual-booking-body {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)),
+                radial-gradient(circle at 6% 4%, rgba(57,255,20,0.08), transparent 28%),
+                radial-gradient(circle at 92% 8%, rgba(20,167,255,0.07), transparent 32%);
+        }
+
+        .manual-booking-section {
+            border: 1px solid rgba(15, 23, 42, 0.065);
+            border-radius: 1.05rem;
+            background: rgba(255,255,255,0.86);
+            padding: 1rem;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                0 20px 46px -42px rgba(15,23,42,0.5);
+        }
+
+        .manual-booking-section-head {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            color: #667085;
+            font-size: 0.62rem;
+            font-weight: 850;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 0.9rem;
+        }
+
+        .manual-booking-section-head svg {
+            color: #050505;
+        }
+
+        .manual-booking-grid {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .manual-booking-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .manual-booking-field span {
+            color: #98a2b3;
+            font-size: 0.55rem;
+            font-weight: 850;
+            letter-spacing: 0.18em;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+
+        .manual-booking-field input,
+        .manual-booking-field select,
+        .manual-booking-field textarea {
+            width: 100%;
+            min-height: 2.95rem;
+            border-radius: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255,255,255,0.95);
+            color: #050505;
+            font-size: 0.9rem;
+            font-weight: 760;
+            outline: none;
+            padding: 0 0.95rem;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+            transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        }
+
+        .manual-booking-field textarea {
+            min-height: 6.5rem;
+            padding-block: 0.85rem;
+            resize: vertical;
+        }
+
+        .manual-booking-field input:focus,
+        .manual-booking-field select:focus,
+        .manual-booking-field textarea:focus {
+            border-color: #050505;
+            background: #ffffff;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                0 0 0 3px rgba(57,255,20,0.16);
+        }
+
+        .manual-booking-field input:disabled {
+            color: #667085;
+            background: rgba(248,250,252,0.78);
+            cursor: not-allowed;
+        }
+
+        @keyframes manualBookingOverlayIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes manualBookingSheetIn {
+            from { opacity: 0; transform: translateY(1rem) scale(0.985); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @media (min-width: 768px) {
+            .manual-booking-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .client-directory-card {
+            box-shadow: 0 22px 60px -52px rgba(15, 23, 42, 0.42);
+        }
+
+        .client-directory-command {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,251,253,0.96)),
+                radial-gradient(circle at 7% 0%, rgba(20,167,255,0.08), transparent 30%),
+                radial-gradient(circle at 94% 8%, rgba(222,91,255,0.07), transparent 34%);
+        }
+
+        .client-directory-tools {
+            padding: 0.35rem;
+            border-radius: 1.15rem;
+            border: 1px solid rgba(15, 23, 42, 0.055);
+            background: rgba(248, 250, 252, 0.64);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.82),
+                0 18px 44px -42px rgba(15,23,42,0.38);
+        }
+
+        .client-search-input {
+            border-radius: 0.9rem !important;
+            border-color: rgba(15, 23, 42, 0.075) !important;
+            background: rgba(255,255,255,0.92) !important;
+            color: #050505 !important;
+            font-weight: 760 !important;
+            letter-spacing: 0 !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                0 14px 34px -32px rgba(15,23,42,0.48);
+        }
+
+        .client-search-input::placeholder {
+            color: #98a2b3;
+            font-weight: 740;
+        }
+
+        .client-filter-tabs {
+            min-height: 2.9rem;
+            padding: 0.25rem;
+            border-radius: 0.98rem;
+            background: rgba(255,255,255,0.68);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+
+        .client-filter-tab {
+            min-width: 0;
+            height: 2.38rem !important;
+            border-radius: 0.76rem !important;
+            font-size: 0.62rem !important;
+            font-weight: 840 !important;
+            letter-spacing: 0.025em !important;
+            box-shadow: none !important;
+        }
+
+        .client-filter-tab:hover {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9) !important;
+        }
+
+        .client-filter-tab.is-active {
+            background: #050505 !important;
+            color: #ffffff !important;
+            border-color: #050505 !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.14),
+                0 16px 34px -24px rgba(0,0,0,0.62) !important;
+        }
+
+        .client-filter-count {
+            min-width: 1.45rem;
+            height: 1.45rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.62rem !important;
+            font-weight: 850 !important;
+            letter-spacing: 0 !important;
+        }
+
+        .client-directory-row {
+            position: relative;
+        }
+
+        .client-directory-row:not(.is-active) {
+            background: #ffffff;
+        }
+
+        .client-directory-row:not(.is-active):hover {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92));
+        }
+
+        .client-row-action {
+            width: 2.55rem;
+            height: 2.55rem;
+            border-radius: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #667085;
+            background: rgba(248, 250, 252, 0.92);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.86),
+                0 14px 30px -28px rgba(15, 23, 42, 0.48);
+            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+        }
+
+        .client-row-action:hover {
+            transform: translateY(-1px);
+            color: #050505;
+            border-color: rgba(15, 23, 42, 0.16);
+            background: #ffffff;
+        }
+
+        .client-row-action.is-active {
+            color: #050505;
+            background: #ffffff;
+            border-color: rgba(255,255,255,0.72);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.88);
+        }
+
+        .client-booking-count {
+            line-height: 1.4;
+        }
+
+        .client-file-details {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+        }
+
+        .client-file-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .client-file-field span {
+            font-size: 0.55rem;
+            line-height: 1;
+            font-weight: 850;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #98a2b3;
+        }
+
+        .client-file-field input {
+            width: 100%;
+            height: 2.85rem;
+            border-radius: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255,255,255,0.95);
+            padding-inline: 0.95rem;
+            color: #050505;
+            font-size: 0.9rem;
+            font-weight: 750;
+            outline: none;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+            transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        }
+
+        .client-file-field input:focus {
+            border-color: #050505;
+            background: #ffffff;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                0 0 0 3px rgba(57,255,20,0.16);
+        }
+
+        .client-file-field input:disabled {
+            color: #667085;
+            background: rgba(255,255,255,0.62);
+            cursor: not-allowed;
         }
 
         .booking-record-row {
@@ -2150,6 +2780,35 @@ body {
                 width: 100% !important;
             }
 
+            .schedule-team-layout {
+                align-items: stretch !important;
+            }
+
+            .schedule-team-copy {
+                flex-basis: auto !important;
+            }
+
+            .schedule-team-rail {
+                margin-inline: -0.15rem;
+                padding-inline: 0.15rem 1rem;
+            }
+
+            .schedule-team-chip {
+                min-width: 8.8rem !important;
+            }
+
+            .schedule-period-tabs {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                width: 100% !important;
+            }
+
+            .schedule-period-tab {
+                min-width: 0 !important;
+                padding-inline: 0.45rem !important;
+                font-size: 0.56rem !important;
+            }
+
             .schedule-calendar-toolbar {
                 width: 100% !important;
             }
@@ -2345,6 +3004,32 @@ body {
                 padding: 1rem !important;
             }
 
+            .booking-desk-head {
+                gap: 0.95rem !important;
+            }
+
+            .booking-period-tabs {
+                display: grid !important;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                width: 100% !important;
+                overflow: hidden;
+            }
+
+            .booking-period-tab {
+                min-width: 0 !important;
+                padding-inline: 0.35rem !important;
+                font-size: 0.5rem !important;
+            }
+
+            .booking-desk-controls {
+                grid-template-columns: 1fr !important;
+                gap: 0.7rem !important;
+            }
+
+            .booking-desk-selects {
+                width: 100% !important;
+            }
+
             .booking-record-row .flex.items-center.gap-3.mb-1 {
                 flex-wrap: wrap;
                 row-gap: 0.45rem;
@@ -2429,6 +3114,7 @@ body {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 width: 100%;
                 gap: 0.45rem !important;
+                padding: 0.4rem !important;
             }
 
             .booking-filter-rail button {
@@ -2436,7 +3122,7 @@ body {
                 justify-content: center;
                 padding-left: 0.45rem !important;
                 padding-right: 0.45rem !important;
-                font-size: 0.54rem !important;
+                font-size: 0.53rem !important;
             }
 
             .booking-record-list {
@@ -3735,9 +4421,20 @@ body {
         }
 
         .native-ui.dashboard-dark .schedule-scope-toggle,
-        .native-ui.dashboard-dark .schedule-month-switcher {
+        .native-ui.dashboard-dark .schedule-period-tabs,
+        .native-ui.dashboard-dark .schedule-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-month-switcher,
+        .native-ui.dashboard-dark .schedule-team-chip:not(.is-active) {
             background: #17191d !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-team-chip.is-active,
+        .native-ui.dashboard-dark .schedule-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-hide-toggle.is-active {
+            background: #f8fafc !important;
+            color: #050505 !important;
+            border-color: #f8fafc !important;
         }
 
         .native-ui.dashboard-dark .schedule-calendar-card .calendar-week-heading,
@@ -3957,10 +4654,21 @@ body {
         }
 
         .native-ui.dashboard-dark .booking-search-field input,
-        .native-ui.dashboard-dark .booking-filter-rail button:not(.bg-black) {
+        .native-ui.dashboard-dark .booking-filter-rail,
+        .native-ui.dashboard-dark .booking-filter-rail button:not(.is-active),
+        .native-ui.dashboard-dark .booking-period-tabs,
+        .native-ui.dashboard-dark .booking-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .booking-desk-select {
             background: #17191d !important;
             color: #f8fafc !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab.is-active,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active {
+            background: #f8fafc !important;
+            color: #050505 !important;
+            border-color: #f8fafc !important;
         }
 
         .native-ui.dashboard-dark .booking-desk-shell .text-black,
@@ -5001,6 +5709,43 @@ body {
             font-size: 0.82rem;
             font-weight: 700;
             line-height: 1.45;
+        }
+
+        .editor-cinema-hero {
+            min-height: 5.9rem !important;
+            padding: 1rem 1.15rem !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            border-radius: 22px !important;
+            background:
+                radial-gradient(circle at 4% 4%, rgba(217, 249, 157, 0.48), transparent 30%),
+                radial-gradient(circle at 96% 15%, rgba(186, 230, 253, 0.62), transparent 35%),
+                linear-gradient(135deg, rgba(255,255,255,0.94), rgba(248,250,252,0.84)) !important;
+        }
+
+        .editor-cinema-hero::before {
+            background: linear-gradient(120deg, rgba(255,255,255,0.72), transparent 52%) !important;
+        }
+
+        .editor-cinema-hero-copy {
+            max-width: 25rem !important;
+            margin: 0 !important;
+        }
+
+        .editor-cinema-hero-copy h3 {
+            max-width: none !important;
+            margin-top: 0.2rem !important;
+            font-size: clamp(1.6rem, 2.5vw, 2.1rem) !important;
+            letter-spacing: -0.055em !important;
+            line-height: 0.9 !important;
+        }
+
+        .editor-cinema-hero-copy p {
+            max-width: 24rem !important;
+            margin-top: 0.36rem !important;
+            font-size: 0.76rem !important;
+            line-height: 1.35 !important;
+            color: #647084 !important;
         }
 
         .editor-cinema-timeline {
@@ -6756,20 +7501,20 @@ body {
         }
 
         .mobile-editor-panel .editor-cinema-hero {
-            min-height: 10.5rem;
-            padding: 0.9rem;
-            align-items: flex-end;
+            min-height: 5.6rem !important;
+            padding: 0.95rem !important;
+            align-items: center !important;
         }
 
         .mobile-editor-panel .editor-cinema-hero-copy h3 {
             max-width: 25rem;
-            font-size: clamp(1.8rem, 3.8vw, 2.45rem);
-            line-height: 0.88;
+            font-size: clamp(1.45rem, 3.4vw, 1.85rem) !important;
+            line-height: 0.92 !important;
         }
 
         .mobile-editor-panel .editor-cinema-hero-copy p {
-            max-width: 27rem;
-            font-size: 0.82rem;
+            max-width: 22rem !important;
+            font-size: 0.74rem !important;
         }
 
         .mobile-editor-panel .editor-cinema-stage-body {
@@ -6821,16 +7566,21 @@ body {
         }
 
         .editor-preview-room-nav {
+            --editor-room-nav-x: 0px;
+            --editor-room-nav-y: 0px;
             position: absolute;
             z-index: 64;
             display: flex;
             gap: 0.35rem;
-            padding: 0.35rem;
-            border-radius: 999px;
-            border: 1px solid rgba(255,255,255,0.78);
-            background: rgba(255,255,255,0.78);
-            box-shadow: 0 18px 60px -42px rgba(15,23,42,0.72);
-            backdrop-filter: blur(22px) saturate(1.25);
+            padding: 0.42rem;
+            border-radius: 1.35rem;
+            border: 1px solid rgba(15,23,42,0.08);
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.94), rgba(250,250,249,0.9)) padding-box,
+                linear-gradient(115deg, rgba(203,255,184,0.52), rgba(183,255,240,0.45), rgba(210,203,255,0.42), rgba(255,212,242,0.38)) border-box;
+            box-shadow: 0 22px 70px -46px rgba(15,23,42,0.72), inset 0 1px 0 rgba(255,255,255,0.92);
+            backdrop-filter: blur(24px) saturate(1.35);
+            touch-action: none;
         }
 
         .mobile-editor-device-option {
@@ -6841,7 +7591,7 @@ body {
             top: 50%;
             right: clamp(1rem, 2vw, 1.75rem);
             left: auto;
-            transform: translateY(-50%);
+            transform: translate(var(--editor-room-nav-x), calc(-50% + var(--editor-room-nav-y)));
             flex-direction: column;
             border-radius: 1.35rem;
             max-height: min(72vh, 36rem);
@@ -6853,7 +7603,7 @@ body {
         .editor-preview-room-nav.is-phone {
             top: 50%;
             left: max(1rem, 5vw);
-            transform: translateY(-50%);
+            transform: translate(var(--editor-room-nav-x), calc(-50% + var(--editor-room-nav-y)));
             flex-direction: column;
             border-radius: 1.35rem;
             max-height: 72vh;
@@ -6868,19 +7618,31 @@ body {
             min-width: 2.35rem;
             height: 2.5rem;
             min-height: 2.5rem;
-            border-radius: 999px;
+            border-radius: 0.95rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.45rem;
-            border: 1px solid transparent;
-            background: rgba(248,250,252,0.82);
-            color: #64748b;
+            border: 1px solid rgba(15,23,42,0.06);
+            background: rgba(255,255,255,0.72);
+            color: #667085;
             font-size: 0.58rem;
             font-weight: 950;
             text-transform: uppercase;
             white-space: nowrap;
-            transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.84);
+            transition: transform 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .editor-preview-room-nav-grip {
+            cursor: grab;
+            color: #98a2b3 !important;
+            background: rgba(248,250,252,0.62) !important;
+        }
+
+        .editor-preview-room-nav-grip:active {
+            cursor: grabbing;
+            transform: scale(0.98);
         }
 
         .editor-preview-room-nav.is-desktop button {
@@ -6900,12 +7662,17 @@ body {
         .editor-preview-room-nav button:hover {
             transform: translateY(-1px);
             color: #050505;
+            border-color: rgba(15,23,42,0.14);
+            background: rgba(255,255,255,0.96);
         }
 
         .editor-preview-room-nav button.is-active {
-            background: #050505;
-            color: #fff;
-            box-shadow: 0 16px 34px -24px rgba(0,0,0,0.92);
+            color: #050505;
+            border: 1px solid transparent;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,249,0.94)) padding-box,
+                var(--native-accent-button-gradient) border-box;
+            box-shadow: 0 18px 40px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.88);
         }
 
         .booking-preview-room-flash {
@@ -6971,18 +7738,39 @@ body {
         }
 
         .native-ui.dashboard-dark .editor-preview-room-nav {
-            background: rgba(17,19,24,0.84);
-            border-color: rgba(255,255,255,0.12);
+            background:
+                linear-gradient(180deg, rgba(10,10,10,0.96), rgba(20,20,20,0.88)) padding-box,
+                var(--native-accent-button-gradient) border-box;
+            border-color: transparent;
+            box-shadow: 0 22px 70px -46px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.1);
         }
 
         .native-ui.dashboard-dark .editor-preview-room-nav button {
-            background: #171a20;
-            color: #b6c2d1;
+            background: #141414;
+            color: #a8b3c7;
+            border-color: rgba(255,255,255,0.09);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+
+        .native-ui.dashboard-dark .editor-preview-room-nav button:hover {
+            background: #1c1c1c;
+            color: #ffffff;
+            border-color: rgba(255,255,255,0.16);
         }
 
         .native-ui.dashboard-dark .editor-preview-room-nav button.is-active {
-            background: #f8fafc;
-            color: #050505;
+            color: #ffffff;
+            border: 1px solid transparent;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14);
+        }
+
+        .native-ui.dashboard-dark .editor-preview-room-nav .editor-preview-room-nav-grip {
+            background: #101010 !important;
+            color: #d8dee8 !important;
+            border-color: rgba(255,255,255,0.12) !important;
         }
 
         /* Compact iOS x Vercel editor pass. Keeps every room dense, glassy, and scannable. */
@@ -7347,9 +8135,28 @@ body {
             box-shadow: 0 18px 58px -44px rgba(15, 23, 42, 0.62) !important;
         }
 
+        .editor-preview-room-nav {
+            align-items: center !important;
+            gap: 0.42rem !important;
+            padding: 0.58rem 0.48rem 0.78rem !important;
+            scroll-padding-block: 0.75rem;
+        }
+
         .editor-preview-room-nav button {
-            min-width: 2.1rem !important;
-            height: 2.1rem !important;
+            width: 2.25rem !important;
+            min-width: 2.25rem !important;
+            height: 2.25rem !important;
+            min-height: 2.25rem !important;
+            flex: 0 0 auto;
+        }
+
+        .editor-preview-room-nav .editor-preview-room-nav-grip {
+            margin-bottom: 0.08rem;
+        }
+
+        .editor-preview-room-nav::after {
+            content: "";
+            flex: 0 0 0.08rem;
         }
 
         .editor-publish-footer {
@@ -12332,7 +13139,1532 @@ body {
                 text-align: left;
             }
 
-            .booking-venue-gallery-count {
-                display: none;
-            }
+        .booking-venue-gallery-count {
+            display: none;
+        }
+    }
+
+        .service-filter-rail,
+        .booking-filter-rail,
+        .client-filter-tabs {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.45rem !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            width: 100%;
+            padding: 0.1rem !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            scrollbar-width: none;
+        }
+
+        .service-filter-rail::-webkit-scrollbar,
+        .booking-filter-rail::-webkit-scrollbar,
+        .client-filter-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .service-filter-tab,
+        .booking-filter-chip,
+        .client-filter-tab {
+            min-width: max-content !important;
+            min-height: 2.45rem !important;
+            height: 2.45rem !important;
+            border-radius: 0.8rem !important;
+            border: 1px solid rgba(15, 23, 42, 0.055) !important;
+            background: rgba(255, 255, 255, 0.72) !important;
+            color: #667085 !important;
+            padding-inline: 0.72rem !important;
+            font-size: 0.62rem !important;
+            font-weight: 850 !important;
+            letter-spacing: 0.035em !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.76) !important;
+            transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .service-filter-tab:hover,
+        .booking-filter-chip:hover,
+        .client-filter-tab:hover {
+            background: rgba(255, 255, 255, 0.96) !important;
+            border-color: rgba(15, 23, 42, 0.1) !important;
+            color: #111827 !important;
+            box-shadow: 0 10px 26px -24px rgba(15, 23, 42, 0.42), inset 0 1px 0 rgba(255,255,255,0.86) !important;
+        }
+
+        .service-filter-tab.is-active,
+        .booking-filter-chip.is-active,
+        .client-filter-tab.is-active {
+            color: #050505 !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 249, 0.94)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 18px 40px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+        }
+
+        .service-filter-count,
+        .booking-filter-count,
+        .client-filter-count {
+            min-width: 1.42rem !important;
+            width: auto !important;
+            height: 1.42rem !important;
+            padding-inline: 0.34rem !important;
+            border-radius: 999px !important;
+            border: 1px solid rgba(15, 23, 42, 0.055) !important;
+            background: #ffffff !important;
+            color: #050505 !important;
+            font-size: 0.62rem !important;
+            font-weight: 850 !important;
+            letter-spacing: 0 !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.88);
+        }
+
+        .service-filter-tab.is-active .service-filter-count,
+        .booking-filter-chip.is-active .booking-filter-count,
+        .client-filter-tab.is-active .client-filter-count {
+            border-color: transparent !important;
+            background: #050505 !important;
+            color: #ffffff !important;
+        }
+
+        .service-filter-tab svg,
+        .booking-filter-chip svg,
+        .client-filter-tab svg {
+            width: 0.82rem;
+            height: 0.82rem;
+            flex: 0 0 auto;
+            opacity: 0.86;
+        }
+
+        .service-option-chip {
+            border: 1px solid rgba(15, 23, 42, 0.055) !important;
+            background: rgba(255, 255, 255, 0.72) !important;
+            color: #667085 !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.76) !important;
+            transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .service-option-chip:hover {
+            background: rgba(255, 255, 255, 0.96) !important;
+            border-color: rgba(15, 23, 42, 0.1) !important;
+            color: #111827 !important;
+            box-shadow: 0 10px 26px -24px rgba(15, 23, 42, 0.42), inset 0 1px 0 rgba(255,255,255,0.86) !important;
+        }
+
+        .service-option-chip.is-active {
+            color: #050505 !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 249, 0.94)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 18px 40px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab,
+        .native-ui.dashboard-dark .booking-filter-chip,
+        .native-ui.dashboard-dark .client-filter-tab,
+        .native-ui.dashboard-dark .service-option-chip {
+            background: rgba(255, 255, 255, 0.055) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active,
+        .native-ui.dashboard-dark .client-filter-tab.is-active,
+        .native-ui.dashboard-dark .service-option-chip.is-active {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #050505, #050505) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active .service-filter-count,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active .booking-filter-count,
+        .native-ui.dashboard-dark .client-filter-tab.is-active .client-filter-count {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: rgba(255,255,255,0.92) !important;
+        }
+
+        /* Dark theme foundation: true-black canvas, lifted surfaces only where contrast helps. */
+        .native-ui.dashboard-dark {
+            --dashboard-black: #000000;
+            --dashboard-surface: #0a0a0a;
+            --dashboard-surface-raised: #141414;
+            --dashboard-rail: #1c1c1c;
+            background: #000000 !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark,
+        .native-ui.dashboard-dark .dashboard-main,
+        .native-ui.dashboard-dark .dashboard-main > div,
+        .native-ui.dashboard-dark .dashboard-sidebar,
+        .native-ui.dashboard-dark .mobile-bottom-nav,
+        .native-ui.dashboard-dark .mobile-editor-shell,
+        .native-ui.dashboard-dark .mobile-editor-preview {
+            background: #000000 !important;
+            background-color: #000000 !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-panel,
+        .native-ui.dashboard-dark .saas-card,
+        .native-ui.dashboard-dark .saas-panel,
+        .native-ui.dashboard-dark .theme-template-panel,
+        .native-ui.dashboard-dark .bg-white,
+        .native-ui.dashboard-dark .booking-desk-shell,
+        .native-ui.dashboard-dark .booking-desk-command,
+        .native-ui.dashboard-dark .booking-record-row,
+        .native-ui.dashboard-dark .service-desk-shell,
+        .native-ui.dashboard-dark .service-desk-command,
+        .native-ui.dashboard-dark .client-directory-card,
+        .native-ui.dashboard-dark .support-inbox-card,
+        .native-ui.dashboard-dark .support-chat-panel,
+        .native-ui.dashboard-dark .support-chat-header,
+        .native-ui.dashboard-dark .support-chat-composer,
+        .native-ui.dashboard-dark .schedule-calendar-card,
+        .native-ui.dashboard-dark .schedule-calendar-command,
+        .native-ui.dashboard-dark .schedule-side-panel,
+        .native-ui.dashboard-dark .schedule-selected-panel {
+            background: #0a0a0a !important;
+            background-color: #0a0a0a !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .bg-neutral-50,
+        .native-ui.dashboard-dark .bg-neutral-100,
+        .native-ui.dashboard-dark .bg-neutral-200,
+        .native-ui.dashboard-dark .rounded-xl.bg-neutral-50,
+        .native-ui.dashboard-dark .rounded-lg.bg-neutral-50,
+        .native-ui.dashboard-dark .service-filter-rail,
+        .native-ui.dashboard-dark .booking-filter-rail,
+        .native-ui.dashboard-dark .client-filter-tabs,
+        .native-ui.dashboard-dark .client-directory-tools,
+        .native-ui.dashboard-dark .schedule-scope-toggle,
+        .native-ui.dashboard-dark .schedule-period-tabs,
+        .native-ui.dashboard-dark .schedule-month-switcher {
+            background: #141414 !important;
+            background-color: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark input,
+        .native-ui.dashboard-dark textarea,
+        .native-ui.dashboard-dark select,
+        .native-ui.dashboard-dark .booking-desk-input,
+        .native-ui.dashboard-dark .booking-desk-select,
+        .native-ui.dashboard-dark .client-search-input,
+        .native-ui.dashboard-dark .service-search-field {
+            background: #050505 !important;
+            background-color: #050505 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab:not(.is-active),
+        .native-ui.dashboard-dark .booking-filter-chip:not(.is-active),
+        .native-ui.dashboard-dark .client-filter-tab:not(.is-active),
+        .native-ui.dashboard-dark .service-option-chip:not(.is-active),
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab:not(.is-active),
+        .native-ui.dashboard-dark .support-mail-tab:not(.is-active) {
+            background: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active,
+        .native-ui.dashboard-dark .client-filter-tab.is-active,
+        .native-ui.dashboard-dark .service-option-chip.is-active,
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active,
+        .native-ui.dashboard-dark .support-mail-tab.is-active {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active .service-filter-count,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active .booking-filter-count,
+        .native-ui.dashboard-dark .client-filter-tab.is-active .client-filter-count,
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active .support-mail-tab-count,
+        .native-ui.dashboard-dark .support-mail-tab.is-active .support-mail-tab-count {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: rgba(255,255,255,0.92) !important;
+        }
+
+        html:has(.native-ui.dashboard-dark),
+        body:has(.native-ui.dashboard-dark) {
+            background: #000000 !important;
+        }
+
+        .native-ui.dashboard-dark .client-directory-row:not(.is-active) {
+            background: #0a0a0a !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+        }
+
+        .native-ui.dashboard-dark .client-directory-row:not(.is-active):hover {
+            background:
+                linear-gradient(180deg, rgba(20, 20, 20, 0.98), rgba(12, 12, 12, 0.96)) !important;
+        }
+
+        .native-ui.dashboard-dark .client-directory-row.is-active {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .client-row-action {
+            background: #141414 !important;
+            color: #d8dee8 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 16px 34px -30px rgba(0,0,0,0.9) !important;
+        }
+
+        .native-ui.dashboard-dark .client-row-action:hover,
+        .native-ui.dashboard-dark .client-row-action.is-active {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-hide-toggle:not(.is-active),
+        .native-ui.dashboard-dark .schedule-team-chip:not(.is-active) {
+            background: #141414 !important;
+            color: #a8b3c7 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab:hover,
+        .native-ui.dashboard-dark .schedule-period-tab:hover,
+        .native-ui.dashboard-dark .schedule-hide-toggle:hover,
+        .native-ui.dashboard-dark .schedule-team-chip:hover {
+            background: #1c1c1c !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.16) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-hide-toggle.is-active,
+        .native-ui.dashboard-dark .schedule-team-chip.is-active {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 38px -34px rgba(255,255,255,0.36) !important;
+        }
+
+        /* Final dark-mode truth: neutral iOS/Vercel graphite, applied after all legacy overrides. */
+        html:has(.native-ui.dashboard-dark),
+        body:has(.native-ui.dashboard-dark) {
+            background: #090909 !important;
+        }
+
+        html body .native-ui.dashboard-dark {
+            --dark-canvas: #090909;
+            --dark-surface: #121212;
+            --dark-surface-raised: #181818;
+            --dark-surface-soft: #202020;
+            --dark-line: rgba(255, 255, 255, 0.095);
+            --dark-line-strong: rgba(255, 255, 255, 0.15);
+            --dark-text: #f5f5f5;
+            --dark-muted: #a3a3a3;
+            background: linear-gradient(180deg, #111111 0%, #090909 20%, #0b0b0b 100%) !important;
+            color: var(--dark-text) !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-main,
+        html body .native-ui.dashboard-dark .mobile-editor-shell,
+        html body .native-ui.dashboard-dark .mobile-editor-preview {
+            background: linear-gradient(180deg, #101010 0%, #090909 48%, #0b0b0b 100%) !important;
+            color: var(--dark-text) !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-main > div {
+            background: linear-gradient(180deg, rgba(14,14,14,0.97), rgba(9,9,9,0.99)) !important;
+            color: var(--dark-text) !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-sidebar,
+        html body .native-ui.dashboard-dark .mobile-bottom-nav,
+        html body .native-ui.dashboard-dark .dashboard-theme-floating,
+        html body .native-ui.dashboard-dark .mobile-guest-auth-cta {
+            background: linear-gradient(180deg, rgba(24,24,24,0.86), rgba(14,14,14,0.92)) !important;
+            border-color: var(--dark-line) !important;
+            box-shadow: 0 28px 90px -56px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.075) !important;
+            backdrop-filter: blur(28px) saturate(1.15) !important;
+        }
+
+        html body .native-ui.dashboard-dark .mobile-editor-panel,
+        html body .native-ui.dashboard-dark .saas-card,
+        html body .native-ui.dashboard-dark .saas-panel,
+        html body .native-ui.dashboard-dark .theme-template-panel,
+        html body .native-ui.dashboard-dark .booking-desk-shell,
+        html body .native-ui.dashboard-dark .booking-desk-command,
+        html body .native-ui.dashboard-dark .booking-record-row,
+        html body .native-ui.dashboard-dark .service-desk-shell,
+        html body .native-ui.dashboard-dark .service-desk-command,
+        html body .native-ui.dashboard-dark .client-directory-card,
+        html body .native-ui.dashboard-dark .client-directory-row:not(.is-active),
+        html body .native-ui.dashboard-dark .support-inbox-card,
+        html body .native-ui.dashboard-dark .support-chat-panel,
+        html body .native-ui.dashboard-dark .support-chat-header,
+        html body .native-ui.dashboard-dark .support-chat-composer,
+        html body .native-ui.dashboard-dark .schedule-calendar-card,
+        html body .native-ui.dashboard-dark .schedule-calendar-command,
+        html body .native-ui.dashboard-dark .schedule-side-panel,
+        html body .native-ui.dashboard-dark .schedule-selected-panel,
+        html body .native-ui.dashboard-dark .finance-desk,
+        html body .native-ui.dashboard-dark .finance-report-strip > div,
+        html body .native-ui.dashboard-dark .editor-cinema-header,
+        html body .native-ui.dashboard-dark .editor-cinema-stage,
+        html body .native-ui.dashboard-dark .editor-cinema-control-panel,
+        html body .native-ui.dashboard-dark .editor-cinema-live-card,
+        html body .native-ui.dashboard-dark .cinema-intro-editor,
+        html body .native-ui.dashboard-dark .cinema-brand-preview,
+        html body .native-ui.dashboard-dark .cinema-theme-preview,
+        html body .native-ui.dashboard-dark .cinema-type-preview,
+        html body .native-ui.dashboard-dark .cinema-visual-preview,
+        html body .native-ui.dashboard-dark .cinema-button-preview,
+        html body .native-ui.dashboard-dark .cinema-feature-preview,
+        html body .native-ui.dashboard-dark .cinema-copy-preview,
+        html body .native-ui.dashboard-dark .cinema-launch-preview,
+        html body .native-ui.dashboard-dark .cinema-setting-group,
+        html body .native-ui.dashboard-dark .cinema-text-card,
+        html body .native-ui.dashboard-dark .cinema-media-action-card,
+        html body .native-ui.dashboard-dark .cinema-display-card,
+        html body .native-ui.dashboard-dark .cinema-media-display-card,
+        html body .native-ui.dashboard-dark .cinema-look-picker,
+        html body .native-ui.dashboard-dark .cinema-social-card,
+        html body .native-ui.dashboard-dark .cinema-faq-editor,
+        html body .native-ui.dashboard-dark .cinema-faq-card,
+        html body .native-ui.dashboard-dark .cinema-color-director,
+        html body .native-ui.dashboard-dark .cinema-native-gradient-note,
+        html body .native-ui.dashboard-dark .bg-white {
+            background: linear-gradient(180deg, rgba(23,23,23,0.96), rgba(14,14,14,0.98)) !important;
+            border-color: var(--dark-line) !important;
+            color: var(--dark-text) !important;
+            box-shadow: 0 22px 70px -54px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.065) !important;
+        }
+
+        html body .native-ui.dashboard-dark .bg-neutral-50,
+        html body .native-ui.dashboard-dark .bg-neutral-100,
+        html body .native-ui.dashboard-dark .bg-neutral-200,
+        html body .native-ui.dashboard-dark .rounded-xl.bg-neutral-50,
+        html body .native-ui.dashboard-dark .rounded-lg.bg-neutral-50,
+        html body .native-ui.dashboard-dark .client-directory-tools,
+        html body .native-ui.dashboard-dark .schedule-scope-toggle,
+        html body .native-ui.dashboard-dark .schedule-period-tabs,
+        html body .native-ui.dashboard-dark .schedule-month-switcher,
+        html body .native-ui.dashboard-dark .booking-record-row > .grid > div:nth-child(2),
+        html body .native-ui.dashboard-dark .support-desk-shell .support-message-client,
+        html body .native-ui.dashboard-dark .support-desk-shell .support-chat-actions button:not(.native-gradient-button),
+        html body .native-ui.dashboard-dark .client-row-action {
+            background: linear-gradient(180deg, rgba(31,31,31,0.95), rgba(19,19,19,0.96)) !important;
+            border-color: rgba(255,255,255,0.09) !important;
+            color: #ededed !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.055) !important;
+        }
+
+        html body .native-ui.dashboard-dark input,
+        html body .native-ui.dashboard-dark textarea,
+        html body .native-ui.dashboard-dark select,
+        html body .native-ui.dashboard-dark .booking-desk-input,
+        html body .native-ui.dashboard-dark .booking-desk-select,
+        html body .native-ui.dashboard-dark .client-search-input,
+        html body .native-ui.dashboard-dark .service-search-field,
+        html body .native-ui.dashboard-dark .cinema-text-card input,
+        html body .native-ui.dashboard-dark .cinema-text-card textarea,
+        html body .native-ui.dashboard-dark .cinema-brand-preview input,
+        html body .native-ui.dashboard-dark .cinema-brand-preview textarea,
+        html body .native-ui.dashboard-dark .cinema-copy-preview input,
+        html body .native-ui.dashboard-dark .cinema-field-grid input,
+        html body .native-ui.dashboard-dark .cinema-field-grid textarea,
+        html body .native-ui.dashboard-dark .cinema-social-fields input,
+        html body .native-ui.dashboard-dark .cinema-faq-card input,
+        html body .native-ui.dashboard-dark .cinema-faq-card textarea,
+        html body .native-ui.dashboard-dark .cinema-faq-editor textarea {
+            background: linear-gradient(180deg, rgba(10,10,10,0.98), rgba(16,16,16,0.98)) !important;
+            color: #f5f5f5 !important;
+            border-color: rgba(255,255,255,0.12) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 34px -32px rgba(0,0,0,0.92) !important;
+        }
+
+        html body .native-ui.dashboard-dark input::placeholder,
+        html body .native-ui.dashboard-dark textarea::placeholder {
+            color: rgba(245,245,245,0.34) !important;
+        }
+
+        html body .native-ui.dashboard-dark .text-black,
+        html body .native-ui.dashboard-dark .text-neutral-950,
+        html body .native-ui.dashboard-dark .text-neutral-900,
+        html body .native-ui.dashboard-dark .text-neutral-800,
+        html body .native-ui.dashboard-dark .text-neutral-700 {
+            color: #f5f5f5 !important;
+        }
+
+        html body .native-ui.dashboard-dark .text-neutral-600,
+        html body .native-ui.dashboard-dark .text-neutral-500,
+        html body .native-ui.dashboard-dark .text-neutral-400,
+        html body .native-ui.dashboard-dark .text-neutral-300,
+        html body .native-ui.dashboard-dark .dashboard-page-header p {
+            color: #a3a3a3 !important;
+        }
+
+        html body .native-ui.dashboard-dark .editor-cinema-hero {
+            background:
+                linear-gradient(135deg, rgba(25,25,25,0.96), rgba(15,15,15,0.98)) padding-box,
+                linear-gradient(115deg, rgba(203,255,184,0.32), rgba(185,227,255,0.26), rgba(255,212,242,0.22)) border-box !important;
+            border: 1px solid transparent !important;
+            box-shadow: 0 28px 78px -58px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+        }
+
+        html body .native-ui.dashboard-dark .editor-cinema-hero::before {
+            background: linear-gradient(120deg, rgba(255,255,255,0.08), transparent 48%) !important;
+        }
+
+        html body .native-ui.dashboard-dark .editor-preview-room-nav {
+            background:
+                linear-gradient(180deg, rgba(26,26,26,0.94), rgba(14,14,14,0.92)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            border-color: transparent !important;
+            box-shadow: 0 24px 80px -52px rgba(0,0,0,0.98), inset 0 1px 0 rgba(255,255,255,0.09) !important;
+        }
+
+        html body .native-ui.dashboard-dark .service-filter-tab:not(.is-active),
+        html body .native-ui.dashboard-dark .booking-filter-chip:not(.is-active),
+        html body .native-ui.dashboard-dark .client-filter-tab:not(.is-active),
+        html body .native-ui.dashboard-dark .service-option-chip:not(.is-active),
+        html body .native-ui.dashboard-dark .support-desk-shell .support-mail-tab:not(.is-active),
+        html body .native-ui.dashboard-dark .support-mail-tab:not(.is-active) {
+            background: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #a8b3c7 !important;
+        }
+
+        html body .native-ui.dashboard-dark .service-filter-tab.is-active,
+        html body .native-ui.dashboard-dark .booking-filter-chip.is-active,
+        html body .native-ui.dashboard-dark .client-filter-tab.is-active,
+        html body .native-ui.dashboard-dark .service-option-chip.is-active,
+        html body .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active,
+        html body .native-ui.dashboard-dark .support-mail-tab.is-active {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+        }
+
+        /* Absolute final rule: gradient CTA text and icons must always be black. */
+        html body .native-ui .native-gradient-button,
+        html body .native-ui .native-gradient-button :where(*),
+        html body .native-ui.dashboard-dark .native-gradient-button,
+        html body .native-ui.dashboard-dark .native-gradient-button :where(*),
+        html body .native-home.native-home-dark .native-gradient-button,
+        html body .native-home.native-home-dark .native-gradient-button :where(*),
+        html body .native-ui .mobile-guest-auth-cta button:last-child,
+        html body .native-ui .mobile-guest-auth-cta button:last-child :where(*),
+        html body .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-child,
+        html body .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-child :where(*),
+        html body .native-ui .bg-\[\#39FF14\],
+        html body .native-ui .bg-\[\#39FF14\] :where(*),
+        html body .native-ui.dashboard-dark .bg-\[\#39FF14\],
+        html body .native-ui.dashboard-dark .bg-\[\#39FF14\] :where(*) {
+            color: #050505 !important;
+            text-shadow: none !important;
+        }
+
+        html body .native-ui .native-gradient-button svg,
+        html body .native-ui.dashboard-dark .native-gradient-button svg,
+        html body .native-home.native-home-dark .native-gradient-button svg,
+        html body .native-ui .mobile-guest-auth-cta button:last-child svg,
+        html body .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-child svg,
+        html body .native-ui .bg-\[\#39FF14\] svg,
+        html body .native-ui.dashboard-dark .bg-\[\#39FF14\] svg {
+            color: #050505 !important;
+            stroke: #050505 !important;
+        }
+
+        /* Final editor/header compacting and gradient button readability. */
+        .mobile-editor-panel .editor-panel-scroll {
+            padding-top: 0.95rem !important;
+        }
+
+        .editor-cinema-studio {
+            gap: 0.58rem !important;
+        }
+
+        .editor-cinema-hero {
+            min-height: 4.45rem !important;
+            padding: 0.72rem 0.9rem !important;
+            border-radius: 18px !important;
+            align-items: center !important;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.92), rgba(248,250,252,0.84)) padding-box,
+                linear-gradient(115deg, rgba(203,255,184,0.56), rgba(185,227,255,0.48), rgba(255,212,242,0.32)) border-box !important;
+            border: 1px solid transparent !important;
+            box-shadow: 0 18px 48px -42px rgba(15, 23, 42, 0.52), inset 0 1px 0 rgba(255,255,255,0.68) !important;
+        }
+
+        .editor-cinema-hero-copy {
+            max-width: 21rem !important;
+        }
+
+        .editor-cinema-hero-copy span {
+            font-size: 0.56rem !important;
+            letter-spacing: 0.16em !important;
+        }
+
+        .editor-cinema-hero-copy h3 {
+            margin-top: 0.08rem !important;
+            font-size: clamp(1.2rem, 2vw, 1.58rem) !important;
+            line-height: 0.96 !important;
+            letter-spacing: -0.045em !important;
+        }
+
+        .editor-cinema-hero-copy p {
+            margin-top: 0.2rem !important;
+            max-width: 19rem !important;
+            font-size: 0.68rem !important;
+            line-height: 1.25 !important;
+        }
+
+        html body .native-ui.dashboard-dark .editor-cinema-hero {
+            background:
+                linear-gradient(135deg, rgba(22,22,22,0.96), rgba(13,13,13,0.98)) padding-box,
+                linear-gradient(115deg, rgba(203,255,184,0.30), rgba(185,227,255,0.22), rgba(255,212,242,0.18)) border-box !important;
+            border: 1px solid transparent !important;
+        }
+
+        .native-gradient-button,
+        .native-gradient-button *,
+        .native-gradient-icon,
+        .native-gradient-icon *,
+        .native-ui.dashboard-dark .native-gradient-button,
+        .native-ui.dashboard-dark .native-gradient-button *,
+        .native-ui.dashboard-dark .native-gradient-icon,
+        .native-ui.dashboard-dark .native-gradient-icon *,
+        .native-ui .bg-\[\#39FF14\],
+        .native-ui .bg-\[\#39FF14\] *,
+        .native-ui.dashboard-dark .bg-\[\#39FF14\],
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] * {
+            color: #050505 !important;
+            text-shadow: none !important;
+        }
+
+        .native-gradient-button svg,
+        .native-gradient-icon svg,
+        .native-ui .bg-\[\#39FF14\] svg,
+        .native-ui.dashboard-dark .bg-\[\#39FF14\] svg {
+            color: #050505 !important;
+            stroke: #050505 !important;
+        }
+
+        html body .native-ui.dashboard-dark .service-filter-tab.is-active .service-filter-count,
+        html body .native-ui.dashboard-dark .booking-filter-chip.is-active .booking-filter-count,
+        html body .native-ui.dashboard-dark .client-filter-tab.is-active .client-filter-count,
+        html body .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active .support-mail-tab-count,
+        html body .native-ui.dashboard-dark .support-mail-tab.is-active .support-mail-tab-count {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: rgba(255,255,255,0.92) !important;
+        }
+
+        /* World-class dark theme pass: neutral graphite, glass depth, no navy cast. */
+        .native-ui.dashboard-dark {
+            --dark-canvas: #090909;
+            --dark-canvas-lift: #0d0d0d;
+            --dark-surface: #121212;
+            --dark-surface-2: #171717;
+            --dark-surface-3: #1d1d1d;
+            --dark-line: rgba(255, 255, 255, 0.095);
+            --dark-line-strong: rgba(255, 255, 255, 0.145);
+            --dark-text: #f5f5f5;
+            --dark-muted: #a3a3a3;
+            --dark-faint: #737373;
+            background:
+                linear-gradient(180deg, #111111 0%, #090909 18%, #0b0b0b 100%) !important;
+            color: var(--dark-text) !important;
+        }
+
+        html:has(.native-ui.dashboard-dark),
+        body:has(.native-ui.dashboard-dark) {
+            background: #090909 !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-main,
+        .native-ui.dashboard-dark .mobile-editor-shell,
+        .native-ui.dashboard-dark .mobile-editor-preview {
+            background:
+                linear-gradient(180deg, #101010 0%, #090909 44%, #0b0b0b 100%) !important;
+            color: var(--dark-text) !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-main > div {
+            background:
+                linear-gradient(180deg, rgba(14, 14, 14, 0.96), rgba(9, 9, 9, 0.99)) !important;
+            color: var(--dark-text) !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-sidebar,
+        .native-ui.dashboard-dark .mobile-bottom-nav,
+        .native-ui.dashboard-dark .dashboard-theme-floating,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta {
+            background:
+                linear-gradient(180deg, rgba(24, 24, 24, 0.84), rgba(14, 14, 14, 0.9)) !important;
+            border-color: var(--dark-line) !important;
+            box-shadow:
+                0 28px 90px -56px rgba(0, 0, 0, 0.96),
+                inset 0 1px 0 rgba(255, 255, 255, 0.075) !important;
+            backdrop-filter: blur(28px) saturate(1.18) !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-panel,
+        .native-ui.dashboard-dark .saas-card,
+        .native-ui.dashboard-dark .saas-panel,
+        .native-ui.dashboard-dark .theme-template-panel,
+        .native-ui.dashboard-dark .booking-desk-shell,
+        .native-ui.dashboard-dark .booking-desk-command,
+        .native-ui.dashboard-dark .booking-record-row,
+        .native-ui.dashboard-dark .service-desk-shell,
+        .native-ui.dashboard-dark .service-desk-command,
+        .native-ui.dashboard-dark .client-directory-card,
+        .native-ui.dashboard-dark .client-directory-row:not(.is-active),
+        .native-ui.dashboard-dark .support-inbox-card,
+        .native-ui.dashboard-dark .support-chat-panel,
+        .native-ui.dashboard-dark .support-chat-header,
+        .native-ui.dashboard-dark .support-chat-composer,
+        .native-ui.dashboard-dark .schedule-calendar-card,
+        .native-ui.dashboard-dark .schedule-calendar-command,
+        .native-ui.dashboard-dark .schedule-side-panel,
+        .native-ui.dashboard-dark .schedule-selected-panel,
+        .native-ui.dashboard-dark .finance-report-strip > div,
+        .native-ui.dashboard-dark .finance-desk,
+        .native-ui.dashboard-dark .bg-white {
+            background:
+                linear-gradient(180deg, rgba(23, 23, 23, 0.96), rgba(14, 14, 14, 0.98)) !important;
+            border-color: var(--dark-line) !important;
+            color: var(--dark-text) !important;
+            box-shadow:
+                0 22px 70px -54px rgba(0, 0, 0, 0.96),
+                inset 0 1px 0 rgba(255, 255, 255, 0.065) !important;
+        }
+
+        .native-ui.dashboard-dark .bg-neutral-50,
+        .native-ui.dashboard-dark .bg-neutral-100,
+        .native-ui.dashboard-dark .bg-neutral-200,
+        .native-ui.dashboard-dark .rounded-xl.bg-neutral-50,
+        .native-ui.dashboard-dark .rounded-lg.bg-neutral-50,
+        .native-ui.dashboard-dark .client-directory-tools,
+        .native-ui.dashboard-dark .schedule-scope-toggle,
+        .native-ui.dashboard-dark .schedule-period-tabs,
+        .native-ui.dashboard-dark .schedule-month-switcher,
+        .native-ui.dashboard-dark .booking-record-row > .grid > div:nth-child(2),
+        .native-ui.dashboard-dark .support-desk-shell .support-message-client,
+        .native-ui.dashboard-dark .support-desk-shell .support-chat-actions button:not(.native-gradient-button),
+        .native-ui.dashboard-dark .client-row-action {
+            background:
+                linear-gradient(180deg, rgba(29, 29, 29, 0.95), rgba(19, 19, 19, 0.96)) !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #ededed !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.055) !important;
+        }
+
+        .native-ui.dashboard-dark input,
+        .native-ui.dashboard-dark textarea,
+        .native-ui.dashboard-dark select,
+        .native-ui.dashboard-dark .booking-desk-input,
+        .native-ui.dashboard-dark .booking-desk-select,
+        .native-ui.dashboard-dark .client-search-input,
+        .native-ui.dashboard-dark .service-search-field {
+            background:
+                linear-gradient(180deg, rgba(10, 10, 10, 0.98), rgba(16, 16, 16, 0.98)) !important;
+            color: #f5f5f5 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.04),
+                0 12px 34px -32px rgba(0,0,0,0.92) !important;
+        }
+
+        .native-ui.dashboard-dark input::placeholder,
+        .native-ui.dashboard-dark textarea::placeholder {
+            color: rgba(245,245,245,0.34) !important;
+        }
+
+        .native-ui.dashboard-dark .text-black,
+        .native-ui.dashboard-dark .text-neutral-950,
+        .native-ui.dashboard-dark .text-neutral-900,
+        .native-ui.dashboard-dark .text-neutral-800,
+        .native-ui.dashboard-dark .text-neutral-700 {
+            color: #f5f5f5 !important;
+        }
+
+        .native-ui.dashboard-dark .text-neutral-600,
+        .native-ui.dashboard-dark .text-neutral-500,
+        .native-ui.dashboard-dark .text-neutral-400,
+        .native-ui.dashboard-dark .text-neutral-300,
+        .native-ui.dashboard-dark .dashboard-page-header p {
+            color: #a3a3a3 !important;
+        }
+
+        .native-ui.dashboard-dark .border-neutral-50,
+        .native-ui.dashboard-dark .border-neutral-100,
+        .native-ui.dashboard-dark .border-neutral-200,
+        .native-ui.dashboard-dark .border-black\/5,
+        .native-ui.dashboard-dark .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+            border-color: var(--dark-line) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-header,
+        .native-ui.dashboard-dark .editor-cinema-stage,
+        .native-ui.dashboard-dark .editor-cinema-control-panel,
+        .native-ui.dashboard-dark .editor-cinema-live-card,
+        .native-ui.dashboard-dark .cinema-intro-editor,
+        .native-ui.dashboard-dark .cinema-brand-preview,
+        .native-ui.dashboard-dark .cinema-theme-preview,
+        .native-ui.dashboard-dark .cinema-type-preview,
+        .native-ui.dashboard-dark .cinema-visual-preview,
+        .native-ui.dashboard-dark .cinema-button-preview,
+        .native-ui.dashboard-dark .cinema-feature-preview,
+        .native-ui.dashboard-dark .cinema-copy-preview,
+        .native-ui.dashboard-dark .cinema-launch-preview,
+        .native-ui.dashboard-dark .cinema-setting-group,
+        .native-ui.dashboard-dark .cinema-text-card,
+        .native-ui.dashboard-dark .cinema-media-action-card,
+        .native-ui.dashboard-dark .cinema-display-card,
+        .native-ui.dashboard-dark .cinema-media-display-card,
+        .native-ui.dashboard-dark .cinema-look-picker,
+        .native-ui.dashboard-dark .cinema-social-card,
+        .native-ui.dashboard-dark .cinema-faq-editor,
+        .native-ui.dashboard-dark .cinema-faq-card,
+        .native-ui.dashboard-dark .cinema-color-director,
+        .native-ui.dashboard-dark .cinema-native-gradient-note {
+            background:
+                linear-gradient(180deg, rgba(24, 24, 24, 0.96), rgba(14, 14, 14, 0.98)) !important;
+            border-color: var(--dark-line) !important;
+            color: #f5f5f5 !important;
+            box-shadow:
+                0 22px 68px -54px rgba(0,0,0,0.95),
+                inset 0 1px 0 rgba(255,255,255,0.06) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-hero {
+            background:
+                linear-gradient(135deg, rgba(25, 25, 25, 0.96), rgba(15, 15, 15, 0.98)) padding-box,
+                linear-gradient(115deg, rgba(203,255,184,0.32), rgba(185,227,255,0.26), rgba(255,212,242,0.22)) border-box !important;
+            border: 1px solid transparent !important;
+            box-shadow:
+                0 28px 78px -58px rgba(0,0,0,0.96),
+                inset 0 1px 0 rgba(255,255,255,0.07) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-hero::before {
+            background:
+                linear-gradient(120deg, rgba(255,255,255,0.08), transparent 48%) !important;
+        }
+
+        .native-ui.dashboard-dark .cinema-text-card input,
+        .native-ui.dashboard-dark .cinema-text-card textarea,
+        .native-ui.dashboard-dark .cinema-brand-preview input,
+        .native-ui.dashboard-dark .cinema-brand-preview textarea,
+        .native-ui.dashboard-dark .cinema-copy-preview input,
+        .native-ui.dashboard-dark .cinema-field-grid input,
+        .native-ui.dashboard-dark .cinema-field-grid textarea,
+        .native-ui.dashboard-dark .cinema-social-fields input,
+        .native-ui.dashboard-dark .cinema-faq-card input,
+        .native-ui.dashboard-dark .cinema-faq-card textarea,
+        .native-ui.dashboard-dark .cinema-faq-editor textarea {
+            background: rgba(8, 8, 8, 0.86) !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-preview-room-nav {
+            background:
+                linear-gradient(180deg, rgba(26, 26, 26, 0.94), rgba(14, 14, 14, 0.92)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            border-color: transparent !important;
+            box-shadow:
+                0 24px 80px -52px rgba(0,0,0,0.98),
+                inset 0 1px 0 rgba(255,255,255,0.09) !important;
+        }
+
+        .native-ui.dashboard-dark .support-desk-shell .support-message-owner,
+        .native-ui.dashboard-dark .client-directory-row.is-active {
+            background:
+                linear-gradient(180deg, #050505, #0d0d0d) !important;
+            border-color: rgba(255, 255, 255, 0.16) !important;
+            color: #ffffff !important;
+        }
+
+        /* Re-assert the approved tab buttons after the dark surface pass. */
+        .native-ui.dashboard-dark .service-filter-tab:not(.is-active),
+        .native-ui.dashboard-dark .booking-filter-chip:not(.is-active),
+        .native-ui.dashboard-dark .client-filter-tab:not(.is-active),
+        .native-ui.dashboard-dark .service-option-chip:not(.is-active),
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab:not(.is-active),
+        .native-ui.dashboard-dark .support-mail-tab:not(.is-active) {
+            background: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active,
+        .native-ui.dashboard-dark .client-filter-tab.is-active,
+        .native-ui.dashboard-dark .service-option-chip.is-active,
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active,
+        .native-ui.dashboard-dark .support-mail-tab.is-active {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active .service-filter-count,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active .booking-filter-count,
+        .native-ui.dashboard-dark .client-filter-tab.is-active .client-filter-count,
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active .support-mail-tab-count,
+        .native-ui.dashboard-dark .support-mail-tab.is-active .support-mail-tab-count {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: rgba(255,255,255,0.92) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-hide-toggle:not(.is-active),
+        .native-ui.dashboard-dark .schedule-team-chip:not(.is-active) {
+            background: #141414 !important;
+            color: #a8b3c7 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-hide-toggle.is-active,
+        .native-ui.dashboard-dark .schedule-team-chip.is-active {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 38px -34px rgba(255,255,255,0.36) !important;
+        }
+
+        .native-ui.dashboard-dark .bg-emerald-50,
+        .native-ui.dashboard-dark .bg-green-50 {
+            background: rgba(16, 185, 129, 0.12) !important;
+            color: #a7f3d0 !important;
+            border-color: rgba(16, 185, 129, 0.22) !important;
+        }
+
+        .native-ui.dashboard-dark .bg-cyan-50,
+        .native-ui.dashboard-dark .bg-sky-50 {
+            background: rgba(6, 182, 212, 0.13) !important;
+            color: #a5f3fc !important;
+            border-color: rgba(6, 182, 212, 0.22) !important;
+        }
+
+        .native-ui.dashboard-dark .bg-violet-50,
+        .native-ui.dashboard-dark .bg-purple-50 {
+            background: rgba(139, 92, 246, 0.14) !important;
+            color: #ddd6fe !important;
+            border-color: rgba(139, 92, 246, 0.24) !important;
+        }
+
+        .native-ui.dashboard-dark .schedule-calendar-card .schedule-calendar-micro-chip.is-today {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .native-ui.dashboard-dark .support-desk-shell .support-message-owner {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.16) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 38px -32px rgba(0,0,0,0.95) !important;
+        }
+
+        .native-ui.dashboard-dark .support-desk-shell .support-message-client {
+            background: #141414 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+        }
+
+        .native-ui.dashboard-dark .support-desk-shell .support-chat-actions button:not(.native-gradient-button) {
+            background: #141414 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+        }
+
+        .native-ui.dashboard-dark .support-desk-shell .support-chat-actions button:not(.native-gradient-button):hover {
+            background: #1c1c1c !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-theme-floating,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta {
+            background: rgba(10, 10, 10, 0.94) !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+            box-shadow: 0 22px 48px -34px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-guest-auth-cta :where(*) {
+            color: inherit !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-guest-auth-cta button:first-of-type {
+            background: #141414 !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-of-type,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta button:last-of-type :where(*) {
+            color: #050505 !important;
+        }
+
+        .native-ui.dashboard-dark .booking-record-row > .grid > div:nth-child(2) {
+            background: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .support-desk-shell .support-thread-row .w-10.h-10.rounded-full,
+        .native-ui.dashboard-dark .support-desk-shell .support-chat-header .w-11.h-11.rounded-full {
+            background: #141414 !important;
+            color: #f8fafc !important;
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .cinema-intro-editor {
+            background: #050505 !important;
+            background-image: none !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 18px 44px -36px rgba(0,0,0,0.92) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-preview-room-nav {
+            background:
+                linear-gradient(180deg, rgba(10,10,10,0.96), rgba(20,20,20,0.9)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            border-color: transparent !important;
+            box-shadow: 0 22px 70px -46px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+        }
+
+        /* Editor settings dark-mode polish: keep the cinema controls true-black and consistent. */
+        .native-ui.dashboard-dark .editor-cinema-header,
+        .native-ui.dashboard-dark .editor-cinema-stage,
+        .native-ui.dashboard-dark .editor-cinema-control-panel,
+        .native-ui.dashboard-dark .editor-cinema-live-card,
+        .native-ui.dashboard-dark .cinema-brand-preview,
+        .native-ui.dashboard-dark .cinema-theme-preview,
+        .native-ui.dashboard-dark .cinema-type-preview,
+        .native-ui.dashboard-dark .cinema-visual-preview,
+        .native-ui.dashboard-dark .cinema-button-preview,
+        .native-ui.dashboard-dark .cinema-feature-preview,
+        .native-ui.dashboard-dark .cinema-copy-preview,
+        .native-ui.dashboard-dark .cinema-launch-preview,
+        .native-ui.dashboard-dark .cinema-setting-group,
+        .native-ui.dashboard-dark .cinema-text-card,
+        .native-ui.dashboard-dark .cinema-media-action-card,
+        .native-ui.dashboard-dark .cinema-display-card,
+        .native-ui.dashboard-dark .cinema-media-display-card,
+        .native-ui.dashboard-dark .cinema-look-picker,
+        .native-ui.dashboard-dark .cinema-social-card,
+        .native-ui.dashboard-dark .cinema-faq-editor,
+        .native-ui.dashboard-dark .cinema-faq-card,
+        .native-ui.dashboard-dark .cinema-color-director,
+        .native-ui.dashboard-dark .cinema-native-gradient-note {
+            background: #0f0f0f !important;
+            background-color: #0f0f0f !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 18px 46px -38px rgba(0,0,0,0.9) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-hero {
+            background:
+                radial-gradient(circle at 8% 15%, rgba(203, 255, 184, 0.12), transparent 30%),
+                radial-gradient(circle at 86% 20%, rgba(185, 227, 255, 0.1), transparent 32%),
+                radial-gradient(circle at 72% 88%, rgba(255, 212, 242, 0.08), transparent 34%),
+                #0a0a0a !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-stage-head,
+        .native-ui.dashboard-dark .cinema-control-title,
+        .native-ui.dashboard-dark .cinema-display-card-head,
+        .native-ui.dashboard-dark .cinema-look-picker-head,
+        .native-ui.dashboard-dark .cinema-social-card-head,
+        .native-ui.dashboard-dark .cinema-faq-editor-head,
+        .native-ui.dashboard-dark .cinema-faq-card-head,
+        .native-ui.dashboard-dark .cinema-color-director-head {
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-stage-head p,
+        .native-ui.dashboard-dark .editor-cinema-hero-copy p,
+        .native-ui.dashboard-dark .cinema-control-title small,
+        .native-ui.dashboard-dark .cinema-setting-group summary,
+        .native-ui.dashboard-dark .cinema-editor-note,
+        .native-ui.dashboard-dark .cinema-native-gradient-note,
+        .native-ui.dashboard-dark .cinema-text-card span,
+        .native-ui.dashboard-dark .cinema-field-grid label,
+        .native-ui.dashboard-dark .cinema-faq-editor label,
+        .native-ui.dashboard-dark .cinema-social-fields label,
+        .native-ui.dashboard-dark .cinema-range-row span,
+        .native-ui.dashboard-dark .cinema-profile-note,
+        .native-ui.dashboard-dark .cinema-look-grid small {
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .cinema-text-card input,
+        .native-ui.dashboard-dark .cinema-text-card textarea,
+        .native-ui.dashboard-dark .cinema-brand-preview input,
+        .native-ui.dashboard-dark .cinema-brand-preview textarea,
+        .native-ui.dashboard-dark .cinema-copy-preview input,
+        .native-ui.dashboard-dark .cinema-field-grid input,
+        .native-ui.dashboard-dark .cinema-field-grid textarea,
+        .native-ui.dashboard-dark .cinema-social-fields input,
+        .native-ui.dashboard-dark .cinema-faq-card input,
+        .native-ui.dashboard-dark .cinema-faq-card textarea,
+        .native-ui.dashboard-dark .cinema-faq-editor textarea {
+            background: #141414 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-nav-buttons button,
+        .native-ui.dashboard-dark .editor-cinema-header-actions button,
+        .native-ui.dashboard-dark .editor-cinema-hero-actions button,
+        .native-ui.dashboard-dark .editor-cinema-control-panel > button,
+        .native-ui.dashboard-dark .editor-cinema-control-panel > label,
+        .native-ui.dashboard-dark .cinema-launch-actions button,
+        .native-ui.dashboard-dark .cinema-align-grid button,
+        .native-ui.dashboard-dark .cinema-industry-list button,
+        .native-ui.dashboard-dark .cinema-display-card-head button,
+        .native-ui.dashboard-dark .cinema-media-action-controls button,
+        .native-ui.dashboard-dark .cinema-banner-crop-grid button,
+        .native-ui.dashboard-dark .cinema-gradient-mode button,
+        .native-ui.dashboard-dark .cinema-chip-scroll button,
+        .native-ui.dashboard-dark .cinema-font-grid button,
+        .native-ui.dashboard-dark .cinema-toggle-grid button,
+        .native-ui.dashboard-dark .cinema-look-grid button,
+        .native-ui.dashboard-dark .cinema-theme-preview button,
+        .native-ui.dashboard-dark .cinema-date-strip button,
+        .native-ui.dashboard-dark .cinema-slot-strip button,
+        .native-ui.dashboard-dark .cinema-button-preview button,
+        .native-ui.dashboard-dark .cinema-feature-preview span {
+            background: #141414 !important;
+            color: #d8dee8 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-nav-buttons button:hover,
+        .native-ui.dashboard-dark .editor-cinema-header-actions button:hover,
+        .native-ui.dashboard-dark .editor-cinema-hero-actions button:hover,
+        .native-ui.dashboard-dark .cinema-align-grid button:hover,
+        .native-ui.dashboard-dark .cinema-industry-list button:hover,
+        .native-ui.dashboard-dark .cinema-display-card-head button:hover,
+        .native-ui.dashboard-dark .cinema-media-action-controls button:hover,
+        .native-ui.dashboard-dark .cinema-banner-crop-grid button:hover,
+        .native-ui.dashboard-dark .cinema-gradient-mode button:hover,
+        .native-ui.dashboard-dark .cinema-chip-scroll button:hover,
+        .native-ui.dashboard-dark .cinema-font-grid button:hover,
+        .native-ui.dashboard-dark .cinema-toggle-grid button:hover,
+        .native-ui.dashboard-dark .cinema-look-grid button:hover,
+        .native-ui.dashboard-dark .cinema-theme-preview button:hover {
+            background: #1c1c1c !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-nav-buttons button:last-child,
+        .native-ui.dashboard-dark .editor-cinema-header-actions button:first-child,
+        .native-ui.dashboard-dark .editor-cinema-hero-actions button:first-child,
+        .native-ui.dashboard-dark .cinema-align-grid button.is-active,
+        .native-ui.dashboard-dark .cinema-display-card-head button.is-active,
+        .native-ui.dashboard-dark .cinema-media-action-controls button.is-active,
+        .native-ui.dashboard-dark .cinema-banner-crop-grid button.is-active,
+        .native-ui.dashboard-dark .cinema-look-grid button.is-active,
+        .native-ui.dashboard-dark .cinema-industry-list button.is-active,
+        .native-ui.dashboard-dark .cinema-chip-scroll button.is-active,
+        .native-ui.dashboard-dark .cinema-color-grid .is-active,
+        .native-ui.dashboard-dark .cinema-gradient-mode button.is-active,
+        .native-ui.dashboard-dark .cinema-font-grid .is-active,
+        .native-ui.dashboard-dark .cinema-toggle-grid button.is-on,
+        .native-ui.dashboard-dark .cinema-feature-preview span.is-on {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-nav-buttons button:disabled {
+            background: #101010 !important;
+            color: #6f7b8f !important;
+            border-color: rgba(255,255,255,0.08) !important;
+            box-shadow: none !important;
+        }
+
+        /* Dark surface depth pass: graphite hierarchy without changing tab button styling. */
+        .native-ui.dashboard-dark {
+            --dashboard-black: #07080a;
+            --dashboard-surface: #101216;
+            --dashboard-surface-raised: #171a20;
+            --dashboard-surface-soft: #1d2128;
+            --dashboard-border: rgba(255, 255, 255, 0.105);
+            background:
+                radial-gradient(circle at 18% 0%, rgba(57, 255, 20, 0.075), transparent 28rem),
+                radial-gradient(circle at 88% 12%, rgba(0, 217, 255, 0.06), transparent 30rem),
+                linear-gradient(180deg, #090a0d 0%, #07080a 44%, #0b0d10 100%) !important;
+            color: #f8fafc !important;
+        }
+
+        html:has(.native-ui.dashboard-dark),
+        body:has(.native-ui.dashboard-dark) {
+            background: #07080a !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-main,
+        .native-ui.dashboard-dark .mobile-editor-shell,
+        .native-ui.dashboard-dark .mobile-editor-preview {
+            background:
+                radial-gradient(circle at 18% 3%, rgba(57, 255, 20, 0.055), transparent 24rem),
+                radial-gradient(circle at 91% 4%, rgba(185, 227, 255, 0.055), transparent 28rem),
+                linear-gradient(180deg, #090a0d 0%, #07080a 48%, #0a0c0f 100%) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-main > div {
+            background:
+                linear-gradient(180deg, rgba(12, 14, 18, 0.94), rgba(8, 10, 13, 0.98)) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .dashboard-sidebar,
+        .native-ui.dashboard-dark .mobile-bottom-nav,
+        .native-ui.dashboard-dark .dashboard-theme-floating,
+        .native-ui.dashboard-dark .mobile-guest-auth-cta {
+            background:
+                linear-gradient(180deg, rgba(18, 20, 25, 0.94), rgba(12, 14, 18, 0.96)) !important;
+            border-color: var(--dashboard-border) !important;
+            box-shadow: 0 26px 70px -48px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+            backdrop-filter: blur(20px) saturate(1.08) !important;
+        }
+
+        .native-ui.dashboard-dark .mobile-editor-panel,
+        .native-ui.dashboard-dark .saas-card,
+        .native-ui.dashboard-dark .saas-panel,
+        .native-ui.dashboard-dark .theme-template-panel,
+        .native-ui.dashboard-dark .booking-desk-shell,
+        .native-ui.dashboard-dark .booking-desk-command,
+        .native-ui.dashboard-dark .booking-record-row,
+        .native-ui.dashboard-dark .service-desk-shell,
+        .native-ui.dashboard-dark .service-desk-command,
+        .native-ui.dashboard-dark .client-directory-card,
+        .native-ui.dashboard-dark .support-inbox-card,
+        .native-ui.dashboard-dark .support-chat-panel,
+        .native-ui.dashboard-dark .support-chat-header,
+        .native-ui.dashboard-dark .support-chat-composer,
+        .native-ui.dashboard-dark .schedule-calendar-card,
+        .native-ui.dashboard-dark .schedule-calendar-command,
+        .native-ui.dashboard-dark .schedule-side-panel,
+        .native-ui.dashboard-dark .schedule-selected-panel,
+        .native-ui.dashboard-dark .editor-cinema-header,
+        .native-ui.dashboard-dark .editor-cinema-stage,
+        .native-ui.dashboard-dark .editor-cinema-control-panel,
+        .native-ui.dashboard-dark .editor-cinema-live-card,
+        .native-ui.dashboard-dark .cinema-intro-editor,
+        .native-ui.dashboard-dark .cinema-brand-preview,
+        .native-ui.dashboard-dark .cinema-theme-preview,
+        .native-ui.dashboard-dark .cinema-type-preview,
+        .native-ui.dashboard-dark .cinema-visual-preview,
+        .native-ui.dashboard-dark .cinema-button-preview,
+        .native-ui.dashboard-dark .cinema-feature-preview,
+        .native-ui.dashboard-dark .cinema-copy-preview,
+        .native-ui.dashboard-dark .cinema-launch-preview,
+        .native-ui.dashboard-dark .cinema-setting-group,
+        .native-ui.dashboard-dark .cinema-text-card,
+        .native-ui.dashboard-dark .cinema-media-action-card,
+        .native-ui.dashboard-dark .cinema-display-card,
+        .native-ui.dashboard-dark .cinema-media-display-card,
+        .native-ui.dashboard-dark .cinema-look-picker,
+        .native-ui.dashboard-dark .cinema-social-card,
+        .native-ui.dashboard-dark .cinema-faq-editor,
+        .native-ui.dashboard-dark .cinema-faq-card,
+        .native-ui.dashboard-dark .cinema-color-director,
+        .native-ui.dashboard-dark .cinema-native-gradient-note {
+            background:
+                linear-gradient(180deg, rgba(19, 22, 28, 0.97), rgba(13, 15, 19, 0.98)) !important;
+            border-color: var(--dashboard-border) !important;
+            color: #f8fafc !important;
+            box-shadow: 0 22px 58px -46px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+        }
+
+        .native-ui.dashboard-dark .bg-white {
+            background:
+                linear-gradient(180deg, rgba(19, 22, 28, 0.96), rgba(13, 15, 19, 0.98)) !important;
+            border-color: var(--dashboard-border) !important;
+            color: #f8fafc !important;
+        }
+
+        .native-ui.dashboard-dark .bg-neutral-50,
+        .native-ui.dashboard-dark .bg-neutral-100,
+        .native-ui.dashboard-dark .bg-neutral-200,
+        .native-ui.dashboard-dark .rounded-xl.bg-neutral-50,
+        .native-ui.dashboard-dark .rounded-lg.bg-neutral-50,
+        .native-ui.dashboard-dark .client-directory-tools,
+        .native-ui.dashboard-dark .schedule-scope-toggle,
+        .native-ui.dashboard-dark .schedule-period-tabs,
+        .native-ui.dashboard-dark .schedule-month-switcher {
+            background:
+                linear-gradient(180deg, rgba(26, 30, 37, 0.96), rgba(18, 21, 26, 0.96)) !important;
+            border-color: rgba(255, 255, 255, 0.095) !important;
+            color: #e7ebf2 !important;
+        }
+
+        .native-ui.dashboard-dark input,
+        .native-ui.dashboard-dark textarea,
+        .native-ui.dashboard-dark select,
+        .native-ui.dashboard-dark .booking-desk-input,
+        .native-ui.dashboard-dark .booking-desk-select,
+        .native-ui.dashboard-dark .client-search-input,
+        .native-ui.dashboard-dark .service-search-field,
+        .native-ui.dashboard-dark .cinema-text-card input,
+        .native-ui.dashboard-dark .cinema-text-card textarea,
+        .native-ui.dashboard-dark .cinema-brand-preview input,
+        .native-ui.dashboard-dark .cinema-brand-preview textarea,
+        .native-ui.dashboard-dark .cinema-copy-preview input,
+        .native-ui.dashboard-dark .cinema-field-grid input,
+        .native-ui.dashboard-dark .cinema-field-grid textarea,
+        .native-ui.dashboard-dark .cinema-social-fields input,
+        .native-ui.dashboard-dark .cinema-faq-card input,
+        .native-ui.dashboard-dark .cinema-faq-card textarea,
+        .native-ui.dashboard-dark .cinema-faq-editor textarea {
+            background:
+                linear-gradient(180deg, rgba(10, 12, 15, 0.98), rgba(15, 17, 21, 0.98)) !important;
+            color: #f8fafc !important;
+            border-color: rgba(255, 255, 255, 0.13) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.045) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-cinema-hero {
+            background:
+                radial-gradient(circle at 10% 12%, rgba(57, 255, 20, 0.12), transparent 32%),
+                radial-gradient(circle at 88% 15%, rgba(0, 217, 255, 0.095), transparent 32%),
+                radial-gradient(circle at 74% 92%, rgba(255, 63, 164, 0.075), transparent 34%),
+                linear-gradient(135deg, #12161b 0%, #0b0d11 52%, #111419 100%) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .native-ui.dashboard-dark .editor-preview-room-nav {
+            background:
+                linear-gradient(180deg, rgba(19, 22, 28, 0.96), rgba(12, 14, 18, 0.94)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            border-color: transparent !important;
+            box-shadow: 0 22px 70px -46px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+        }
+
+        /* Preserve the approved dark tab button treatment after surface overrides. */
+        .native-ui.dashboard-dark .service-filter-tab:not(.is-active),
+        .native-ui.dashboard-dark .booking-filter-chip:not(.is-active),
+        .native-ui.dashboard-dark .client-filter-tab:not(.is-active),
+        .native-ui.dashboard-dark .service-option-chip:not(.is-active),
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab:not(.is-active),
+        .native-ui.dashboard-dark .support-mail-tab:not(.is-active) {
+            background: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #a8b3c7 !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active,
+        .native-ui.dashboard-dark .client-filter-tab.is-active,
+        .native-ui.dashboard-dark .service-option-chip.is-active,
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active,
+        .native-ui.dashboard-dark .support-mail-tab.is-active {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+        }
+
+        .native-ui.dashboard-dark .service-filter-tab.is-active .service-filter-count,
+        .native-ui.dashboard-dark .booking-filter-chip.is-active .booking-filter-count,
+        .native-ui.dashboard-dark .client-filter-tab.is-active .client-filter-count,
+        .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active .support-mail-tab-count,
+        .native-ui.dashboard-dark .support-mail-tab.is-active .support-mail-tab-count {
+            background: #ffffff !important;
+            color: #050505 !important;
+            border-color: rgba(255,255,255,0.92) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-period-tab:not(.is-active),
+        .native-ui.dashboard-dark .schedule-hide-toggle:not(.is-active),
+        .native-ui.dashboard-dark .schedule-team-chip:not(.is-active) {
+            background: #141414 !important;
+            color: #a8b3c7 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .native-ui.dashboard-dark .booking-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-period-tab.is-active,
+        .native-ui.dashboard-dark .schedule-hide-toggle.is-active,
+        .native-ui.dashboard-dark .schedule-team-chip.is-active {
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 38px -34px rgba(255,255,255,0.36) !important;
+        }
+
+        /* EOF final dark cascade: keep the approved tabs, upgrade every dark surface to neutral graphite. */
+        html:has(.native-ui.dashboard-dark),
+        body:has(.native-ui.dashboard-dark) {
+            background: #090909 !important;
+        }
+
+        html body .native-ui.dashboard-dark {
+            --dark-line: rgba(255, 255, 255, 0.095);
+            --dark-text: #f5f5f5;
+            background: linear-gradient(180deg, #111111 0%, #090909 20%, #0b0b0b 100%) !important;
+            color: var(--dark-text) !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-main,
+        html body .native-ui.dashboard-dark .mobile-editor-shell,
+        html body .native-ui.dashboard-dark .mobile-editor-preview {
+            background: linear-gradient(180deg, #101010 0%, #090909 48%, #0b0b0b 100%) !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-main > div {
+            background: linear-gradient(180deg, rgba(14,14,14,0.97), rgba(9,9,9,0.99)) !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-sidebar,
+        html body .native-ui.dashboard-dark .mobile-bottom-nav,
+        html body .native-ui.dashboard-dark .dashboard-theme-floating,
+        html body .native-ui.dashboard-dark .mobile-guest-auth-cta {
+            background: linear-gradient(180deg, rgba(24,24,24,0.86), rgba(14,14,14,0.92)) !important;
+            border-color: var(--dark-line) !important;
+            box-shadow: 0 28px 90px -56px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.075) !important;
+            backdrop-filter: blur(28px) saturate(1.15) !important;
+        }
+
+        html body .native-ui.dashboard-dark .mobile-editor-panel,
+        html body .native-ui.dashboard-dark .saas-card,
+        html body .native-ui.dashboard-dark .saas-panel,
+        html body .native-ui.dashboard-dark .theme-template-panel,
+        html body .native-ui.dashboard-dark .booking-desk-shell,
+        html body .native-ui.dashboard-dark .booking-record-row,
+        html body .native-ui.dashboard-dark .service-desk-shell,
+        html body .native-ui.dashboard-dark .client-directory-card,
+        html body .native-ui.dashboard-dark .client-directory-row:not(.is-active),
+        html body .native-ui.dashboard-dark .support-inbox-card,
+        html body .native-ui.dashboard-dark .support-chat-panel,
+        html body .native-ui.dashboard-dark .support-chat-header,
+        html body .native-ui.dashboard-dark .support-chat-composer,
+        html body .native-ui.dashboard-dark .schedule-calendar-card,
+        html body .native-ui.dashboard-dark .schedule-calendar-command,
+        html body .native-ui.dashboard-dark .schedule-side-panel,
+        html body .native-ui.dashboard-dark .schedule-selected-panel,
+        html body .native-ui.dashboard-dark .finance-desk,
+        html body .native-ui.dashboard-dark .finance-report-strip > div,
+        html body .native-ui.dashboard-dark .editor-cinema-header,
+        html body .native-ui.dashboard-dark .editor-cinema-stage,
+        html body .native-ui.dashboard-dark .editor-cinema-control-panel,
+        html body .native-ui.dashboard-dark .editor-cinema-live-card,
+        html body .native-ui.dashboard-dark .cinema-intro-editor,
+        html body .native-ui.dashboard-dark .cinema-brand-preview,
+        html body .native-ui.dashboard-dark .cinema-theme-preview,
+        html body .native-ui.dashboard-dark .cinema-type-preview,
+        html body .native-ui.dashboard-dark .cinema-visual-preview,
+        html body .native-ui.dashboard-dark .cinema-button-preview,
+        html body .native-ui.dashboard-dark .cinema-feature-preview,
+        html body .native-ui.dashboard-dark .cinema-copy-preview,
+        html body .native-ui.dashboard-dark .cinema-launch-preview,
+        html body .native-ui.dashboard-dark .cinema-setting-group,
+        html body .native-ui.dashboard-dark .cinema-text-card,
+        html body .native-ui.dashboard-dark .cinema-media-action-card,
+        html body .native-ui.dashboard-dark .cinema-display-card,
+        html body .native-ui.dashboard-dark .cinema-media-display-card,
+        html body .native-ui.dashboard-dark .cinema-look-picker,
+        html body .native-ui.dashboard-dark .cinema-social-card,
+        html body .native-ui.dashboard-dark .cinema-faq-editor,
+        html body .native-ui.dashboard-dark .cinema-faq-card,
+        html body .native-ui.dashboard-dark .cinema-color-director,
+        html body .native-ui.dashboard-dark .cinema-native-gradient-note,
+        html body .native-ui.dashboard-dark .bg-white {
+            background: linear-gradient(180deg, rgba(23,23,23,0.96), rgba(14,14,14,0.98)) !important;
+            border-color: var(--dark-line) !important;
+            color: var(--dark-text) !important;
+            box-shadow: 0 22px 70px -54px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.065) !important;
+        }
+
+        html body .native-ui.dashboard-dark .editor-cinema-hero {
+            background:
+                linear-gradient(135deg, rgba(25,25,25,0.96), rgba(15,15,15,0.98)) padding-box,
+                linear-gradient(115deg, rgba(203,255,184,0.32), rgba(185,227,255,0.26), rgba(255,212,242,0.22)) border-box !important;
+            border: 1px solid transparent !important;
+            box-shadow: 0 28px 78px -58px rgba(0,0,0,0.96), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+        }
+
+        html body .native-ui.dashboard-dark input,
+        html body .native-ui.dashboard-dark textarea,
+        html body .native-ui.dashboard-dark select,
+        html body .native-ui.dashboard-dark .booking-desk-input,
+        html body .native-ui.dashboard-dark .booking-desk-select,
+        html body .native-ui.dashboard-dark .client-search-input,
+        html body .native-ui.dashboard-dark .service-search-field {
+            background: linear-gradient(180deg, rgba(10,10,10,0.98), rgba(16,16,16,0.98)) !important;
+            color: #f5f5f5 !important;
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+
+        html body .native-ui.dashboard-dark .service-filter-tab:not(.is-active),
+        html body .native-ui.dashboard-dark .booking-filter-chip:not(.is-active),
+        html body .native-ui.dashboard-dark .client-filter-tab:not(.is-active),
+        html body .native-ui.dashboard-dark .service-option-chip:not(.is-active),
+        html body .native-ui.dashboard-dark .support-desk-shell .support-mail-tab:not(.is-active),
+        html body .native-ui.dashboard-dark .support-mail-tab:not(.is-active) {
+            background: #141414 !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #a8b3c7 !important;
+        }
+
+        html body .native-ui.dashboard-dark .service-filter-tab.is-active,
+        html body .native-ui.dashboard-dark .booking-filter-chip.is-active,
+        html body .native-ui.dashboard-dark .client-filter-tab.is-active,
+        html body .native-ui.dashboard-dark .service-option-chip.is-active,
+        html body .native-ui.dashboard-dark .support-desk-shell .support-mail-tab.is-active,
+        html body .native-ui.dashboard-dark .support-mail-tab.is-active {
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+            background:
+                linear-gradient(180deg, #000000, #000000) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
         }

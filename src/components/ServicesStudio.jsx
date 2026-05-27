@@ -39,9 +39,9 @@ const priceTypes = [
 ];
 
 const serviceStatusFilters = [
-  { id: 'all', label: 'All' },
-  { id: 'live', label: 'Live' },
-  { id: 'hidden', label: 'Hidden' }
+  { id: 'all', label: 'All', icon: Briefcase },
+  { id: 'live', label: 'Live', icon: Check },
+  { id: 'hidden', label: 'Hidden', icon: X }
 ];
 
 const getStaffInitial = (staff = {}) => (staff.name || staff.email || 'S').charAt(0).toUpperCase();
@@ -220,16 +220,6 @@ export const ServicesStudio = ({
       </header>
 
       <section className="service-desk-shell rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
-        <div className="service-desk-command p-4 md:p-5 border-b border-neutral-100">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-neutral-400">Services Desk</p>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black mt-1">Bookable services</h2>
-            <p className="text-sm text-neutral-500 mt-1 max-w-2xl">
-              Search, filter, and open a service file without spreading the whole setup across the page.
-            </p>
-          </div>
-        </div>
-
         <div className="p-4 md:p-5 border-b border-neutral-100 space-y-3">
           <div className="flex flex-col xl:flex-row gap-3">
             <label className="service-search-field h-12 rounded-xl bg-neutral-50 border border-neutral-200 px-4 flex items-center gap-2 flex-1 min-w-0">
@@ -254,6 +244,7 @@ export const ServicesStudio = ({
           <div className="service-filter-rail flex flex-wrap items-center gap-2">
             {serviceStatusFilters.map(filter => {
               const active = statusFilter === filter.id;
+              const FilterIcon = filter.icon;
               const count = filter.id === 'all'
                 ? services.length
                 : filter.id === 'live'
@@ -264,10 +255,11 @@ export const ServicesStudio = ({
                   key={filter.id}
                   type="button"
                   onClick={() => setStatusFilter(filter.id)}
-                  className={`h-10 px-3 rounded-lg text-[10px] font-black uppercase transition-all inline-flex items-center gap-2 ${active ? 'bg-black text-white shadow-lg shadow-black/10' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100 hover:text-black'}`}
+                  className={`service-filter-tab h-10 px-3 rounded-lg text-[10px] font-black uppercase transition-all inline-flex items-center gap-2 ${active ? 'is-active bg-black text-white shadow-lg shadow-black/10' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100 hover:text-black'}`}
                 >
+                  <FilterIcon size={13} />
                   {filter.label}
-                  <span className={`min-w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${active ? 'native-gradient-icon text-black' : 'bg-white text-black border border-neutral-100'}`}>{count}</span>
+                  <span className={`service-filter-count min-w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${active ? 'native-gradient-icon text-black' : 'bg-white text-black border border-neutral-100'}`}>{count}</span>
                 </button>
               );
             })}
@@ -283,7 +275,7 @@ export const ServicesStudio = ({
                 <button
                   type="button"
                   onClick={() => setCategoryFilter('all')}
-                  className={`h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${categoryFilter === 'all' ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
+                  className={`service-option-chip h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${categoryFilter === 'all' ? 'is-active bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
                 >
                   All
                 </button>
@@ -292,7 +284,7 @@ export const ServicesStudio = ({
                     key={category}
                     type="button"
                     onClick={() => setCategoryFilter(category)}
-                    className={`h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${categoryFilter === category ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
+                    className={`service-option-chip h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${categoryFilter === category ? 'is-active bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
                   >
                     {category}
                   </button>
@@ -314,14 +306,14 @@ export const ServicesStudio = ({
                 <button
                   type="button"
                   onClick={() => setStaffFilter('all')}
-                  className={`h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${staffFilter === 'all' ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
+                  className={`service-option-chip h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${staffFilter === 'all' ? 'is-active bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
                 >
                   All staff
                 </button>
                 <button
                   type="button"
                   onClick={() => setStaffFilter('unassigned')}
-                  className={`h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${staffFilter === 'unassigned' ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
+                  className={`service-option-chip h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] ${staffFilter === 'unassigned' ? 'is-active bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
                 >
                   Unassigned
                 </button>
@@ -330,11 +322,11 @@ export const ServicesStudio = ({
                     key={staff.id}
                     type="button"
                     onClick={() => setStaffFilter(staff.id)}
-                    className={`h-9 pl-1.5 pr-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] inline-flex items-center gap-2 ${staffFilter === staff.id ? 'bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
+                    className={`service-option-chip h-9 pl-1.5 pr-3 rounded-full text-[10px] font-black uppercase tracking-[0.12em] inline-flex items-center gap-2 ${staffFilter === staff.id ? 'is-active bg-black text-white' : 'bg-white text-neutral-500 border border-neutral-100'}`}
                   >
                     <span
                       className="w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-black"
-                      style={{ background: staffFilter === staff.id ? '#ffffff22' : `${staff.color || '#755CFF'}22`, color: staffFilter === staff.id ? '#fff' : staff.color || '#755CFF' }}
+                      style={{ background: `${staff.color || '#755CFF'}22`, color: staff.color || '#755CFF' }}
                     >
                       {getStaffInitial(staff)}
                     </span>

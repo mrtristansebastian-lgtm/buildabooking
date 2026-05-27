@@ -60,6 +60,10 @@ import { getLocalDateStr } from '../utils/dates';
                 return (activeStaff.length ? activeStaff : fallbackStaff)
                     .filter((staff, index, list) => staff?.id && list.findIndex(item => item.id === staff.id) === index);
             }, [activeStaffId, staffList, workspaceRole]);
+            const getCalendarDisplayName = (calendar) => {
+                if (calendar?.id === 'workspace') return 'Business';
+                return String(calendar?.name || 'Team').trim().split(/\s+/)[0] || 'Team';
+            };
             const staffCalendarOptions = useMemo(() => {
                 return [
                     { id: 'workspace', name: 'Business Overview', role: `${staffMembersForCoverage.length} ${staffMembersForCoverage.length === 1 ? 'profile' : 'profiles'}`, color: '#000000', username: 'full business view', icon: 'business' },
@@ -497,12 +501,7 @@ import { getLocalDateStr } from '../utils/dates';
                 : calendarViewMode === 'week'
                     ? `${formatCompactDate(calendarWeekStart)} - ${formatCompactDate(calendarWeekEnd)}`
                     : selectedDateLabel;
-            const calendarTitle = calendarViewMode === 'month' ? 'Monthly Calendar' : calendarViewMode === 'week' ? 'Week Schedule' : 'Day Schedule';
-            const calendarDescription = calendarViewMode === 'month'
-                ? 'Open, close, and tune each day from one calm workspace.'
-                : calendarViewMode === 'week'
-                    ? 'Manage the current week without carrying the whole month around.'
-                    : 'Focus on one day, its slots, and its booking capacity.';
+            const calendarTitle = calendarViewMode === 'month' ? 'Monthly Schedule' : calendarViewMode === 'week' ? 'Week Schedule' : 'Day Schedule';
             const calendarHeaderLabels = calendarViewMode === 'day'
                 ? [calendarAnchorDate.toLocaleDateString('en-US', { weekday: 'short' })]
                 : calendarViewMode === 'week'
@@ -579,74 +578,6 @@ import { getLocalDateStr } from '../utils/dates';
                 setExpandedDate(nextDateKey);
                 setCurrentMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
             };
-
-            const scheduleInsight = useMemo(() => {
-                const anchorDate = expandedDate ? dateFromKey(expandedDate) : new Date();
-                const weekStart = addDaysToDate(anchorDate, -((anchorDate.getDay() + 6) % 7));
-                const weekEnd = addDaysToDate(weekStart, 6);
-                const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-                const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-                const periodDates = scheduleStatsPeriod === 'day'
-                    ? [getLocalDateStr(anchorDate)]
-                    : scheduleStatsPeriod === 'week'
-                        ? getDateRange(weekStart, weekEnd)
-                        : getDateRange(monthStart, monthEnd);
-                const label = scheduleStatsPeriod === 'day'
-                    ? selectedDateLabel
-                    : scheduleStatsPeriod === 'week'
-                        ? `${formatCompactDate(weekStart)} - ${formatCompactDate(weekEnd)}`
-                        : currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-                const summary = periodDates.reduce((acc, dateStr) => {
-                    const config = getDayConfig(dateStr);
-                    const savedConfig = activeSchedule?.[dateStr];
-                    const dayBookings = bookingsByDate[dateStr] || { confirmed: 0, reserved: 0, pending: 0, waitlist: 0, total: 0 };
-                    const capacity = config.available ? (config.times?.length || 0) : 0;
-                    const openSlots = dateStr >= todayStr && config.available ? Math.max(0, capacity - dayBookings.reserved) : 0;
-
-                    acc.totalDays += 1;
-                    acc.confirmed += dayBookings.confirmed;
-                    acc.pending += dayBookings.pending;
-                    acc.waitlist += dayBookings.waitlist;
-                    acc.reserved += dayBookings.reserved;
-                    acc.capacity += capacity;
-                    acc.openSlots += openSlots;
-                    if (config.available) acc.openDays += 1;
-                    else acc.closedDays += 1;
-                    if (savedConfig) acc.customDays += 1;
-                    return acc;
-                }, { totalDays: 0, openDays: 0, closedDays: 0, customDays: 0, capacity: 0, openSlots: 0, confirmed: 0, pending: 0, waitlist: 0, reserved: 0 });
-
-                const fillRate = summary.capacity ? Math.min(100, Math.round((summary.reserved / summary.capacity) * 100)) : 0;
-                const dayStatus = !selectedConfig ? 'Select a date' : expandedDate < todayStr ? 'Past Day' : selectedConfig.available ? 'Open' : 'Closed';
-
-                return {
-                    ...summary,
-                    label,
-                    fillRate,
-                    dayStatus,
-                    periodName: scheduleStatsPeriod.charAt(0).toUpperCase() + scheduleStatsPeriod.slice(1)
-                };
-            }, [scheduleStatsPeriod, expandedDate, selectedDateLabel, selectedConfig, currentMonth, activeSchedule, defaultTimes, bookingsByDate, todayStr]);
-
-            const scheduleMetricCards = useMemo(() => {
-                return [
-                    {
-                        label: 'Bookings Confirmed',
-                        value: scheduleInsight.confirmed,
-                        hint: scheduleStatsPeriod === 'day' ? scheduleInsight.label : scheduleInsight.periodName,
-                        icon: CalendarCheck,
-                        tone: 'accent'
-                    },
-                    {
-                        label: 'Total Available Slots',
-                        value: scheduleInsight.openSlots,
-                        hint: `${scheduleInsight.capacity} total capacity`,
-                        icon: Clock,
-                        tone: 'light'
-                    }
-                ];
-            }, [scheduleStatsPeriod, scheduleInsight]);
 
             useEffect(() => {
                 setSlotEditor(null);
@@ -956,36 +887,37 @@ import { getLocalDateStr } from '../utils/dates';
                         </button>
                     </div>
 
-                    <section className="saas-card p-3 md:p-4 mb-6">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Team Calendar</p>
-                                <h3 className="text-lg md:text-xl font-bold tracking-tight text-black truncate">
+                    <section className="saas-card schedule-team-card p-3 md:p-4 mb-6">
+                        <div className="schedule-team-layout flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <div className="schedule-team-copy min-w-0">
+                                <p className="schedule-team-eyebrow text-[9px] font-bold uppercase tracking-[0.24em] text-neutral-400">Team Calendar</p>
+                                <h3 className="schedule-team-title text-lg md:text-xl font-bold tracking-tight text-black truncate">
                                     {isWorkspaceCalendar ? 'Business Overview' : selectedCalendar?.name || 'My Calendar'}
                                 </h3>
-                                <p className="text-xs text-neutral-500 mt-1">
+                                <p className="schedule-team-subcopy text-xs text-neutral-500 mt-1">
                                     {isWorkspaceCalendar
                                         ? `${staffMembersForCoverage.length} staff ${staffMembersForCoverage.length === 1 ? 'calendar' : 'calendars'} in view`
                                         : canEditSelectedCalendar ? 'Editing this calendar' : 'View only calendar'}
                                 </p>
                             </div>
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 lg:justify-end">
+                            <div className="schedule-team-rail flex gap-2 overflow-x-auto no-scrollbar pb-1 lg:justify-end">
                                 {visibleCalendarOptions.map(calendar => {
                                     const active = selectedCalendarId === calendar.id;
                                     const initials = getStaffInitials(calendar.name);
+                                    const displayName = getCalendarDisplayName(calendar);
                                     return (
                                         <button
                                             key={calendar.id}
                                             type="button"
                                             onClick={() => setSelectedCalendarId(calendar.id)}
-                                            className={`min-w-[156px] h-12 rounded-lg border px-3 flex items-center gap-3 text-left transition-all ${active ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-black'}`}
+                                            className={`schedule-team-chip min-w-[156px] h-12 rounded-lg border px-3 flex items-center gap-3 text-left transition-all ${active ? 'is-active bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white text-black border-neutral-200 hover:border-black'}`}
+                                            aria-pressed={active}
                                         >
-                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold overflow-hidden ${active ? 'native-gradient-icon text-black' : 'bg-neutral-50 border border-neutral-100 text-black'}`}>
+                                            <span className={`schedule-team-avatar w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold overflow-hidden ${active ? 'native-gradient-icon text-black' : 'bg-neutral-50 border border-neutral-100 text-black'}`}>
                                                 {calendar.photoURL ? <img src={calendar.photoURL} alt="" className="w-full h-full object-cover" /> : calendar.id === 'workspace' ? <Users size={14} /> : initials}
                                             </span>
                                             <span className="min-w-0">
-                                                <span className={`block text-sm font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{calendar.name}</span>
-                                                <span className={`block text-[8px] font-bold uppercase tracking-[0.16em] truncate ${active ? 'text-white/45' : 'text-neutral-400'}`}>{calendar.username || calendar.role}</span>
+                                                <span className={`schedule-team-name block text-sm font-bold truncate ${active ? 'text-white' : 'text-black'}`}>{displayName}</span>
                                             </span>
                                         </button>
                                     );
@@ -1002,19 +934,19 @@ import { getLocalDateStr } from '../utils/dates';
                     <div className="space-y-6">
                         <section data-tour="schedule-calendar" className={`saas-card schedule-calendar-card schedule-mode-${calendarViewMode} ${hidePastDays ? 'schedule-forward-days' : ''} overflow-hidden`}>
                             <div className="schedule-calendar-command p-5 md:p-6 border-b border-neutral-100 bg-white">
-                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
-                                    <div>
+                                <div className="schedule-calendar-command-inner flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                                    <div className="schedule-calendar-title-block">
                                         <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-400 mb-2">Calendar Board</p>
                                         <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">{calendarTitle}</h3>
-                                        <p className="text-sm text-neutral-500 mt-1">{calendarDescription}</p>
                                     </div>
-                                    <div className="flex flex-col gap-3 w-full lg:w-auto lg:items-end">
-                                        <div className="schedule-scope-toggle flex bg-neutral-100 p-1.5 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                    <div className="schedule-calendar-controls flex flex-col gap-3 w-full lg:w-auto lg:items-end">
+                                        <div className="schedule-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1.5 rounded-lg border border-neutral-200 w-full sm:w-fit">
                                             {['day', 'week', 'month'].map(period => (
                                                 <button
                                                     key={period}
+                                                    type="button"
                                                     onClick={() => setSchedulePeriod(period)}
-                                                    className={`flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                    className={`schedule-period-tab flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'is-active bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
                                                 >
                                                     {period}
                                                 </button>
@@ -1030,7 +962,7 @@ import { getLocalDateStr } from '../utils/dates';
                                                 type="button"
                                                 aria-pressed={hidePastDays}
                                                 onClick={toggleHidePastDays}
-                                                className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
+                                                className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'is-active bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
                                             >
                                                 <span className={`w-5 h-5 rounded-full border flex items-center justify-center ${hidePastDays ? 'bg-[#39FF14] border-transparent text-black' : 'bg-neutral-50 border-neutral-200'}`}>
                                                     {hidePastDays && <Check size={11}/>}
@@ -1039,27 +971,6 @@ import { getLocalDateStr } from '../utils/dates';
                                             </button>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="schedule-compact-stats grid grid-cols-1 sm:grid-cols-2 gap-2 mt-5">
-                                    {scheduleMetricCards.map((item) => {
-                                        const IconCmp = item.icon;
-                                        return (
-                                            <div key={item.label} className="native-stat-card schedule-compact-stat rounded-lg border border-neutral-100 bg-white px-4 py-3 text-black">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-3 min-w-0">
-                                                        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-neutral-100 text-black shrink-0">
-                                                            <IconCmp size={16}/>
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-400 truncate">{item.label}</p>
-                                                            <p className="text-xs font-semibold text-neutral-500 truncate">{item.hint}</p>
-                                                        </div>
-                                                    </div>
-                                                    <p className="metric-value text-2xl md:text-3xl font-black tracking-tight leading-none">{item.value}</p>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
                                 </div>
                             </div>
 

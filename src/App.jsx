@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
+    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, GripVertical, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -734,21 +734,21 @@ const guestDemoAssets = {
 };
 
 const guestDemoServices = [
-  { id: 'demo-basic-fade', name: 'Basic Fade Cut', category: 'Barbering', description: 'Clean everyday fade, neckline, lineup, and fresh finish for quick confidence.', price: '120', duration: '45', staffIds: ['owner', 'staff-kabelo', 'staff-reece'], imageUrls: [guestDemoAssets.services[0]] },
-  { id: 'demo-skin-fade', name: 'Skin Fade', category: 'Barbering', description: 'Tight skin fade with sharp temples, detailed blend, and camera-ready lineup.', price: '160', duration: '60', staffIds: ['owner', 'staff-kabelo'], imageUrls: [guestDemoAssets.services[1]] },
-  { id: 'demo-vip-fade-beard', name: 'VIP Fade + Beard', category: 'VIP Grooming', description: 'Premium fade, beard sculpting, hot towel, enhancements, and finish spray.', price: '220', duration: '75', staffIds: ['owner', 'staff-kabelo'], imageUrls: [guestDemoAssets.services[2]] },
-  { id: 'demo-wash-blowout', name: 'Ladies Wash & Blowout', category: 'Hair Styling', description: 'Relaxed wash, condition, blowout, and smooth volume finish.', price: '250', duration: '60', staffIds: ['staff-aaliyah', 'staff-thandi'], imageUrls: [guestDemoAssets.services[3]] },
-  { id: 'demo-braids-cornrows', name: 'Braids / Cornrows', category: 'Braids', description: 'Clean parts, neat tension control, stitch detail, and protective finish.', price: '350', duration: '120', staffIds: ['staff-aaliyah'], imageUrls: [guestDemoAssets.services[4]] },
-  { id: 'demo-wig-install', name: 'Wig Install', category: 'Installs', description: 'Natural lace prep, melt, styling, and soft finish for content-ready hair.', price: '650', duration: '150', staffIds: ['staff-thandi', 'staff-aaliyah'], imageUrls: [guestDemoAssets.services[5]] },
-  { id: 'demo-beard-shaping', name: 'Beard Shaping', category: 'Barbering', description: 'Razor-sharp beard outline, symmetry cleanup, oil, and detail work.', price: '80', duration: '30', staffIds: ['owner', 'staff-reece'], imageUrls: [guestDemoAssets.services[6]] },
-  { id: 'demo-hair-dye', name: 'Hair Dye', category: 'Colour', description: 'Creative colour or grey coverage with consultation and clean finish.', price: '300', duration: '90', staffIds: ['staff-thandi', 'staff-kabelo'], imageUrls: [guestDemoAssets.services[7]] },
-  { id: 'demo-kids-cut', name: 'Kids Cut', category: 'Family', description: 'Patient, neat kids cut with simple styling and a calm chair experience.', price: '90', duration: '30', staffIds: ['staff-reece', 'owner'], imageUrls: [guestDemoAssets.services[8]] },
-  { id: 'demo-dread-retwist', name: 'Dreadlock Retwist', category: 'Locs', description: 'Clean retwist, scalp care, part refresh, and polished loc finish.', price: '550', duration: '180', staffIds: ['staff-aaliyah', 'staff-thandi'], imageUrls: [guestDemoAssets.services[9]] },
-  { id: 'demo-scalp-treatment', name: 'Scalp Treatment', category: 'Treatments', description: 'Soothing scalp cleanse, treatment massage, hydration, and recovery plan.', price: '180', duration: '45', staffIds: ['staff-thandi'], imageUrls: [guestDemoAssets.services[10]] },
-  { id: 'demo-house-call-vip', name: 'House Call VIP Booking', category: 'Mobile VIP', description: 'Mobile grooming setup for hotels, events, shoots, and private clients.', price: '900', duration: '120', staffIds: ['owner', 'staff-kabelo'], imageUrls: [guestDemoAssets.services[11]] },
-  { id: 'demo-nail-grooming', name: 'Nail Grooming', category: 'Beauty Add-ons', description: 'Clean nail grooming, buffing, shaping, and low-key polish detail.', price: '150', duration: '45', staffIds: ['staff-thandi'], imageUrls: [guestDemoAssets.services[12]] },
-  { id: 'demo-brow-tint-shape', name: 'Eyebrow Tint & Shape', category: 'Beauty Add-ons', description: 'Tint, shape, and tidy finish for a precise face-framing result.', price: '120', duration: '30', staffIds: ['staff-thandi'], imageUrls: [guestDemoAssets.services[13]] },
-  { id: 'demo-full-grooming', name: 'Full Grooming Package', category: 'VIP Grooming', description: 'Complete refresh with cut, beard or beauty add-on, treatment, and premium finish.', price: '750', duration: '120', staffIds: ['owner', 'staff-kabelo', 'staff-thandi'], imageUrls: [guestDemoAssets.services[14]] }
+  { id: 'demo-basic-fade', name: 'Basic Fade Cut', category: 'Barbering', description: 'Clean everyday fade, neckline, lineup, and fresh finish for quick confidence.', price: '120', duration: '45', staffIds: ['owner', 'staff-kabelo', 'staff-reece'], imageUrls: [] },
+  { id: 'demo-skin-fade', name: 'Skin Fade', category: 'Barbering', description: 'Tight skin fade with sharp temples, detailed blend, and camera-ready lineup.', price: '160', duration: '60', staffIds: ['owner', 'staff-kabelo'], imageUrls: [] },
+  { id: 'demo-vip-fade-beard', name: 'VIP Fade + Beard', category: 'VIP Grooming', description: 'Premium fade, beard sculpting, hot towel, enhancements, and finish spray.', price: '220', duration: '75', staffIds: ['owner', 'staff-kabelo'], imageUrls: [] },
+  { id: 'demo-wash-blowout', name: 'Ladies Wash & Blowout', category: 'Hair Styling', description: 'Relaxed wash, condition, blowout, and smooth volume finish.', price: '250', duration: '60', staffIds: ['staff-aaliyah', 'staff-thandi'], imageUrls: [] },
+  { id: 'demo-braids-cornrows', name: 'Braids / Cornrows', category: 'Braids', description: 'Clean parts, neat tension control, stitch detail, and protective finish.', price: '350', duration: '120', staffIds: ['staff-aaliyah'], imageUrls: [] },
+  { id: 'demo-wig-install', name: 'Wig Install', category: 'Installs', description: 'Natural lace prep, melt, styling, and soft finish for content-ready hair.', price: '650', duration: '150', staffIds: ['staff-thandi', 'staff-aaliyah'], imageUrls: [] },
+  { id: 'demo-beard-shaping', name: 'Beard Shaping', category: 'Barbering', description: 'Razor-sharp beard outline, symmetry cleanup, oil, and detail work.', price: '80', duration: '30', staffIds: ['owner', 'staff-reece'], imageUrls: [] },
+  { id: 'demo-hair-dye', name: 'Hair Dye', category: 'Colour', description: 'Creative colour or grey coverage with consultation and clean finish.', price: '300', duration: '90', staffIds: ['staff-thandi', 'staff-kabelo'], imageUrls: [] },
+  { id: 'demo-kids-cut', name: 'Kids Cut', category: 'Family', description: 'Patient, neat kids cut with simple styling and a calm chair experience.', price: '90', duration: '30', staffIds: ['staff-reece', 'owner'], imageUrls: [] },
+  { id: 'demo-dread-retwist', name: 'Dreadlock Retwist', category: 'Locs', description: 'Clean retwist, scalp care, part refresh, and polished loc finish.', price: '550', duration: '180', staffIds: ['staff-aaliyah', 'staff-thandi'], imageUrls: [] },
+  { id: 'demo-scalp-treatment', name: 'Scalp Treatment', category: 'Treatments', description: 'Soothing scalp cleanse, treatment massage, hydration, and recovery plan.', price: '180', duration: '45', staffIds: ['staff-thandi'], imageUrls: [] },
+  { id: 'demo-house-call-vip', name: 'House Call VIP Booking', category: 'Mobile VIP', description: 'Mobile grooming setup for hotels, events, shoots, and private clients.', price: '900', duration: '120', staffIds: ['owner', 'staff-kabelo'], imageUrls: [] },
+  { id: 'demo-nail-grooming', name: 'Nail Grooming', category: 'Beauty Add-ons', description: 'Clean nail grooming, buffing, shaping, and low-key polish detail.', price: '150', duration: '45', staffIds: ['staff-thandi'], imageUrls: [] },
+  { id: 'demo-brow-tint-shape', name: 'Eyebrow Tint & Shape', category: 'Beauty Add-ons', description: 'Tint, shape, and tidy finish for a precise face-framing result.', price: '120', duration: '30', staffIds: ['staff-thandi'], imageUrls: [] },
+  { id: 'demo-full-grooming', name: 'Full Grooming Package', category: 'VIP Grooming', description: 'Complete refresh with cut, beard or beauty add-on, treatment, and premium finish.', price: '750', duration: '120', staffIds: ['owner', 'staff-kabelo', 'staff-thandi'], imageUrls: [] }
 ];
 
 const guestDemoClientRows = [
@@ -1794,6 +1794,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px) and (orientation: portrait)')?.matches
             ));
             const [mobileNavCollapsed, setMobileNavCollapsed] = useState(false);
+            const [editorRoomNavOffset, setEditorRoomNavOffset] = useState({ x: 0, y: 0 });
             const [bookingDeskPeriod, setBookingDeskPeriod] = useState('all');
             const [bookingCustomRange, setBookingCustomRange] = useState(() => {
                 const today = getLocalDateStr(new Date());
@@ -1804,6 +1805,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [bookingSearch, setBookingSearch] = useState('');
             const [bookingSort, setBookingSort] = useState('newest');
             const [bookingPaymentFilter, setBookingPaymentFilter] = useState('all');
+            const [manualBookingOpen, setManualBookingOpen] = useState(false);
+            const [manualBookingServiceId, setManualBookingServiceId] = useState('custom');
             const [clientRecords, setClientRecords] = useState([]);
             const [clientSearch, setClientSearch] = useState('');
             const [clientDeskFilter, setClientDeskFilter] = useState('all');
@@ -1824,6 +1827,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const scaleRef = useRef(1);
             const compactViewportRef = useRef(false);
             const settingsRef = useRef(null);
+            const editorRoomNavDragRef = useRef(null);
             const editorDraftSaveTimerRef = useRef(0);
             const editorDraftCloudTimerRef = useRef(0);
             const editorDraftFlushRef = useRef(null);
@@ -1853,6 +1857,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
+            useEffect(() => () => editorRoomNavDragRef.current?.cleanup?.(), []);
             useEffect(() => {
                 safeLocalSet('build-a-booking-dashboard-theme', dashboardThemeMode);
             }, [dashboardThemeMode]);
@@ -2241,6 +2246,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const workspaceServices = useMemo(() => normalizeServiceList(settings.services || []), [settings.services]);
             const serviceById = useMemo(() => new Map(workspaceServices.map(service => [service.id, service])), [workspaceServices]);
+            const selectedManualBookingService = useMemo(() => (
+                workspaceServices.find(service => service.id === manualBookingServiceId) || null
+            ), [manualBookingServiceId, workspaceServices]);
             const getBookingService = (booking = {}) => {
                 if (booking.serviceName || booking.serviceId) {
                     return {
@@ -2526,12 +2534,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     history: sortRecent(historyRecords)
                 };
                 const filters = [
-                    { id: 'upcoming', label: 'Upcoming', count: upcomingRecords.length },
-                    { id: 'review', label: 'Review', count: reviewRecords.length },
-                    { id: 'confirmed', label: 'Confirmed', count: confirmedRecords.length },
-                    { id: 'waitlist', label: 'Waitlist', count: waitlist },
-                    { id: 'history', label: 'History', count: historyRecords.length },
-                    { id: 'all', label: 'All', count: paymentFilteredRecords.length }
+                    { id: 'upcoming', label: 'Upcoming', count: upcomingRecords.length, icon: CalendarCheck },
+                    { id: 'review', label: 'Review', count: reviewRecords.length, icon: Bell },
+                    { id: 'confirmed', label: 'Confirmed', count: confirmedRecords.length, icon: Check },
+                    { id: 'waitlist', label: 'Waitlist', count: waitlist, icon: Clock },
+                    { id: 'history', label: 'History', count: historyRecords.length, icon: History },
+                    { id: 'all', label: 'All', count: paymentFilteredRecords.length, icon: Layers }
                 ];
                 const activeFilter = filters.some(filter => filter.id === bookingFilter) ? bookingFilter : 'upcoming';
                 const activeFilterLabel = filters.find(filter => filter.id === activeFilter)?.label || 'Upcoming';
@@ -2938,18 +2946,20 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (clientDeskFilter === 'first-time') {
                     return filteredClients.filter(client => client.autoLabels?.includes('First Time'));
                 }
-                if (clientDeskFilter === 'enriched') {
-                    return filteredClients.filter(client => client.notes || client.avatar || client.labels?.length);
-                }
                 return filteredClients;
             }, [clientDeskFilter, filteredClients]);
 
             const clientDeskFilters = useMemo(() => ([
-                { id: 'all', label: 'All', count: clientDirectory.length },
-                { id: 'regulars', label: 'Regulars', count: clientMetrics.regulars },
-                { id: 'first-time', label: 'First Time', count: clientMetrics.firstTimers },
-                { id: 'enriched', label: 'Enriched', count: clientMetrics.enriched }
-            ]), [clientDirectory.length, clientMetrics.enriched, clientMetrics.firstTimers, clientMetrics.regulars]);
+                { id: 'all', label: 'All', count: clientDirectory.length, icon: Users },
+                { id: 'regulars', label: 'Regulars', count: clientMetrics.regulars, icon: Star },
+                { id: 'first-time', label: 'First Time', count: clientMetrics.firstTimers, icon: User }
+            ]), [clientDirectory.length, clientMetrics.firstTimers, clientMetrics.regulars]);
+
+            useEffect(() => {
+                if (clientDeskFilter === 'enriched') {
+                    setClientDeskFilter('all');
+                }
+            }, [clientDeskFilter]);
 
             const selectedClient = useMemo(() => (
                 clientDirectory.find(client => client.id === selectedClientId) || null
@@ -4222,6 +4232,60 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
                 playEditorStudioSound('step');
             };
+            const startEditorRoomNavDrag = (event) => {
+                if (event.button !== undefined && event.button !== 0) return;
+                event.preventDefault();
+                event.stopPropagation();
+                editorRoomNavDragRef.current?.cleanup?.();
+                const drag = {
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    originX: editorRoomNavOffset.x,
+                    originY: editorRoomNavOffset.y
+                };
+                const moveDrag = (moveEvent) => {
+                    if (moveEvent.pointerId !== drag.pointerId) return;
+                    moveEvent.preventDefault();
+                    const nextX = drag.originX + moveEvent.clientX - drag.startX;
+                    const nextY = drag.originY + moveEvent.clientY - drag.startY;
+                    setEditorRoomNavOffset({
+                        x: Math.max(-260, Math.min(260, nextX)),
+                        y: Math.max(-280, Math.min(280, nextY))
+                    });
+                };
+                const endDrag = (endEvent) => {
+                    if (endEvent?.pointerId !== undefined && endEvent.pointerId !== drag.pointerId) return;
+                    window.removeEventListener('pointermove', moveDrag);
+                    window.removeEventListener('pointerup', endDrag);
+                    window.removeEventListener('pointercancel', endDrag);
+                    editorRoomNavDragRef.current = null;
+                };
+                drag.cleanup = endDrag;
+                editorRoomNavDragRef.current = drag;
+                window.addEventListener('pointermove', moveDrag, { passive: false });
+                window.addEventListener('pointerup', endDrag);
+                window.addEventListener('pointercancel', endDrag);
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+            };
+            const moveEditorRoomNavDrag = (event) => {
+                const drag = editorRoomNavDragRef.current;
+                if (!drag || drag.pointerId !== event.pointerId) return;
+                event.preventDefault();
+                const nextX = drag.originX + event.clientX - drag.startX;
+                const nextY = drag.originY + event.clientY - drag.startY;
+                setEditorRoomNavOffset({
+                    x: Math.max(-260, Math.min(260, nextX)),
+                    y: Math.max(-280, Math.min(280, nextY))
+                });
+            };
+            const endEditorRoomNavDrag = (event) => {
+                const drag = editorRoomNavDragRef.current;
+                if (drag?.pointerId === event.pointerId) {
+                    event.currentTarget.releasePointerCapture?.(event.pointerId);
+                    drag.cleanup?.(event);
+                }
+            };
             const handleInspect = (tab) => {
                 if (activeTab !== 'editor') setActiveTab('editor');
                 setEditorCollapsed(false);
@@ -4998,6 +5062,106 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     console.error(err);
                     showToast('Booking could not be saved.');
                     return false;
+                }
+            };
+
+            const handleManualBookingSubmit = async (event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const formData = new FormData(form);
+                const bookingDateKey = String(formData.get('bookingDate') || '').trim();
+                const bookingDate = bookingDateKey ? new Date(`${bookingDateKey}T00:00:00`) : new Date();
+                const selectedServiceId = String(formData.get('serviceId') || 'custom');
+                const selectedService = workspaceServices.find(service => service.id === selectedServiceId) || null;
+                const customServiceName = String(formData.get('customServiceName') || '').trim();
+                const serviceName = selectedService?.name || customServiceName || 'Manual service';
+                const servicePrice = String(selectedService?.price ?? formData.get('servicePrice') ?? '').trim();
+                const serviceDuration = String(selectedService?.duration ?? formData.get('serviceDuration') ?? '').trim();
+                const serviceCategory = String(selectedService?.category ?? formData.get('serviceCategory') ?? '').trim();
+                const paymentMethod = String(formData.get('paymentMethod') || '').trim();
+                const paymentProviderName = {
+                    cash: 'Cash',
+                    manual_eft: 'Direct EFT',
+                    stripe: 'Stripe',
+                    yoco: 'Yoco',
+                    payfast: 'PayFast',
+                    paystack: 'Paystack',
+                    ozow: 'Ozow'
+                }[paymentMethod] || '';
+                const priceNumber = Number(String(servicePrice).replace(/[^\d.]/g, ''));
+                const now = Date.now();
+                const bookingRecord = {
+                    clientName: String(formData.get('clientName') || '').trim(),
+                    clientPhone: String(formData.get('clientPhone') || '').trim(),
+                    clientEmail: String(formData.get('clientEmail') || '').trim(),
+                    clientBirthday: String(formData.get('clientBirthday') || '').trim(),
+                    clientNote: String(formData.get('clientNote') || '').trim(),
+                    clientEmailOptIn: Boolean(String(formData.get('clientEmail') || '').trim()),
+                    serviceId: selectedService?.id || '',
+                    serviceName,
+                    serviceDescription: selectedService?.description || '',
+                    servicePrice,
+                    servicePriceType: selectedService?.priceType || 'fixed',
+                    serviceDuration,
+                    serviceCategory,
+                    amountInCents: Number.isFinite(priceNumber) ? Math.round(priceNumber * 100) : 0,
+                    currency: settings.currency || 'ZAR',
+                    paymentMethod,
+                    paymentGateway: ['stripe', 'yoco', 'payfast', 'paystack', 'ozow'].includes(paymentMethod) ? paymentMethod : '',
+                    paymentProviderName,
+                    paymentStatus: String(formData.get('paymentStatus') || (paymentMethod ? 'manual_pending' : 'unpaid')),
+                    paymentReference: String(formData.get('paymentReference') || '').trim(),
+                    notificationChannels: {
+                        email: Boolean(String(formData.get('clientEmail') || '').trim()),
+                        portal: Boolean(String(formData.get('clientEmail') || '').trim())
+                    },
+                    date: bookingDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+                    dateKey: bookingDateKey || getLocalDateStr(bookingDate),
+                    time: String(formData.get('bookingTime') || '').trim(),
+                    status: String(formData.get('bookingStatus') || 'confirmed'),
+                    staffId: String(formData.get('staffId') || '').trim(),
+                    noShowHistory: false,
+                    source: 'manual-owner',
+                    timestamp: now,
+                    createdAt: now,
+                    updatedAt: now
+                };
+
+                if (!bookingRecord.clientName || !bookingRecord.dateKey || !bookingRecord.time) {
+                    showToast('Add a client name, date, and time first.');
+                    return;
+                }
+
+                if (!isFirebaseConfigured || !user) {
+                    setBookingsAndCache(prev => [{ id: `manual-${now}`, ...bookingRecord }, ...prev]);
+                    setManualBookingOpen(false);
+                    setBookingFilter('upcoming');
+                    form.reset();
+                    setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
+                    showToast('Manual booking added.');
+                    return;
+                }
+
+                try {
+                    const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
+                    await createOwnerNotification(makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+                        title: `Manual booking added for ${bookingRecord.clientName}`,
+                        body: `${bookingRecord.serviceName} / ${bookingRecord.date} at ${bookingRecord.time}.`,
+                        ownerId: workspaceOwnerId,
+                        booking: { ...bookingRecord, id: bookingRef.id },
+                        bookingId: bookingRef.id,
+                        tab: 'bookings',
+                        priority: 'normal'
+                    }));
+                    setManualBookingOpen(false);
+                    setBookingFilter('upcoming');
+                    form.reset();
+                    setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
+                    showToast('Manual booking added.');
+                } catch (error) {
+                    console.error(error);
+                    showToast('Manual booking could not be saved.');
                 }
             };
 
@@ -6023,7 +6187,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                       </div>
                     </section>
             
-                    <LandingFeatureBook />
+                    <LandingFeatureBook onGuestDashboard={openGuestDashboard} />
 
                     <LandingPaymentRail />
             
@@ -7108,66 +7272,38 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 </div>
                             </header>
 
-                            <div className="booking-desk-command rounded-lg border border-neutral-200 bg-white p-3 md:p-4 mb-4 md:mb-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center shrink-0"><Users size={17}/></div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-lg md:text-xl font-bold tracking-tight text-black">Client Desk</h3>
-                                        <p className="text-xs md:text-sm text-neutral-500 truncate">
-                                            {clientMetrics.total ? `${clientMetrics.total} profiles, ${clientMetrics.regulars} regulars, ${clientMetrics.firstTimers} first timers.` : 'Ready for the first real client profile.'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
-                                    {[
-                                        { label: 'Profiles', value: clientMetrics.total },
-                                        { label: 'Regulars', value: clientMetrics.regulars },
-                                        { label: 'Enriched', value: clientMetrics.enriched }
-                                    ].map(metric => (
-                                        <div key={metric.label} className="rounded-lg bg-neutral-50 border border-neutral-100 px-3 py-2">
-                                            <p className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">{metric.label}</p>
-                                            <p className="metric-value text-lg font-bold text-black leading-none mt-1">{metric.value}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                 <section className={`${activeClient ? 'xl:col-span-5' : 'xl:col-span-12'} space-y-4 md:space-y-6 ${clientMobileView === 'directory' || clientMobileView === 'add' ? '' : 'hidden md:block'}`}>
-                                    <div data-tour="clients-directory" className={`saas-card overflow-hidden ${clientMobileView === 'add' ? 'hidden md:block' : ''}`}>
-                                        <div className="p-4 md:p-6 border-b border-neutral-100">
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
-                                                <div>
-                                                    <h3 className="text-lg font-bold tracking-tight text-black">Client Directory</h3>
-                                                    <p className="text-sm text-neutral-500">
-                                                        {showClientExample
-                                                            ? '0 real profiles. Example shown for layout only.'
-                                                            : `${filteredClients.length} shown from ${clientDirectory.length} profiles.`}
-                                                    </p>
-                                                </div>
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-md">Auto Synced</span>
-                                            </div>
-                                            <div className="relative">
+                                    <div data-tour="clients-directory" className={`saas-card client-directory-card overflow-hidden ${clientMobileView === 'add' ? 'hidden md:block' : ''}`}>
+                                        <div className="client-directory-command p-4 md:p-5 border-b border-neutral-100">
+                                            <div className="client-directory-tools">
+                                            <div className="client-search-wrap relative">
                                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
                                                 <input
                                                     value={clientSearch}
                                                     onChange={(event) => setClientSearch(event.target.value)}
                                                     placeholder="Search name, phone, label"
                                                     aria-label="Search clients"
-                                                    className="w-full h-10 md:h-12 bg-neutral-50 border border-neutral-100 rounded-lg pl-11 pr-4 text-sm font-bold outline-none text-black focus:bg-white focus:border-black transition-colors"
+                                                    className="client-search-input w-full h-11 md:h-12 bg-white border border-neutral-200 rounded-xl pl-11 pr-4 text-sm font-bold outline-none text-black focus:bg-white focus:border-black transition-colors"
                                                 />
                                             </div>
-                                            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                                {clientDeskFilters.map(filter => (
-                                                    <button
-                                                        key={filter.id}
-                                                        type="button"
-                                                        onClick={() => setClientDeskFilter(filter.id)}
-                                                        className={`h-10 rounded-lg border text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${clientDeskFilter === filter.id ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white border-neutral-200 text-neutral-500 hover:text-black hover:border-black'}`}
-                                                    >
-                                                        {filter.label} <span className={`rounded-full px-2 py-0.5 ${clientDeskFilter === filter.id ? 'bg-white/15 text-white' : 'bg-neutral-100 text-neutral-500'}`}>{filter.count}</span>
-                                                    </button>
-                                                ))}
+                                            <div className="client-filter-tabs mt-3 grid grid-cols-3 gap-1.5">
+                                                {clientDeskFilters.map(filter => {
+                                                    const FilterIcon = filter.icon || Users;
+                                                    return (
+                                                        <button
+                                                            key={filter.id}
+                                                            type="button"
+                                                            onClick={() => setClientDeskFilter(filter.id)}
+                                                            className={`client-filter-tab h-10 rounded-lg border text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${clientDeskFilter === filter.id ? 'is-active bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-white border-transparent text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                        >
+                                                            <FilterIcon size={13} />
+                                                            <span>{filter.label}</span>
+                                                            <span className={`client-filter-count rounded-full px-2 py-0.5 ${clientDeskFilter === filter.id ? 'bg-white/15 text-white' : 'bg-neutral-100 text-neutral-500'}`}>{filter.count}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                             </div>
                                         </div>
                                         <div className="max-h-[58vh] md:max-h-[640px] overflow-y-auto divide-y divide-neutral-100">
@@ -7184,20 +7320,31 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     setSelectedClientId(client.id);
                                                     setClientMobileView('profile');
                                                 };
+                                                const openClientChat = () => {
+                                                    const latestBooking = client.bookings?.[0] || client.lastBooking;
+                                                    if (!latestBooking?.id) {
+                                                        showToast('This client needs a booking before a chat thread can open.');
+                                                        return;
+                                                    }
+                                                    openBookingChat(latestBooking);
+                                                };
                                                 return (
-                                                    <button
+                                                    <div
                                                         key={client.id}
-                                                        onClick={openClientFile}
-                                                        className={`w-full text-left p-3 md:p-5 transition-all ${isActive ? 'bg-black text-white' : 'hover:bg-neutral-50 text-black'}`}
+                                                        className={`client-directory-row w-full p-3 md:p-5 transition-all ${isActive ? 'is-active bg-black text-white' : 'hover:bg-neutral-50 text-black'}`}
                                                     >
                                                         <div className="flex items-start gap-3 md:gap-4">
-                                                            <div className={`w-11 h-11 md:w-14 md:h-14 rounded-lg overflow-hidden flex items-center justify-center font-bold text-base md:text-xl shrink-0 ${isActive ? 'bg-white text-black' : 'bg-neutral-100 text-black'}`}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={openClientFile}
+                                                                className={`w-11 h-11 md:w-14 md:h-14 rounded-lg overflow-hidden flex items-center justify-center font-bold text-base md:text-xl shrink-0 ${isActive ? 'bg-white text-black' : 'bg-neutral-100 text-black'}`}
+                                                                aria-label={`Open ${client.name} file`}
+                                                            >
                                                                 {client.avatar ? <img src={client.avatar} className="w-full h-full object-cover" /> : (client.name || '?').charAt(0)}
-                                                            </div>
-                                                            <div className="min-w-0 flex-1">
+                                                            </button>
+                                                            <button type="button" onClick={openClientFile} className="min-w-0 flex-1 text-left">
                                                                 <div className="flex items-start justify-between gap-3 mb-1">
                                                                     <h4 className="text-base md:text-lg font-bold tracking-tight truncate">{client.name}</h4>
-                                                                    <span className={`metric-value text-sm font-bold shrink-0 ${isActive ? 'text-[#39FF14]' : 'text-black'}`}>{client.isExample ? 'Example' : client.bookingCount}</span>
                                                                 </div>
                                                                 <p className={`text-xs md:text-sm truncate mb-2 md:mb-3 ${isActive ? 'text-white/55' : 'text-neutral-500'}`}>{client.isExample ? 'Preview only - not saved or counted' : client.phone || client.email || 'Manual profile'}</p>
                                                                 <div className="flex flex-wrap gap-1.5 md:gap-2">
@@ -7205,12 +7352,29 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                         <span key={label} className={`px-2 py-1 rounded-md text-[7px] md:text-[8px] font-bold uppercase tracking-widest ${isActive ? 'bg-white/10 text-white' : label === 'Regular' || label === 'VIP' ? 'bg-[#39FF14] text-black' : 'bg-neutral-100 text-neutral-500'}`}>{label}</span>
                                                                     ))}
                                                                 </div>
+                                                            </button>
+                                                            <div className="client-row-actions flex items-center gap-1.5 shrink-0">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={openClientFile}
+                                                                    aria-label={`Open ${client.name} file`}
+                                                                    title="Open file"
+                                                                    className={`client-row-action ${isActive ? 'is-active' : ''}`}
+                                                                >
+                                                                    <FileText size={15} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={openClientChat}
+                                                                    aria-label={`Open ${client.name} chat`}
+                                                                    title="Open chat"
+                                                                    className={`client-row-action ${isActive ? 'is-active' : ''}`}
+                                                                >
+                                                                    <MessageCircle size={15} />
+                                                                </button>
                                                             </div>
-                                                            <span className={`h-10 px-3 rounded-lg flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-widest shrink-0 ${isActive ? 'bg-white text-black' : 'bg-neutral-100 text-neutral-500'}`}>
-                                                                <FileText size={14}/> File
-                                                            </span>
                                                         </div>
-                                                    </button>
+                                                    </div>
                                                 );
                                             })}
                                         </div>
@@ -7316,20 +7480,56 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         </button>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 min-w-0">
-                                                            <div className="flex items-center gap-2 text-neutral-400 mb-2"><Phone size={14}/><span className="text-[9px] font-bold uppercase tracking-widest">Phone</span></div>
-                                                            <p className="text-sm font-bold text-black truncate">{activeClient.phone || 'Not added'}</p>
+                                                    <form
+                                                        key={`client-details-${activeClient.id}`}
+                                                        onSubmit={(event) => {
+                                                            event.preventDefault();
+                                                            const formData = new FormData(event.currentTarget);
+                                                            upsertClientRecord(activeClient.id, {
+                                                                name: String(formData.get('name') || '').trim() || activeClient.name,
+                                                                phone: String(formData.get('phone') || '').trim(),
+                                                                email: String(formData.get('email') || '').trim(),
+                                                                birthday: String(formData.get('birthday') || '').trim()
+                                                            });
+                                                            showToast('Client details saved');
+                                                        }}
+                                                        className="client-file-details rounded-2xl border border-neutral-100 bg-neutral-50/80 p-3 md:p-4"
+                                                    >
+                                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+                                                            <div>
+                                                                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Client Details</p>
+                                                                <p className="text-xs text-neutral-500 mt-1">Update contact info without leaving the file.</p>
+                                                            </div>
+                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-white border border-neutral-100 px-3 py-1.5 rounded-full">
+                                                                {isExampleClient ? 'Example only' : activeClient.lastBooking ? `Last ${activeClient.lastBooking.date}` : 'No visits yet'}
+                                                            </span>
                                                         </div>
-                                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 min-w-0">
-                                                            <div className="flex items-center gap-2 text-neutral-400 mb-2"><Mail size={14}/><span className="text-[9px] font-bold uppercase tracking-widest">Email</span></div>
-                                                            <p className="text-sm font-bold text-black truncate">{activeClient.email || 'Not added'}</p>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <label className="client-file-field">
+                                                                <span>Name</span>
+                                                                <input name="name" defaultValue={activeClient.name || ''} disabled={isExampleClient} />
+                                                            </label>
+                                                            <label className="client-file-field">
+                                                                <span>Phone</span>
+                                                                <input name="phone" type="tel" defaultValue={activeClient.phone || ''} placeholder="Not added" disabled={isExampleClient} />
+                                                            </label>
+                                                            <label className="client-file-field">
+                                                                <span>Email</span>
+                                                                <input name="email" type="email" defaultValue={activeClient.email || ''} placeholder="Not added" disabled={isExampleClient} />
+                                                            </label>
+                                                            <label className="client-file-field">
+                                                                <span>Birthday</span>
+                                                                <input name="birthday" defaultValue={activeClient.birthday || ''} placeholder="MM/DD" disabled={isExampleClient} />
+                                                            </label>
                                                         </div>
-                                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 min-w-0">
-                                                            <div className="flex items-center gap-2 text-neutral-400 mb-2"><Calendar size={14}/><span className="text-[9px] font-bold uppercase tracking-widest">Last Visit</span></div>
-                                                            <p className="text-sm font-bold text-black truncate">{isExampleClient ? 'Example only' : activeClient.lastBooking ? `${activeClient.lastBooking.date} / ${activeClient.lastBooking.time}` : 'No booking yet'}</p>
-                                                        </div>
-                                                    </div>
+                                                        <button
+                                                            type="submit"
+                                                            disabled={isExampleClient}
+                                                            className="mt-3 h-11 w-full md:w-auto px-5 rounded-xl bg-black text-white flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        >
+                                                            <Check size={15}/> {isExampleClient ? 'Example Only' : 'Save Details'}
+                                                        </button>
+                                                    </form>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -7679,9 +7879,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             <>
                                                 <section className="editor-cinema-hero">
                                                     <div className="editor-cinema-hero-copy">
-                                                        <span>Live Design Session</span>
-                                                        <h3>Customize your booking page.</h3>
-                                                        <p>Choose each room, tune the exact part of the page, and watch the live preview move with you. Simple for beginners, deep enough for a real brand.</p>
+                                                        <span>Live design</span>
+                                                        <h3>Customize your page.</h3>
+                                                        <p>Pick a room, tune it, preview it.</p>
                                                     </div>
                                                 </section>
 
@@ -8158,7 +8358,28 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             </button>
                         </div>
 
-                        <div className={`editor-preview-room-nav ${device === 'mobile' ? 'is-phone' : 'is-desktop'}`} aria-label="Preview editing rooms">
+                        <div
+                            className={`editor-preview-room-nav ${device === 'mobile' ? 'is-phone' : 'is-desktop'} ${editorRoomNavOffset.x || editorRoomNavOffset.y ? 'is-custom-position' : ''}`}
+                            aria-label="Preview editing rooms"
+                            style={{
+                                '--editor-room-nav-x': `${editorRoomNavOffset.x}px`,
+                                '--editor-room-nav-y': `${editorRoomNavOffset.y}px`
+                            }}
+                        >
+                            <button
+                                type="button"
+                                className="editor-preview-room-nav-grip"
+                                aria-label="Move editor toolbar"
+                                title="Drag to move toolbar. Double click to reset."
+                                onPointerDown={startEditorRoomNavDrag}
+                                onPointerMove={moveEditorRoomNavDrag}
+                                onPointerUp={endEditorRoomNavDrag}
+                                onPointerCancel={endEditorRoomNavDrag}
+                                onDoubleClick={() => setEditorRoomNavOffset({ x: 0, y: 0 })}
+                            >
+                                <GripVertical size={14} />
+                                <span>Move</span>
+                            </button>
                             {editorRoomScenes.map((scene) => {
                                 const SceneIcon = scene.icon;
                                 const isActive = (editorStudioModal || 'introduction') === scene.id;
@@ -8246,31 +8467,211 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Bookings</h1>
                                 <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Review requests, confirm clients, assign your team, and keep every appointment moving.</p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
+                                    setManualBookingOpen(true);
+                                }}
+                                className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto"
+                            >
+                                <Plus size={15}/> Booking
+                            </button>
                         </header>
+
+                        {manualBookingOpen && (
+                            <div className="manual-booking-overlay fixed inset-0 z-[220] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
+                                <form onSubmit={handleManualBookingSubmit} className="manual-booking-sheet w-full md:max-w-5xl max-h-[94dvh] overflow-y-auto bg-white rounded-t-[1.6rem] md:rounded-2xl border border-neutral-100 shadow-2xl shadow-black/30">
+                                    <div className="manual-booking-header sticky top-0 z-10 bg-white/92 backdrop-blur-xl border-b border-neutral-100 p-4 md:p-6 flex items-start justify-between gap-4">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">Manual Booking</p>
+                                            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Add Booking</h2>
+                                            <p className="text-sm text-neutral-500 mt-1">Create an appointment for walk-ins, phone calls, DMs, or staff-entered bookings.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setManualBookingOpen(false)}
+                                            aria-label="Close manual booking form"
+                                            className="w-10 h-10 rounded-full bg-white border border-neutral-200 text-neutral-500 hover:text-black hover:border-black flex items-center justify-center shrink-0"
+                                        >
+                                            <X size={17}/>
+                                        </button>
+                                    </div>
+
+                                    <div className="manual-booking-body p-4 md:p-6 space-y-4">
+                                        <section className="manual-booking-section">
+                                            <div className="manual-booking-section-head">
+                                                <User size={16}/>
+                                                <span>Client</span>
+                                            </div>
+                                            <div className="manual-booking-grid">
+                                                <label className="manual-booking-field md:col-span-2">
+                                                    <span>Name</span>
+                                                    <input name="clientName" required placeholder="Client name" />
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Phone</span>
+                                                    <input name="clientPhone" type="tel" placeholder="+27 82 000 0000" />
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Email</span>
+                                                    <input name="clientEmail" type="email" placeholder="client@email.com" />
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Birthday</span>
+                                                    <input name="clientBirthday" placeholder="MM/DD or 9 December" />
+                                                </label>
+                                            </div>
+                                        </section>
+
+                                        <section className="manual-booking-section">
+                                            <div className="manual-booking-section-head">
+                                                <Calendar size={16}/>
+                                                <span>Appointment</span>
+                                            </div>
+                                            <div className="manual-booking-grid">
+                                                <label className="manual-booking-field">
+                                                    <span>Date</span>
+                                                    <input name="bookingDate" type="date" required defaultValue={getLocalDateStr(new Date())} />
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Time</span>
+                                                    <input name="bookingTime" type="time" required defaultValue="09:00" />
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Status</span>
+                                                    <select name="bookingStatus" defaultValue="confirmed">
+                                                        <option value="confirmed">Confirmed</option>
+                                                        <option value="pending">Needs review</option>
+                                                        <option value="waitlist">Waitlist</option>
+                                                    </select>
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Staff</span>
+                                                    <select name="staffId" defaultValue={activeStaffProfile?.id || displayStaffList[0]?.id || ''}>
+                                                        <option value="">Unassigned</option>
+                                                        {displayStaffList.map(staff => <option key={staff.id} value={staff.id}>{staff.name}</option>)}
+                                                    </select>
+                                                </label>
+                                            </div>
+                                        </section>
+
+                                        <section className="manual-booking-section">
+                                            <div className="manual-booking-section-head">
+                                                <Briefcase size={16}/>
+                                                <span>Service</span>
+                                            </div>
+                                            <div className="manual-booking-grid">
+                                                <label className="manual-booking-field md:col-span-2">
+                                                    <span>Service</span>
+                                                    <select name="serviceId" value={manualBookingServiceId} onChange={(event) => setManualBookingServiceId(event.target.value)}>
+                                                        {workspaceServices.map(service => <option key={service.id} value={service.id}>{service.name}</option>)}
+                                                        <option value="custom">Custom service</option>
+                                                    </select>
+                                                </label>
+                                                {!selectedManualBookingService && (
+                                                    <label className="manual-booking-field md:col-span-2">
+                                                        <span>Custom service name</span>
+                                                        <input name="customServiceName" placeholder="Walk-in cut, consultation, private booking..." />
+                                                    </label>
+                                                )}
+                                                <label className="manual-booking-field">
+                                                    <span>Price</span>
+                                                    <input name="servicePrice" inputMode="decimal" placeholder="0" defaultValue={selectedManualBookingService?.price || ''} disabled={Boolean(selectedManualBookingService)} />
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Duration</span>
+                                                    <input name="serviceDuration" inputMode="numeric" placeholder="60" defaultValue={selectedManualBookingService?.duration || ''} disabled={Boolean(selectedManualBookingService)} />
+                                                </label>
+                                                <label className="manual-booking-field md:col-span-2">
+                                                    <span>Category</span>
+                                                    <input name="serviceCategory" placeholder="Barbering, beauty, consultation..." defaultValue={selectedManualBookingService?.category || ''} disabled={Boolean(selectedManualBookingService)} />
+                                                </label>
+                                            </div>
+                                        </section>
+
+                                        <section className="manual-booking-section">
+                                            <div className="manual-booking-section-head">
+                                                <CreditCard size={16}/>
+                                                <span>Payment</span>
+                                            </div>
+                                            <div className="manual-booking-grid">
+                                                <label className="manual-booking-field">
+                                                    <span>Method</span>
+                                                    <select name="paymentMethod" defaultValue="">
+                                                        <option value="">No payment yet</option>
+                                                        <option value="cash">Cash</option>
+                                                        <option value="manual_eft">Direct EFT</option>
+                                                        <option value="yoco">Yoco</option>
+                                                        <option value="stripe">Stripe</option>
+                                                        <option value="payfast">PayFast</option>
+                                                        <option value="paystack">Paystack</option>
+                                                        <option value="ozow">Ozow</option>
+                                                    </select>
+                                                </label>
+                                                <label className="manual-booking-field">
+                                                    <span>Payment Status</span>
+                                                    <select name="paymentStatus" defaultValue="unpaid">
+                                                        <option value="unpaid">Unpaid</option>
+                                                        <option value="manual_pending">Open</option>
+                                                        <option value="paid">Paid</option>
+                                                    </select>
+                                                </label>
+                                                <label className="manual-booking-field md:col-span-2">
+                                                    <span>Reference</span>
+                                                    <input name="paymentReference" placeholder="Optional invoice, receipt, or EFT reference" />
+                                                </label>
+                                            </div>
+                                        </section>
+
+                                        <section className="manual-booking-section">
+                                            <div className="manual-booking-section-head">
+                                                <MessageSquare size={16}/>
+                                                <span>Notes</span>
+                                            </div>
+                                            <label className="manual-booking-field">
+                                                <span>Internal note</span>
+                                                <textarea name="clientNote" placeholder="Preferences, request source, deposit notes, accessibility needs..." />
+                                            </label>
+                                        </section>
+                                    </div>
+
+                                    <div className="manual-booking-footer sticky bottom-0 bg-white/94 backdrop-blur-xl border-t border-neutral-100 p-4 md:p-5 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                        <button type="button" onClick={() => setManualBookingOpen(false)} className="h-12 px-5 rounded-xl bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest hover:border-black transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" className="h-12 px-6 rounded-xl bg-black text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10">
+                                            <Check size={15}/> Save Booking
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
 
                         <section data-tour="bookings-queue" className="saas-card booking-desk-shell overflow-hidden">
                             <div className="booking-desk-command p-4 md:p-5 border-b border-neutral-100">
-                                <div className="flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
-                                    <div>
-                                        <p className="text-[10px] font-bold uppercase text-neutral-400 mb-2">Booking Desk</p>
-                                        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black">
+                                <div className="booking-desk-head flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
+                                    <div className="booking-desk-title-block">
+                                        <p className="booking-desk-eyebrow text-[10px] font-bold uppercase text-neutral-400 mb-2">Booking Desk</p>
+                                        <h2 className="booking-desk-title text-2xl md:text-3xl font-bold tracking-tight text-black">
                                             {bookingDesk.activeFilter === 'upcoming' ? 'Latest Upcoming' : `${bookingDesk.activeFilterLabel} Bookings`}
                                         </h2>
-                                        <p className="text-sm text-neutral-500 mt-1">
+                                        <p className="booking-desk-subcopy text-sm text-neutral-500 mt-1">
                                             {showBookingExample
                                                 ? '0 real records. Example shown for layout only.'
                                                 : `${bookingRows.length} shown / ${bookingDesk.period.rangeLabel}.`}
                                         </p>
                                     </div>
-                                    <div className="schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                    <div className="booking-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
                                         {bookingDesk.periods.map(period => (
                                             <button
                                                 key={period.id}
+                                                type="button"
                                                 onClick={() => {
                                                     setBookingDeskPeriod(period.id);
                                                     if (period.id === 'custom') setBookingRangeDialogOpen(true);
                                                 }}
-                                                className={`flex-1 sm:flex-none h-10 px-4 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                className={`booking-period-tab flex-1 sm:flex-none h-10 px-4 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'is-active bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
                                             >
                                                 {period.label}
                                             </button>
@@ -8286,16 +8687,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             onChange={(event) => setBookingSearch(event.target.value)}
                                             placeholder="Search client, phone, email, note"
                                             aria-label="Search bookings"
-                                            className="w-full h-12 rounded-lg bg-white border border-neutral-200 pl-11 pr-4 text-sm font-bold text-black outline-none focus:border-black transition-colors"
+                                            className="booking-desk-input w-full h-12 rounded-lg bg-white border border-neutral-200 pl-11 pr-4 text-sm font-bold text-black outline-none focus:border-black transition-colors"
                                         />
                                     </label>
-                                    <div className="grid grid-cols-2 gap-2 xl:w-[420px]">
+                                    <div className="booking-desk-selects grid grid-cols-2 gap-2 xl:w-[420px]">
                                         <label className="relative">
                                             <span className="sr-only">Filter by payment</span>
                                             <select
                                                 value={bookingPaymentFilter}
                                                 onChange={(event) => setBookingPaymentFilter(event.target.value)}
-                                                className="w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
+                                                className="booking-desk-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
                                             >
                                                 <option value="all">All payments</option>
                                                 <option value="paid">Paid</option>
@@ -8310,7 +8711,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             <select
                                                 value={bookingSort}
                                                 onChange={(event) => setBookingSort(event.target.value)}
-                                                className="w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
+                                                className="booking-desk-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
                                             >
                                                 <option value="newest">Newest first</option>
                                                 <option value="oldest">Oldest first</option>
@@ -8322,16 +8723,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </label>
                                     </div>
                                     <div className="booking-filter-rail flex flex-wrap items-center gap-2">
-                                        {bookingDesk.filters.map(filter => (
-                                            <button
-                                                key={filter.id}
-                                                onClick={() => setBookingFilter(filter.id)}
-                                                className={`h-11 px-3 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-2 ${bookingDesk.activeFilter === filter.id ? 'bg-black text-white shadow-lg' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100 hover:text-black'}`}
-                                            >
-                                                {filter.label}
-                                                <span className={`min-w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${bookingDesk.activeFilter === filter.id ? 'native-gradient-icon text-black' : 'bg-white text-black border border-neutral-100'}`}>{filter.count}</span>
-                                            </button>
-                                        ))}
+                                        {bookingDesk.filters.map(filter => {
+                                            const FilterIcon = filter.icon || Layers;
+                                            return (
+                                                <button
+                                                    key={filter.id}
+                                                    type="button"
+                                                    onClick={() => setBookingFilter(filter.id)}
+                                                    className={`booking-filter-chip h-11 px-3 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-2 ${bookingDesk.activeFilter === filter.id ? 'is-active bg-black text-white shadow-lg' : 'bg-neutral-50 text-neutral-500 hover:bg-neutral-100 hover:text-black'}`}
+                                                >
+                                                    <FilterIcon size={13} />
+                                                    <span>{filter.label}</span>
+                                                    <span className={`booking-filter-count min-w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${bookingDesk.activeFilter === filter.id ? 'native-gradient-icon text-black' : 'bg-white text-black border border-neutral-100'}`}>{filter.count}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
