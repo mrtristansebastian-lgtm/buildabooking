@@ -99,11 +99,13 @@ const buildCroppedImageFile = async (crop) => {
   canvas.height = preset.height;
   const ctx = canvas.getContext('2d');
   const zoom = Math.max(1, Number(crop.zoom || 1));
+  const positionX = Math.max(0, Math.min(100, Number(crop.positionX ?? 50)));
+  const positionY = Math.max(0, Math.min(100, Number(crop.positionY ?? 50)));
   const coverScale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight) * zoom;
   const drawWidth = image.naturalWidth * coverScale;
   const drawHeight = image.naturalHeight * coverScale;
-  const offsetX = Math.max(0, drawWidth - canvas.width) * (Number(crop.positionX || 50) / 100);
-  const offsetY = Math.max(0, drawHeight - canvas.height) * (Number(crop.positionY || 50) / 100);
+  const offsetX = Math.max(0, drawWidth - canvas.width) * (positionX / 100);
+  const offsetY = Math.max(0, drawHeight - canvas.height) * (positionY / 100);
 
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -187,7 +189,8 @@ const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
                 alt=""
                 style={{
                   objectPosition: `${currentPositionX}% ${currentPositionY}%`,
-                  transform: `scale(${currentZoom})`
+                  transform: `scale(${currentZoom})`,
+                  transformOrigin: `${currentPositionX}% ${currentPositionY}%`
                 }}
               />
             </div>
@@ -765,6 +768,281 @@ const createDefaultSettings = () => ({
   address: '',
   socials: { instagram: '', tiktok: '', facebook: '', website: '' }
 });
+
+const demoImage = (id, width = 1200, height = 900, fit = 'crop') => (
+  `https://images.unsplash.com/${id}?auto=format&fit=${fit}&crop=faces&w=${width}&h=${height}&q=82`
+);
+
+const guestDemoAssets = {
+  logo: demoImage('photo-1522337360788-8b13dee7a37e', 700, 700),
+  banner: demoImage('photo-1560066984-138dadb4c035', 1600, 700),
+  venue: [
+    demoImage('photo-1522337360788-8b13dee7a37e', 1200, 900),
+    demoImage('photo-1560066984-138dadb4c035', 1200, 900),
+    demoImage('photo-1521590832167-7bcbfaa6381f', 1200, 900),
+    demoImage('photo-1527799820374-dcf8d9d4a388', 1200, 900),
+    demoImage('photo-1487412947147-5cebf100ffc2', 1200, 900),
+    demoImage('photo-1516975080664-ed2fc6a32937', 1200, 900)
+  ],
+  services: [
+    demoImage('photo-1560066984-138dadb4c035', 900, 720),
+    demoImage('photo-1522337360788-8b13dee7a37e', 900, 720),
+    demoImage('photo-1521590832167-7bcbfaa6381f', 900, 720),
+    demoImage('photo-1527799820374-dcf8d9d4a388', 900, 720),
+    demoImage('photo-1487412947147-5cebf100ffc2', 900, 720),
+    demoImage('photo-1516975080664-ed2fc6a32937', 900, 720)
+  ],
+  people: [
+    demoImage('photo-1494790108377-be9c29b29330', 320, 320),
+    demoImage('photo-1534528741775-53994a69daeb', 320, 320),
+    demoImage('photo-1507003211169-0a1dd7228f2d', 320, 320),
+    demoImage('photo-1544005313-94ddf0286df2', 320, 320),
+    demoImage('photo-1524504388940-b1c1722653e1', 320, 320),
+    demoImage('photo-1506794778202-cad84cf45f1d', 320, 320),
+    demoImage('photo-1517841905240-472988babdf9', 320, 320),
+    demoImage('photo-1547425260-76bcadfb4f2c', 320, 320)
+  ]
+};
+
+const guestDemoServices = [
+  { id: 'demo-cut-finish', name: 'Signature Cut & Finish', category: 'Hair Styling', description: 'Consultation, precision cut, luxe wash, scalp massage, and polished blow finish.', price: '680', duration: '75', staffIds: ['owner', 'staff-zara', 'staff-neo'], imageUrls: [guestDemoAssets.services[0]] },
+  { id: 'demo-colour-gloss', name: 'Colour Gloss Ritual', category: 'Colour', description: 'Tonal refresh, shine glaze, bond treatment, and soft editorial styling.', price: '1250', duration: '120', staffIds: ['staff-zara'], imageUrls: [guestDemoAssets.services[1]] },
+  { id: 'demo-balayage', name: 'Balayage Transformation', category: 'Colour', description: 'Dimensional hand-painted colour with toner, bond care, and finish.', price: '2450', duration: '210', staffIds: ['staff-zara', 'owner'], imageUrls: [guestDemoAssets.services[2]] },
+  { id: 'demo-silk-press', name: 'Silk Press & Hydration', category: 'Texture', description: 'Steam hydration, heat protection, smooth silk press, and movement finish.', price: '920', duration: '105', staffIds: ['staff-ama'], imageUrls: [guestDemoAssets.services[3]] },
+  { id: 'demo-bridal-trial', name: 'Bridal Hair Trial', category: 'Events', description: 'Moodboard consult, two style directions, veil test, and photo-ready finish.', price: '1450', duration: '150', staffIds: ['owner', 'staff-ama'], imageUrls: [guestDemoAssets.services[4]] },
+  { id: 'demo-treatment', name: 'Repair Treatment Bar', category: 'Treatments', description: 'Bond repair, gloss mask, and a quick finish for busy regulars.', price: '520', duration: '45', staffIds: ['staff-neo'], imageUrls: [guestDemoAssets.services[5]] }
+];
+
+const createGuestDemoDate = (offset = 0) => {
+  const date = new Date();
+  date.setHours(10, 0, 0, 0);
+  date.setDate(date.getDate() + offset);
+  return {
+    date,
+    dateKey: getLocalDateStr(date),
+    label: date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  };
+};
+
+const createGuestDemoSchedule = () => {
+  const schedule = {};
+  const busyTimes = ['08:30', '09:30', '10:30', '11:30', '13:00', '14:00', '15:30', '16:30', '17:30'];
+  const expressTimes = ['09:00', '10:00', '12:00', '14:30', '16:00'];
+  for (let offset = 0; offset < 28; offset += 1) {
+    const { date, dateKey } = createGuestDemoDate(offset);
+    const isSunday = date.getDay() === 0;
+    const isMonday = date.getDay() === 1;
+    schedule[dateKey] = {
+      available: !isSunday,
+      times: isSunday ? [] : (isMonday ? expressTimes : busyTimes)
+    };
+  }
+  return schedule;
+};
+
+const createGuestDemoBookings = () => {
+  const now = Date.now();
+  const rows = [
+    ['booking-aurora-1001', 'Maya Nkosi', '+27 72 555 0194', 'maya.nkosi@example.com', 0, '10:30', 'demo-colour-gloss', 'Colour Gloss Ritual', '1250', 'confirmed', 'paid', 'manual_eft', 125000, 2],
+    ['booking-aurora-1002', 'Ava Jacobs', '+27 82 440 9011', 'ava.jacobs@example.com', 0, '14:00', 'demo-cut-finish', 'Signature Cut & Finish', '680', 'pending', 'manual_pending', 'cash', 68000, 4],
+    ['booking-aurora-1003', 'Thando Mokoena', '+27 71 221 7604', 'thando.mokoena@example.com', 1, '09:30', 'demo-silk-press', 'Silk Press & Hydration', '920', 'confirmed', 'paid', 'manual_eft', 92000, 8],
+    ['booking-aurora-1004', 'Leila Khan', '+27 83 119 4410', 'leila.khan@example.com', 1, '16:30', 'demo-treatment', 'Repair Treatment Bar', '520', 'confirmed', 'paid', 'cash', 52000, 12],
+    ['booking-aurora-1005', 'Nandi Dlamini', '+27 79 880 3412', 'nandi.dlamini@example.com', 2, '11:30', 'demo-balayage', 'Balayage Transformation', '2450', 'waitlist', 'manual_pending', 'manual_eft', 245000, 15],
+    ['booking-aurora-1006', 'Sofia Williams', '+27 73 602 8890', 'sofia.williams@example.com', 3, '13:00', 'demo-bridal-trial', 'Bridal Hair Trial', '1450', 'confirmed', 'paid', 'manual_eft', 145000, 20],
+    ['booking-aurora-1007', 'Zoe Adams', '+27 81 771 2017', 'zoe.adams@example.com', 4, '15:30', 'demo-cut-finish', 'Signature Cut & Finish', '680', 'confirmed', 'paid', 'cash', 68000, 24],
+    ['booking-aurora-1008', 'Kuhle Maseko', '+27 76 309 1188', 'kuhle.maseko@example.com', 5, '10:30', 'demo-colour-gloss', 'Colour Gloss Ritual', '1250', 'pending', 'manual_pending', 'manual_eft', 125000, 28],
+    ['booking-aurora-1009', 'Lina Pretorius', '+27 84 902 3301', 'lina.pretorius@example.com', -2, '09:30', 'demo-treatment', 'Repair Treatment Bar', '520', 'confirmed', 'paid', 'cash', 52000, 34],
+    ['booking-aurora-1010', 'Imani Daniels', '+27 74 556 2109', 'imani.daniels@example.com', -4, '14:00', 'demo-silk-press', 'Silk Press & Hydration', '920', 'confirmed', 'paid', 'manual_eft', 92000, 42],
+    ['booking-aurora-1011', 'Priya Naidoo', '+27 72 119 7780', 'priya.naidoo@example.com', -7, '12:00', 'demo-balayage', 'Balayage Transformation', '2450', 'confirmed', 'paid', 'manual_eft', 245000, 58],
+    ['booking-aurora-1012', 'Cara Meyer', '+27 83 909 1502', 'cara.meyer@example.com', -11, '15:30', 'demo-cut-finish', 'Signature Cut & Finish', '680', 'declined', 'unpaid', 'cash', 68000, 70]
+  ];
+
+  return rows.map((row, index) => {
+    const [id, clientName, clientPhone, clientEmail, offset, time, serviceId, serviceName, servicePrice, status, paymentStatus, paymentGateway, amountInCents, hoursAgo] = row;
+    const { dateKey, label } = createGuestDemoDate(offset);
+    const paidAt = paymentStatus === 'paid' ? now - hoursAgo * 60 * 60 * 1000 : null;
+    return {
+      id,
+      clientName,
+      clientPhone,
+      clientEmail,
+      clientBirthday: ['23 June 1996', '4 April 1993', '19 August 1989', '12 January 1998'][index % 4],
+      clientNote: index % 3 === 0 ? 'Prefers sparkling water, quiet chair, and a soft wave finish.' : 'Demo booking. Use the status and payment actions to explore the workflow.',
+      clientPhotoURL: guestDemoAssets.people[index % guestDemoAssets.people.length],
+      clientAvatar: guestDemoAssets.people[index % guestDemoAssets.people.length],
+      avatar: guestDemoAssets.people[index % guestDemoAssets.people.length],
+      serviceId,
+      serviceName,
+      serviceDuration: guestDemoServices.find(service => service.id === serviceId)?.duration || '60',
+      servicePrice,
+      servicePriceType: 'fixed',
+      serviceCategory: guestDemoServices.find(service => service.id === serviceId)?.category || 'Salon',
+      amountInCents,
+      currency: 'ZAR',
+      paymentMethod: paymentGateway,
+      paymentGateway,
+      paymentProviderName: paymentGateway === 'cash' ? 'Cash' : 'Manual EFT',
+      paymentStatus,
+      paymentReference: id.toUpperCase(),
+      manualPayment: true,
+      amountPaidInCents: paymentStatus === 'paid' ? amountInCents : 0,
+      paidAt,
+      date: label,
+      dateKey,
+      time: status === 'waitlist' ? 'Waitlist' : time,
+      status,
+      timestamp: now - hoursAgo * 60 * 60 * 1000,
+      createdAt: now - (hoursAgo + 2) * 60 * 60 * 1000,
+      updatedAt: now - hoursAgo * 60 * 60 * 1000,
+      staffId: ['owner', 'staff-zara', 'staff-ama', 'staff-neo'][index % 4],
+      noShowHistory: index === 7,
+      source: 'guest-demo'
+    };
+  });
+};
+
+const createGuestDemoClients = (bookings = []) => (
+  bookings.slice(0, 8).map((booking, index) => ({
+    id: `guest-client-${index + 1}`,
+    name: booking.clientName,
+    phone: booking.clientPhone,
+    email: booking.clientEmail,
+    birthday: booking.clientBirthday,
+    notes: index % 2 === 0
+      ? 'High-intent client. Likes visual references, warm blonde tones, and pre-booking before events.'
+      : 'Regular guest profile with preferences, notes, and booking history for the demo workspace.',
+    avatar: booking.avatar,
+    labels: index < 3 ? ['VIP', 'High Value'] : index === 7 ? ['No-show Risk'] : ['Prefers Chat'],
+    source: 'guest-demo',
+    createdAt: booking.createdAt,
+    updatedAt: booking.updatedAt
+  }))
+);
+
+const createGuestDemoStaff = () => ([
+  { id: 'owner', uid: 'guest-owner', name: 'Aurora Vale', email: 'aurora@luxeandloom.example', phone: '+27 21 555 0144', photoURL: guestDemoAssets.people[0], role: 'owner', status: 'connected', color: '#111827', speciality: 'Colour direction' },
+  { id: 'staff-zara', name: 'Zara Mbele', email: 'zara@luxeandloom.example', phone: '+27 72 555 0172', photoURL: guestDemoAssets.people[1], role: 'stylist', status: 'access-ready', color: '#8B5CF6', speciality: 'Balayage and gloss' },
+  { id: 'staff-ama', name: 'Ama Jacobs', email: 'ama@luxeandloom.example', phone: '+27 82 555 0182', photoURL: guestDemoAssets.people[3], role: 'stylist', status: 'access-ready', color: '#06B6D4', speciality: 'Texture and bridal' },
+  { id: 'staff-neo', name: 'Neo Daniels', email: 'neo@luxeandloom.example', phone: '+27 73 555 0193', photoURL: guestDemoAssets.people[5], role: 'assistant', status: 'access-ready', color: '#22C55E', speciality: 'Treatment bar' }
+]);
+
+const createGuestDemoSettings = () => ({
+  ...createDefaultSettings(),
+  guestDemoVersion: 2,
+  slug: 'luxe-and-loom',
+  brandName: 'Luxe & Loom',
+  businessName: 'Luxe & Loom Hair House',
+  tagline: 'Cape Town colour house / fully booked energy',
+  welcomeMessage: 'Book polished colour, healthy hair rituals, and event-ready styling from a salon clients keep coming back to.',
+  primaryColor: '#111827',
+  headingColor: '#050505',
+  bodyColor: '#4B5563',
+  backgroundColor: '#FBFAF7',
+  slotBgColor: '#FFFFFF',
+  slotTextColor: '#111827',
+  dateBgColor: '#FFFFFF',
+  dateTextColor: '#6B7280',
+  dateActiveBgColor: '#DDFCE8',
+  dateActiveTextColor: '#050505',
+  buttonColor: '#111827',
+  buttonTextColor: '#FFFFFF',
+  fontFamily: 'figtree',
+  headingFontFamily: 'bricolage',
+  bodyFontFamily: 'figtree',
+  buttonFontFamily: 'space-grotesk',
+  slotFontFamily: 'figtree',
+  dateFontFamily: 'bricolage',
+  brandNameSize: 82,
+  taglineSize: 10,
+  welcomeSize: 19,
+  nativeAccent: true,
+  calendarDisplayStyle: 'glow',
+  timeDisplayStyle: 'blocks',
+  serviceDisplayStyle: 'gallery',
+  serviceBorderStyle: 'solid',
+  faqDisplayStyle: 'cards',
+  faqStyle: 'outline',
+  venueGalleryStyle: 'editorial',
+  mapDisplayStyle: 'card',
+  socialDisplayStyle: 'dock',
+  socialIconStyle: 'solid',
+  dateLabel: 'Pick a date with good hair energy',
+  timeLabel: 'Choose your chair time',
+  buttonText: 'Book The Look',
+  confirmButtonText: 'Reserve Appointment',
+  detailsHeading: 'Client Details',
+  detailsSubHeading: 'So the team can prepare your visit',
+  successHeading: 'You are on the books',
+  availableTimes: ['08:30', '09:30', '10:30', '11:30', '13:00', '14:00', '15:30', '16:30', '17:30'],
+  schedule: createGuestDemoSchedule(),
+  features: {
+    birthday: true,
+    waitlist: true,
+    socialProof: true,
+    loadingScreen: true,
+    firstAvailable: true,
+    collectClientName: true,
+    collectClientPhone: true,
+    collectClientEmail: true,
+    collectClientNotes: true,
+    emailUpdates: true,
+    faqEnabled: true,
+    socialLinks: true,
+    location: 'https://maps.google.com/?q=Cape%20Town%20hair%20salon',
+    faqs: [
+      { q: 'Should I arrive with clean hair?', a: 'Arrive with dry, detangled hair unless your service includes a wash. Colour clients should avoid heavy oils before the visit.' },
+      { q: 'Do you take deposits?', a: 'High-value colour and bridal bookings can be reserved with EFT or cash-on-arrival tracking in the finance desk.' },
+      { q: 'Can I join a waitlist?', a: 'Yes. If a full day opens, the salon can move waitlisted clients into confirmed slots and send updates.' },
+      { q: 'Where should I park?', a: 'Street parking is usually easiest before 10:00. The venue gallery and map section show clients what to expect.' }
+    ]
+  },
+  accountProfiles: {
+    'guest-workspace': {
+      uid: 'guest-workspace',
+      firstName: 'Aurora',
+      lastName: 'Vale',
+      email: 'aurora@luxeandloom.example',
+      mobile: '+27 21 555 0144',
+      photoURL: guestDemoAssets.people[0],
+      updatedAt: Date.now()
+    }
+  },
+  services: guestDemoServices,
+  serviceIndustry: 'hair_salon',
+  logoDisplay: { visible: true, alignment: 'left', size: 112 },
+  bannerDisplay: { visible: true, height: 260, position: 'center' },
+  logo: guestDemoAssets.logo,
+  bannerImage: guestDemoAssets.banner,
+  venuePhotos: guestDemoAssets.venue,
+  venueTitle: 'Inside the colour house',
+  venueIntro: 'Light-filled chairs, a treatment bar, and client-ready corners that make the booking page feel real.',
+  address: '77 Bree Street, Cape Town',
+  socials: {
+    instagram: '@luxeandloomhair',
+    tiktok: '@luxeandloom',
+    facebook: 'luxeandloomhair',
+    website: 'https://luxeandloom.example'
+  }
+});
+
+const createGuestDemoCommunications = () => ({
+  ...createDefaultCommunications(),
+  confirmed: { active: true, text: 'Your Luxe & Loom appointment is confirmed. We have saved your chair and your stylist is prepping your notes.' },
+  review: { active: true, text: 'Thank you for visiting Luxe & Loom. If your hair is feeling lovely, a quick review helps the salon grow.' },
+  waitlist: { active: true, text: 'A Luxe & Loom slot opened up. Reply quickly and we can move you from waitlist to confirmed.' },
+  runningLate: { active: true, text: 'The salon is running about 10 minutes behind. Your stylist still has your full appointment protected.' }
+});
+
+const createGuestDemoWorkspace = () => {
+  const bookings = createGuestDemoBookings();
+  return {
+    settings: createGuestDemoSettings(),
+    bookings,
+    staffList: createGuestDemoStaff(),
+    clientRecords: createGuestDemoClients(bookings),
+    communications: createGuestDemoCommunications()
+  };
+};
 
 const clampNumber = (value, min, max, fallback) => {
   const parsed = Number(value);
@@ -1752,6 +2030,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const editorDraftRecoveredRef = useRef(false);
             const publishedSettingsSnapshotRef = useRef(null);
             const cloudEditorDraftRef = useRef(null);
+            const guestDemoSeededRef = useRef(false);
             const themeBatchTimerRef = useRef(0);
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
@@ -1984,6 +2263,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 editorDraftRecoveredRef.current = false;
                 editorDraftLastFingerprintRef.current = '';
                 editorDraftCloudFingerprintRef.current = '';
+                guestDemoSeededRef.current = false;
                 ownerNotificationSeenRef.current = new Set();
                 ownerNotificationsReadyRef.current = false;
                 setSettings(createDefaultSettings());
@@ -2005,7 +2285,26 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [publicSlug, loading, user?.uid, guestMode]);
 
             useEffect(() => {
-                if (publicSlug || !editorDraftOwnerKey || !isEditorWorkspaceOpen) return;
+                if (!isGuestWorkspace) {
+                    guestDemoSeededRef.current = false;
+                    return;
+                }
+                if (loading) return;
+                if (guestDemoSeededRef.current) return;
+
+                const demoWorkspace = createGuestDemoWorkspace();
+                setSettings(demoWorkspace.settings);
+                setBookings(demoWorkspace.bookings);
+                setBookingsReady(true);
+                setStaffList(demoWorkspace.staffList);
+                setClientRecords(demoWorkspace.clientRecords);
+                setCommunications(demoWorkspace.communications);
+                setAccountProfileOverride(demoWorkspace.settings.accountProfiles?.['guest-workspace'] || {});
+                guestDemoSeededRef.current = true;
+            }, [isGuestWorkspace, loading]);
+
+            useEffect(() => {
+                if (publicSlug || isGuestWorkspace || !editorDraftOwnerKey || !isEditorWorkspaceOpen) return;
                 const localDraft = readEditorDraft(editorDraftOwnerKey);
                 if (!localDraft?.settings) return;
                 const localDraftAgeMs = Date.now() - Number(localDraft.savedAt || 0);
@@ -2020,10 +2319,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     editorDraftRecoveredRef.current = true;
                     showToast('Recovered your latest editor draft on this device.');
                 }
-            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, publicSlug]);
+            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, isGuestWorkspace, publicSlug]);
 
             useEffect(() => {
-                if (publicSlug || !editorDraftOwnerKey || !isEditorWorkspaceOpen) {
+                if (publicSlug || isGuestWorkspace || !editorDraftOwnerKey || !isEditorWorkspaceOpen) {
                     editorDraftFlushRef.current = null;
                     return undefined;
                 }
@@ -2049,10 +2348,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 window.clearTimeout(editorDraftSaveTimerRef.current);
                 editorDraftSaveTimerRef.current = window.setTimeout(persistDraft, 400);
                 return undefined;
-            }, [editorDraftOwnerKey, editorStudioScene, editorTab, isEditorWorkspaceOpen, publicSlug, settings, themeTemplateName]);
+            }, [editorDraftOwnerKey, editorStudioScene, editorTab, isEditorWorkspaceOpen, isGuestWorkspace, publicSlug, settings, themeTemplateName]);
 
             useEffect(() => {
-                if (publicSlug || !isFirebaseConfigured || !db || !workspaceOwnerId || !canManageWorkspace || activeTab !== 'editor') return undefined;
+                if (publicSlug || isGuestWorkspace || !isFirebaseConfigured || !db || !workspaceOwnerId || !canManageWorkspace || activeTab !== 'editor') return undefined;
                 const fingerprint = stableSettingsFingerprint(settings);
                 if (!fingerprint || fingerprint === editorDraftCloudFingerprintRef.current) return undefined;
                 window.clearTimeout(editorDraftCloudTimerRef.current);
@@ -2075,7 +2374,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
                 }, 7000);
                 return undefined;
-            }, [activeTab, canManageWorkspace, editorStudioScene, editorTab, publicSlug, settings, themeTemplateName, view, workspaceOwnerId]);
+            }, [activeTab, canManageWorkspace, editorStudioScene, editorTab, isGuestWorkspace, publicSlug, settings, themeTemplateName, view, workspaceOwnerId]);
 
             useEffect(() => {
                 const flushLocalDraft = () => {
@@ -3771,6 +4070,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     setBookingsReady(true);
                     return undefined;
                 }
+                if (isGuestWorkspace) {
+                    setBookingsReady(true);
+                    return undefined;
+                }
                 if (!isFirebaseConfigured || !db) {
                     setBookingsReady(true);
                     return undefined;
@@ -3814,7 +4117,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
 
                 return () => unsubBookings();
-            }, [loading, publicSlug, user?.uid, workspaceOwnerId]);
+            }, [isGuestWorkspace, loading, publicSlug, user?.uid, workspaceOwnerId]);
 
             const publishSettings = async (nextSettings = settings, successMessage = "Booking page published!", options = {}) => {
                 const silent = Boolean(options.silent);
@@ -3936,17 +4239,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'staffAccess', emailKey, 'workspaces', workspaceOwnerId));
             };
 
-            const saveStaff = async (newList, previousList = staffList) => {
+            const saveStaff = async (newList, previousList = staffList, options = {}) => {
+                const profileForStaff = options.profile || personalProfile;
+                const displayNameForStaff = options.displayName || personalDisplayName;
                 const normalizedList = newList.map((staff, index) => {
                     if (staff.id === 'owner') {
                         return {
                             ...staff,
                             ...createOwnerStaffProfile({
                                 ...user,
-                                displayName: personalDisplayName,
-                                email: personalProfile.email || user?.email || staff.email || '',
-                                photoURL: personalProfile.photoURL || staff.photoURL || user?.photoURL || '',
-                                phoneNumber: personalProfile.mobile || staff.phone || user?.phoneNumber || ''
+                                displayName: displayNameForStaff,
+                                email: profileForStaff.email || user?.email || staff.email || '',
+                                photoURL: profileForStaff.photoURL || staff.photoURL || user?.photoURL || '',
+                                phoneNumber: profileForStaff.mobile || staff.phone || user?.phoneNumber || ''
                             }, staff.color || '#39FF14'),
                             color: staff.color || '#39FF14',
                             role: 'owner',
@@ -4571,8 +4876,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     const url = await uploadAsset(croppedFile, folder);
                     setImageCropModal(null);
                     imageCropCommitRef.current = null;
-                    await onComplete?.(url, croppedFile);
-                    showToast('Image saved.');
+                    const completionMessage = await onComplete?.(url, croppedFile);
+                    if (completionMessage !== false) {
+                        showToast(typeof completionMessage === 'string' ? completionMessage : 'Image saved.');
+                    }
                 } catch (error) {
                     console.error(error);
                     showToast('Image crop could not be saved.');
@@ -4590,17 +4897,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const nextDisplayName = [nextProfile.firstName, nextProfile.lastName].filter(Boolean).join(' ').trim() || personalDisplayName;
                 const emailKey = normalizeEmail(user?.email || '');
                 const profileEmailKey = normalizeEmail(nextProfile.email || '');
-
-                setSettings(prev => ({
-                    ...prev,
+                const nextSettings = {
+                    ...settings,
                     accountProfiles: {
-                        ...(prev.accountProfiles || {}),
+                        ...(settings.accountProfiles || {}),
                         [accountProfileKey]: nextProfile
                     }
-                }));
-                setAccountProfileOverride(nextProfile);
-
-                setStaffList(prev => (prev || []).map(staff => {
+                };
+                const nextStaffList = (staffList || []).map(staff => {
                     const isCurrentPerson = (
                         (user?.uid && staff.uid === user.uid) ||
                         (emailKey && normalizeEmail(staff.email || '') === emailKey) ||
@@ -4616,44 +4920,35 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         photoURL: nextProfile.photoURL || staff.photoURL || '',
                         updatedAt: Date.now()
                     };
-                }));
-            };
-            const handlePersonalProfilePhotoUpload = async (file) => {
-                if (!file) return;
-                const previousPhoto = personalProfile.photoURL || '';
-                requestImageCropUpload(file, {
-                    folder: 'account-avatars',
-                    title: 'Crop profile photo',
-                    ratioKey: 'square',
-                    shape: 'circle'
-                }, async (url) => {
-                    if (previousPhoto && previousPhoto !== url) await deleteStorageAsset(previousPhoto);
-                    updatePersonalProfile({ photoURL: url });
-                    showToast('Profile photo updated');
                 });
+
+                setSettings(nextSettings);
+                setAccountProfileOverride(nextProfile);
+                setStaffList(nextStaffList);
+
+                return { nextProfile, nextSettings, nextStaffList, nextDisplayName };
             };
-            const removePersonalProfilePhoto = async () => {
-                const previousPhoto = personalProfile.photoURL || '';
-                updatePersonalProfile({ photoURL: '' });
-                await deleteStorageAsset(previousPhoto);
-                showToast('Profile photo removed');
-            };
-            const saveProfileChanges = async () => {
-                const displayName = [personalProfile.firstName, personalProfile.lastName].filter(Boolean).join(' ').trim() || personalDisplayName;
-                const emailKey = normalizeEmail(personalProfile.email || user?.email || '');
+            const persistProfileChanges = async (
+                profileToSave = personalProfile,
+                settingsToSave = settings,
+                staffListToSave = displayStaffList,
+                successMessage = 'Profile updated.'
+            ) => {
+                const displayName = [profileToSave.firstName, profileToSave.lastName].filter(Boolean).join(' ').trim() || personalDisplayName;
+                const emailKey = normalizeEmail(profileToSave.email || user?.email || '');
                 try {
                     if (isFirebaseConfigured && user?.uid) {
                         const accountPayload = {
                             uid: user.uid,
                             email: emailKey,
                             displayName,
-                            firstName: personalProfile.firstName || '',
-                            lastName: personalProfile.lastName || '',
-                            mobile: personalProfile.mobile || '',
-                            phone: personalProfile.mobile || '',
-                            photoURL: personalProfile.photoURL || '',
+                            firstName: profileToSave.firstName || '',
+                            lastName: profileToSave.lastName || '',
+                            mobile: profileToSave.mobile || '',
+                            phone: profileToSave.mobile || '',
+                            photoURL: profileToSave.photoURL || '',
                             personalProfile: {
-                                ...personalProfile,
+                                ...profileToSave,
                                 email: emailKey,
                                 updatedAt: Date.now()
                             },
@@ -4666,20 +4961,46 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
 
                     if (canManageWorkspace) {
-                        await publishSettings(settings, 'Profile updated.', { silent: true });
+                        await publishSettings(settingsToSave, successMessage, { silent: true });
                     } else if (!isFirebaseConfigured) {
-                        setSettings(settings);
+                        setSettings(settingsToSave);
                     }
 
                     if (canManageTeam) {
-                        await saveStaff(displayStaffList, staffList);
+                        await saveStaff(staffListToSave, staffList, { profile: profileToSave, displayName });
                     }
 
-                    showToast('Profile updated.');
+                    showToast(successMessage);
+                    return true;
                 } catch (error) {
                     console.error(error);
                     showToast('Profile could not be saved.');
+                    return false;
                 }
+            };
+            const handlePersonalProfilePhotoUpload = async (file) => {
+                if (!file) return;
+                const previousPhoto = personalProfile.photoURL || '';
+                requestImageCropUpload(file, {
+                    folder: 'account-avatars',
+                    title: 'Crop profile photo',
+                    ratioKey: 'square',
+                    shape: 'circle'
+                }, async (url) => {
+                    if (previousPhoto && previousPhoto !== url) await deleteStorageAsset(previousPhoto);
+                    const { nextProfile, nextSettings, nextStaffList } = updatePersonalProfile({ photoURL: url });
+                    await persistProfileChanges(nextProfile, nextSettings, nextStaffList, 'Profile photo saved.');
+                    return false;
+                });
+            };
+            const removePersonalProfilePhoto = async () => {
+                const previousPhoto = personalProfile.photoURL || '';
+                const { nextProfile, nextSettings, nextStaffList } = updatePersonalProfile({ photoURL: '' });
+                await deleteStorageAsset(previousPhoto);
+                await persistProfileChanges(nextProfile, nextSettings, nextStaffList, 'Profile photo removed.');
+            };
+            const saveProfileChanges = async () => {
+                await persistProfileChanges();
             };
             const handleSettingImageUpload = async (key, file, folder) => {
                 if (!file) return;
@@ -4825,6 +5146,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setActiveWorkspaceOwnerId('');
                 setWorkspaceAccess([]);
                 safeLocalRemove('build-a-booking-active-workspace');
+                clearEditorDraft('guest');
                 resetWorkspaceRuntimeState();
                 setGuestMode(true);
                 setClientGuestMode(false);
@@ -5910,21 +6232,24 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     title: 'Account & Access',
                     note: isGuestWorkspace ? 'Guest workspace controls' : user?.email || 'Owner account',
                     icon: ShieldCheck,
-                    meta: workspaceRole
+                    meta: workspaceRole,
+                    quick: ['Photo & name', 'Login state', 'Team identity']
                 },
                 {
                     id: 'billing',
                     title: 'Plan & Billing',
                     note: 'Plans, checkout, and billing portal',
                     icon: Briefcase,
-                    meta: 'Ready'
+                    meta: 'Ready',
+                    quick: ['Upgrade plan', 'Billing portal', 'Plan status']
                 },
                 {
                     id: 'business',
                     title: 'Business Details',
                     note: settings.brandName || 'Brand, venue gallery, links, logo, and banner',
                     icon: Images,
-                    meta: settings.slug || 'booking'
+                    meta: settings.slug || 'booking',
+                    quick: ['Logo & banner', 'Venue gallery', 'Social links']
                 },
                 {
                     id: 'manual',
@@ -5932,6 +6257,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     note: 'Feature guide and setup help',
                     icon: BookOpen,
                     meta: 'Guide',
+                    quick: ['Setup guide', 'Feature map', 'Best practices'],
                     action: () => setShowOwnerManual(true)
                 }
             ];
@@ -6680,7 +7006,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                             <div className="profile-mobile-hub max-w-6xl mb-4">
                                 {!activeProfileSection ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                                    <div className="profile-command-grid">
                                         {profileSections.map(section => {
                                             const IconCmp = section.icon;
                                             return (
@@ -6688,20 +7014,25 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     key={section.id}
                                                     type="button"
                                                     onClick={() => section.action ? section.action() : setActiveProfileSection(section.id)}
-                                                    className="w-full rounded-2xl border border-neutral-100 bg-white p-4 text-left shadow-[0_14px_36px_-30px_rgba(15,23,42,0.45)] flex items-center justify-between gap-4"
+                                                    className="profile-command-card"
                                                 >
-                                                    <span className="flex items-center gap-3 min-w-0">
-                                                        <span className="w-11 h-11 rounded-xl native-gradient-icon flex items-center justify-center shrink-0 text-black">
+                                                    <span className="profile-command-card-top">
+                                                        <span className="profile-command-icon native-gradient-icon">
                                                             <IconCmp size={18} />
                                                         </span>
-                                                        <span className="min-w-0">
-                                                            <span className="block text-base font-bold tracking-tight text-black truncate">{section.title}</span>
-                                                            <span className="block text-xs text-neutral-500 font-medium mt-0.5 truncate">{section.note}</span>
-                                                        </span>
+                                                        <span className="profile-command-meta">{section.meta}</span>
                                                     </span>
-                                                    <span className="flex items-center gap-2 shrink-0">
-                                                        <span className="max-w-[5.8rem] truncate rounded-full bg-neutral-50 border border-neutral-100 px-2.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">{section.meta}</span>
-                                                        <ChevronRight size={17} className="text-neutral-300" />
+                                                    <span className="profile-command-copy">
+                                                        <span>{section.title}</span>
+                                                        <small>{section.note}</small>
+                                                    </span>
+                                                    <span className="profile-command-quick">
+                                                        {(section.quick || []).map(item => (
+                                                            <span key={item}>{item}</span>
+                                                        ))}
+                                                    </span>
+                                                    <span className="profile-command-arrow" aria-hidden="true">
+                                                        <ChevronRight size={17} />
                                                     </span>
                                                 </button>
                                             );

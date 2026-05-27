@@ -141,6 +141,33 @@ const emptyDrafts = gatewayCards.reduce((acc, gateway) => {
   return acc;
 }, {});
 
+const guestDemoGatewaySettings = {
+  manual_eft: {
+    enabled: true,
+    mode: 'demo',
+    public: {
+      accountHolder: 'Luxe & Loom Hair House',
+      bankName: 'Demo Bank',
+      accountNumber: '000 123 456',
+      branchCode: '250655',
+      accountType: 'Business Current',
+      instructions: 'Use your booking reference so the salon can match payment quickly.'
+    }
+  },
+  cash: {
+    enabled: true,
+    mode: 'demo',
+    public: {
+      instructions: 'Cash accepted at reception. The finance desk keeps it open until marked paid.'
+    }
+  },
+  yoco: {
+    enabled: true,
+    mode: 'demo',
+    public: {}
+  }
+};
+
 const exampleTransactions = [
   {
     id: 'example-paid-1',
@@ -406,13 +433,16 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
 
   const selectedGateway = gatewayById[selectedGatewayId] || gatewayCards[0];
   const selectedDraft = drafts[selectedGateway.id] || emptyDrafts[selectedGateway.id];
-  const selectedPublicConfig = saved[selectedGateway.id] || {};
+  const effectiveSaved = useMemo(() => (
+    isGuestWorkspace ? { ...guestDemoGatewaySettings, ...saved } : saved
+  ), [isGuestWorkspace, saved]);
+  const selectedPublicConfig = effectiveSaved[selectedGateway.id] || {};
   const isManualGateway = manualGatewayIds.has(selectedGateway.id);
   const isCashGateway = selectedGateway.id === 'cash';
 
   const enabledCount = useMemo(() => (
-    gatewayCards.filter((gateway) => saved[gateway.id]?.enabled).length
-  ), [saved]);
+    gatewayCards.filter((gateway) => effectiveSaved[gateway.id]?.enabled).length
+  ), [effectiveSaved]);
 
   const periodRange = useMemo(() => getPeriodRange(period, customRange), [period, customRange]);
 
@@ -448,14 +478,18 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
       .sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0))
   ), [manualBookingRows, paymentAttempts]);
 
+  const effectiveFinanceRecords = useMemo(() => (
+    financeRecords.length ? financeRecords : (isGuestWorkspace ? exampleTransactions : [])
+  ), [financeRecords, isGuestWorkspace]);
+
   const periodRecords = useMemo(() => {
     const startMs = periodRange.start.getTime();
     const endMs = periodRange.end.getTime();
-    return financeRecords.filter((record) => {
+    return effectiveFinanceRecords.filter((record) => {
       if (!record.updatedAtMs) return false;
       return record.updatedAtMs >= startMs && record.updatedAtMs < endMs;
     });
-  }, [financeRecords, periodRange]);
+  }, [effectiveFinanceRecords, periodRange]);
 
   const financeMetrics = useMemo(() => {
     const paid = periodRecords.filter((record) => record.status === 'paid');
@@ -474,7 +508,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
   const maxChartValue = Math.max(...chartBuckets.map((bucket) => bucket.value), 1);
 
   const visibleDeskRows = useMemo(() => {
-    const rows = financeRecords.length ? financeRecords : (isGuestWorkspace ? exampleTransactions : []);
+    const rows = effectiveFinanceRecords;
     const queryText = search.trim().toLowerCase();
     return rows.filter((row) => {
       const typeMatches = deskView === 'transactions'
@@ -493,7 +527,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
         row.status
       ].some((value) => String(value || '').toLowerCase().includes(queryText));
     }).slice(0, 12);
-  }, [deskView, financeRecords, search]);
+  }, [deskView, effectiveFinanceRecords, search]);
 
   const updateDraft = (gatewayId, patch) => {
     setDrafts((current) => ({
@@ -565,7 +599,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
   };
 
   const downloadFinanceCsv = () => {
-    const rows = (financeRecords.length ? financeRecords : (isGuestWorkspace ? exampleTransactions : [])).map((row) => ({
+    const rows = effectiveFinanceRecords.map((row) => ({
       id: row.id,
       status: row.status,
       gateway: gatewayById[row.gatewayType]?.name || row.gatewayType || 'Gateway',
