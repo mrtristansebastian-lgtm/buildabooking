@@ -85,6 +85,7 @@ const IMAGE_CROP_RATIOS = {
 
 const loadImageForCrop = (src) => new Promise((resolve, reject) => {
   const image = new Image();
+  image.crossOrigin = 'anonymous';
   image.onload = () => resolve(image);
   image.onerror = reject;
   image.src = src;
@@ -287,7 +288,7 @@ const themeTemplateKeys = [
   'brandNameSize', 'brandNameFontFamily', 'taglineSize', 'taglineFontFamily',
   'welcomeSize', 'welcomeFontFamily', 'headingLetterSpacing', 'subtextLetterSpacing',
   'buttonStyle', 'availabilityStyle', 'dateStyle', 'timeSlotStyle', 'actionButtonStyle',
-  'calendarDisplayStyle', 'timeDisplayStyle', 'serviceDisplayStyle',
+  'calendarDisplayStyle', 'timeDisplayStyle', 'serviceDisplayStyle', 'serviceBorderStyle',
   'faqStyle', 'faqDisplayStyle', 'faqBgColor', 'faqBorderColor', 'faqTextColor', 'faqAnswerColor', 'faqFontFamily',
   'venueGalleryStyle', 'venueTitle', 'venueIntro', 'mapDisplayStyle',
   'socialIconStyle', 'socialDisplayStyle', 'socialIconBgColor', 'socialIconColor', 'socialIconTextColor'
@@ -674,6 +675,7 @@ const createDefaultSettings = () => ({
   calendarDisplayStyle: 'studio',
   timeDisplayStyle: 'pill',
   serviceDisplayStyle: 'cards',
+  serviceBorderStyle: 'solid',
   faqStyle: 'minimal',
   faqDisplayStyle: 'accordion',
   faqBgColor: 'transparent',
@@ -1100,7 +1102,7 @@ function StyleSegmentedControl({ value, onChange, label = 'Style' }) {
   );
 }
 
-function InterfaceLookGrid({ value, onChange, looks = [], label = 'Display look' }) {
+function InterfaceLookGrid({ value, onChange, looks = [], label = 'Display look', children }) {
   const activeValue = value || looks[0]?.id;
 
   return (
@@ -1130,6 +1132,7 @@ function InterfaceLookGrid({ value, onChange, looks = [], label = 'Display look'
           );
         })}
       </div>
+      {children && <div className="cinema-look-picker-footer">{children}</div>}
     </div>
   );
 }
@@ -4650,6 +4653,34 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 await deleteStorageAsset(previousUrl);
                 showToast('Image removed');
             };
+            const openSettingImageCrop = (key, folder) => {
+                const currentUrl = settingsRef.current?.[key] || settings[key] || '';
+                if (!currentUrl) {
+                    showToast(key === 'bannerImage' ? 'Upload a banner in Business Profile first.' : 'Upload a logo in Business Profile first.');
+                    return;
+                }
+                const ratioKey = key === 'bannerImage' ? 'banner' : 'square';
+                imageCropCommitRef.current = {
+                    folder,
+                    onComplete: async (url) => {
+                        if (currentUrl && currentUrl !== url) await deleteStorageAsset(currentUrl);
+                        handleSettingChange(key, url);
+                        showToast(key === 'bannerImage' ? 'Banner crop updated' : 'Logo crop updated');
+                    }
+                };
+                setImageCropModal({
+                    source: currentUrl,
+                    fileName: key === 'bannerImage' ? 'booking-banner.jpg' : 'business-logo.jpg',
+                    title: key === 'bannerImage' ? 'Adjust banner crop' : 'Adjust logo crop',
+                    ratioKey,
+                    shape: key === 'bannerImage' ? 'rounded' : 'square',
+                    zoom: 1,
+                    positionX: 50,
+                    positionY: key === 'bannerImage'
+                        ? ({ top: 18, center: 50, bottom: 82 }[getBannerDisplay(settingsRef.current || settings).position] || 50)
+                        : 50
+                });
+            };
             const handleVenuePhotoUpload = async (files) => {
                 const photoFiles = Array.from(files || []).filter(Boolean).slice(0, 8);
                 if (!photoFiles.length) return;
@@ -7832,18 +7863,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                                                         <div className="editor-cinema-control-panel">
                                                             {activeScene.id === 'services' && <>
-                                                                <div className="cinema-control-title"><span>Service menu</span><small>Services are edited in their own studio so pricing, galleries, and staff stay organized.</small></div>
+                                                                <div className="cinema-control-title"><span>Services display</span><small>Choose how bookable services are presented on the booking page.</small></div>
                                                                 <InterfaceLookGrid
-                                                                    label="Services display"
+                                                                    label="Display type"
                                                                     looks={editorInterfaceLooks.services}
                                                                     value={settings.serviceDisplayStyle || 'cards'}
                                                                     onChange={(value) => handleSettingChange('serviceDisplayStyle', value)}
-                                                                />
-                                                                <div className="cinema-feature-preview">
-                                                                    {workspaceServices.slice(0, 6).map(service => <span key={service.id} className={service.active !== false ? 'is-on' : ''}>{service.name}</span>)}
-                                                                    {workspaceServices.length === 0 && <span>Add your first service</span>}
-                                                                </div>
-                                                                <button type="button" onClick={() => setActiveTab('services')}><Briefcase size={15}/> Open Services</button>
+                                                                >
+                                                                    <StyleSegmentedControl value={settings.serviceBorderStyle || 'solid'} onChange={(value) => handleSettingChange('serviceBorderStyle', value)} label="Border style" />
+                                                                </InterfaceLookGrid>
                                                             </>}
 
                                                             {activeScene.id === 'colours' && <>
@@ -7958,47 +7986,36 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                                 ))}
                                                                             </div>
                                                                         </details>
-                                                                        <div className="cinema-media-display-suite">
-                                                                            <section className="cinema-media-display-card">
-                                                                                <div className="cinema-media-preview is-logo">
-                                                                                    <div className="cinema-logo-size-preview" style={{ width: `${Math.min(96, Math.max(42, logoDisplay.size * 0.52))}px`, height: `${Math.min(96, Math.max(42, logoDisplay.size * 0.52))}px` }}>
-                                                                                        {settings.logo ? <img src={settings.logo} alt="" /> : <span>Logo</span>}
-                                                                                    </div>
+                                                                        <div className="cinema-media-actions">
+                                                                            <section className="cinema-media-action-card">
+                                                                                <div>
+                                                                                    <strong>Logo on booking page</strong>
+                                                                                    <small>Shared from Business Profile. Crop changes stay linked everywhere.</small>
                                                                                 </div>
-                                                                                <div className="cinema-media-display-body">
-                                                                                    <div className="cinema-display-card-head">
-                                                                                        <strong>Logo display</strong>
-                                                                                        <button type="button" onClick={() => handleLogoDisplayChange('visible', !logoDisplay.visible)} className={logoDisplay.visible ? 'is-active' : ''}>{logoDisplay.visible ? 'Shown' : 'Hidden'}</button>
-                                                                                    </div>
-                                                                                    <label className="cinema-range-row">
-                                                                                        <span>Size</span>
-                                                                                        <input type="range" min="48" max="176" value={logoDisplay.size} onChange={(event) => handleLogoDisplayChange('size', Number(event.target.value))} />
-                                                                                        <b>{logoDisplay.size}px</b>
-                                                                                    </label>
-                                                                                    <p className="cinema-profile-note">Logo upload lives in Business Profile.</p>
+                                                                                <div className="cinema-media-action-controls">
+                                                                                    <button type="button" onClick={() => handleLogoDisplayChange('visible', !logoDisplay.visible)} className={logoDisplay.visible ? 'is-active' : ''}>{logoDisplay.visible ? 'Shown' : 'Hidden'}</button>
+                                                                                    <button type="button" onClick={() => openSettingImageCrop('logo', 'logos')} aria-label="Crop logo"><Crop size={15} /></button>
                                                                                 </div>
+                                                                                <label className="cinema-range-row">
+                                                                                    <span>Size</span>
+                                                                                    <input type="range" min="48" max="176" value={logoDisplay.size} onChange={(event) => handleLogoDisplayChange('size', Number(event.target.value))} />
+                                                                                    <b>{logoDisplay.size}px</b>
+                                                                                </label>
                                                                             </section>
-                                                                            <section className="cinema-media-display-card">
-                                                                                <div className="cinema-media-preview is-banner">
-                                                                                    {settings.bannerImage ? <img src={settings.bannerImage} alt="" style={{ objectPosition: bannerDisplay.position === 'top' ? 'center top' : bannerDisplay.position === 'bottom' ? 'center bottom' : 'center center' }} /> : <span>Banner</span>}
+                                                                            <section className="cinema-media-action-card">
+                                                                                <div>
+                                                                                    <strong>Banner on booking page</strong>
+                                                                                    <small>Shared from Business Profile. Use crop to reframe the image.</small>
                                                                                 </div>
-                                                                                <div className="cinema-media-display-body">
-                                                                                    <div className="cinema-display-card-head">
-                                                                                        <strong>Banner display</strong>
-                                                                                        <button type="button" onClick={() => handleBannerDisplayChange('visible', !bannerDisplay.visible)} className={bannerDisplay.visible ? 'is-active' : ''}>{bannerDisplay.visible ? 'Shown' : 'Hidden'}</button>
-                                                                                    </div>
-                                                                                    <label className="cinema-range-row">
-                                                                                        <span>Height</span>
-                                                                                        <input type="range" min="120" max="360" value={bannerDisplay.height} onChange={(event) => handleBannerDisplayChange('height', Number(event.target.value))} />
-                                                                                        <b>{bannerDisplay.height}px</b>
-                                                                                    </label>
-                                                                                    <div className="cinema-banner-crop-grid" aria-label="Banner crop position">
-                                                                                        {['top', 'center', 'bottom'].map(position => (
-                                                                                            <button key={position} type="button" onClick={() => handleBannerDisplayChange('position', position)} className={bannerDisplay.position === position ? 'is-active' : ''}>{position}</button>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                    <p className="cinema-profile-note">Banner upload lives in Business Profile.</p>
+                                                                                <div className="cinema-media-action-controls">
+                                                                                    <button type="button" onClick={() => handleBannerDisplayChange('visible', !bannerDisplay.visible)} className={bannerDisplay.visible ? 'is-active' : ''}>{bannerDisplay.visible ? 'Shown' : 'Hidden'}</button>
+                                                                                    <button type="button" onClick={() => openSettingImageCrop('bannerImage', 'banners')} aria-label="Crop banner"><Crop size={15} /></button>
                                                                                 </div>
+                                                                                <label className="cinema-range-row">
+                                                                                    <span>Height</span>
+                                                                                    <input type="range" min="120" max="360" value={bannerDisplay.height} onChange={(event) => handleBannerDisplayChange('height', Number(event.target.value))} />
+                                                                                    <b>{bannerDisplay.height}px</b>
+                                                                                </label>
                                                                             </section>
                                                                         </div>
                                                                     </div>
@@ -8012,11 +8029,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     value={settings.calendarDisplayStyle || 'studio'}
                                                                     onChange={(value) => {
                                                                         handleSettingChange('calendarDisplayStyle', value);
-                                                                        handleSettingChange('dateStyle', ({ studio: 'solid', classic: 'outline', editorial: 'minimal', compact: 'solid', glow: 'outline' }[value]) || 'solid');
                                                                         handleSettingChange('calendarGlow', value === 'glow');
                                                                     }}
-                                                                />
-                                                                <VisualEditorGroup title="Calendar frame" note="Date cards, active state, background, and glow."><StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Calendar Style" /></VisualEditorGroup>
+                                                                >
+                                                                    <StyleSegmentedControl value={settings.dateStyle || settings.availabilityStyle || 'solid'} onChange={(value) => handleSettingChange('dateStyle', value)} label="Border style" />
+                                                                </InterfaceLookGrid>
                                                                 <div className="cinema-field-grid">
                                                                     <label>Active color<input type="color" value={settings.dateActiveBgColor?.slice(0, 7) || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('dateActiveBgColor', event.target.value)} /></label>
                                                                     <label>Active text<input type="color" value={settings.dateActiveTextColor || '#050505'} onChange={(event) => handleSettingChange('dateActiveTextColor', event.target.value)} /></label>
@@ -8034,12 +8051,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     label="Time display"
                                                                     looks={editorInterfaceLooks.time}
                                                                     value={settings.timeDisplayStyle || 'pill'}
-                                                                    onChange={(value) => {
-                                                                        handleSettingChange('timeDisplayStyle', value);
-                                                                        handleSettingChange('timeSlotStyle', ({ pill: 'solid', blocks: 'solid', minimal: 'minimal', luxury: 'outline', compact: 'outline' }[value]) || 'solid');
-                                                                    }}
-                                                                />
-                                                                <VisualEditorGroup title="Time slots" note="Bookable time cards only."><StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'minimal'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Time Box Style" /></VisualEditorGroup>
+                                                                    onChange={(value) => handleSettingChange('timeDisplayStyle', value)}
+                                                                >
+                                                                    <StyleSegmentedControl value={settings.timeSlotStyle || settings.availabilityStyle || 'solid'} onChange={(value) => { handleSettingChange('timeSlotStyle', value); handleSettingChange('availabilityStyle', value); }} label="Border style" />
+                                                                </InterfaceLookGrid>
                                                                 <div className="cinema-field-grid">
                                                                     <label>Slot background<input type="color" value={settings.slotBgColor || '#f8fafc'} onChange={(event) => handleSettingChange('slotBgColor', event.target.value)} /></label>
                                                                     <label>Slot text<input type="color" value={settings.slotTextColor || '#050505'} onChange={(event) => handleSettingChange('slotTextColor', event.target.value)} /></label>
@@ -8073,12 +8088,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     label="FAQ display"
                                                                     looks={editorInterfaceLooks.faq}
                                                                     value={settings.faqDisplayStyle || settings.faqStyle || 'accordion'}
-                                                                    onChange={(value) => {
-                                                                        handleSettingChange('faqDisplayStyle', value);
-                                                                        handleSettingChange('faqStyle', ({ accordion: 'outline', cards: 'solid', minimal: 'minimal', numbered: 'outline', split: 'solid' }[value]) || 'outline');
-                                                                    }}
-                                                                />
-                                                                <VisualEditorGroup title="FAQ weight" note="Fine tune the question card surface."><StyleSegmentedControl value={settings.faqStyle || 'minimal'} onChange={(value) => handleSettingChange('faqStyle', value)} label="FAQ Weight" /></VisualEditorGroup>
+                                                                    onChange={(value) => handleSettingChange('faqDisplayStyle', value)}
+                                                                >
+                                                                    <StyleSegmentedControl value={settings.faqStyle || 'outline'} onChange={(value) => handleSettingChange('faqStyle', value)} label="Border style" />
+                                                                </InterfaceLookGrid>
                                                                 <div className="cinema-field-grid"><label>FAQ background<input type="color" value={settings.faqBgColor === 'transparent' ? '#ffffff' : settings.faqBgColor || '#ffffff'} onChange={(event) => handleSettingChange('faqBgColor', event.target.value)} /></label><label>FAQ border<input type="color" value={settings.faqBorderColor || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('faqBorderColor', event.target.value)} /></label></div>
                                                                 <div className="cinema-faq-editor">
                                                                     <div className="cinema-faq-editor-head">

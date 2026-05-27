@@ -199,6 +199,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const faqStyle = getVisualStyle(settings.faqStyle, 'minimal');
             const socialIconStyle = getVisualStyle(settings.socialIconStyle, 'outline');
             const serviceDisplayStyle = getDisplayLook('services', settings.serviceDisplayStyle, 'cards');
+            const serviceBorderStyle = getVisualStyle(settings.serviceBorderStyle, 'solid');
             const calendarDisplayStyle = getDisplayLook('calendar', settings.calendarDisplayStyle, 'studio');
             const timeDisplayStyle = getDisplayLook('time', settings.timeDisplayStyle, 'pill');
             const faqDisplayStyle = getDisplayLook('faq', settings.faqDisplayStyle, 'accordion');
@@ -404,6 +405,31 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 if (socialIconStyle === 'solid') return { backgroundColor: bg === 'transparent' ? accent : bg, color: settings.socialIconTextColor || settings.buttonTextColor || '#000000', border: '1px solid transparent' };
                 if (socialIconStyle === 'outline') return { backgroundColor: 'transparent', color: accent, border: `1px solid ${accent}55` };
                 return { backgroundColor: 'transparent', color: accent, border: '1px solid transparent' };
+            };
+
+            const getServiceCardStyle = (isActive) => {
+                const accent = settings.primaryColor || '#000000';
+                const heading = settings.headingColor || '#000000';
+                const inactiveBg = `${heading}05`;
+                const activeBg = `${accent}12`;
+                const activeBorder = nativeAccent ? accent : `${accent}CC`;
+                if (serviceBorderStyle === 'minimal') {
+                    return {
+                        borderColor: isActive ? activeBorder : 'transparent',
+                        backgroundColor: isActive ? activeBg : 'transparent',
+                        borderBottomColor: isActive ? activeBorder : `${heading}18`
+                    };
+                }
+                if (serviceBorderStyle === 'outline') {
+                    return {
+                        borderColor: isActive ? activeBorder : `${heading}18`,
+                        backgroundColor: isActive ? activeBg : 'transparent'
+                    };
+                }
+                return {
+                    borderColor: isActive ? activeBorder : `${heading}12`,
+                    backgroundColor: isActive ? activeBg : inactiveBg
+                };
             };
 
             if (isInitialLoading) {
@@ -615,11 +641,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                                     event.stopPropagation();
                                                     setSelectedServiceId(service.id);
                                                 }}
-                                                className={`appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all ${isActive ? `scale-[1.01] shadow-xl ${nativeAccentCardClass} ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
-                                                style={{
-                                                    borderColor: isActive ? settings.primaryColor : `${settings.headingColor || '#000000'}14`,
-                                                    backgroundColor: isActive ? `${settings.primaryColor || '#000000'}10` : `${settings.headingColor || '#000000'}05`
-                                                }}
+                                                className={`appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all booking-service-border-${serviceBorderStyle} ${isActive ? `scale-[1.01] shadow-xl ${nativeAccentCardClass} ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
+                                                style={getServiceCardStyle(isActive)}
                                             >
                                                 <div className="flex items-start gap-4">
                                                     <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ backgroundColor: isActive ? (settings.primaryColor || '#000') : `${settings.headingColor || '#000'}0D`, color: isActive ? (settings.buttonTextColor || '#000') : settings.headingColor }}>
