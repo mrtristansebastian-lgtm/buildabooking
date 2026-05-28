@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Bell, Calendar, Check, ChevronDown, Clock, Info, Maximize2, MessageCircle, Minimize2, Plus, RefreshCw, Search, Send, Users, Wrench, X } from 'lucide-react';
+import { buildJumpGuestChatScript } from '../data/guestWorkspace/jumpStudios';
 import * as FirebaseSDK from '../services/firebase';
 import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
 
@@ -13,23 +14,30 @@ const timestampValue = (value) => {
 
 const LIVE_MESSAGE_LIMIT = 20;
 
-const velvetDemoFallbackScripts = {};
-
-const buildVelvetDemoScript = ({ clientName = 'Client', serviceName = 'appointment', note = '', status = 'pending' }, scriptSource = velvetDemoFallbackScripts) => {
-  const direct = scriptSource[clientName];
-  if (direct) return direct;
+const buildGuestBookingScript = ({ clientName = 'Client', serviceName = 'session', note = '', status = 'pending', chatPreview = '', chatMessages = [] } = {}) => {
+  if (Array.isArray(chatMessages) && chatMessages.length) {
+    const messages = chatMessages
+      .map(message => (typeof message === 'string' ? message : message?.text))
+      .filter(Boolean);
+    if (messages.length) {
+      return {
+        preview: chatPreview || messages[0],
+        messages
+      };
+    }
+  }
+  const direct = buildJumpGuestChatScript({ clientName, serviceName, note, status });
   const cleanNote = String(note || '').replace(/\s+/g, ' ').trim();
-  const topicMatch = cleanNote.match(/Chat:\s*(.*?)(?:\s+Added from|\s+Notes:|$)/i);
-  const topic = (topicMatch?.[1] || cleanNote || `Question about my ${serviceName} booking.`).trim();
+  const topic = cleanNote || direct.preview;
   return {
-    preview: topic,
-    messages: [
-      `Hi Velvet Fade, I am checking in about my ${serviceName} booking.`,
+    preview: direct.preview || topic,
+    messages: direct.messages?.length ? direct.messages : [
+      `Hi Jump Studios, I am checking in about my ${serviceName} booking.`,
       topic,
-      `Absolutely. We have that noted for your ${serviceName}, and the team will prep the chair around it.`,
+      `Absolutely. We have that noted for your ${serviceName}, and the coaching team will shape the session around it.`,
       status === 'waitlist'
-        ? 'Thanks. Please keep me posted if the chair opens.'
-        : 'Perfect, thank you. See you at the shop.'
+        ? 'Thanks. Please keep me posted if a better slot opens.'
+        : 'Perfect, thank you. This makes the plan feel clear.'
     ]
   };
 };
@@ -79,18 +87,17 @@ export function WorkspaceInbox({
   const [supportToolsOpen, setSupportToolsOpen] = useState(false);
   const [quickBookingOpen, setQuickBookingOpen] = useState(false);
   const [quickBookingSaving, setQuickBookingSaving] = useState(false);
-  const [guestChatScripts, setGuestChatScripts] = useState(velvetDemoFallbackScripts);
 
   const exampleThread = useMemo(() => ({
     id: 'example-support-thread',
-    clientName: 'Sipho Mokoena',
-    clientEmail: 'sipho.mokoena@velvetfade.example',
+    clientName: 'Mina Patel',
+    clientEmail: 'mina.patel@jump-client.example',
     clientPhotoURL: '',
-    workspaceName: 'Velvet Fade Studio',
-    lastMessage: 'Can I move my Skin Fade to later on Friday if anything opens?',
+    workspaceName: 'Jump Studios',
+    lastMessage: 'Can we keep the assessment focused on training around a product launch?',
     bookingId: 'example-support-booking',
     bookingStatus: 'pending',
-    serviceName: 'Skin Fade',
+    serviceName: 'Jump Start Assessment',
     ownerUnread: 1,
     clientUnread: 0,
     rescheduleStatus: 'requested',
@@ -99,13 +106,13 @@ export function WorkspaceInbox({
 
   const exampleBooking = useMemo(() => ({
     id: 'example-support-booking',
-    clientName: 'Sipho Mokoena',
-    clientEmail: 'sipho.mokoena@velvetfade.example',
+    clientName: 'Mina Patel',
+    clientEmail: 'mina.patel@jump-client.example',
     clientPhotoURL: '',
     date: 'Thursday, May 28',
     time: '17:00',
     status: 'pending',
-    serviceName: 'Skin Fade',
+    serviceName: 'Jump Start Assessment',
     isExample: true
   }), []);
 
@@ -114,35 +121,21 @@ export function WorkspaceInbox({
       id: 'example-system',
       senderRole: 'system',
       senderName: 'Booking update',
-      text: 'Example Skin Fade request received for Thursday, May 28 at 17:00.'
+      text: 'Example Jump Start Assessment request received for Thursday, May 28 at 17:00.'
     },
     {
       id: 'example-client',
       senderRole: 'client',
-      senderName: 'Sipho Mokoena',
-      text: 'Hey, could I move my Skin Fade to later on Friday if anything opens?'
+      senderName: 'Mina Patel',
+      text: 'Hey, can we keep the assessment focused on training around a product launch?'
     },
     {
       id: 'example-owner',
       senderRole: 'owner',
-      senderName: 'Velvet Fade Studio',
-      text: 'Absolutely. We can offer 17:00 or place you on the waitlist for 18:30.'
+      senderName: 'Jump Studios',
+      text: 'Absolutely. We can map your launch schedule, training windows, and recovery plan in the first session.'
     }
   ]), []);
-
-  useEffect(() => {
-    if (!isGuestWorkspace) return undefined;
-    let cancelled = false;
-    fetch('/velvet-demo-chats.json')
-      .then((response) => response.ok ? response.json() : {})
-      .then((scripts) => {
-        if (!cancelled && scripts && typeof scripts === 'object') setGuestChatScripts(scripts);
-      })
-      .catch(() => {
-        if (!cancelled) setGuestChatScripts(velvetDemoFallbackScripts);
-      });
-    return () => { cancelled = true; };
-  }, [isGuestWorkspace]);
 
   const guestDemoThreads = useMemo(() => {
     if (!isGuestWorkspace || !Array.isArray(bookings) || bookings.length === 0) return [];
@@ -157,18 +150,20 @@ export function WorkspaceInbox({
       })
       .slice(0, 50)
       .map((booking, index) => {
-        const script = buildVelvetDemoScript({
+        const script = buildGuestBookingScript({
           clientName: booking.clientName,
           serviceName: booking.serviceName,
           note: booking.clientNote,
-          status: booking.status
-        }, guestChatScripts);
+          status: booking.status,
+          chatPreview: booking.chatPreview,
+          chatMessages: booking.chatMessages
+        });
         return {
           id: `guest-thread-${booking.id}`,
           clientName: booking.clientName,
           clientEmail: booking.clientEmail,
           clientPhotoURL: '',
-          workspaceName: booking.workspaceName || 'Velvet Fade Studio',
+          workspaceName: booking.workspaceName || 'Jump Studios',
           lastMessage: script.preview,
           chatMessages: script.messages,
           bookingId: booking.id,
@@ -186,7 +181,7 @@ export function WorkspaceInbox({
           isGuestDemo: true
         };
       });
-  }, [bookings, guestChatScripts, isGuestWorkspace]);
+  }, [bookings, isGuestWorkspace]);
 
   const shouldShowExampleThread = isGuestWorkspace && threadsReady && threads.length === 0 && bookings.length === 0;
   const threadSource = threads.length ? threads : (guestDemoThreads.length ? guestDemoThreads : (shouldShowExampleThread ? [exampleThread] : []));
@@ -261,12 +256,12 @@ export function WorkspaceInbox({
     const serviceName = activeThread.serviceName || linkedBooking?.serviceName || 'appointment';
     const script = Array.isArray(activeThread.chatMessages) && activeThread.chatMessages.length
       ? activeThread.chatMessages
-      : buildVelvetDemoScript({
+      : buildGuestBookingScript({
         clientName,
         serviceName,
         note: activeThread.lastMessage,
         status: activeThread.bookingStatus
-      }, guestChatScripts).messages;
+      }).messages;
     return [
       {
         id: `${activeThread.id}-system`,
@@ -277,11 +272,11 @@ export function WorkspaceInbox({
       ...script.map((text, index) => ({
         id: `${activeThread.id}-msg-${index}`,
         senderRole: index === 2 ? 'owner' : 'client',
-        senderName: index === 2 ? 'Velvet Fade Studio' : clientName,
+        senderName: index === 2 ? 'Jump Studios' : clientName,
         text
       }))
     ];
-  }, [activeThread, exampleMessages, guestChatScripts, linkedBooking?.serviceName]);
+  }, [activeThread, exampleMessages, linkedBooking?.serviceName]);
   const visibleMessages = activeThread?.isExample ? guestDemoMessages : [...olderMessages, ...messages];
   const activeStaff = useMemo(() => {
     const emailKey = notificationEmailKey(user?.email || '');

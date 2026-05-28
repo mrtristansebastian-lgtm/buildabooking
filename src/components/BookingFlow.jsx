@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Banknote, Bell, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flame, Globe, Images, Instagram, Landmark, Mail, MapPin, ReceiptText } from 'lucide-react';
+import { ArrowRight, Banknote, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flame, Globe, Images, Instagram, Landmark, Mail, MapPin, ReceiptText } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
 import { formatServiceDuration, formatServicePrice, normalizeServiceList } from '../utils/services';
@@ -7,7 +7,6 @@ import { formatServiceDuration, formatServicePrice, normalizeServiceList } from 
 const alignments = ['left', 'center', 'right'];
 const visualStyles = ['minimal', 'outline', 'solid'];
 const displayLooks = {
-    services: ['cards', 'menu', 'gallery', 'compact', 'luxury'],
     calendar: ['studio', 'classic', 'editorial', 'compact', 'glow'],
     time: ['pill', 'blocks', 'minimal', 'luxury', 'compact'],
     faq: ['accordion', 'cards', 'minimal', 'numbered', 'split'],
@@ -47,12 +46,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
             const [selectedServiceId, setSelectedServiceId] = useState('');
+            const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
             const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', emailOptIn: false });
             const [selectedManualPayment, setSelectedManualPayment] = useState('');
             const [submittedBooking, setSubmittedBooking] = useState(null);
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [submitError, setSubmitError] = useState('');
-            const [isInitialLoading, setIsInitialLoading] = useState(settings.features?.loadingScreen);
+            const [isInitialLoading, setIsInitialLoading] = useState(() => Boolean(settings.features?.loadingScreen));
             const [openFaq, setOpenFaq] = useState(null);
 
             useEffect(() => {
@@ -104,6 +104,9 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const emailOptInEnabled = Boolean(settings.features?.emailUpdates !== false && collectClientEmail);
             const activeServices = useMemo(() => normalizeServiceList(settings.services || []).filter(service => service.active !== false), [settings.services]);
             const selectedService = activeServices.find(service => service.id === selectedServiceId) || activeServices[0] || null;
+            const previewMotionClass = isPreview ? '' : 'transition-all duration-1000';
+            const previewStepMotionClass = isPreview ? '' : 'animate-in fade-in slide-in-from-bottom-20 duration-1000';
+            const previewSuccessMotionClass = isPreview ? '' : 'animate-in zoom-in-95 duration-1000';
             const serviceReady = activeServices.length === 0 || Boolean(selectedService?.id);
             const dateStepNumber = activeServices.length > 0 ? '02' : '01';
             const timeStepNumber = activeServices.length > 0 ? '03' : '02';
@@ -159,7 +162,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const nativeAccentFillClass = nativeAccent ? 'booking-gradient-accent' : '';
             const nativeAccentButtonClass = nativeAccent ? 'booking-gradient-button' : '';
             const nativeAccentBorderClass = nativeAccent ? 'booking-gradient-border' : '';
-            const nativeAccentCardClass = nativeAccent ? 'booking-gradient-card' : '';
 
             const inspectClass = isPreview ? "cursor-pointer hover:ring-1 hover:ring-[#39FF14] hover:ring-offset-4 rounded transition-all duration-300 group/inspect relative" : "";
             const logoDisplay = useMemo(() => {
@@ -169,12 +171,10 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 return {
                     visible: display.visible !== false,
                     alignment,
+                    placement: ['title', 'top', 'badge'].includes(display.placement) ? display.placement : 'title',
                     size: Number.isFinite(size) ? Math.min(176, Math.max(48, size)) : 96
                 };
             }, [settings.logoDisplay]);
-            const logoAlignmentStyle = {
-                justifyContent: logoDisplay.alignment === 'center' ? 'center' : logoDisplay.alignment === 'right' ? 'flex-end' : 'flex-start'
-            };
             const pageAlignment = getAlign(logoDisplay.alignment);
             const pageJustify = pageAlignment === 'center' ? 'center' : pageAlignment === 'right' ? 'flex-end' : 'flex-start';
             const pageItems = pageAlignment === 'center' ? 'items-center' : pageAlignment === 'right' ? 'items-end' : 'items-start';
@@ -198,14 +198,30 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const actionButtonStyle = getVisualStyle(settings.actionButtonStyle, 'solid');
             const faqStyle = getVisualStyle(settings.faqStyle, 'minimal');
             const socialIconStyle = getVisualStyle(settings.socialIconStyle, 'outline');
-            const serviceDisplayStyle = getDisplayLook('services', settings.serviceDisplayStyle, 'cards');
+            const serviceDisplayStyle = 'signature';
+            const serviceDropdownEnabled = Boolean(settings.serviceDropdownEnabled);
+            const serviceDropdownStyle = 'signature';
             const serviceBorderStyle = getVisualStyle(settings.serviceBorderStyle, 'solid');
             const calendarDisplayStyle = getDisplayLook('calendar', settings.calendarDisplayStyle, 'studio');
+            const calendarNativeFillLooks = new Set(['studio', 'glow']);
             const timeDisplayStyle = getDisplayLook('time', settings.timeDisplayStyle, 'pill');
             const faqDisplayStyle = getDisplayLook('faq', settings.faqDisplayStyle, 'accordion');
             const venueGalleryStyle = getDisplayLook('venue', settings.venueGalleryStyle, 'mosaic');
             const mapDisplayStyle = getDisplayLook('maps', settings.mapDisplayStyle, 'card');
             const socialDisplayStyle = getDisplayLook('social', settings.socialDisplayStyle, 'icons');
+            const socialPlacement = ['intro', 'booking', 'footer'].includes(settings.socialPlacement) ? settings.socialPlacement : 'footer';
+
+            useEffect(() => {
+                if (!serviceDropdownEnabled) setServicesDropdownOpen(false);
+            }, [serviceDropdownEnabled]);
+            const serviceCategories = useMemo(() => {
+                const categories = activeServices.map(service => service.category?.trim()).filter(Boolean);
+                return ['All', ...Array.from(new Set(categories))];
+            }, [activeServices]);
+            const [selectedServiceCategory, setSelectedServiceCategory] = useState('All');
+            useEffect(() => {
+                if (!serviceCategories.includes(selectedServiceCategory)) setSelectedServiceCategory('All');
+            }, [selectedServiceCategory, serviceCategories]);
             const faqItems = (settings.features?.faqEnabled && Array.isArray(settings.features?.faqs))
                 ? settings.features.faqs.filter(faq => faq?.q?.trim() && faq?.a?.trim())
                 : [];
@@ -251,13 +267,47 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const bannerDisplay = useMemo(() => {
                 const display = settings.bannerDisplay || {};
                 const height = Number(display.height);
+                const opacity = Number(display.opacity);
                 const position = ['top', 'center', 'bottom'].includes(display.position) ? display.position : 'center';
                 return {
                     visible: display.visible !== false,
+                    placement: ['hero', 'top', 'footer'].includes(display.placement) ? display.placement : 'hero',
                     height: Number.isFinite(height) ? Math.min(360, Math.max(120, height)) : 220,
+                    opacity: Number.isFinite(opacity) ? Math.min(100, Math.max(15, opacity)) : 100,
                     objectPosition: position === 'top' ? 'center top' : position === 'bottom' ? 'center bottom' : 'center center'
                 };
             }, [settings.bannerDisplay]);
+            const hasHeroLogo = Boolean(settings.logo && logoDisplay.visible);
+            const hasHeroBanner = Boolean(settings.bannerImage && bannerDisplay.visible);
+            const renderHeroLogo = (extraClass = '') => hasHeroLogo ? (
+                <button
+                    type="button"
+                    className={`booking-hero-logo-frame ${extraClass} ${inspectClass}`}
+                    style={{ width: logoDisplay.size, height: logoDisplay.size }}
+                    onClick={() => isPreview && onInspect('introduction')}
+                    aria-label="Edit brand logo"
+                >
+                    <img
+                        src={settings.logo}
+                        className="booking-hero-logo"
+                        alt="Brand Logo"
+                    />
+                </button>
+            ) : null;
+            const renderHeroMedia = (extraClass = '') => hasHeroBanner ? (
+                <figure
+                    className={`booking-hero-media ${extraClass} ${inspectClass}`}
+                    style={{ '--hero-media-height': `${bannerDisplay.height}px` }}
+                    onClick={() => isPreview && onInspect('introduction')}
+                >
+                    <img
+                        src={settings.bannerImage}
+                        className="booking-hero-banner-image"
+                        style={{ objectPosition: bannerDisplay.objectPosition, opacity: bannerDisplay.opacity / 100 }}
+                        alt="Booking page banner"
+                    />
+                </figure>
+            ) : null;
 
             useEffect(() => {
                 if (selectedManualPayment && !manualPaymentOptions.some(option => option.id === selectedManualPayment)) {
@@ -411,7 +461,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 const accent = settings.primaryColor || '#000000';
                 const heading = settings.headingColor || '#000000';
                 const inactiveBg = `${heading}05`;
-                const activeBg = `${accent}12`;
+                const activeBg = nativeAccent ? (settings.slotBgColor || '#FFFFFF') : `${accent}12`;
                 const activeBorder = nativeAccent ? accent : `${accent}CC`;
                 if (serviceBorderStyle === 'minimal') {
                     return {
@@ -432,9 +482,209 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 };
             };
 
-            if (isInitialLoading) {
+            const servicesForDisplay = selectedServiceCategory !== 'All'
+                ? activeServices.filter(service => service.category?.trim() === selectedServiceCategory)
+                : activeServices;
+
+            const renderServiceButton = (service) => {
+                const isActive = selectedService?.id === service.id;
+                const price = formatServicePrice(service);
+                const duration = formatServiceDuration(service.duration);
+                const hasFacts = Boolean(price || duration);
+                const hasServiceImage = Boolean(service.imageUrls?.[0]);
                 return (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center transition-opacity duration-1000" style={{ backgroundColor: settings.backgroundColor }}>
+                    <button
+                        key={service.id}
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedServiceId(service.id);
+                        }}
+                        className={`booking-service-option appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all booking-service-border-${serviceBorderStyle} ${hasServiceImage ? 'has-service-image' : 'is-text-only-service'} ${isActive ? `is-selected scale-[1.01] shadow-xl ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
+                        style={getServiceCardStyle(isActive)}
+                    >
+                        <div className="booking-service-shell flex items-start gap-4">
+                            {hasServiceImage && (
+                                <div className="booking-service-image w-14 h-14 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ backgroundColor: isActive ? (settings.primaryColor || '#000') : `${settings.headingColor || '#000'}0D`, color: isActive ? (settings.buttonTextColor || '#000') : settings.headingColor }}>
+                                    <img src={service.imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                                </div>
+                            )}
+                            <div className="booking-service-copy min-w-0 flex-1">
+                                <div className="booking-service-title-line flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        {service.category && <span className="booking-service-eyebrow" style={{ color: settings.bodyColor }}>{service.category}</span>}
+                                        <h5 className="text-base md:text-lg font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</h5>
+                                    </div>
+                                    {isActive && (
+                                        <span className="booking-service-selected-mark" style={{ color: settings.primaryColor, borderColor: `${settings.primaryColor || '#000'}40`, backgroundColor: `${settings.primaryColor || '#000'}0F` }}>
+                                            <Check size={14} />
+                                        </span>
+                                    )}
+                                </div>
+                                {service.description && <p className="text-xs md:text-sm mt-2 leading-relaxed opacity-65" style={{ color: settings.bodyColor }}>{service.description}</p>}
+                                {hasFacts && (
+                                    <div className="booking-service-facts" aria-label="Service price and duration">
+                                        {duration && <span className="booking-service-fact" style={{ backgroundColor: `${settings.headingColor || '#000'}08`, borderColor: `${settings.headingColor || '#000'}10`, color: settings.bodyColor }}><Clock size={12} />{duration}</span>}
+                                        {price && <span className="booking-service-fact is-price" style={{ backgroundColor: `${settings.primaryColor || '#000'}12`, borderColor: `${settings.primaryColor || '#000'}1F`, color: settings.headingColor }}>{price}</span>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </button>
+                );
+            };
+
+            const renderServiceGrid = () => (
+                <div className={`booking-services-wrap booking-services-wrap-${serviceDisplayStyle}`} onClick={() => isPreview && onInspect('services')}>
+                    {serviceCategories.length > 1 && (
+                        <div className="booking-service-category-rail" aria-label="Service categories">
+                            {serviceCategories.map(category => {
+                                const isActive = selectedServiceCategory === category;
+                                return (
+                                    <button
+                                        key={category}
+                                        type="button"
+                                        aria-pressed={isActive}
+                                        className={isActive ? nativeAccentBorderClass : ''}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSelectedServiceCategory(category);
+                                        }}
+                                        style={{
+                                            color: isActive ? settings.headingColor : settings.bodyColor,
+                                            borderColor: isActive ? settings.primaryColor : `${settings.headingColor || '#000'}14`,
+                                            backgroundColor: isActive ? (nativeAccent ? '#fff' : `${settings.primaryColor || '#000'}12`) : `${settings.headingColor || '#000'}05`
+                                        }}
+                                    >
+                                        {category}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                    <div className={`booking-services-grid booking-services-${serviceDisplayStyle} grid grid-cols-1 md:grid-cols-2 gap-3`}>
+                    {servicesForDisplay.map(service => renderServiceButton(service))}
+                    </div>
+                </div>
+            );
+
+            const renderServiceDropdownMenu = () => (
+                <div className="booking-service-dropdown-menu">
+                    {activeServices.map(service => {
+                        const isActive = selectedService?.id === service.id;
+                        const price = formatServicePrice(service);
+                        const hasServiceImage = Boolean(service.imageUrls?.[0]);
+                        const hasPrice = Boolean(price);
+                        return (
+                            <button
+                                key={service.id}
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setSelectedServiceId(service.id);
+                                    setServicesDropdownOpen(false);
+                                }}
+                                className={`booking-service-dropdown-row ${hasServiceImage ? 'has-service-image' : 'is-text-only-service'} ${isActive ? 'is-active' : ''}`}
+                                style={{
+                                    color: settings.headingColor,
+                                    borderColor: isActive ? `${settings.headingColor || settings.primaryColor || '#000'}2B` : `${settings.headingColor || '#000'}10`,
+                                    backgroundColor: isActive ? `${settings.headingColor || settings.primaryColor || '#000'}04` : 'transparent',
+                                    fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily)
+                                }}
+                            >
+                                {hasServiceImage && <span className="booking-service-dropdown-row-image"><img src={service.imageUrls[0]} alt="" /></span>}
+                                <span className="booking-service-dropdown-row-copy">
+                                    <strong style={{ fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</strong>
+                                </span>
+                                {hasPrice && <span className="booking-service-dropdown-row-meta" style={{ color: settings.bodyColor }}>
+                                    {price && <b style={{ color: settings.headingColor }}>{price}</b>}
+                                </span>}
+                                <span className="booking-service-dropdown-row-check" style={{ borderColor: isActive ? settings.primaryColor : `${settings.headingColor || '#000'}14`, color: isActive ? settings.primaryColor : 'transparent' }}>
+                                    <Check size={12} />
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            );
+
+            const renderServiceSection = () => {
+                if (activeServices.length === 0) return null;
+
+                return (
+                    <section data-preview-section="services" className="pt-2" style={{ order: 1 }}>
+                        <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('services')}>
+                            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>01 // Choose Service</h3>
+                            <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
+                                What would you like to book?
+                            </h4>
+                        </div>
+                        {serviceDropdownEnabled ? (
+                            <div className={`booking-services-dropdown ${servicesDropdownOpen ? 'is-open' : ''}`} onClick={() => isPreview && onInspect('services')}>
+                                <button
+                                    type="button"
+                                    className={`booking-service-dropdown-trigger booking-service-dropdown-trigger-${serviceDropdownStyle} booking-service-dropdown-border-${serviceBorderStyle} ${nativeAccentBorderClass}`}
+                                    aria-expanded={servicesDropdownOpen}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        setServicesDropdownOpen(open => !open);
+                                    }}
+                                    style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}
+                                >
+                                    <span className="booking-service-dropdown-copy">
+                                        <strong>{selectedService?.name || 'Choose a service'}</strong>
+                                    </span>
+                                    <span className="booking-service-dropdown-meta">
+                                        {selectedService && formatServicePrice(selectedService) && <span className="booking-service-dropdown-trigger-fact is-price">{formatServicePrice(selectedService)}</span>}
+                                        <ChevronDown size={16} className="booking-service-dropdown-chevron" />
+                                    </span>
+                                </button>
+                                <div className="booking-service-dropdown-panel">
+                                    {renderServiceDropdownMenu()}
+                                </div>
+                            </div>
+                        ) : (
+                            renderServiceGrid()
+                        )}
+                    </section>
+                );
+            };
+
+            const renderSocialLinks = (placement = 'footer') => {
+                if (socialLinks.length === 0 || socialPlacement !== placement) return null;
+                return (
+                    <div className={`booking-social-links booking-social-${socialDisplayStyle} booking-social-placement-${placement} mt-8 flex flex-wrap items-center justify-center gap-3 ${inspectClass}`} data-preview-section="social" onClick={() => isPreview && onInspect('social')}>
+                        {socialLinks.map(link => {
+                            const IconCmp = link.icon;
+                            return (
+                                <a
+                                    key={link.key}
+                                    href={link.href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={(event) => {
+                                        if (isPreview) {
+                                            event.preventDefault();
+                                            onInspect('social');
+                                        }
+                                    }}
+                                    className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-4 text-[10px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
+                                    style={getSocialLinkStyle()}
+                                    aria-label={link.label}
+                                >
+                                    <IconCmp size={14} />
+                                    <span>{link.label}</span>
+                                </a>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            if (isInitialLoading) {
+                const loadingMotionClass = isPreview ? '' : 'transition-opacity duration-1000';
+                return (
+                    <div className={`absolute inset-0 z-50 flex items-center justify-center ${loadingMotionClass}`} style={{ backgroundColor: settings.backgroundColor }}>
                         <div className="w-24 h-24 rounded-full flex items-center justify-center font-bold text-5xl shadow-2xl animate-subtle-pulse" style={{ backgroundColor: settings.headingColor, color: settings.backgroundColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>
                             {settings.brandName?.charAt(0) || "B"}
                         </div>
@@ -445,102 +695,95 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             if (!activeDate) return <div className="h-full w-full flex items-center justify-center font-bold text-xl opacity-20">No Availability</div>;
 
             return (
-                <div className={`w-full h-full flex flex-col transition-all duration-1000 select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''} ${isPreview ? 'booking-flow-preview' : 'booking-flow-public'}`} style={dynamicStyles}>
+                <div className={`w-full h-full flex flex-col ${previewMotionClass} select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''} ${isPreview ? 'booking-flow-preview' : 'booking-flow-public'}`} style={dynamicStyles}>
                 {step === 1 && (
-                    <div className={`animate-in fade-in slide-in-from-bottom-20 duration-1000 min-h-full flex flex-col p-6 md:p-12 relative z-10 ${isPreview ? 'booking-flow-preview-shell' : 'booking-flow-public-shell'}`}>
+                    <div className={`${previewStepMotionClass} min-h-full flex flex-col p-6 md:p-12 relative z-10 ${isPreview ? 'booking-flow-preview-shell' : 'booking-flow-public-shell'}`}>
                     
                     {/* BRAND HEADER */}
-                    <header className="mb-10 flex-shrink-0" data-preview-section="introduction">
+                    <header className={`booking-page-hero booking-hero-${pageAlignment} ${hasHeroBanner && bannerDisplay.placement === 'hero' ? 'has-banner' : ''} ${hasHeroLogo ? 'has-logo' : ''} logo-placement-${logoDisplay.placement} banner-placement-${bannerDisplay.placement} mb-10 flex-shrink-0`} data-preview-section="introduction">
+                        {hasHeroBanner && bannerDisplay.placement === 'top' && renderHeroMedia('booking-hero-media-top')}
                         <div
-                            className={`flex items-center gap-4 mb-8 ${inspectClass}`}
+                            className={`booking-hero-kicker flex items-center gap-4 ${inspectClass}`}
                             style={{ justifyContent: pageJustify }}
                             onClick={() => isPreview && onInspect('calendar')}
                         >
-                            <div className={`w-12 h-[2px] ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
+                            <div className={`booking-hero-kicker-rule ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
                             <span
-                                className="font-bold uppercase tracking-[0.6em] opacity-40"
+                                className="font-bold uppercase opacity-40"
                                 style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
                             >
                                 {settings.tagline}
                             </span>
                         </div>
 
-                        {settings.bannerImage && bannerDisplay.visible && (
-                            <img
-                                src={settings.bannerImage}
-                                className={`w-full rounded-lg object-cover shadow-sm mb-8 border border-neutral-100/10 ${inspectClass}`}
-                                style={{ height: `${bannerDisplay.height}px`, objectPosition: bannerDisplay.objectPosition }}
-                                alt="Booking page banner"
-                                onClick={() => isPreview && onInspect('introduction')}
-                            />
-                        )}
-                        
-                        {settings.logo && logoDisplay.visible && (
-                            <div className="flex mb-6" style={logoAlignmentStyle}>
-                                <img
-                                    src={settings.logo}
-                                    className={`rounded-lg object-contain shadow-sm border border-neutral-100/10 ${inspectClass}`}
-                                    style={{ width: logoDisplay.size, height: logoDisplay.size, maxWidth: '45vw', maxHeight: '45vw' }}
-                                    alt="Brand Logo"
+                        {hasHeroBanner && bannerDisplay.placement === 'hero' && renderHeroMedia()}
+
+                        <div className="booking-hero-copy" style={{ alignItems: pageAlignment === 'left' ? 'flex-start' : pageAlignment === 'right' ? 'flex-end' : 'center' }}>
+                            {hasHeroLogo && logoDisplay.placement === 'top' && renderHeroLogo('booking-hero-logo-top')}
+                            <div className="booking-hero-title-lockup" style={{ justifyContent: pageJustify }}>
+                                {hasHeroLogo && logoDisplay.placement === 'title' && renderHeroLogo()}
+                                <h1
+                                    className={`booking-hero-title font-bold tracking-tighter leading-[0.85] max-w-full ${inspectClass}`}
+                                    style={{
+                                        color: settings.headingColor,
+                                        fontFamily: getFontFamily(brandText.font),
+                                        fontSize: `${brandText.size}px`,
+                                        ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}),
+                                        textAlign: pageAlignment,
+                                        overflowWrap: 'anywhere',
+                                        ...getBlockMargins(pageAlignment)
+                                    }}
                                     onClick={() => isPreview && onInspect('introduction')}
-                                />
+                                    contentEditable={isPreview}
+                                    suppressContentEditableWarning
+                                    onBlur={(event) => isPreview && onSettingChange?.('brandName', event.currentTarget.textContent.trim())}
+                                >
+                                {settings.brandName}
+                            </h1>
+                                {hasHeroLogo && logoDisplay.placement === 'badge' && renderHeroLogo('booking-hero-logo-badge')}
                             </div>
-                        )}
+                            <p
+                                className={`booking-hero-subtitle opacity-60 font-light leading-relaxed max-w-3xl ${inspectClass}`}
+                                style={{
+                                    color: settings.bodyColor,
+                                    fontFamily: getFontFamily(welcomeText.font),
+                                    fontSize: `${welcomeText.size}px`,
+                                    ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}),
+                                    textAlign: pageAlignment,
+                                    ...getBlockMargins(pageAlignment)
+                                }}
+                                onClick={() => isPreview && onInspect('introduction')}
+                                contentEditable={isPreview}
+                                suppressContentEditableWarning
+                                onBlur={(event) => isPreview && onSettingChange?.('welcomeMessage', event.currentTarget.textContent.trim())}
+                            >
+                                {settings.welcomeMessage}
+                            </p>
 
-                        <h1
-                            className={`font-bold tracking-tighter mb-4 leading-[0.85] max-w-full ${inspectClass}`}
-                            style={{
-                                color: settings.headingColor,
-                                fontFamily: getFontFamily(brandText.font),
-                                fontSize: `${brandText.size}px`,
-                                ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}),
-                                textAlign: pageAlignment,
-                                overflowWrap: 'anywhere',
-                                ...getBlockMargins(pageAlignment)
-                            }}
-                            onClick={() => isPreview && onInspect('introduction')}
-                            contentEditable={isPreview}
-                            suppressContentEditableWarning
-                            onBlur={(event) => isPreview && onSettingChange?.('brandName', event.currentTarget.textContent.trim())}
-                        >
-                            {settings.brandName}
-                        </h1>
-                        <p
-                            className={`opacity-60 font-light leading-relaxed max-w-3xl ${inspectClass} mb-4`}
-                            style={{
-                                color: settings.bodyColor,
-                                fontFamily: getFontFamily(welcomeText.font),
-                                fontSize: `${welcomeText.size}px`,
-                                ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}),
-                                textAlign: pageAlignment,
-                                ...getBlockMargins(pageAlignment)
-                            }}
-                            onClick={() => isPreview && onInspect('introduction')}
-                            contentEditable={isPreview}
-                            suppressContentEditableWarning
-                            onBlur={(event) => isPreview && onSettingChange?.('welcomeMessage', event.currentTarget.textContent.trim())}
-                        >
-                            {settings.welcomeMessage}
-                        </p>
-
-                        <div
-                            className="flex flex-wrap items-center gap-3 mt-4"
-                            style={{ justifyContent: pageJustify }}
-                        >
-                            {settings.address && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest" style={{ backgroundColor: settings.headingColor + '10', color: settings.headingColor }}>
-                                    <MapPin size={12} /> {settings.address}
-                                </span>
-                            )}
-                            {settings.features?.location && (
-                                <a href={settings.features.location} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80 ${nativeAccent ? 'booking-gradient-chip' : ''}`} style={{ backgroundColor: settings.primaryColor + '20', color: settings.primaryColor }}>
-                                    <MapPin size={12} /> Get Directions
-                                </a>
+                            {(settings.address || settings.features?.location) && (
+                                <div
+                                    className="booking-hero-actions"
+                                    style={{ justifyContent: pageJustify }}
+                                >
+                                    {settings.address && (
+                                        <span className="booking-hero-chip" style={{ color: settings.headingColor }}>
+                                            <MapPin size={12} /> {settings.address}
+                                        </span>
+                                    )}
+                                    {settings.features?.location && (
+                                        <a href={settings.features.location} target="_blank" rel="noreferrer" className={`booking-hero-chip booking-hero-chip-action transition-all hover:opacity-80 ${nativeAccent ? 'booking-gradient-chip' : ''}`} style={{ color: settings.primaryColor }}>
+                                            <MapPin size={12} /> Get Directions
+                                        </a>
+                                    )}
+                                </div>
                             )}
                         </div>
+                        {hasHeroBanner && bannerDisplay.placement === 'footer' && renderHeroMedia('booking-hero-media-footer')}
                     </header>
+                    {renderSocialLinks('intro')}
 
                     <div className="flex flex-col gap-16 flex-1">
+                        {renderServiceSection()}
                         
                         {/* DATE SLIDER */}
                         <section data-preview-section="calendar" style={{ order: activeServices.length > 0 ? 2 : 1 }}>
@@ -567,7 +810,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 {dates.map((d, i) => {
                                 const isActive = selectedDateIdx === i;
                                 const nativeDateClass = nativeAccent && isActive
-                                    ? (dateStyle === 'solid' ? nativeAccentButtonClass : `${nativeAccentCardClass} ${nativeAccentBorderClass}`)
+                                    ? (dateStyle === 'solid' && calendarNativeFillLooks.has(calendarDisplayStyle) ? nativeAccentButtonClass : nativeAccentBorderClass)
                                     : '';
                                 return (
                                     <button key={i} aria-pressed={isActive} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'} ${nativeDateClass}`} style={getDateSlotStyle(isActive)}>
@@ -619,54 +862,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             </div>
                         )}
                         </section>
-
-                        {activeServices.length > 0 && (
-                            <section data-preview-section="services" className="pt-2" style={{ order: 1 }}>
-                                <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => isPreview && onInspect('services')}>
-                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>01 // Choose Service</h3>
-                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                                        What would you like to book?
-                                    </h4>
-                                </div>
-                                <div className={`booking-services-grid booking-services-${serviceDisplayStyle} grid grid-cols-1 md:grid-cols-2 gap-3`} onClick={() => isPreview && onInspect('services')}>
-                                    {activeServices.map(service => {
-                                        const isActive = selectedService?.id === service.id;
-                                        const price = formatServicePrice(service);
-                                        const duration = formatServiceDuration(service.duration);
-                                        return (
-                                            <button
-                                                key={service.id}
-                                                type="button"
-                                                onClick={(event) => {
-                                                    event.stopPropagation();
-                                                    setSelectedServiceId(service.id);
-                                                }}
-                                                className={`appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all booking-service-border-${serviceBorderStyle} ${isActive ? `scale-[1.01] shadow-xl ${nativeAccentCardClass} ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
-                                                style={getServiceCardStyle(isActive)}
-                                            >
-                                                <div className="flex items-start gap-4">
-                                                    <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ backgroundColor: isActive ? (settings.primaryColor || '#000') : `${settings.headingColor || '#000'}0D`, color: isActive ? (settings.buttonTextColor || '#000') : settings.headingColor }}>
-                                                        {service.imageUrls?.[0] ? <img src={service.imageUrls[0]} alt="" className="w-full h-full object-cover" /> : <Briefcase size={20} />}
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <h5 className="text-base md:text-lg font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</h5>
-                                                            {isActive && <Check size={18} style={{ color: settings.primaryColor }} className="shrink-0" />}
-                                                        </div>
-                                                        {service.description && <p className="text-xs md:text-sm mt-2 leading-relaxed opacity-65" style={{ color: settings.bodyColor }}>{service.description}</p>}
-                                                        <div className="mt-4 flex flex-wrap gap-2">
-                                                            {service.category && <span className="rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em]" style={{ backgroundColor: `${settings.headingColor || '#000'}0A`, color: settings.bodyColor }}>{service.category}</span>}
-                                                            {duration && <span className="rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em] inline-flex items-center gap-1" style={{ backgroundColor: `${settings.headingColor || '#000'}0A`, color: settings.bodyColor }}><Clock size={10} />{duration}</span>}
-                                                            {price && <span className="rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-[0.18em]" style={{ backgroundColor: `${settings.primaryColor || '#000'}18`, color: settings.headingColor }}>{price}</span>}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        )}
 
                         {faqItems.length > 0 && (
                             <section
@@ -929,6 +1124,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             {settings.features?.socialProof && (
                                 <p className="mt-6 text-[10px] font-bold uppercase tracking-widest opacity-40" style={{ color: settings.bodyColor }}><Flame size={12} className="inline mr-1 -mt-0.5"/> 4 People secured slots this week</p>
                             )}
+                            {renderSocialLinks('booking')}
                             {(venuePhotos.length > 0 || (venueMapHref && mapDisplayStyle !== 'none')) && (
                                 <section
                                     className={`booking-venue-gallery booking-venue-${venueGalleryStyle} mt-8 ${inspectClass}`}
@@ -1009,40 +1205,14 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                     )}
                                 </section>
                             )}
-                            {socialLinks.length > 0 && (
-                                <div className={`booking-social-links booking-social-${socialDisplayStyle} mt-8 flex flex-wrap items-center justify-center gap-3 ${inspectClass}`} data-preview-section="social" onClick={() => isPreview && onInspect('social')}>
-                                    {socialLinks.map(link => {
-                                        const IconCmp = link.icon;
-                                        return (
-                                            <a
-                                                key={link.key}
-                                                href={link.href}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                onClick={(event) => {
-                                                    if (isPreview) {
-                                                        event.preventDefault();
-                                                        onInspect('social');
-                                                    }
-                                                }}
-                                                className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-4 text-[10px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
-                                                style={getSocialLinkStyle()}
-                                                aria-label={link.label}
-                                            >
-                                                <IconCmp size={14} />
-                                                <span>{link.label}</span>
-                                            </a>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            {renderSocialLinks('footer')}
                         </div>
                     </div>
                     </div>
                 )}
 
                 {step === 2 && (
-                    <div className="h-full flex flex-col items-start justify-center text-left animate-in zoom-in-95 duration-1000 p-8 md:p-16 relative z-10">
+                    <div className={`h-full flex flex-col items-start justify-center text-left ${previewSuccessMotionClass} p-8 md:p-16 relative z-10`}>
                     <div className={`flex items-center gap-8 mb-20 ${inspectClass}`} onClick={() => isPreview && onInspect('buttons')}>
                         <div className="w-20 h-20 rounded-lg flex items-center justify-center shadow-2xl rotate-12" style={{ backgroundColor: settings.headingColor }}>
                         {isWaitlistMode ? <Bell size={32} strokeWidth={3} style={{ color: settings.primaryColor }} /> : <Check size={40} strokeWidth={4} style={{ color: settings.primaryColor }} />}

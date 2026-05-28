@@ -3,8 +3,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Banknote,
-  BarChart3,
-  CalendarDays,
   Check,
   CreditCard,
   Download,
@@ -15,7 +13,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  SlidersHorizontal,
   X,
   Zap
 } from 'lucide-react';
@@ -173,19 +170,19 @@ const guestDemoGatewaySettings = {
     enabled: true,
     mode: 'demo',
     public: {
-      accountHolder: 'Velvet Fade Studio',
-      bankName: 'Demo Bank',
-      accountNumber: '000 123 456',
-      branchCode: '250655',
+      accountHolder: 'Jump Studios',
+      bankName: 'Demo Global Bank',
+      accountNumber: '000 555 2026',
+      branchCode: '000000',
       accountType: 'Business Current',
-      instructions: 'Use your booking reference so the shop can match payment quickly.'
+      instructions: 'Use your booking ID as the payment reference so the coaching team can match it to your session.'
     }
   },
   cash: {
-    enabled: true,
+    enabled: false,
     mode: 'demo',
     public: {
-      instructions: 'Cash accepted at reception. The finance desk keeps it open until marked paid.'
+      instructions: 'Cash is disabled for this online academy demo.'
     }
   },
   yoco: {
@@ -205,35 +202,6 @@ const guestDemoGatewaySettings = {
   }
 };
 
-const exampleTransactions = [
-  {
-    id: 'example-paid-1',
-    isExample: true,
-    gatewayType: 'manual_eft',
-    status: 'paid',
-    amountInCents: 16000,
-    currency: 'ZAR',
-    customerName: 'Sipho Mokoena',
-    customerEmail: 'sipho.mokoena@velvetfade.example',
-    description: 'Skin Fade - manual EFT',
-    bookingId: 'VELVET-1028',
-    updatedAtMs: Date.now() - 1000 * 60 * 45
-  },
-  {
-    id: 'example-ready-1',
-    isExample: true,
-    gatewayType: 'cash',
-    status: 'manual_pending',
-    amountInCents: 22000,
-    currency: 'ZAR',
-    customerName: 'Kabelo Ndlovu',
-    customerEmail: 'kabelo.ndlovu@velvetfade.example',
-    description: 'VIP Fade + Beard - cash on arrival',
-    bookingId: 'VELVET-1031',
-    updatedAtMs: Date.now() - 1000 * 60 * 60 * 6
-  }
-];
-
 const startOfDay = (date) => {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
@@ -249,6 +217,8 @@ const getWeekStart = (date) => {
 };
 
 const getMonthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+const getYearStart = (date) => new Date(date.getFullYear(), 0, 1);
 
 const addDays = (date, days) => {
   const next = new Date(date);
@@ -345,7 +315,7 @@ const getBookingAmountInCents = (booking = {}) => {
   return parseAmountToCents(booking.total || booking.servicePrice || booking.price || booking.deposit || 0);
 };
 
-const getPeriodRange = (period, customRange) => {
+const getPeriodRange = (period) => {
   const now = new Date();
   if (period === 'all') {
     return { start: new Date(2000, 0, 1), end: new Date(2100, 0, 1), label: 'All time' };
@@ -358,10 +328,9 @@ const getPeriodRange = (period, customRange) => {
     const start = getWeekStart(now);
     return { start, end: addDays(start, 7), label: 'This week' };
   }
-  if (period === 'custom' && customRange.from && customRange.to) {
-    const start = startOfDay(new Date(`${customRange.from}T00:00:00`));
-    const end = addDays(startOfDay(new Date(`${customRange.to}T00:00:00`)), 1);
-    return { start, end, label: 'Custom range' };
+  if (period === 'year') {
+    const start = getYearStart(now);
+    return { start, end: new Date(now.getFullYear() + 1, 0, 1), label: String(now.getFullYear()) };
   }
   const start = getMonthStart(now);
   return { start, end: new Date(now.getFullYear(), now.getMonth() + 1, 1), label: now.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }) };
@@ -411,20 +380,10 @@ const buildChartBuckets = (records, period, range) => {
     unit = 'day';
     start = getMonthStart(defaultStart);
     end = addMonths(start, 1);
-  } else if (period === 'custom') {
-    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / dayMs));
-    if (days <= 45) {
-      unit = 'day';
-      start = startOfDay(start);
-    } else if (days <= 180) {
-      unit = 'week';
-      start = getWeekStart(start);
-    } else {
-      unit = 'month';
-      start = getMonthStart(start);
-      const monthSpan = Math.max(1, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
-      step = monthSpan > 36 ? 3 : 1;
-    }
+  } else if (period === 'year') {
+    unit = 'month';
+    start = getYearStart(defaultStart);
+    end = new Date(defaultStart.getFullYear() + 1, 0, 1);
   }
 
   if (end <= start) end = unit === 'month' ? addMonths(start, step) : unit === 'hour' ? new Date(start.getTime() + step * 60 * 60 * 1000) : addDays(start, step);
@@ -474,6 +433,34 @@ const buildChartBuckets = (records, period, range) => {
   return buckets.length ? buckets : [{ label: 'No data', rangeLabel: 'No paid records', value: 0, count: 0, startMs: start.getTime(), endMs: end.getTime() }];
 };
 
+const getPaidAverageByUnit = (records = [], unit = 'month') => {
+  const buckets = records
+    .filter((record) => record.status === 'paid' && record.updatedAtMs)
+    .reduce((acc, record) => {
+      const date = new Date(record.updatedAtMs);
+      const key = unit === 'year'
+        ? String(date.getFullYear())
+        : unit === 'day'
+          ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+          : `${date.getFullYear()}-${date.getMonth() + 1}`;
+      acc[key] = (acc[key] || 0) + Number(record.amountInCents || 0);
+      return acc;
+    }, {});
+  const values = Object.values(buckets);
+  if (!values.length) return 0;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+};
+
+const getAverageMetricMeta = (period) => {
+  if (period === 'day') {
+    return { unit: 'day', label: 'Average Daily Income', caption: 'Across paid days' };
+  }
+  if (period === 'year') {
+    return { unit: 'year', label: 'Average Yearly Income', caption: 'Across paid years' };
+  }
+  return { unit: 'month', label: 'Average Monthly Revenue', caption: 'Across paid months' };
+};
+
 const Toggle = ({ checked, onChange }) => (
   <button
     type="button"
@@ -487,18 +474,20 @@ const Toggle = ({ checked, onChange }) => (
 
 const StatusPill = ({ status }) => {
   const clean = String(status || 'initiated').toLowerCase();
-  const label = clean.replace(/_/g, ' ');
+  const label = clean === 'manual_pending' ? 'pending payment' : clean.replace(/_/g, ' ');
   const tone = clean === 'paid'
     ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
     : clean.includes('ready')
       ? 'bg-blue-50 text-blue-700 border-blue-100'
       : clean.includes('fail') || clean.includes('cancel')
         ? 'bg-rose-50 text-rose-700 border-rose-100'
-        : 'bg-neutral-50 text-neutral-500 border-neutral-100';
+        : clean.includes('pending') || clean.includes('manual')
+          ? 'bg-amber-50 text-amber-700 border-amber-100'
+          : 'bg-neutral-50 text-neutral-500 border-neutral-100';
   return <span className={`rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${tone}`}>{label}</span>;
 };
 
-const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR' }) => {
+const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR', statItems = [] }) => {
   const safeBuckets = buckets.length ? buckets : [{ label: 'No data', rangeLabel: 'No paid records', value: 0, count: 0 }];
   const chartWidth = 920;
   const chartHeight = 340;
@@ -507,12 +496,8 @@ const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR' }) => {
   const plotHeight = chartHeight - padding.top - padding.bottom;
   const maxValue = Math.max(...safeBuckets.map((bucket) => Number(bucket.value || 0)), 1);
   const totalValue = safeBuckets.reduce((sum, bucket) => sum + Number(bucket.value || 0), 0);
-  const averageValue = Math.round(totalValue / Math.max(1, safeBuckets.length));
   const peakBucket = safeBuckets.reduce((peak, bucket) => (bucket.value || 0) > (peak.value || 0) ? bucket : peak, safeBuckets[0]);
   const paidBuckets = safeBuckets.filter((bucket) => Number(bucket.value || 0) > 0);
-  const latestBucket = paidBuckets[paidBuckets.length - 1] || safeBuckets[safeBuckets.length - 1] || safeBuckets[0];
-  const previousBucket = paidBuckets[paidBuckets.length - 2] || { value: 0 };
-  const trendValue = Number(latestBucket.value || 0) - Number(previousBucket.value || 0);
   const labelEvery = Math.max(1, Math.ceil(safeBuckets.length / 8));
   const points = safeBuckets.map((bucket, index) => {
     const x = padding.left + (safeBuckets.length === 1 ? plotWidth / 2 : (index / (safeBuckets.length - 1)) * plotWidth);
@@ -522,19 +507,16 @@ const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR' }) => {
   const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
   const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${(padding.top + plotHeight).toFixed(2)} L ${points[0].x.toFixed(2)} ${(padding.top + plotHeight).toFixed(2)} Z`;
   const yTicks = Array.from({ length: 5 }, (_, index) => Math.round((maxValue / 4) * index)).reverse();
-  const trendLabel = trendValue === 0 ? 'Flat' : `${trendValue > 0 ? '+' : '-'}${formatMoney(Math.abs(trendValue), currency)}`;
-  const trendTone = trendValue >= 0 ? 'text-emerald-600' : 'text-rose-600';
-  const statItems = [
-    ['Revenue', formatMoney(totalValue, currency), 'Paid in range'],
-    ['Average', formatMoney(averageValue, currency), 'Per bucket'],
-    ['Peak', formatMoney(peakBucket.value || 0, currency), peakBucket.label],
-    ['Latest paid', formatMoney(latestBucket.value || 0, currency), latestBucket.label]
+  const summaryItems = statItems.length ? statItems : [
+    { label: 'Total Revenue', value: formatMoney(totalValue, currency), caption: 'Paid revenue' },
+    { label: 'Average Monthly Revenue', value: formatMoney(totalValue, currency), caption: 'Across paid months' },
+    { label: 'Pending Payments', value: formatMoney(0, currency), caption: 'Awaiting confirmation' }
   ];
 
   return (
     <div className="finance-timeline-chart rounded-[1.35rem] border border-neutral-100 bg-white p-3 md:p-4">
-      <div className="finance-timeline-statbar grid grid-cols-2 xl:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-100 mb-4">
-        {statItems.map(([label, value, caption]) => (
+      <div className="finance-timeline-statbar grid grid-cols-1 sm:grid-cols-3 gap-px overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-100 mb-4">
+        {summaryItems.map(({ label, value, caption }) => (
           <div key={label} className="bg-white px-4 py-3">
             <p className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{label}</p>
             <p className="mt-1 text-lg md:text-xl font-black tracking-tight text-black truncate">{value}</p>
@@ -603,7 +585,7 @@ const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR' }) => {
 
       <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
         <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{safeBuckets.length} time buckets · paid revenue only</p>
-        <p className={`text-[10px] font-black uppercase tracking-widest ${trendTone}`}>Latest paid movement {trendLabel}</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{paidBuckets.length} paid bucket{paidBuckets.length === 1 ? '' : 's'}</p>
       </div>
     </div>
   );
@@ -621,8 +603,6 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
   const [search, setSearch] = useState('');
   const [deskStatusFilter, setDeskStatusFilter] = useState('all');
   const [deskSort, setDeskSort] = useState('newest');
-  const [customRange, setCustomRange] = useState({ from: '', to: '' });
-  const [rangeDialogOpen, setRangeDialogOpen] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState('ZAR');
 
   useEffect(() => {
@@ -683,11 +663,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
   const isManualGateway = manualGatewayIds.has(selectedGateway.id);
   const isCashGateway = selectedGateway.id === 'cash';
 
-  const enabledCount = useMemo(() => (
-    gatewayCards.filter((gateway) => effectiveSaved[gateway.id]?.enabled).length
-  ), [effectiveSaved]);
-
-  const periodRange = useMemo(() => getPeriodRange(period, customRange), [period, customRange]);
+  const periodRange = useMemo(() => getPeriodRange(period), [period]);
 
   const manualBookingRows = useMemo(() => (
     (bookings || [])
@@ -721,9 +697,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
       .sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0))
   ), [manualBookingRows, paymentAttempts]);
 
-  const effectiveFinanceRecords = useMemo(() => (
-    financeRecords.length ? financeRecords : (isGuestWorkspace ? exampleTransactions : [])
-  ), [financeRecords, isGuestWorkspace]);
+  const effectiveFinanceRecords = useMemo(() => financeRecords, [financeRecords]);
 
   const inferredCurrency = useMemo(() => {
     if (currencyOptionByCode[financeSummary.currency]) return financeSummary.currency;
@@ -770,18 +744,38 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
 
   const financeMetrics = useMemo(() => {
     const paid = periodRecords.filter((record) => record.status === 'paid');
-    const open = periodRecords.filter((record) => !['paid', 'failed', 'cancelled', 'canceled'].includes(record.status));
+    const pending = periodRecords.filter((record) => record.status === 'manual_pending' || (record.canMarkPaid && !['paid', 'failed', 'cancelled', 'canceled'].includes(record.status)));
+    const averageMeta = getAverageMetricMeta(period);
     return {
       revenueInCents: paid.reduce((sum, record) => sum + record.amountInCents, 0),
       paidCount: paid.length,
-      openCount: open.length,
-      gatewayCount: enabledCount,
-      lifetimeRevenue: Number(financeSummary.totalRevenueInCents || 0),
-      lifetimePaidCount: Number(financeSummary.paidTransactionCount || 0)
+      pendingInCents: pending.reduce((sum, record) => sum + Number(record.amountInCents || 0), 0),
+      pendingCount: pending.length,
+      averageLabel: averageMeta.label,
+      averageCaption: averageMeta.caption,
+      averageInCents: getPaidAverageByUnit(effectiveFinanceRecords, averageMeta.unit)
     };
-  }, [enabledCount, financeSummary, periodRecords]);
+  }, [effectiveFinanceRecords, period, periodRecords]);
 
   const chartBuckets = useMemo(() => buildChartBuckets(periodRecords, period, periodRange), [period, periodRange, periodRecords]);
+
+  const financeStatItems = useMemo(() => ([
+    {
+      label: 'Total Revenue',
+      value: formatMoney(financeMetrics.revenueInCents, displayCurrency),
+      caption: `${financeMetrics.paidCount} paid booking${financeMetrics.paidCount === 1 ? '' : 's'}`
+    },
+    {
+      label: financeMetrics.averageLabel,
+      value: formatMoney(financeMetrics.averageInCents, displayCurrency),
+      caption: financeMetrics.averageCaption
+    },
+    {
+      label: 'Pending Payments',
+      value: formatMoney(financeMetrics.pendingInCents, displayCurrency),
+      caption: `${financeMetrics.pendingCount} awaiting confirmation`
+    }
+  ]), [displayCurrency, financeMetrics]);
 
   const visibleDeskRows = useMemo(() => {
     const rows = effectiveFinanceRecords;
@@ -879,15 +873,6 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
     setGatewayModalOpen(true);
   };
 
-  const applyCustomRange = () => {
-    if (!customRange.from || !customRange.to) {
-      showToast?.('Choose a start and end date first.');
-      return;
-    }
-    setPeriod('custom');
-    setRangeDialogOpen(false);
-  };
-
   const downloadFinanceCsv = () => {
     const rows = effectiveFinanceRecords.map((row) => ({
       id: row.id,
@@ -969,15 +954,20 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
                 ))}
               </select>
             </label>
-            <div className="finance-period-tabs schedule-scope-toggle grid grid-cols-5 rounded-lg bg-neutral-100 p-1 min-w-full sm:min-w-[520px]">
-              {['all', 'day', 'week', 'month', 'custom'].map((item) => (
+            <div className="finance-period-tabs schedule-scope-toggle grid grid-cols-4 rounded-lg bg-neutral-100 p-1 min-w-full sm:min-w-[440px]">
+              {[
+                ['day', 'Day'],
+                ['month', 'Monthly'],
+                ['year', 'Year'],
+                ['all', 'All time']
+              ].map(([item, label]) => (
                 <button
                   key={item}
                   type="button"
-                  onClick={() => (item === 'custom' ? setRangeDialogOpen(true) : setPeriod(item))}
+                  onClick={() => setPeriod(item)}
                   className={`finance-period-tab h-10 rounded-md text-[9px] md:text-[10px] font-bold uppercase tracking-widest transition-all ${period === item ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
                 >
-                  {item === 'all' ? 'all time' : item}
+                  {label}
                 </button>
               ))}
             </div>
@@ -985,22 +975,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
         </div>
 
         <div className="p-4 md:p-6">
-          <div className="mb-5 flex justify-end">
-            <div className="finance-report-strip grid grid-cols-2 sm:grid-cols-4 gap-2 lg:min-w-[520px]">
-              {[
-                ['Paid', financeMetrics.paidCount],
-                ['Open', financeMetrics.openCount],
-                ['Gateways', financeMetrics.gatewayCount],
-                ['Range', chartBuckets.length]
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-4 py-3">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{label}</p>
-                  <p className="mt-1 text-xl font-black tracking-tight text-black">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <FinanceTimelineChart buckets={chartBuckets} currency={displayCurrency} />
+          <FinanceTimelineChart buckets={chartBuckets} currency={displayCurrency} statItems={financeStatItems} />
         </div>
       </div>
 
@@ -1047,7 +1022,7 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
             >
               <option value="all">All statuses</option>
               <option value="paid">Paid</option>
-              <option value="open">Open</option>
+              <option value="open">Pending payment</option>
               <option value="cash">Cash</option>
               <option value="card">Card</option>
               <option value="eft">Manual EFT</option>
@@ -1257,40 +1232,6 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
         </div>
       )}
 
-      {rangeDialogOpen && (
-        <div className="finance-modal fixed inset-0 z-[1410] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
-          <div className="finance-range-panel w-full md:max-w-lg rounded-t-[1.5rem] md:rounded-[1.25rem] bg-white border border-neutral-200 shadow-2xl shadow-black/30 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Custom report</p>
-                <h3 className="text-2xl font-black tracking-tight text-black mt-1">Choose dates</h3>
-              </div>
-              <button type="button" onClick={() => setRangeDialogOpen(false)} className="w-11 h-11 rounded-2xl bg-white border border-neutral-200 flex items-center justify-center text-black">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="mt-5 grid sm:grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">From</span>
-                <div className="mt-2 flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-3">
-                  <CalendarDays size={15} className="text-neutral-300" />
-                  <input type="date" value={customRange.from} onChange={(event) => setCustomRange((current) => ({ ...current, from: event.target.value }))} className="h-12 flex-1 bg-transparent outline-none text-sm font-bold text-black" />
-                </div>
-              </label>
-              <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">To</span>
-                <div className="mt-2 flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-3">
-                  <CalendarDays size={15} className="text-neutral-300" />
-                  <input type="date" value={customRange.to} onChange={(event) => setCustomRange((current) => ({ ...current, to: event.target.value }))} className="h-12 flex-1 bg-transparent outline-none text-sm font-bold text-black" />
-                </div>
-              </label>
-            </div>
-            <button type="button" onClick={applyCustomRange} className="mt-5 h-12 w-full rounded-2xl native-gradient-button text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-              <SlidersHorizontal size={15} /> Apply range
-            </button>
-          </div>
-        </div>
-      )}
     </section>
   );
 };

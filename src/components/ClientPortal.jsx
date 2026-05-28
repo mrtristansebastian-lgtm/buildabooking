@@ -90,25 +90,25 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
   const exampleBooking = useMemo(() => ({
     id: 'example-client-booking',
     threadId: 'example-client-thread',
-    workspaceName: 'Studio Noir',
+    workspaceName: 'Jump Studios',
     date: 'Thursday, May 28',
     time: '14:30',
     status: 'pending',
-    serviceName: 'Signature Blowout',
-    serviceDuration: '60',
-    servicePrice: '650',
-    servicePriceType: 'from',
+    serviceName: 'Jump Start Assessment',
+    serviceDuration: '45',
+    servicePrice: '35',
+    servicePriceType: 'fixed',
     isExample: true
   }), []);
 
   const exampleThread = useMemo(() => ({
     id: 'example-client-thread',
-    workspaceName: 'Studio Noir',
-    clientName: user?.displayName || 'Maya Nkosi',
-    clientEmail: emailKey || 'maya.nkosi@example.com',
+    workspaceName: 'Jump Studios',
+    clientName: user?.displayName || 'Mina Patel',
+    clientEmail: emailKey || 'mina.patel@jump-client.example',
     bookingId: 'example-client-booking',
     bookingStatus: 'pending',
-    lastMessage: 'We received your request. You can chat here or request a new time.',
+    lastMessage: 'We received your request. You can chat here or request a new coaching time.',
     clientUnread: 1,
     rescheduleStatus: 'open',
     isExample: true
@@ -119,13 +119,13 @@ export function ClientPortal({ appId, db, user, themeMode = 'light', isGuestPrev
       id: 'example-client-system',
       senderRole: 'system',
       senderName: 'Booking update',
-      text: 'Example Signature Blowout request sent for Thursday, May 28 at 14:30.'
+      text: 'Example Jump Start Assessment request sent for Thursday, May 28 at 14:30.'
     },
     {
       id: 'example-client-owner',
       senderRole: 'owner',
-      senderName: 'Studio Noir',
-      text: 'Thanks for booking. We will approve the request shortly. If you need a different time, send it here.'
+      senderName: 'Jump Studios',
+      text: 'Thanks for booking. We will approve the request shortly. If you need a different coaching time, send it here.'
     },
     {
       id: 'example-client-reply',

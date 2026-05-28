@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
@@ -12,6 +12,7 @@ import { NotificationCenter } from './components/NotificationCenter';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
+import { createJumpGuestWorkspace } from './data/guestWorkspace/jumpStudios';
 import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, functions, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
@@ -32,7 +33,7 @@ import {
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug } from './utils/slugs';
 import { formatServiceDuration, formatServicePrice, normalizeServiceList, summarizeService } from './utils/services';
-import { mixHexColors, normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
+import { hexToRgb, mixHexColors, normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
 
 const OwnerManual = lazy(() => (
   import('./components/OwnerManual').then((module) => ({ default: module.OwnerManual }))
@@ -65,7 +66,7 @@ const FinancePaymentSettings = lazy(() => (
 const bookingPaymentFilterOptions = [
     ['all', 'All payments'],
     ['paid', 'Paid'],
-    ['open', 'Open'],
+    ['open', 'Pending'],
     ['cash', 'Cash'],
     ['card', 'Card'],
     ['eft', 'Manual EFT']
@@ -297,13 +298,6 @@ const visualStyleOptions = [
 ];
 
 const editorInterfaceLooks = {
-  services: [
-    { id: 'cards', label: 'Studio Cards', note: 'Balanced cards with clear price and detail hierarchy.' },
-    { id: 'menu', label: 'Price Menu', note: 'Restaurant-style rows for fast service scanning.' },
-    { id: 'gallery', label: 'Visual Tiles', note: 'Image-led editorial blocks for visual brands.' },
-    { id: 'compact', label: 'Command List', note: 'Dense pro rows for long menus and repeat clients.' },
-    { id: 'luxury', label: 'Atelier', note: 'Premium spacing with boutique editorial rhythm.' }
-  ],
   calendar: [
     { id: 'studio', label: 'Native Rail', note: 'App-like date rail with soft selected states.' },
     { id: 'classic', label: 'Planner Cards', note: 'Structured day cards with familiar rhythm.' },
@@ -359,13 +353,13 @@ const themePaletteLabel = (paletteId) => (
 
 const fontStylePresets = [
   {
-    id: 'system',
-    label: 'System',
-    note: 'iOS clean',
-    fontFamily: 'inter',
+    id: 'native',
+    label: 'Native',
+    note: 'Build A Booking modern',
+    fontFamily: 'figtree',
     headingFontFamily: 'plus-jakarta',
-    bodyFontFamily: 'inter',
-    buttonFontFamily: 'inter',
+    bodyFontFamily: 'figtree',
+    buttonFontFamily: 'space-grotesk',
     slotFontFamily: 'plus-jakarta',
     dateFontFamily: 'plus-jakarta',
     headingLetterSpacing: 0,
@@ -618,11 +612,11 @@ const normalizeCommunications = (communications = {}) => {
 };
 
 const createDefaultSettings = () => ({
-  slug: 'studio-noir',
-  brandName: 'Studio Noir',
-  welcomeMessage: 'Reserve your private session.',
-  tagline: 'Atelier 7B / Private',
-  primaryColor: '#755CFF',
+  slug: 'your-business',
+  brandName: 'Your Business',
+  welcomeMessage: 'Reserve your session.',
+  tagline: 'Online bookings',
+  primaryColor: '#050505',
   headingColor: '#000000',
   bodyColor: '#666666',
   backgroundColor: '#ffffff',
@@ -630,11 +624,15 @@ const createDefaultSettings = () => ({
   slotTextColor: '#000000',
   dateBgColor: 'transparent',
   dateTextColor: '#666666',
-  dateActiveBgColor: '#EEF7FF',
-  dateActiveTextColor: '#000000',
-  buttonTextColor: '#000000',
+  dateActiveBgColor: '#050505',
+  dateActiveTextColor: '#ffffff',
+  buttonTextColor: '#ffffff',
   fontFamily: 'inter',
   nativeAccent: true,
+  editorPaletteFlowColor: 'blue',
+  editorColorDepth: 50,
+  editorColorDepths: {},
+  editorColorMix: ['blue'],
   headingFontFamily: '',
   bodyFontFamily: '',
   buttonFontFamily: '',
@@ -653,7 +651,7 @@ const createDefaultSettings = () => ({
   actionButtonStyle: 'solid',
   calendarDisplayStyle: 'studio',
   timeDisplayStyle: 'pill',
-  serviceDisplayStyle: 'cards',
+  serviceDropdownEnabled: false,
   serviceBorderStyle: 'solid',
   faqStyle: 'minimal',
   faqDisplayStyle: 'accordion',
@@ -668,6 +666,7 @@ const createDefaultSettings = () => ({
   mapDisplayStyle: 'card',
   socialIconStyle: 'outline',
   socialDisplayStyle: 'icons',
+  socialPlacement: 'footer',
   socialIconBgColor: 'transparent',
   socialIconColor: '',
   socialIconTextColor: '',
@@ -688,7 +687,7 @@ const createDefaultSettings = () => ({
   serviceIndustry: '',
   services: [],
   logoDisplay: { visible: true, alignment: 'left', size: 96 },
-  bannerDisplay: { visible: true, height: 220, position: 'center' },
+  bannerDisplay: { visible: true, height: 220, position: 'center', placement: 'hero', opacity: 100 },
   logo: '',
   bannerImage: '',
   venuePhotos: [],
@@ -696,442 +695,11 @@ const createDefaultSettings = () => ({
   socials: { instagram: '', tiktok: '', facebook: '', website: '' }
 });
 
-const demoImage = (id, width = 1200, height = 900, fit = 'crop', extra = '') => (
-  `https://images.unsplash.com/${id}?auto=format&fit=${fit}&w=${width}&h=${height}&q=84${extra}`
-);
-
-const createDemoLogoDataUrl = () => (
-  `data:image/svg+xml,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
-      <defs>
-        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0" stop-color="#050505"/>
-          <stop offset="0.55" stop-color="#2dd4bf"/>
-          <stop offset="1" stop-color="#f97316"/>
-        </linearGradient>
-      </defs>
-      <rect width="600" height="600" rx="150" fill="#050505"/>
-      <rect x="36" y="36" width="528" height="528" rx="126" fill="url(#g)"/>
-      <circle cx="300" cy="240" r="104" fill="#050505" opacity=".92"/>
-      <path d="M226 234c44-38 104-38 148 0" fill="none" stroke="#f8fafc" stroke-width="24" stroke-linecap="round"/>
-      <path d="M210 318h180" fill="none" stroke="#f8fafc" stroke-width="30" stroke-linecap="round"/>
-      <text x="300" y="462" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="900" letter-spacing="3" fill="#050505">VELVET</text>
-      <text x="300" y="512" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="7" fill="#050505">FADE</text>
-    </svg>
-  `)}`
-);
-
-const guestDemoAssets = {
-  logo: createDemoLogoDataUrl(),
-  banner: demoImage('photo-1621605815971-fbc98d665033', 1800, 780, 'crop', '&crop=entropy'),
-  venue: [
-    demoImage('photo-1621605815971-fbc98d665033', 1200, 900, 'crop', '&crop=entropy'),
-    demoImage('photo-1585747860715-2ba37e788b70', 1200, 900, 'crop', '&crop=entropy'),
-    demoImage('photo-1512690459411-b9245aed614b', 1200, 900, 'crop', '&crop=entropy'),
-    demoImage('photo-1503951914875-452162b0f3f1', 1200, 900, 'crop', '&crop=entropy'),
-    demoImage('photo-1522337360788-8b13dee7a37e', 1200, 900, 'crop', '&crop=entropy'),
-    demoImage('photo-1521590832167-7bcbfaa6381f', 1200, 900, 'crop', '&crop=entropy')
-  ],
-  services: [
-    demoImage('photo-1503951914875-452162b0f3f1', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1622288432450-277d0fef5ed6', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1621605815971-fbc98d665033', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1522337360788-8b13dee7a37e', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1595476108010-b4d1f102b1b1', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1527799820374-dcf8d9d4a388', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1519014816548-bf5fe059798b', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1487412947147-5cebf100ffc2', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1544161515-4ab6ce6db874', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1516975080664-ed2fc6a32937', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1540555700478-4be289fbecef', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1580618672591-eb180b1a973f', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1604654894610-df63bc536371', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1560066984-138dadb4c035', 900, 720, 'crop', '&crop=entropy'),
-    demoImage('photo-1599351431202-1e0f0137899a', 900, 720, 'crop', '&crop=entropy')
-  ]
-};
-
-const guestDemoServices = [
-  { id: 'demo-basic-fade', name: 'Basic Fade Cut', category: 'Barbering', description: 'Clean everyday fade, neckline, lineup, and fresh finish for quick confidence.', price: '120', duration: '45', staffIds: ['owner', 'staff-kabelo', 'staff-reece'], imageUrls: [] },
-  { id: 'demo-skin-fade', name: 'Skin Fade', category: 'Barbering', description: 'Tight skin fade with sharp temples, detailed blend, and camera-ready lineup.', price: '160', duration: '60', staffIds: ['owner', 'staff-kabelo'], imageUrls: [] },
-  { id: 'demo-vip-fade-beard', name: 'VIP Fade + Beard', category: 'VIP Grooming', description: 'Premium fade, beard sculpting, hot towel, enhancements, and finish spray.', price: '220', duration: '75', staffIds: ['owner', 'staff-kabelo'], imageUrls: [] },
-  { id: 'demo-wash-blowout', name: 'Ladies Wash & Blowout', category: 'Hair Styling', description: 'Relaxed wash, condition, blowout, and smooth volume finish.', price: '250', duration: '60', staffIds: ['staff-aaliyah', 'staff-thandi'], imageUrls: [] },
-  { id: 'demo-braids-cornrows', name: 'Braids / Cornrows', category: 'Braids', description: 'Clean parts, neat tension control, stitch detail, and protective finish.', price: '350', duration: '120', staffIds: ['staff-aaliyah'], imageUrls: [] },
-  { id: 'demo-wig-install', name: 'Wig Install', category: 'Installs', description: 'Natural lace prep, melt, styling, and soft finish for content-ready hair.', price: '650', duration: '150', staffIds: ['staff-thandi', 'staff-aaliyah'], imageUrls: [] },
-  { id: 'demo-beard-shaping', name: 'Beard Shaping', category: 'Barbering', description: 'Razor-sharp beard outline, symmetry cleanup, oil, and detail work.', price: '80', duration: '30', staffIds: ['owner', 'staff-reece'], imageUrls: [] },
-  { id: 'demo-hair-dye', name: 'Hair Dye', category: 'Colour', description: 'Creative colour or grey coverage with consultation and clean finish.', price: '300', duration: '90', staffIds: ['staff-thandi', 'staff-kabelo'], imageUrls: [] },
-  { id: 'demo-kids-cut', name: 'Kids Cut', category: 'Family', description: 'Patient, neat kids cut with simple styling and a calm chair experience.', price: '90', duration: '30', staffIds: ['staff-reece', 'owner'], imageUrls: [] },
-  { id: 'demo-dread-retwist', name: 'Dreadlock Retwist', category: 'Locs', description: 'Clean retwist, scalp care, part refresh, and polished loc finish.', price: '550', duration: '180', staffIds: ['staff-aaliyah', 'staff-thandi'], imageUrls: [] },
-  { id: 'demo-scalp-treatment', name: 'Scalp Treatment', category: 'Treatments', description: 'Soothing scalp cleanse, treatment massage, hydration, and recovery plan.', price: '180', duration: '45', staffIds: ['staff-thandi'], imageUrls: [] },
-  { id: 'demo-house-call-vip', name: 'House Call VIP Booking', category: 'Mobile VIP', description: 'Mobile grooming setup for hotels, events, shoots, and private clients.', price: '900', duration: '120', staffIds: ['owner', 'staff-kabelo'], imageUrls: [] },
-  { id: 'demo-nail-grooming', name: 'Nail Grooming', category: 'Beauty Add-ons', description: 'Clean nail grooming, buffing, shaping, and low-key polish detail.', price: '150', duration: '45', staffIds: ['staff-thandi'], imageUrls: [] },
-  { id: 'demo-brow-tint-shape', name: 'Eyebrow Tint & Shape', category: 'Beauty Add-ons', description: 'Tint, shape, and tidy finish for a precise face-framing result.', price: '120', duration: '30', staffIds: ['staff-thandi'], imageUrls: [] },
-  { id: 'demo-full-grooming', name: 'Full Grooming Package', category: 'VIP Grooming', description: 'Complete refresh with cut, beard or beauty add-on, treatment, and premium finish.', price: '750', duration: '120', staffIds: ['owner', 'staff-kabelo', 'staff-thandi'], imageUrls: [] }
-];
-
-const guestDemoClientRows = [
-  ["Sipho Mokoena", 24, "Graphic Designer", "Skin Fade", "160", "Every 2 weeks", "Loves clean temple fades and always books Friday afternoons.", "Asked if the barber could make the fade hit like payday energy.", "Regular"],
-  ["Aaliyah Jacobs", 27, "Makeup Artist", "Wig Install", "650", "Monthly", "Prefers natural lace finish and soft curls.", "Chatted about content creation and Instagram reels during appointment.", "VIP"],
-  ["Kabelo Ndlovu", 31, "Gym Owner", "VIP Fade + Beard", "220", "Weekly", "Keeps beard razor sharp for branding photos.", "Mentioned he has three selfies pending after this cut.", "VIP"],
-  ["Zanele Khumalo", 22, "University Student", "Braids / Cornrows", "350", "Every 6 weeks", "Prefers long stitch braids.", "Discussed varsity stress and amapiano playlists.", "Student"],
-  ["Ethan Daniels", 29, "Software Developer", "Basic Fade Cut", "120", "Monthly", "Quiet client, always books online.", "Talked briefly about gaming PCs and coffee.", "Online Booker"],
-  ["Lerato Maseko", 34, "HR Manager", "Ladies Wash & Blowout", "250", "Monthly", "Prefers silky volume finish.", "Shared funny office gossip stories.", "Regular"],
-  ["Jayden Petersen", 19, "Student", "Hair Dye", "300", "Every 2 months", "Changes colour often.", "Wanted anime protagonist silver.", "Creative"],
-  ["Nomvula Dube", 38, "Entrepreneur", "Full Grooming Package", "750", "Monthly", "VIP customer.", "Discussed opening another beauty branch in Sandton.", "VIP"],
-  ["Musa Cele", 26, "DJ", "Dreadlock Retwist", "550", "Monthly", "Often arrives with headphones on.", "Played unreleased amapiano tracks during appointment.", "Creative"],
-  ["Priya Naidoo", 30, "Pharmacist", "Eyebrow Tint & Shape", "120", "Every 3 weeks", "Precision-focused client.", "Recommended skincare products to staff.", "Regular"],
-  ["Thabo Mthembu", 28, "Forex Trader", "VIP Fade + Beard", "220", "Weekly", "Always checking charts mid-cut.", "Said if NASDAQ taps TP today, add extra enhancements.", "VIP"],
-  ["Bianca Smith", 25, "Fashion Influencer", "Wig Install", "650", "Monthly", "Loves platinum blonde styles.", "Filmed TikTok transition inside the shop.", "Creator"],
-  ["Ayanda Zulu", 40, "Taxi Business Owner", "Beard Shaping", "80", "Weekly", "Loyal customer for 2 years.", "Spoke about business growth and fuel prices.", "Loyal"],
-  ["Chloe Van Wyk", 21, "Student", "Nail Grooming", "150", "Monthly", "Minimalist nail styles.", "Asked for selfie lighting recommendations.", "Student"],
-  ["Devon Arendse", 35, "Real Estate Agent", "Skin Fade", "160", "Every 2 weeks", "Wants executive look.", "Mentioned clients trust fresh haircuts more.", "Professional"],
-  ["Nthabiseng Radebe", 29, "Teacher", "Scalp Treatment", "180", "Monthly", "Focused on healthy hair recovery.", "Relaxing appointment with little conversation.", "Wellness"],
-  ["Yusuf Khan", 33, "Restaurant Owner", "Full Grooming Package", "750", "Monthly", "Premium client.", "Brought free burgers for the staff.", "VIP"],
-  ["Megan Daniels", 26, "Photographer", "Ladies Wash & Blowout", "250", "Monthly", "Loves volume curls.", "Discussed camera gear and editing styles.", "Creative"],
-  ["Sanele Hlophe", 23, "Soccer Player", "Basic Fade Cut", "120", "Weekly", "Sharp lineup every match week.", "Debated Premier League predictions.", "Athlete"],
-  ["Reece Williams", 32, "Sales Consultant", "Hair Dye", "300", "Quarterly", "Covers greys professionally.", "Asked about loyalty discounts.", "Professional"],
-  ["Candice Fortuin", 28, "Events Coordinator", "Braids / Cornrows", "350", "Every 6 weeks", "Likes neat braids that last through events.", "Talked about festival outfits.", "Event Ready"],
-  ["Tshepo Moloi", 36, "Operations Manager", "Kids Cut", "90", "Monthly", "Books for his son and prefers patient barbers.", "Son refused to leave after getting a lollipop.", "Family"],
-  ["Keagan Adams", 22, "Content Creator", "Skin Fade", "160", "Every 2 weeks", "Wants very sharp detail for videos.", "Wanted TikTok barber level precision.", "Creator"],
-  ["Boitumelo Mokoena", 30, "Interior Designer", "Wig Install", "650", "Monthly", "Prefers polished soft glam finishes.", "Preparing for engagement photos.", "VIP"],
-  ["Ricardo Hendricks", 37, "Project Manager", "Beard Shaping", "80", "Weekly", "Likes a clean beard line and quick service.", "Spoke about rugby and braais.", "Loyal"],
-  ["Anele Sithole", 33, "Legal Assistant", "Scalp Treatment", "180", "Monthly", "Prefers quiet chair and massage-focused treatment.", "Relaxed spa-style session.", "Wellness"],
-  ["Jade Pillay", 24, "Sneaker Reseller", "Nail Grooming", "150", "Monthly", "Likes clean minimalist grooming.", "Asked staff where they buy sneakers.", "Trend"],
-  ["Lungelo Dlamini", 27, "Brand Strategist", "VIP Fade + Beard", "220", "Every 2 weeks", "Books before date nights and launches.", "Came directly before a date night.", "VIP"],
-  ["Taryn Fisher", 31, "Accountant", "Eyebrow Tint & Shape", "120", "Every 3 weeks", "Prefers subtle brow finish.", "Recommended Netflix shows.", "Regular"],
-  ["Mbuso Ngema", 34, "Music Producer", "Dreadlock Retwist", "550", "Monthly", "Needs locs neat for studio sessions.", "Producer working on gospel album.", "Creative"],
-  ["Nicole Botha", 29, "Marketing Manager", "Ladies Wash & Blowout", "250", "Monthly", "Prefers glossy blowouts.", "Loved the cappuccino machine.", "Regular"],
-  ["Karabo Seema", 18, "Student", "Basic Fade Cut", "120", "Monthly", "Wants school-event friendly style.", "Asked for school dance style.", "Student"],
-  ["Tyrone Isaacs", 41, "Conference Speaker", "House Call VIP Booking", "900", "Quarterly", "Hotel appointments before keynote events.", "Barber came to hotel before business conference.", "Mobile VIP"],
-  ["Palesa Mabena", 26, "Travel Consultant", "Braids / Cornrows", "350", "Every 6 weeks", "Needs long-lasting vacation styles.", "Needed vacation-ready look.", "Travel"],
-  ["Darren Jacobs", 30, "Tattoo Artist", "Hair Dye", "300", "Quarterly", "Open to bold colour changes.", "Went full copper brown transformation.", "Creative"],
-  ["Simphiwe Dube", 35, "Product Manager", "Full Grooming Package", "750", "Monthly", "Likes premium reset appointments.", "Called it a software update for humans.", "VIP"],
-  ["Kiara Naicker", 28, "Bride-to-be", "Wig Install", "650", "Monthly", "Needs bridal-ready finish.", "Bridal prep appointment.", "Bridal"],
-  ["Warren Petersen", 39, "Insurance Broker", "Beard Shaping", "80", "Weekly", "Quick lunchtime cleanup client.", "Quick lunchtime cleanup.", "Professional"],
-  ["Naledi Phiri", 25, "Beauty Buyer", "Nail Grooming", "150", "Monthly", "Likes current skincare and beauty trends.", "Chatted about skincare trends.", "Trend"],
-  ["Brandon September", 27, "Fitness Coach", "Skin Fade", "160", "Every 2 weeks", "Loves ultra-clean side profile fades.", "Loves ultra-clean side profile fades.", "Athlete"],
-  ["Faith Mthethwa", 32, "Nurse", "Scalp Treatment", "180", "Monthly", "Self-care appointment after long shifts.", "Relaxing self-care appointment.", "Wellness"],
-  ["Jason Govender", 28, "Logistics Planner", "Basic Fade Cut", "120", "Weekly", "Likes recurring appointment discipline.", "Booked recurring Tuesday slot.", "Regular"],
-  ["Luyanda Msimango", 29, "Music Producer", "Dreadlock Retwist", "550", "Monthly", "Purple dyed locs and clean retwist.", "Music producer with purple dyed locs.", "Creative"],
-  ["Simone Abrahams", 34, "Event Planner", "Eyebrow Tint & Shape", "120", "Every 3 weeks", "Books before dinner events.", "Fast appointment before dinner event.", "Event Ready"],
-  ["Trevor Molefe", 38, "Podcast Host", "VIP Fade + Beard", "220", "Every 2 weeks", "Needs beard and fade sharp on camera.", "Preparing for podcast appearance.", "Creator"],
-  ["Zoya Khan", 27, "Boutique Owner", "Ladies Wash & Blowout", "250", "Monthly", "Requested soft luxury hair.", "Requested soft luxury hair.", "VIP"],
-  ["Neo Ramokgopa", 6, "Primary School Learner", "Kids Cut", "90", "Monthly", "First haircut experience, parent-managed profile.", "First haircut experience. Tiny legend survived.", "Family"],
-  ["Caitlyn Arendse", 23, "Fashion Student", "Braids / Cornrows", "350", "Every 6 weeks", "Wants summer-ready boho braids.", "Wanted summer-ready boho braids.", "Student"],
-  ["Kabelo Sithole", 25, "Musician", "Hair Dye", "300", "Quarterly", "Changes colour for shoots.", "Dyed hair for music video shoot.", "Creative"],
-  ["Ameer Jacobs", 36, "Hospitality Director", "Full Grooming Package", "750", "Monthly", "Premium grooming and fragrance-focused client.", "Said the shop smells like confidence and cologne.", "VIP"]
-];
-
-const guestDemoClientPool = guestDemoClientRows.map(([name, age, occupation, serviceName, price, frequency, notes, chatSummary, label], index) => ({
-  name,
-  age,
-  occupation,
-  serviceName,
-  price,
-  frequency,
-  notes,
-  chatSummary,
-  label,
-  phone: `+27 ${['72', '82', '71', '73', '79', '81', '83', '76', '84', '74'][index % 10]} ${String(210 + index).padStart(3, '0')} ${String(4000 + index * 37).slice(-4)}`,
-  email: `${name.toLowerCase().replace(/[^a-z]+/g, '.').replace(/^\.+|\.+$/g, '')}@velvetfade.example`,
-  birthday: `${(index % 27) + 1} ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][index % 12]} ${2026 - (age || 28)}`,
-  avatar: ''
-}));
-
-const guestDemoServiceByName = guestDemoServices.reduce((serviceMap, service) => {
-  serviceMap[service.name] = service;
-  return serviceMap;
-}, {});
-
-const createGuestDemoDate = (offset = 0) => {
-  const date = new Date();
-  date.setHours(10, 0, 0, 0);
-  date.setDate(date.getDate() + offset);
-  return {
-    date,
-    dateKey: getLocalDateStr(date),
-    label: date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  };
-};
-
-const createGuestDemoSchedule = () => {
-  const schedule = {};
-  const busyTimes = ['08:00', '09:00', '10:00', '11:00', '12:30', '14:00', '15:30', '17:00', '18:30'];
-  const expressTimes = ['09:00', '10:00', '12:30', '15:30', '17:00'];
-  for (let offset = -92; offset < 35; offset += 1) {
-    const { date, dateKey } = createGuestDemoDate(offset);
-    const isSunday = date.getDay() === 0;
-    const isMonday = date.getDay() === 1;
-    schedule[dateKey] = {
-      available: !isSunday,
-      times: isSunday ? [] : (isMonday ? expressTimes : busyTimes)
-    };
-  }
-  return schedule;
-};
-
-const createGuestDemoBookings = () => {
-  const now = Date.now();
-  const timeCycle = ['08:00', '09:00', '10:00', '11:00', '12:30', '14:00', '15:30', '17:00', '18:30'];
-  const bookings = [];
-  const getDemoDate = ({ monthOffset = 0, day = 1, hour = 10, minute = 0 }) => {
-    const date = new Date();
-    date.setHours(hour, minute, 0, 0);
-    date.setMonth(date.getMonth() + monthOffset, day);
-    if (date.getDay() === 0) date.setDate(date.getDate() + 1);
-    return {
-      date,
-      dateKey: getLocalDateStr(date),
-      label: date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    };
-  };
-  const pushBooking = ({ client, clientIndex, monthOffset, day, timeIndex, status = 'confirmed', paymentStatus = 'paid', sequence = 0 }) => {
-    const service = guestDemoServiceByName[client.serviceName] || guestDemoServices[0];
-    const amountInCents = Number(service.price) * 100;
-    const [hour, minute] = timeCycle[timeIndex % timeCycle.length].split(':').map(Number);
-    const { date, dateKey, label } = getDemoDate({ monthOffset, day, hour, minute });
-    const appointmentAt = new Date(date);
-    const gatewayCycle = ['manual_eft', 'cash', 'stripe', 'payfast', 'yoco', 'paystack', 'ozow'];
-    const paymentGateway = gatewayCycle[(clientIndex + sequence) % gatewayCycle.length];
-    const paymentProviderName = paymentGateway === 'cash'
-      ? 'Cash'
-      : paymentGateway === 'manual_eft'
-        ? 'Manual EFT'
-        : paymentGateway === 'payfast'
-          ? 'Payfast card'
-          : paymentGateway === 'yoco'
-            ? 'Yoco card'
-            : paymentGateway === 'paystack'
-              ? 'Paystack card'
-              : paymentGateway === 'ozow'
-                ? 'Ozow payment'
-                : 'Stripe card';
-    const paidAt = paymentStatus === 'paid'
-      ? Math.min(appointmentAt.getTime() + 1000 * 60 * 75, now - 1000 * 60 * Math.max(20, clientIndex + sequence + 5))
-      : null;
-    const updatedAt = paymentStatus === 'paid'
-      ? paidAt
-      : Math.min(appointmentAt.getTime(), now - 1000 * 60 * (clientIndex + sequence + 20));
-    const id = `booking-velvet-${String(1000 + bookings.length + 1).padStart(4, '0')}`;
-    bookings.push({
-      id,
-      clientName: client.name,
-      clientPhone: client.phone,
-      clientEmail: client.email,
-      clientBirthday: client.birthday,
-      clientNote: sequence === 3
-        ? `Chat: ${client.chatSummary} Added from support chat after a stylist follow-up. Notes: ${client.notes}`
-        : (clientIndex + sequence) % 4 === 0
-          ? `${client.notes} Frequency: ${client.frequency}. Chat: ${client.chatSummary}`
-          : `${client.occupation}. ${client.notes} Chat: ${client.chatSummary}`,
-      clientPhotoURL: '',
-      clientAvatar: '',
-      avatar: '',
-      serviceId: service.id,
-      serviceName: service.name,
-      serviceDuration: service.duration,
-      servicePrice: service.price,
-      servicePriceType: service.priceType || 'fixed',
-      serviceCategory: service.category,
-      amountInCents,
-      currency: 'ZAR',
-      paymentMethod: paymentGateway,
-      paymentGateway,
-      paymentProviderName,
-      paymentStatus,
-      paymentReference: id.toUpperCase(),
-      manualPayment: true,
-      amountPaidInCents: paymentStatus === 'paid' ? amountInCents : 0,
-      paidAt,
-      date: label,
-      dateKey,
-      time: status === 'waitlist' ? 'Waitlist' : timeCycle[timeIndex % timeCycle.length],
-      status,
-      timestamp: appointmentAt.getTime(),
-      createdAt: appointmentAt.getTime() - 1000 * 60 * 60 * (24 + ((clientIndex + sequence) % 24)),
-      updatedAt,
-      staffId: service.staffIds[(clientIndex + sequence) % service.staffIds.length] || 'owner',
-      noShowHistory: (clientIndex + sequence) % 37 === 0,
-      source: 'guest-demo'
-    });
-  };
-
-  guestDemoClientPool.forEach((client, clientIndex) => {
-    const preferredDay = 2 + (clientIndex % 24);
-    [-2, -1, 0].forEach((monthOffset, historyIndex) => {
-      pushBooking({
-        client,
-        clientIndex,
-        monthOffset,
-        day: preferredDay,
-        timeIndex: clientIndex + historyIndex,
-        status: 'confirmed',
-        paymentStatus: 'paid',
-        sequence: historyIndex
-      });
-    });
-    const upcomingStatus = clientIndex % 10 === 0 ? 'waitlist' : clientIndex % 6 === 0 ? 'pending' : 'confirmed';
-    pushBooking({
-      client,
-      clientIndex,
-      monthOffset: clientIndex < 28 ? 0 : 1,
-      day: clientIndex < 28 ? 27 + (clientIndex % 4) : 2 + (clientIndex % 18),
-      timeIndex: clientIndex + 3,
-      status: upcomingStatus,
-      paymentStatus: upcomingStatus === 'confirmed' && clientIndex % 4 === 0 ? 'paid' : 'manual_pending',
-      sequence: 3
-    });
-  });
-
-  return bookings.sort((a, b) => (b.updatedAt || b.timestamp || 0) - (a.updatedAt || a.timestamp || 0));
-};
-
-const createGuestDemoClients = (bookings = []) => (
-  guestDemoClientPool.map((client, index) => {
-    const clientBookings = bookings.filter(booking => booking.clientEmail === client.email);
-    const lastBooking = [...clientBookings].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] || null;
-    return {
-      id: `phone-${client.phone.replace(/\D/g, '')}`,
-      name: client.name,
-      phone: client.phone,
-      email: client.email,
-      birthday: client.birthday,
-      notes: `${client.age}-year-old ${client.occupation}. Books ${client.serviceName} at R${client.price}. ${client.frequency}. ${client.notes} Chat: ${client.chatSummary}`,
-      avatar: '',
-      labels: [client.label, client.frequency, clientBookings.length >= 4 ? 'Regular' : 'Needs Follow-up'].filter(Boolean),
-      source: 'guest-demo',
-      createdAt: clientBookings[clientBookings.length - 1]?.createdAt || Date.now() - (index + 12) * 86400000,
-      updatedAt: lastBooking?.updatedAt || Date.now() - index * 3600000
-    };
-  })
-);
-
-const createGuestDemoStaff = () => ([
-  { id: 'owner', uid: 'guest-owner', name: 'Mandla Jacobs', email: 'mandla@velvetfade.example', phone: '+27 11 555 0144', photoURL: '', role: 'owner', status: 'connected', color: '#111827', speciality: 'VIP fades, beard work, and mobile grooming' },
-  { id: 'staff-aaliyah', name: 'Aaliyah Fortuin', email: 'aaliyah@velvetfade.example', phone: '+27 72 555 0172', photoURL: '', role: 'stylist', status: 'access-ready', color: '#F97316', speciality: 'Braids, installs, and glam finishes' },
-  { id: 'staff-kabelo', name: 'Kabelo Dube', email: 'kabelo@velvetfade.example', phone: '+27 82 555 0182', photoURL: '', role: 'barber', status: 'access-ready', color: '#14B8A6', speciality: 'Skin fades, kids cuts, and colour' },
-  { id: 'staff-thandi', name: 'Thandi Naidoo', email: 'thandi@velvetfade.example', phone: '+27 73 555 0193', photoURL: '', role: 'beauty lead', status: 'access-ready', color: '#A855F7', speciality: 'Blowouts, brows, scalp care, and nails' },
-  { id: 'staff-reece', name: 'Reece September', email: 'reece@velvetfade.example', phone: '+27 79 555 0155', photoURL: '', role: 'junior barber', status: 'access-ready', color: '#22C55E', speciality: 'Basic fades, beard cleanups, and family bookings' }
-]);
-
-const createGuestDemoSettings = () => ({
-  ...createDefaultSettings(),
-  guestDemoVersion: 4,
-  slug: 'velvet-fade-studio',
-  brandName: 'Velvet Fade Studio',
-  businessName: 'Velvet Fade Studio',
-  tagline: 'Sharp cuts. Smooth energy. Kasi luxury with city polish.',
-  welcomeMessage: 'Modern unisex Johannesburg grooming with clean fades, braids, beard work, installs, treatments, beauty add-ons, loyalty energy, walk-ins, appointments, and VIP mobile bookings.',
-  primaryColor: '#050505',
-  headingColor: '#050505',
-  bodyColor: '#4B5563',
-  backgroundColor: '#F8F7F4',
-  slotBgColor: '#FFFFFF',
-  slotTextColor: '#111827',
-  dateBgColor: '#FFFFFF',
-  dateTextColor: '#6B7280',
-  dateActiveBgColor: '#99F6E4',
-  dateActiveTextColor: '#050505',
-  buttonColor: '#050505',
-  buttonTextColor: '#FFFFFF',
-  fontFamily: 'figtree',
-  headingFontFamily: 'bricolage',
-  bodyFontFamily: 'figtree',
-  buttonFontFamily: 'space-grotesk',
-  slotFontFamily: 'figtree',
-  dateFontFamily: 'bricolage',
-  brandNameSize: 86,
-  taglineSize: 10,
-  welcomeSize: 20,
-  nativeAccent: true,
-  calendarDisplayStyle: 'editorial',
-  timeDisplayStyle: 'commerce',
-  serviceDisplayStyle: 'gallery',
-  serviceBorderStyle: 'solid',
-  faqDisplayStyle: 'split',
-  faqStyle: 'outline',
-  venueGalleryStyle: 'editorial',
-  mapDisplayStyle: 'card',
-  socialDisplayStyle: 'solid',
-  socialIconStyle: 'solid',
-  dateLabel: 'Choose your grooming day',
-  timeLabel: 'Pick your chair time',
-  buttonText: 'Book Velvet Fade',
-  confirmButtonText: 'Reserve Appointment',
-  detailsHeading: 'Client Details',
-  detailsSubHeading: 'So the team can prep your chair, style notes, and smooth arrival.',
-  successHeading: 'You are locked in',
-  availableTimes: ['08:00', '09:00', '10:00', '11:00', '12:30', '14:00', '15:30', '17:00', '18:30'],
-  schedule: createGuestDemoSchedule(),
-  features: {
-    birthday: true,
-    waitlist: true,
-    socialProof: true,
-    loadingScreen: true,
-    firstAvailable: true,
-    collectClientName: true,
-    collectClientPhone: true,
-    collectClientEmail: true,
-    collectClientNotes: true,
-    emailUpdates: true,
-    faqEnabled: true,
-    socialLinks: true,
-    location: 'https://maps.google.com/?q=Johannesburg%20barbershop',
-    faqs: [
-      { q: 'Do you take walk-ins?', a: 'Yes, but online bookings get priority. Busy Fridays and Saturdays are best reserved ahead.' },
-      { q: 'Can I book a house call?', a: 'VIP mobile bookings are available for hotels, events, shoots, and private clients around Johannesburg.' },
-      { q: 'Do you offer hair and beauty combos?', a: 'Yes. Clients can pair barbering with braids, installs, blowouts, brows, nails, or scalp treatments.' },
-      { q: 'Do regulars get rewards?', a: 'The guest demo includes recurring clients, loyalty notes, and high-value booking history so owners can see retention clearly.' }
-    ]
-  },
-  accountProfiles: {
-    'guest-workspace': {
-      uid: 'guest-workspace',
-      firstName: 'Mandla',
-      lastName: 'Jacobs',
-      email: 'mandla@velvetfade.example',
-      mobile: '+27 11 555 0144',
-      photoURL: '',
-      updatedAt: Date.now()
-    }
-  },
-  services: guestDemoServices,
-  serviceIndustry: 'barbershop',
-  logoDisplay: { visible: true, alignment: 'left', size: 104 },
-  bannerDisplay: { visible: true, height: 284, position: 'center' },
-  logo: guestDemoAssets.logo,
-  bannerImage: guestDemoAssets.banner,
-  venuePhotos: guestDemoAssets.venue,
-  venueTitle: 'Inside Velvet Fade',
-  venueIntro: 'Neon mirrors, premium chairs, espresso shots, sneaker talk, amapiano in the background, and fresh confidence walking out the door.',
-  address: '88 Commissioner Street, Johannesburg',
-  socials: {
-    instagram: '@velvetfadestudio',
-    tiktok: '@velvetfadeza',
-    facebook: 'velvetfadestudio',
-    website: 'https://velvetfade.example'
-  }
+const createGuestDemoWorkspace = () => createJumpGuestWorkspace({
+  createDefaultSettings,
+  createDefaultCommunications,
+  getLocalDateStr
 });
-
-const createGuestDemoCommunications = () => ({
-  ...createDefaultCommunications(),
-  confirmed: { active: true, text: 'Your Velvet Fade Studio booking is confirmed. Your chair is saved and the team has your grooming notes ready.' },
-  review: { active: true, text: 'Thanks for visiting Velvet Fade Studio. If the cut, install, or treatment felt fresh, a quick review helps the shop grow.' },
-  waitlist: { active: true, text: 'A Velvet Fade slot opened up. Reply quickly and we can move you from waitlist to confirmed.' },
-  runningLate: { active: true, text: 'The shop is running about 10 minutes behind. Your appointment is still protected and the espresso machine is on.' }
-});
-
-const createGuestDemoWorkspace = () => {
-  const bookings = createGuestDemoBookings();
-  return {
-    settings: createGuestDemoSettings(),
-    bookings,
-    staffList: createGuestDemoStaff(),
-    clientRecords: createGuestDemoClients(bookings),
-    communications: createGuestDemoCommunications()
-  };
-};
-
 const clampNumber = (value, min, max, fallback) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -1141,9 +709,11 @@ const clampNumber = (value, min, max, fallback) => {
 const getLogoDisplay = (settings = {}) => {
   const logoDisplay = settings.logoDisplay || {};
   const size = Number(logoDisplay.size);
+  const placement = ['title', 'top', 'badge'].includes(logoDisplay.placement) ? logoDisplay.placement : 'title';
   return {
     visible: logoDisplay.visible !== false,
     alignment: logoAlignmentOptions.some(option => option.id === logoDisplay.alignment) ? logoDisplay.alignment : 'left',
+    placement,
     size: Number.isFinite(size) ? Math.min(176, Math.max(48, size)) : 96
   };
 };
@@ -1159,10 +729,14 @@ const parseAmountToCents = (value) => {
 const getBannerDisplay = (settings = {}) => {
   const bannerDisplay = settings.bannerDisplay || {};
   const height = Number(bannerDisplay.height);
+  const opacity = Number(bannerDisplay.opacity);
   const position = ['top', 'center', 'bottom'].includes(bannerDisplay.position) ? bannerDisplay.position : 'center';
+  const placement = ['hero', 'top', 'footer'].includes(bannerDisplay.placement) ? bannerDisplay.placement : 'hero';
   return {
     visible: bannerDisplay.visible !== false,
+    placement,
     height: Number.isFinite(height) ? Math.min(360, Math.max(120, height)) : 220,
+    opacity: Number.isFinite(opacity) ? Math.min(100, Math.max(15, opacity)) : 100,
     position,
     objectPosition: position === 'top' ? 'center top' : position === 'bottom' ? 'center bottom' : 'center center'
   };
@@ -1180,7 +754,7 @@ function LetterSpacingControl({ settings, onChange }) {
       key: 'headingLetterSpacing',
       label: 'Heading Space',
       note: 'Business name, section titles, and success headline.',
-      sample: 'Studio Noir',
+      sample: 'Your Business',
       min: -4,
       max: 8
     },
@@ -1188,7 +762,7 @@ function LetterSpacingControl({ settings, onChange }) {
       key: 'subtextLetterSpacing',
       label: 'Subtext Space',
       note: 'Tagline and welcome copy below the heading.',
-      sample: 'Reserve your private session.',
+      sample: 'Reserve your session.',
       min: -1,
       max: 6
     }
@@ -1299,13 +873,15 @@ function InterfaceLookGrid({ value, onChange, looks = [], label = 'Display look'
               onClick={() => onChange(look.id)}
               className={isActive ? 'is-active' : ''}
             >
-              <i aria-hidden="true">
+              <i className="cinema-look-preview" data-look={look.id} aria-hidden="true">
+                <b />
+                <b />
+                <b />
                 <b />
                 <b />
                 <b />
               </i>
               <span>{look.label}</span>
-              <small>{look.note}</small>
             </button>
           );
         })}
@@ -1441,6 +1017,18 @@ const workspaceTabAliases = {
   payments: 'finance'
 };
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
+const landingStopActions = [
+  'manual booking management',
+  'chasing clients for replies',
+  'losing bookings in DMs',
+  'double booking your calendar',
+  'typing the same answers',
+  'guessing who paid',
+  'messy client records',
+  'late reschedule chaos',
+  'copying links all day',
+  'running your studio on memory'
+];
 
 const safeJsonParse = (value, fallback = null) => {
   if (!value) return fallback;
@@ -1500,6 +1088,10 @@ const clearEditorDraft = (ownerId) => {
 const getEditorDraftVersionsKey = (ownerId = 'guest') => (
   `${editorDraftVersionsStoragePrefix}-${String(ownerId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '-')}`
 );
+
+const clearEditorDraftVersions = (ownerId) => {
+  safeLocalRemove(getEditorDraftVersionsKey(ownerId));
+};
 
 const readEditorDraftVersions = (ownerId) => {
   const versions = safeJsonParse(safeLocalGet(getEditorDraftVersionsKey(ownerId)), []);
@@ -1675,6 +1267,11 @@ const getInitialWorkspaceRoute = () => {
   return getWorkspaceRouteFromUrl() || getSavedWorkspaceRoute();
 };
 
+const shouldStartInGuestWorkspace = (route = {}) => (
+  safeLocalGet(guestModeStorageKey) === 'true' ||
+  (route.view === 'dashboard' && !getPublicBookingSlug())
+);
+
 const saveWorkspaceRoute = (route) => {
   const normalized = normalizeWorkspaceRoute(route);
   safeLocalSet(workspaceRouteStorageKey, JSON.stringify(normalized));
@@ -1791,6 +1388,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
           export default function App() {
             const isNativeAppRuntime = Capacitor?.isNativePlatform?.() || false;
               const [initialWorkspaceRoute] = useState(getInitialWorkspaceRoute);
+              const initialGuestWorkspaceRef = useRef(null);
+              const startsInGuestWorkspace = shouldStartInGuestWorkspace(initialWorkspaceRoute);
+              const getInitialGuestWorkspace = () => {
+                if (!startsInGuestWorkspace) return null;
+                if (!initialGuestWorkspaceRef.current) {
+                  initialGuestWorkspaceRef.current = createGuestDemoWorkspace();
+                }
+                return initialGuestWorkspaceRef.current;
+              };
               const [user, setUser] = useState(null);
             const [workspaceAccess, setWorkspaceAccess] = useState([]);
             const [activeWorkspaceOwnerId, setActiveWorkspaceOwnerId] = useState('');
@@ -1810,7 +1416,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 hasFreshAuthRedirectStart()
             ));
             const [guestMode, setGuestMode] = useState(() => {
-                return safeLocalGet(guestModeStorageKey) === 'true';
+                return startsInGuestWorkspace;
             });
             const [clientGuestMode, setClientGuestMode] = useState(false);
             const [publicSlug, setPublicSlug] = useState(getPublicBookingSlug);
@@ -1838,7 +1444,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [device, setDevice] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches ? 'mobile' : 'desktop'
             )); 
-            const [editorPreviewBooting, setEditorPreviewBooting] = useState(false);
             const [previewKey, setPreviewKey] = useState(0); 
             const [scale, setScale] = useState(1);
             const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -1867,7 +1472,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [bookingPaymentFilter, setBookingPaymentFilter] = useState('all');
             const [manualBookingOpen, setManualBookingOpen] = useState(false);
             const [manualBookingServiceId, setManualBookingServiceId] = useState('custom');
-            const [clientRecords, setClientRecords] = useState([]);
+            const [clientRecords, setClientRecords] = useState(() => getInitialGuestWorkspace()?.clientRecords || []);
             const [clientSearch, setClientSearch] = useState('');
             const [clientDeskFilter, setClientDeskFilter] = useState('all');
             const [selectedClientId, setSelectedClientId] = useState(null);
@@ -1904,6 +1509,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [runningLateDialog, setRunningLateDialog] = useState(null);
             const [supportThreadFocus, setSupportThreadFocus] = useState(null);
+            const [landingStopText, setLandingStopText] = useState('');
+            const [landingStopIndex, setLandingStopIndex] = useState(0);
+            const [landingStopDeleting, setLandingStopDeleting] = useState(false);
             const [legalPanel, setLegalPanel] = useState(null);
             const [ownerNotifications, setOwnerNotifications] = useState([]);
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
@@ -1941,6 +1549,29 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
             useEffect(() => () => editorRoomNavDragRef.current?.cleanup?.(), []);
+            useEffect(() => {
+                const phrase = landingStopActions[landingStopIndex] || '';
+                const isComplete = !landingStopDeleting && landingStopText === phrase;
+                const isCleared = landingStopDeleting && landingStopText.length === 0;
+                const delay = isComplete ? 1300 : isCleared ? 220 : landingStopDeleting ? 34 : 58;
+                const timer = window.setTimeout(() => {
+                    if (isComplete) {
+                        setLandingStopDeleting(true);
+                        return;
+                    }
+                    if (isCleared) {
+                        setLandingStopDeleting(false);
+                        setLandingStopIndex(index => (index + 1) % landingStopActions.length);
+                        return;
+                    }
+                    setLandingStopText(current => (
+                        landingStopDeleting
+                            ? current.slice(0, Math.max(0, current.length - 1))
+                            : phrase.slice(0, current.length + 1)
+                    ));
+                }, delay);
+                return () => window.clearTimeout(timer);
+            }, [landingStopDeleting, landingStopIndex, landingStopText]);
             useEffect(() => {
                 if (typeof window === 'undefined') return undefined;
                 const confirmPageExit = (event) => {
@@ -2096,7 +1727,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 };
             }, [isNativeAppRuntime]);
 
-            const [settings, setSettings] = useState(createDefaultSettings);
+            const [settings, setSettings] = useState(() => getInitialGuestWorkspace()?.settings || createDefaultSettings());
 
             useEffect(() => {
                 settingsRef.current = settings;
@@ -2119,14 +1750,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             }, []);
 
-            const [bookings, setBookings] = useState([]);
-            const [bookingsReady, setBookingsReady] = useState(!isFirebaseConfigured);
-            const [staffList, setStaffList] = useState([{id: 'owner', name: 'Admin', color: '#39FF14'}]);
-            const [accountProfileOverride, setAccountProfileOverride] = useState({});
-            const [communications, setCommunications] = useState(createDefaultCommunications);
+            const [bookings, setBookings] = useState(() => getInitialGuestWorkspace()?.bookings || []);
+            const [bookingsReady, setBookingsReady] = useState(() => Boolean(getInitialGuestWorkspace()) || !isFirebaseConfigured);
+            const [staffList, setStaffList] = useState(() => getInitialGuestWorkspace()?.staffList || [{id: 'owner', name: 'Admin', color: '#39FF14'}]);
+            const [accountProfileOverride, setAccountProfileOverride] = useState(() => getInitialGuestWorkspace()?.settings?.accountProfiles?.['guest-workspace'] || {});
+            const [communications, setCommunications] = useState(() => getInitialGuestWorkspace()?.communications || createDefaultCommunications());
             const referralUrl = useMemo(() => `${window.location.origin}/ref/${user?.uid?.substring(0,6) || '10X'}`, [user?.uid]);
             const workspaceOwnerId = activeWorkspaceOwnerId || user?.uid || '';
-            const isGuestWorkspace = Boolean(guestMode && !user && !publicSlug);
+            const isDashboardGuestPreview = view === 'dashboard';
+            const isGuestWorkspace = Boolean((guestMode || isDashboardGuestPreview) && !user && !publicSlug);
             const activeWorkspaceGrant = useMemo(
                 () => workspaceAccess.find(grant => grant.ownerId === workspaceOwnerId),
                 [workspaceAccess, workspaceOwnerId]
@@ -2186,16 +1818,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             useEffect(() => {
-                if (publicSlug || loading || user) return;
+                if (publicSlug || loading || user || isGuestWorkspace) return;
                 resetWorkspaceRuntimeState();
-            }, [publicSlug, loading, user?.uid, guestMode]);
+            }, [publicSlug, loading, user?.uid, guestMode, isGuestWorkspace]);
 
             useEffect(() => {
                 if (!isEditorWorkspaceOpen || !editorDraftOwnerKey) return;
+                if (isGuestWorkspace) {
+                    setEditorDraftVersions([]);
+                    setEditorDraftNameInput(settings.draftName || settings.brandName || 'Jump Studios');
+                    return;
+                }
                 const versions = readEditorDraftVersions(editorDraftOwnerKey);
                 setEditorDraftVersions(versions);
                 setEditorDraftNameInput(current => current || settings.draftName || settings.brandName || 'Working Draft');
-            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, settings.brandName, settings.draftName]);
+            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, isGuestWorkspace, settings.brandName, settings.draftName]);
 
             useEffect(() => {
                 if (!isGuestWorkspace) {
@@ -2205,7 +1842,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (loading) return;
                 if (guestDemoSeededRef.current) return;
 
-                const demoWorkspace = createGuestDemoWorkspace();
+                clearEditorDraft('guest');
+                clearEditorDraftVersions('guest');
+                const demoWorkspace = initialGuestWorkspaceRef.current || createGuestDemoWorkspace();
                 setSettings(demoWorkspace.settings);
                 setBookings(demoWorkspace.bookings);
                 setBookingsReady(true);
@@ -2213,6 +1852,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setClientRecords(demoWorkspace.clientRecords);
                 setCommunications(demoWorkspace.communications);
                 setAccountProfileOverride(demoWorkspace.settings.accountProfiles?.['guest-workspace'] || {});
+                setEditorDraftVersions([]);
+                setEditorDraftNameInput(demoWorkspace.settings.brandName || 'Jump Studios');
                 guestDemoSeededRef.current = true;
             }, [isGuestWorkspace, loading]);
 
@@ -2440,21 +2081,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const visibleBookings = bookings;
             const exampleBooking = useMemo(() => ({
                 id: 'example-booking',
-                clientName: 'Sipho Mokoena',
-                clientPhone: '+27 72 210 4000',
-                clientEmail: 'sipho.mokoena@velvetfade.example',
-                clientNote: 'Example only. Sipho loves clean temple fades and always books Friday afternoons.',
-                clientBirthday: '1 January 2002',
+                clientName: 'Mina Patel',
+                clientPhone: '+44 20 5555 0188',
+                clientEmail: 'mina.patel@jump-client.example',
+                clientNote: 'Example only. Mina booked from the public booking page and wants strength coaching around a busy product launch.',
+                clientBirthday: '12 March 1992',
                 clientPhotoURL: '',
                 clientAvatar: '',
                 avatar: '',
-                serviceName: 'Skin Fade',
+                serviceName: 'Jump Start Assessment',
                 serviceDuration: '60',
-                servicePrice: '160',
-                paymentMethod: 'cash',
-                paymentGateway: 'cash',
+                servicePrice: '35',
+                paymentMethod: 'stripe',
+                paymentGateway: 'stripe',
                 paymentStatus: 'manual_pending',
-                paymentProviderName: 'Cash',
+                paymentProviderName: 'Stripe checkout',
                 date: 'Thursday, May 28',
                 time: '17:00',
                 status: 'pending',
@@ -2464,11 +2105,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }), []);
             const exampleClient = useMemo(() => ({
                 id: 'example-client',
-                name: 'Sipho Mokoena',
-                phone: '+27 72 210 4000',
-                email: 'sipho.mokoena@velvetfade.example',
-                birthday: '1 January 2002',
-                notes: 'Example only. Graphic designer. Books Skin Fade at R160 every 2 weeks. Loves clean temple fades and Friday afternoons.',
+                name: 'Mina Patel',
+                phone: '+44 20 5555 0188',
+                email: 'mina.patel@jump-client.example',
+                birthday: '12 March 1992',
+                notes: 'Example only. Product lead in London. Books from the public booking page and wants a realistic training plan that works around launch weeks.',
                 avatar: '',
                 labels: ['Example'],
                 autoLabels: ['First Time'],
@@ -3235,6 +2876,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const paletteFilterOptions = useMemo(() => (
                 paletteThemeFilterGroup.filters.filter(filter => !['dark', 'earth'].includes(filter.id))
             ), [paletteThemeFilterGroup]);
+            const paletteFlowOptions = useMemo(() => (
+                paletteFilterOptions.filter(filter => !['all'].includes(filter.id))
+            ), [paletteFilterOptions]);
             const selectedPaletteFilter = paletteThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.palette) || paletteThemeFilterGroup.filters[0];
             const selectedPaletteName = themeGenerationInputs.palette === 'custom' ? 'Custom' : selectedPaletteFilter.name;
             const selectedPalettePhrase = themeGenerationInputs.palette === 'custom'
@@ -3242,6 +2886,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 : selectedPaletteFilter.id === 'all'
                     ? 'a full color range'
                     : `${selectedPaletteFilter.name.toLowerCase()} colors`;
+            const activePaletteFlowId = paletteFlowOptions.some(option => option.id === settings.editorPaletteFlowColor)
+                ? settings.editorPaletteFlowColor
+                : paletteFlowOptions.some(option => option.id === themeGenerationInputs.palette)
+                    ? themeGenerationInputs.palette
+                    : 'blue';
+            const activePaletteFlow = paletteFlowOptions.find(option => option.id === activePaletteFlowId) || paletteFlowOptions[0];
+            const activePaletteDepthValue = typeof settings.editorColorDepths === 'object' && settings.editorColorDepths !== null
+                ? Number(settings.editorColorDepths[activePaletteFlowId] ?? settings.editorColorDepth ?? 50)
+                : Number(settings.editorColorDepth ?? 50);
+            const activePaletteShade = Math.max(1, Math.min(10, Math.round((activePaletteDepthValue || 50) / 10) || 5));
             const shouldMountEditorPreview = activeTab === 'editor';
 
             const setThemeFilterValue = (groupId, filterId) => {
@@ -3349,7 +3003,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 showToast('Use your browser share button, then choose Add to Home Screen.');
             };
 
-            useEffect(() => {
+            useLayoutEffect(() => {
                 if (activeTab !== 'editor' || !shouldMountEditorPreview) return undefined;
 
                 let frameRequest = 0;
@@ -3404,13 +3058,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     window.removeEventListener('resize', updateScale); 
                 };
             }, [device, activeTab, sidebarCollapsed, editorCollapsed, mobileNavCollapsed, editorStudioModal, shouldMountEditorPreview]);
-
-            useEffect(() => {
-                if (activeTab !== 'editor') return undefined;
-                setEditorPreviewBooting(true);
-                const timer = window.setTimeout(() => setEditorPreviewBooting(false), 820);
-                return () => window.clearTimeout(timer);
-            }, [activeTab, device, editorStudioModal, editorCollapsed, mobileNavCollapsed]);
 
             useEffect(() => {
                 if (activeTab !== 'editor') return;
@@ -3717,7 +3364,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             setWorkspaceAccess([]);
                             setActiveWorkspaceOwnerId('');
                             safeLocalRemove('build-a-booking-active-workspace');
-                            resetWorkspaceRuntimeState();
+                            const signedOutRoute = getWorkspaceRouteFromUrl() || getSavedWorkspaceRoute();
+                            if (shouldStartInGuestWorkspace(signedOutRoute)) {
+                                guestDemoSeededRef.current = false;
+                            } else {
+                                resetWorkspaceRuntimeState();
+                            }
                             const redirectStillStarting = hasFreshAuthRedirectStart();
                             setAuthRedirectPending(redirectStillStarting);
                             return;
@@ -4056,6 +3708,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     status: 'saved',
                     name: draftSettings.draftName
                 });
+                if (isGuestWorkspace) {
+                    setSettings(draftSettings);
+                    clearWorkspaceDirty();
+                    showToast(successMessage);
+                    return true;
+                }
                 writeEditorDraft(workspaceOwnerId || editorDraftOwnerKey, draftPayload);
                 if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
                     setSettings(draftSettings);
@@ -4106,7 +3764,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     settings: versionSettings
                 };
                 const nextVersions = [version, ...editorDraftVersions.filter(item => item.id !== version.id)].slice(0, 12);
-                writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
+                if (!isGuestWorkspace) {
+                    writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
+                }
                 setEditorDraftVersions(nextVersions);
                 await saveSettingsDraft(versionSettings, `Saved "${versionName}".`);
                 return true;
@@ -4123,18 +3783,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     setEditorStudioScene(version.editorStudioScene);
                 }
                 setEditorDraftNameInput(version.name || version.settings.draftName || 'Restored version');
-                writeEditorDraft(editorDraftOwnerKey, buildEditorDraftPayload(version.settings, {
-                    route: version.route || { view, activeTab, editorTab },
-                    editorStudioScene: version.editorStudioScene || editorStudioScene,
-                    status: 'restored',
-                    name: version.name || version.settings.draftName || 'Restored version'
-                }));
+                if (!isGuestWorkspace) {
+                    writeEditorDraft(editorDraftOwnerKey, buildEditorDraftPayload(version.settings, {
+                        route: version.route || { view, activeTab, editorTab },
+                        editorStudioScene: version.editorStudioScene || editorStudioScene,
+                        status: 'restored',
+                        name: version.name || version.settings.draftName || 'Restored version'
+                    }));
+                }
                 showToast(`Restored "${version.name || 'saved version'}".`);
             };
 
             const deleteEditorVersion = (versionId) => {
                 const nextVersions = editorDraftVersions.filter(version => version.id !== versionId);
-                writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
+                if (!isGuestWorkspace) {
+                    writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
+                }
                 setEditorDraftVersions(nextVersions);
                 showToast('Version removed.');
             };
@@ -4334,10 +3998,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, []);
 
             const editorRoomPreviewTargets = {
-                introduction: 'identity',
+                introduction: 'introduction',
+                logo: 'introduction',
+                banner: 'introduction',
                 services: 'services',
-                colours: 'identity',
-                typography: 'identity',
+                colours: 'introduction',
+                typography: 'introduction',
                 calendar: 'calendar',
                 time: 'time',
                 faq: 'faq',
@@ -4348,19 +4014,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const editorRoomScenes = [
                 { id: 'introduction', number: '01', icon: MessageSquare, title: 'Introduction' },
-                { id: 'services', number: '02', icon: Briefcase, title: 'Services' },
-                { id: 'colours', number: '03', icon: Pipette, title: 'Colour Direction' },
-                { id: 'typography', number: '04', icon: Type, title: 'Typography' },
-                { id: 'calendar', number: '05', icon: Calendar, title: 'Calendar Style' },
-                { id: 'time', number: '06', icon: Clock, title: 'Time Style' },
-                { id: 'faq', number: '07', icon: HelpCircle, title: 'FAQ Setup' },
-                { id: 'form', number: '08', icon: FileText, title: 'Client Form' },
-                { id: 'buttons', number: '09', icon: SlidersHorizontal, title: 'Action Buttons' },
-                { id: 'venue', number: '10', icon: Images, title: 'Venue & Maps' },
-                { id: 'social', number: '11', icon: Globe, title: 'Social Media' }
+                { id: 'logo', number: '02', icon: ImagePlus, title: 'Logo Placement' },
+                { id: 'banner', number: '03', icon: Images, title: 'Banner Placement' },
+                { id: 'services', number: '04', icon: Briefcase, title: 'Services' },
+                { id: 'colours', number: '05', icon: Pipette, title: 'Colour Direction' },
+                { id: 'typography', number: '06', icon: Type, title: 'Typography' },
+                { id: 'calendar', number: '07', icon: Calendar, title: 'Calendar Style' },
+                { id: 'time', number: '08', icon: Clock, title: 'Time Style' },
+                { id: 'faq', number: '09', icon: HelpCircle, title: 'FAQ Setup' },
+                { id: 'form', number: '10', icon: FileText, title: 'Client Form' },
+                { id: 'buttons', number: '11', icon: SlidersHorizontal, title: 'Action Buttons' },
+                { id: 'venue', number: '12', icon: Images, title: 'Venue & Maps' },
+                { id: 'social', number: '13', icon: Globe, title: 'Social Media' }
             ];
             const roomTabMap = {
                 introduction: 'identity',
+                logo: 'identity',
+                banner: 'identity',
                 services: 'features',
                 colours: 'themes',
                 typography: 'visuals',
@@ -4374,66 +4044,63 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const focusEditorPreviewRoom = (roomId) => {
                 if (typeof document === 'undefined') return;
-                const frame = document.querySelector('.editor-preview-frame');
-                if (roomId === 'colours') {
-                    frame?.classList.remove('booking-preview-paint-sweep');
-                    if (frame) {
+                const runFrameCue = (className, duration = 1800) => {
+                    window.requestAnimationFrame(() => {
+                        const frame = document.querySelector('.editor-preview-frame');
+                        const targets = [frame].filter(Boolean);
+                        if (!targets.length) return;
+                        targets.forEach(target => target.classList.remove(className));
                         void frame.offsetWidth;
-                        frame.classList.add('booking-preview-paint-sweep');
-                        window.setTimeout(() => frame.classList.remove('booking-preview-paint-sweep'), 2200);
-                    }
+                        targets.forEach(target => target.classList.add(className));
+                        window.setTimeout(() => {
+                            targets.forEach(target => target.classList.remove(className));
+                        }, duration);
+                    });
+                };
+                const focusPreviewTarget = (targetName, attempt = 0) => {
+                    window.requestAnimationFrame(() => {
+                        const frame = document.querySelector('.editor-preview-frame');
+                        const previewScroller = frame?.querySelector('.overflow-y-auto');
+                        const target = frame?.querySelector(`[data-preview-section="${targetName}"]`);
+                        if (!target) {
+                            if (attempt < 8) {
+                                window.setTimeout(() => focusPreviewTarget(targetName, attempt + 1), 90);
+                            }
+                            return;
+                        }
+                        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                        target.classList.remove('booking-preview-room-flash');
+                        void target.offsetWidth;
+                        target.classList.add('booking-preview-room-flash');
+                        window.setTimeout(() => target.classList.remove('booking-preview-room-flash'), 2400);
+                        previewScroller?.classList.add('is-room-scrolling');
+                        window.setTimeout(() => previewScroller?.classList.remove('is-room-scrolling'), 900);
+                    });
+                };
+                if (roomId === 'colours') {
                     return;
                 }
                 if (roomId === 'typography') {
-                    frame?.classList.remove('booking-preview-text-dance');
-                    if (frame) {
-                        void frame.offsetWidth;
-                        frame.classList.add('booking-preview-text-dance');
-                        window.setTimeout(() => frame.classList.remove('booking-preview-text-dance'), 1800);
-                    }
+                    runFrameCue('booking-preview-text-dance', 1800);
+                    focusPreviewTarget(editorRoomPreviewTargets[roomId] || roomId);
                     return;
                 }
                 const targetName = editorRoomPreviewTargets[roomId] || roomId;
-                window.requestAnimationFrame(() => {
-                    const previewScroller = document.querySelector('.editor-preview-frame .overflow-y-auto');
-                    const target = document.querySelector(`[data-preview-section="${targetName}"]`);
-                    if (!target) return;
-                    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                    target.classList.remove('booking-preview-room-flash');
-                    void target.offsetWidth;
-                    target.classList.add('booking-preview-room-flash');
-                    window.setTimeout(() => target.classList.remove('booking-preview-room-flash'), 2400);
-                    previewScroller?.classList.add('is-room-scrolling');
-                    window.setTimeout(() => previewScroller?.classList.remove('is-room-scrolling'), 900);
-                });
+                focusPreviewTarget(targetName);
             };
             const openEditorRoom = (roomId) => {
                 const normalizedRoomId = roomId === 'identity' ? 'introduction' : roomId;
-                const shouldCloseRoom = editorStudioModal === normalizedRoomId;
-                setEditorStudioModal(shouldCloseRoom ? null : normalizedRoomId);
+                setEditorStudioModal(normalizedRoomId);
                 setEditorTab(roomTabMap[normalizedRoomId] || 'identity');
-                if (shouldCloseRoom) {
-                    playEditorStudioSound('step');
-                    return;
-                }
-                if (normalizedRoomId === 'faq') {
-                    markWorkspaceDirty();
-                    setSettings(prev => ({
-                        ...prev,
-                        features: {
-                            ...(prev.features || {}),
-                            faqEnabled: true,
-                            faqs: Array.isArray(prev.features?.faqs) && prev.features.faqs.length > 0
-                                ? prev.features.faqs
-                                : defaultFaqItems
-                        }
-                    }));
-                    window.setTimeout(() => focusEditorPreviewRoom(normalizedRoomId), 360);
-                } else {
-                    focusEditorPreviewRoom(normalizedRoomId);
-                }
+                focusEditorPreviewRoom(normalizedRoomId);
                 playEditorStudioSound('step');
             };
+            useEffect(() => {
+                if (activeTab !== 'editor' || !editorStudioModal) return undefined;
+                const roomId = editorStudioModal === 'identity' ? 'introduction' : editorStudioModal;
+                const timer = window.setTimeout(() => focusEditorPreviewRoom(roomId), 35);
+                return () => window.clearTimeout(timer);
+            }, [activeTab, editorStudioModal, editorCollapsed, previewKey]);
             const startEditorRoomNavDrag = (event) => {
                 if (event.button !== undefined && event.button !== 0) return;
                 event.preventDefault();
@@ -4603,12 +4270,35 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const normalized = normalizeHexColor(color, '');
                 if (!normalized) return '';
                 const safeDepth = Math.max(0, Math.min(100, Number(depth) || 50));
-                if (safeDepth === 50) return normalized;
-                const amount = Math.min(0.72, Math.abs(safeDepth - 50) / 72);
-                return safeDepth < 50
-                    ? mixHexColors(normalized, '#ffffff', amount)
-                    : mixHexColors(normalized, '#050505', amount);
+                const electricColor = (input, intensity = 1) => {
+                    const { r, g, b } = hexToRgb(input, '#050505');
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    if (max - min < 18) return mixHexColors(input, '#F8FAFC', 0.35 + (0.22 * intensity));
+                    const channel = (value) => {
+                        const isLead = value === max;
+                        const leadValue = 230 + Math.round(25 * intensity);
+                        const mutedValue = Math.round(value * (1 - (0.54 * intensity)));
+                        return Math.max(0, Math.min(255, isLead ? leadValue : mutedValue));
+                    };
+                    return `#${[channel(r), channel(g), channel(b)].map(value => value.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+                };
+                if (safeDepth <= 50) {
+                    const amount = Math.min(0.82, (50 - safeDepth) / 50 * 0.82);
+                    return mixHexColors(normalized, '#ffffff', amount);
+                }
+                if (safeDepth <= 76) {
+                    const amount = Math.min(0.62, (safeDepth - 50) / 26 * 0.62);
+                    return mixHexColors(normalized, '#050505', amount);
+                }
+                const neonAmount = Math.min(1, (safeDepth - 76) / 24);
+                const deepBase = mixHexColors(normalized, '#050505', 0.5);
+                return mixHexColors(deepBase, electricColor(normalized, neonAmount), 0.42 + (0.58 * neonAmount));
             };
+            const activePaletteSampleBase = activePaletteFlow?.swatches?.[1] || activePaletteFlow?.swatches?.[0] || settings.primaryColor || '#050505';
+            const activePaletteShadeColor = normalizeHexColor(tuneColorByDepth(activePaletteSampleBase, activePaletteShade * 10), settings.backgroundColor || '#050505');
+            const activePaletteShadeText = readableTextFor(activePaletteShadeColor);
+            const activePalettePreviewSwatches = (activePaletteFlow?.swatches || [activePaletteShadeColor]).slice(0, 3);
             const applyColorDirection = (paletteId, selectedIds = settings.editorColorMix || [], depthInput = settings.editorColorDepths || settings.editorColorDepth || 50) => {
                 const paletteLookup = new Map(paletteFilterOptions.map(option => [option.id, option]));
                 const ids = selectedIds.length ? selectedIds : [paletteId];
@@ -4632,37 +4322,68 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const secondary = normalizeHexColor(softSecondary, '#bae6fd');
                 const accent = normalizeHexColor(richAccent, primary);
                 const averageDepth = ids.reduce((total, id) => total + getEditorColorDepth(id, depthInput), 0) / Math.max(ids.length, 1);
-                const darkMode = averageDepth > 64;
-                const softAlpha = darkMode ? '33' : '18';
-                const lighterAlpha = darkMode ? '22' : '12';
-                const activeText = readableTextFor(primary);
-                const slotText = readableTextFor(secondary);
+                const pageText = readableTextFor(primary);
+                const textIsLight = pageText === '#FFFFFF';
+                const paletteBody = mixHexColors(primary, pageText, textIsLight ? 0.74 : 0.68);
+                const paletteAction = pageText;
+                const cardAlpha = textIsLight ? '14' : '10';
+                const activeAlpha = averageDepth > 76 ? '26' : '1D';
+                const borderAlpha = textIsLight ? '45' : '32';
+                const activeText = pageText;
+                const slotText = pageText;
+                const actionText = readableTextFor(paletteAction);
                 markWorkspaceDirty();
                 setSettings(prev => ({
                     ...prev,
                     primaryColor: primary,
                     accentColor: accent,
-                    backgroundColor: darkMode ? '#0f1117' : '#ffffff',
-                    headingColor: darkMode ? '#f8fafc' : '#050505',
-                    bodyColor: darkMode ? '#cbd5e1' : '#64748b',
-                    dateActiveBgColor: `${primary}${softAlpha}`,
+                    backgroundColor: primary,
+                    headingColor: pageText,
+                    bodyColor: paletteBody,
+                    dateActiveBgColor: `${pageText}${activeAlpha}`,
                     dateActiveTextColor: activeText,
-                    dateBgColor: darkMode ? '#171a20' : '#f8fafc',
-                    dateTextColor: darkMode ? '#dbeafe' : '#64748b',
-                    slotBgColor: darkMode ? '#171a20' : '#f8fafc',
-                    slotTextColor: darkMode ? '#f8fafc' : '#050505',
-                    slotActiveBgColor: `${secondary}${softAlpha}`,
+                    dateBgColor: `${pageText}${cardAlpha}`,
+                    dateTextColor: paletteBody,
+                    slotBgColor: `${pageText}${cardAlpha}`,
+                    slotTextColor: paletteBody,
+                    slotActiveBgColor: `${pageText}${activeAlpha}`,
                     slotActiveTextColor: slotText,
-                    buttonColor: primary,
-                    buttonTextColor: activeText,
-                    faqBgColor: darkMode ? `${primary}${lighterAlpha}` : '#ffffff',
-                    faqBorderColor: `${accent}66`,
-                    socialIconColor: primary
+                    buttonColor: paletteAction,
+                    buttonTextColor: actionText,
+                    faqBgColor: `${pageText}${cardAlpha}`,
+                    faqBorderColor: `${pageText}${borderAlpha}`,
+                    faqTextColor: pageText,
+                    faqAnswerColor: paletteBody,
+                    socialIconBgColor: `${pageText}${cardAlpha}`,
+                    socialIconColor: paletteAction,
+                    socialIconTextColor: actionText
+                }));
+            };
+            const applyPaletteFlowColor = (paletteId = activePaletteFlowId, shade = activePaletteShade) => {
+                const safePaletteId = paletteFlowOptions.some(option => option.id === paletteId) ? paletteId : activePaletteFlowId;
+                const safeShade = Math.max(1, Math.min(10, Number(shade) || 5));
+                const depth = safeShade * 10;
+                const nextDepths = {
+                    ...(settings.editorColorDepths || {}),
+                    [safePaletteId]: depth
+                };
+                setThemeFilterValue('palette', safePaletteId);
+                applyColorDirection(safePaletteId, [safePaletteId], nextDepths);
+                setSettings(prev => ({
+                    ...prev,
+                    editorPaletteFlowColor: safePaletteId,
+                    editorColorMix: [safePaletteId],
+                    editorColorDepth: depth,
+                    editorColorDepths: {
+                        ...(prev.editorColorDepths || {}),
+                        [safePaletteId]: depth
+                    }
                 }));
             };
             const applyFontStylePreset = (preset) => {
                 if (!preset) return;
                 markWorkspaceDirty();
+                focusEditorPreviewRoom('typography');
                 setSettings(prev => ({
                     ...prev,
                     fontFamily: preset.fontFamily,
@@ -4734,10 +4455,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const addFaqItem = () => handleFeatureChange('faqs', [...(settings.features?.faqs || []), { q: '', a: '' }]);
             const removeFaqItem = (index) => handleFeatureChange('faqs', (settings.features?.faqs || []).filter((_, idx) => idx !== index));
-            const handleSocialChange = (key, value) => {
-                markWorkspaceDirty();
-                setSettings(prev => ({ ...prev, socials: { ...(prev.socials || {}), [key]: value } }));
-            };
             const copyToClipboard = async (value, label = 'Link') => {
                 try {
                     await navigator.clipboard.writeText(value);
@@ -4972,9 +4689,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     shape: key === 'bannerImage' ? 'rounded' : 'square',
                     zoom: 1,
                     positionX: 50,
-                    positionY: key === 'bannerImage'
-                        ? ({ top: 18, center: 50, bottom: 82 }[getBannerDisplay(settingsRef.current || settings).position] || 50)
-                        : 50
+                    positionY: 50
                 });
             };
             const handleVenuePhotoUpload = async (files) => {
@@ -5063,6 +4778,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setWorkspaceAccess([]);
                 safeLocalRemove('build-a-booking-active-workspace');
                 clearEditorDraft('guest');
+                clearEditorDraftVersions('guest');
                 resetWorkspaceRuntimeState();
                 setGuestMode(true);
                 setClientGuestMode(false);
@@ -5189,6 +4905,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setGuestMode(false);
                 setClientGuestMode(false);
                 safeLocalRemove(guestModeStorageKey);
+                clearEditorDraft('guest');
+                clearEditorDraftVersions('guest');
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
                 safeLocalRemove('build-a-booking-active-workspace');
@@ -6426,8 +6144,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             if (view === 'client') {
                 const clientPortalUser = user || (clientGuestMode ? {
                     uid: 'guest-client-preview',
-                    displayName: 'Sipho Mokoena',
-                    email: 'sipho.mokoena@velvetfade.example',
+                    displayName: 'Mina Patel',
+                    email: 'mina.patel@jump-client.example',
                     photoURL: ''
                 } : null);
 
@@ -6530,11 +6248,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         </button>
                       </div>
                     </section>
-            
+
                     <LandingFeatureBook onGuestDashboard={openGuestDashboard} />
 
-                    <LandingPaymentRail />
-            
+                    <section className="landing-stop-section px-4 sm:px-6 py-16 md:py-24 border-b border-neutral-100">
+                      <div className="landing-stop-panel max-w-7xl mx-auto">
+                        <div className="landing-stop-copy">
+                          <h2>
+                            <b>STOP</b>
+                            <strong className="native-accent-text" aria-live="polite">
+                              {landingStopText}
+                              <i aria-hidden="true" />
+                            </strong>
+                          </h2>
+                        </div>
+                      </div>
+                    </section>
+
                     {/* Footer CTA */}
                     <section className="py-20 md:py-32 px-4 sm:px-6 text-center border-t border-neutral-200/50 bg-neutral-50/50">
                       <div className="flex flex-col items-center max-w-3xl mx-auto">
@@ -6552,13 +6282,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         </div>
                       </div>
                     </section>
+
+                    <LandingPaymentRail />
                   </div>
                 );
             }
 
             return (
                 <div
-                    className={`flex h-screen overflow-hidden font-sans relative native-ui ${dashboardThemeMode === 'dark' ? 'dashboard-dark' : 'dashboard-light'} ${sidebarCollapsed ? 'dashboard-sidebar-is-collapsed' : ''}`}
+                    className={`flex h-screen overflow-hidden font-sans relative native-ui ${dashboardThemeMode === 'dark' ? 'dashboard-dark' : 'dashboard-light'} ${sidebarCollapsed ? 'dashboard-sidebar-is-collapsed' : ''} ${activeTab === 'editor' ? 'dashboard-editor-active' : ''}`}
                 >
                 {/* Global Toast */}
                 {toast && (
@@ -7417,6 +7149,54 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             )}
                                         </div>
 
+                                        <div className="business-faq-profile pt-6 border-t border-neutral-50">
+                                            <div className="business-faq-profile-head">
+                                                <div>
+                                                    <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 block text-black">Booking Page FAQ</label>
+                                                    <h4>Questions and answers</h4>
+                                                    <p>Set the actual client-facing FAQ copy here. The editor handles how this section looks on the booking page.</p>
+                                                </div>
+                                                <button type="button" onClick={toggleFaqFeature} className={settings.features?.faqEnabled ? 'is-on' : ''}>
+                                                    <span>{settings.features?.faqEnabled ? 'Shown' : 'Hidden'}</span>
+                                                    <i />
+                                                </button>
+                                            </div>
+                                            {settings.features?.faqEnabled ? (
+                                                <div className="business-faq-profile-list">
+                                                    {(settings.features?.faqs || []).map((faq, index) => (
+                                                        <article key={index} className="business-faq-profile-card">
+                                                            <div className="business-faq-profile-card-head">
+                                                                <span>FAQ {index + 1}</span>
+                                                                <button type="button" onClick={() => removeFaqItem(index)} aria-label={`Remove FAQ ${index + 1}`}>
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
+                                                            <label>
+                                                                <span>Question</span>
+                                                                <input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="How do I know my booking is confirmed?" />
+                                                            </label>
+                                                            <label>
+                                                                <span>Answer</span>
+                                                                <textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="You will receive an update as soon as the business approves your request." />
+                                                            </label>
+                                                        </article>
+                                                    ))}
+                                                    <button type="button" onClick={addFaqItem} className="business-faq-profile-add">
+                                                        <span><Plus size={15} /></span>
+                                                        <strong>Add question</strong>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button type="button" onClick={toggleFaqFeature} className="business-faq-profile-empty">
+                                                    <HelpCircle size={18} />
+                                                    <span>
+                                                        <strong>FAQ is hidden</strong>
+                                                        Turn it on when you want helpful questions to appear on the booking page.
+                                                    </span>
+                                                </button>
+                                            )}
+                                        </div>
+
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-neutral-50">
                                             <div>
                                                 <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block text-black">Business Name</label>
@@ -8215,6 +7995,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             ...scene,
                                             title: {
                                                 introduction: 'Introduction',
+                                                logo: 'Logo placement',
+                                                banner: 'Banner placement',
                                                 services: 'Services',
                                                 colours: 'Colour direction',
                                                 typography: 'Typography',
@@ -8228,16 +8010,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             }[scene.id],
                                             prompt: {
                                                 introduction: 'Name the page and write the first words clients see. Type here or directly on the mockup.',
+                                                logo: 'Place the logo like a brand mark: beside the title, above the hero, or as a small badge.',
+                                                banner: 'Choose whether the banner acts as the hero image, a top strip, or a calmer footer media panel.',
                                                 services: 'Build the bookable menu clients choose from before they request a time.',
                                                 colours: 'Build a live color direction from one color, many colors, or your uploaded brand media.',
-                                                typography: 'Shape every heading, paragraph, label, and letter spacing.',
+                                                typography: 'Choose a polished font system for headings, paragraphs, labels, and buttons.',
                                                 calendar: 'Customize the calendar only: date cards, active states, color, shadow, and glow.',
                                                 time: 'Customize bookable time slots without touching the calendar.',
                                                 faq: 'Add helpful questions and tune how the FAQ block feels.',
                                                 form: 'Choose the client details your business needs before booking.',
                                                 buttons: 'Tune the final booking button so the action feels clear and branded.',
                                                 venue: 'Show the venue, directions, and location details after the booking action.',
-                                                social: 'Add social links so clients can keep following after booking.'
+                                                social: 'Choose whether social links show, where they sit, and how they feel.'
                                             }[scene.id]
                                         }));
                                         const activeSceneId = editorStudioModal || 'introduction';
@@ -8335,110 +8119,220 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             {activeScene.id === 'introduction' && (
                                                                 <div className="cinema-copy-preview">
                                                                     <input value={settings.brandName || ''} onChange={(event) => handleSettingChange('brandName', event.target.value)} placeholder={`Welcome to ${settings.businessName || 'your business'}`} />
-                                                                    <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Atelier 7B / Private" />
+                                                                    <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Online bookings" />
                                                                     <input value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Reserve your private session." />
                                                                     <input value={settings.dateLabel || ''} onChange={(event) => handleSettingChange('dateLabel', event.target.value)} placeholder="Which day are you looking to book?" />
                                                                 </div>
                                                             )}
+                                                            {activeScene.id === 'logo' && <div className="cinema-feature-preview">{[['Logo', settings.logo && getLogoDisplay(settings).visible], ['Placement', getLogoDisplay(settings).placement], ['Alignment', getLogoDisplay(settings).alignment], ['Size', `${getLogoDisplay(settings).size}px`]].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
+                                                            {activeScene.id === 'banner' && <div className="cinema-feature-preview">{[['Banner', settings.bannerImage && getBannerDisplay(settings).visible], ['Placement', getBannerDisplay(settings).placement], ['Crop tool', settings.bannerImage], ['Opacity', `${getBannerDisplay(settings).opacity}%`]].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
 
                                                             {activeScene.id === 'faq' && <div className="cinema-feature-preview">{[['FAQ', settings.features?.faqEnabled], ['Questions', (settings.features?.faqs || []).length > 0], ['Look', settings.faqDisplayStyle || settings.faqStyle || 'minimal']].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
                                                             {activeScene.id === 'venue' && <div className="cinema-feature-preview">{[['Gallery', Array.isArray(settings.venuePhotos) && settings.venuePhotos.length > 0], ['Maps', settings.features?.location], ['Look', settings.venueGalleryStyle || 'mosaic'], ['Directions', settings.mapDisplayStyle !== 'none']].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
-                                                            {activeScene.id === 'social' && <div className="cinema-feature-preview">{[['Instagram', settings.socials?.instagram], ['TikTok', settings.socials?.tiktok], ['Facebook', settings.socials?.facebook], ['Website', settings.socials?.website], ['Look', settings.socialDisplayStyle || settings.socialIconStyle || 'icons']].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
+                                                            {activeScene.id === 'social' && <div className="cinema-feature-preview">{[['Shown', settings.features?.socialLinks], ['Links', Object.values(settings.socials || {}).filter(Boolean).length], ['Placement', settings.socialPlacement || 'footer'], ['Look', settings.socialDisplayStyle || settings.socialIconStyle || 'icons']].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
                                                         </div>
 
                                                         <div className="editor-cinema-control-panel">
                                                             {activeScene.id === 'services' && <>
                                                                 <div className="cinema-control-title"><span>Services display</span><small>Choose how bookable services are presented on the booking page.</small></div>
-                                                                <InterfaceLookGrid
-                                                                    label="Display type"
-                                                                    looks={editorInterfaceLooks.services}
-                                                                    value={settings.serviceDisplayStyle || 'cards'}
-                                                                    onChange={(value) => handleSettingChange('serviceDisplayStyle', value)}
-                                                                >
-                                                                    <StyleSegmentedControl value={settings.serviceBorderStyle || 'solid'} onChange={(value) => handleSettingChange('serviceBorderStyle', value)} label="Border style" />
-                                                                </InterfaceLookGrid>
+                                                                <div className="service-flow-segmented" role="group" aria-label="Service display type">
+                                                                    <button type="button" onClick={() => handleSettingChange('serviceDropdownEnabled', false)} className={!settings.serviceDropdownEnabled ? 'is-on' : ''}>
+                                                                        <span>Display flow</span>
+                                                                    </button>
+                                                                    <button type="button" onClick={() => handleSettingChange('serviceDropdownEnabled', true)} className={settings.serviceDropdownEnabled ? 'is-on' : ''}>
+                                                                        <span>Dropdown flow</span>
+                                                                    </button>
+                                                                </div>
+                                                                <div className="cinema-look-picker">
+                                                                    <div className="cinema-look-picker-head">
+                                                                        <span>Service look</span>
+                                                                        <small>{settings.serviceDropdownEnabled ? 'Premium dropdown selector' : 'Premium service list'}</small>
+                                                                    </div>
+                                                                    <p className="cinema-native-gradient-note">Build A Booking now handles the service layout for you. Choose the flow above, then tune only how strong the surface feels.</p>
+                                                                    <StyleSegmentedControl value={settings.serviceBorderStyle || 'outline'} onChange={(value) => handleSettingChange('serviceBorderStyle', value)} label="Look" />
+                                                                </div>
                                                             </>}
 
                                                             {activeScene.id === 'colours' && <>
-                                                                <div className="cinema-control-title"><span>Colour direction</span><small>Set the page surface, text, and booking actions. Every change updates the preview live.</small></div>
-                                                                <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
-                                                                    <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>Native gradient on</button>
-                                                                    <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>Custom accents</button>
-                                                                </div>
-                                                                <p className="cinema-native-gradient-note">Keep the Build A Booking gradient on for selected dates, time slots, chips, and action moments. Switch it off only when those accents should follow your own colours.</p>
-                                                                <div className="cinema-color-directors">
-                                                                    {[
-                                                                        {
-                                                                            id: 'background',
-                                                                            label: 'Background',
-                                                                            note: 'Main page surface.',
-                                                                            value: settings.backgroundColor || '#ffffff',
-                                                                            onApply: (color) => handleSettingChange('backgroundColor', color)
-                                                                        },
-                                                                        {
-                                                                            id: 'headings',
-                                                                            label: 'Headings',
-                                                                            note: 'Business name and section titles.',
-                                                                            value: settings.headingColor || '#050505',
-                                                                            onApply: (color) => {
-                                                                                handleSettingChange('headingColor', color);
-                                                                                handleSettingChange('dateActiveTextColor', readableTextFor(settings.dateActiveBgColor || color));
-                                                                            }
-                                                                        },
-                                                                        {
-                                                                            id: 'body',
-                                                                            label: 'Body text',
-                                                                            note: 'Paragraphs, labels, and helper copy.',
-                                                                            value: settings.bodyColor || '#616672',
-                                                                            onApply: (color) => handleSettingChange('bodyColor', color)
-                                                                        },
-                                                                        {
-                                                                            id: 'buttons',
-                                                                            label: 'Buttons',
-                                                                            note: 'Primary actions and selected controls.',
-                                                                            value: settings.buttonColor || settings.primaryColor || '#050505',
-                                                                            onApply: (color) => {
-                                                                                handleSettingChange('buttonColor', color);
-                                                                                handleSettingChange('primaryColor', color);
-                                                                                handleSettingChange('buttonTextColor', readableTextFor(color));
-                                                                                if (!settings.nativeAccent) {
-                                                                                    handleSettingChange('dateActiveBgColor', `${color}22`);
-                                                                                    handleSettingChange('slotActiveBgColor', `${color}22`);
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    ].map((control) => {
-                                                                        const displayColor = normalizeHexColor(control.value?.slice?.(0, 7), control.value || '#050505');
-                                                                        return (
-                                                                            <div key={control.id} className="cinema-color-director">
-                                                                                <div className="cinema-color-director-head">
-                                                                                    <span className="cinema-color-orb" style={{ backgroundColor: displayColor }} />
-                                                                                    <div>
-                                                                                        <b>{control.label}</b>
-                                                                                        <small>{control.note}</small>
-                                                                                    </div>
-                                                                                    <label className="cinema-color-edit">
-                                                                                        <Pipette size={14} />
-                                                                                        Edit
-                                                                                        <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} aria-label={`Edit ${control.label.toLowerCase()} colour`} />
-                                                                                    </label>
-                                                                                </div>
+                                                                <div className="cinema-control-title"><span>Page theme</span><small>Choose a colour family, then set its strength.</small></div>
+                                                                <div
+                                                                    className="palette-flow-room"
+                                                                    style={{
+                                                                        '--palette-selected': activePaletteShadeColor,
+                                                                        '--palette-selected-text': activePaletteShadeText
+                                                                    }}
+                                                                >
+                                                                    <div className="palette-flow-hero">
+                                                                        <div className="palette-flow-sample" style={{ backgroundColor: activePaletteShadeColor, color: activePaletteShadeText }}>
+                                                                            <span>{activePaletteFlow?.name || 'Palette'}</span>
+                                                                            <strong>{String(activePaletteShade).padStart(2, '0')}</strong>
+                                                                        </div>
+                                                                        <div className="palette-flow-copy">
+                                                                            <span>Palette</span>
+                                                                            <strong>{activePaletteFlow?.name || 'Colour'} spectrum</strong>
+                                                                            <small>Background first. Type, buttons, dates, slots, and surfaces follow.</small>
+                                                                            <div className="palette-flow-chip-row" aria-hidden="true">
+                                                                                {activePalettePreviewSwatches.map((color) => (
+                                                                                    <i key={color} style={{ backgroundColor: color }} />
+                                                                                ))}
                                                                             </div>
-                                                                        );
-                                                                    })}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="palette-spectrum-grid" aria-label="Colour spectrum">
+                                                                        {paletteFlowOptions.map((palette) => {
+                                                                            const isActive = activePaletteFlowId === palette.id;
+                                                                            const mainSwatch = palette.swatches[1] || palette.swatches[0] || '#050505';
+                                                                            const swatchColors = palette.swatches.slice(0, 3);
+                                                                            return (
+                                                                                <button
+                                                                                    key={palette.id}
+                                                                                    type="button"
+                                                                                    onClick={() => applyPaletteFlowColor(palette.id, activePaletteShade)}
+                                                                                    className={`palette-spectrum-card ${isActive ? 'is-active' : ''}`}
+                                                                                    aria-pressed={isActive}
+                                                                                    style={{
+                                                                                        '--palette-a': palette.swatches[0] || mainSwatch,
+                                                                                        '--palette-b': mainSwatch,
+                                                                                        '--palette-c': palette.swatches[2] || mainSwatch
+                                                                                    }}
+                                                                                >
+                                                                                    <span className="palette-spectrum-icon" aria-hidden="true">
+                                                                                        {swatchColors.map((color) => <b key={color} style={{ backgroundColor: color }} />)}
+                                                                                    </span>
+                                                                                    <span className="palette-spectrum-copy">
+                                                                                        <strong>{palette.name}</strong>
+                                                                                        <small>{palette.hint}</small>
+                                                                                    </span>
+                                                                                    <span className="palette-spectrum-state" aria-hidden="true">
+                                                                                        {isActive && <Check size={12} strokeWidth={3} />}
+                                                                                    </span>
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    <div
+                                                                        className="palette-shade-panel"
+                                                                        style={{
+                                                                            '--palette-selected': activePaletteShadeColor,
+                                                                            '--palette-selected-text': activePaletteShadeText
+                                                                        }}
+                                                                    >
+                                                                        <div className="palette-shade-head">
+                                                                            <span>Spectrum</span>
+                                                                            <small>{activePaletteFlow?.name || 'Palette'} {activePaletteShade}</small>
+                                                                        </div>
+                                                                        <div className="palette-shade-grid" aria-label={`${activePaletteFlow?.name || 'Palette'} spectrum`}>
+                                                                            {Array.from({ length: 10 }, (_, index) => {
+                                                                                const shade = index + 1;
+                                                                                const depth = shade * 10;
+                                                                                const palette = activePaletteFlow || paletteFlowOptions[0];
+                                                                                const sampleBase = palette?.swatches?.[1] || palette?.swatches?.[0] || '#050505';
+                                                                                const shadeColor = tuneColorByDepth(sampleBase, depth);
+                                                                                const isActive = activePaletteShade === shade;
+                                                                                return (
+                                                                                    <button
+                                                                                        key={shade}
+                                                                                        type="button"
+                                                                                        onClick={() => applyPaletteFlowColor(activePaletteFlowId, shade)}
+                                                                                        className={isActive ? 'is-active' : ''}
+                                                                                        aria-pressed={isActive}
+                                                                                        aria-label={`${activePaletteFlow?.name || 'Palette'} spectrum ${shade}`}
+                                                                                        style={{ backgroundColor: shadeColor, color: readableTextFor(shadeColor) }}
+                                                                                    >
+                                                                                        <span>{String(shade).padStart(2, '0')}</span>
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                        <div className="palette-shade-labels" aria-hidden="true">
+                                                                            <span>Light</span>
+                                                                            <span>Deep</span>
+                                                                            <span>Neon</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
+                                                                        <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>
+                                                                            <span>Native gradient</span>
+                                                                            <small>Build A Booking glow</small>
+                                                                        </button>
+                                                                        <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>
+                                                                            <span>Custom accents</span>
+                                                                            <small>Follow palette</small>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="cinema-control-title is-compact"><span>Fine tune</span><small>Optional section edits after the full-page theme is set.</small></div>
+                                                                    <div className="cinema-color-directors">
+                                                                            {[
+                                                                                {
+                                                                                    id: 'background',
+                                                                                    label: 'Background',
+                                                                                    note: 'Main page surface.',
+                                                                                    value: settings.backgroundColor || '#ffffff',
+                                                                                    onApply: (color) => handleSettingChange('backgroundColor', color)
+                                                                                },
+                                                                                {
+                                                                                    id: 'headings',
+                                                                                    label: 'Headings',
+                                                                                    note: 'Business name and section titles.',
+                                                                                    value: settings.headingColor || '#050505',
+                                                                                    onApply: (color) => {
+                                                                                        handleSettingChange('headingColor', color);
+                                                                                        handleSettingChange('dateActiveTextColor', readableTextFor(settings.dateActiveBgColor || color));
+                                                                                    }
+                                                                                },
+                                                                                {
+                                                                                    id: 'body',
+                                                                                    label: 'Body text',
+                                                                                    note: 'Paragraphs, labels, and helper copy.',
+                                                                                    value: settings.bodyColor || '#616672',
+                                                                                    onApply: (color) => handleSettingChange('bodyColor', color)
+                                                                                },
+                                                                                {
+                                                                                    id: 'buttons',
+                                                                                    label: 'Buttons',
+                                                                                    note: 'Primary actions and selected controls.',
+                                                                                    value: settings.buttonColor || settings.primaryColor || '#050505',
+                                                                                    onApply: (color) => {
+                                                                                        handleSettingChange('buttonColor', color);
+                                                                                        handleSettingChange('primaryColor', color);
+                                                                                        handleSettingChange('buttonTextColor', readableTextFor(color));
+                                                                                        if (!settings.nativeAccent) {
+                                                                                            handleSettingChange('dateActiveBgColor', `${color}22`);
+                                                                                            handleSettingChange('slotActiveBgColor', `${color}22`);
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            ].map((control) => {
+                                                                                const displayColor = normalizeHexColor(control.value?.slice?.(0, 7), control.value || '#050505');
+                                                                                return (
+                                                                                    <div key={control.id} className="cinema-color-director">
+                                                                                        <div className="cinema-color-director-head">
+                                                                                            <span className="cinema-color-orb" style={{ backgroundColor: displayColor }} />
+                                                                                            <div>
+                                                                                                <b>{control.label}</b>
+                                                                                                <small>{control.note}</small>
+                                                                                            </div>
+                                                                                            <label className="cinema-color-edit">
+                                                                                                <Pipette size={14} />
+                                                                                                Edit
+                                                                                                <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} aria-label={`Edit ${control.label.toLowerCase()} colour`} />
+                                                                                            </label>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                    </div>
+                                                                    <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
                                                                 </div>
-                                                                <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
                                                             </>}
 
                                                             {activeScene.id === 'typography' && <>
-                                                                <div className="cinema-control-title"><span>Font style</span><small>Apply a polished preset, then fine tune spacing.</small></div>
+                                                                <div className="cinema-control-title"><span>Font style</span><small>Apply a polished preset designed to keep the page balanced.</small></div>
                                                                 <div className="cinema-font-grid">{fontStylePresets.map(preset => <button key={preset.id} type="button" onClick={() => applyFontStylePreset(preset)} className={(settings.headingFontFamily || settings.fontFamily) === (preset.headingFontFamily || preset.fontFamily) ? 'is-active' : ''} style={{ fontFamily: getFontFamily(preset.headingFontFamily || preset.fontFamily) }}>Aa <span>{preset.label}</span></button>)}</div>
-                                                                <LetterSpacingControl settings={settings} onChange={handleSettingChange} />
                                                             </>}
 
                                                             {activeScene.id === 'introduction' && (() => {
                                                                 const logoDisplay = getLogoDisplay(settings);
-                                                                const bannerDisplay = getBannerDisplay(settings);
                                                                 return (
                                                                     <div className="cinema-intro-editor">
                                                                         <p className="cinema-editor-note">Edit the first words clients see here, or click the same text directly on the mockup.</p>
@@ -8471,38 +8365,105 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                                 ))}
                                                                             </div>
                                                                         </details>
-                                                                        <div className="cinema-media-actions">
-                                                                            <section className="cinema-media-action-card">
-                                                                                <div>
-                                                                                    <strong>Logo on booking page</strong>
-                                                                                    <small>Shared from Business Profile. Crop changes stay linked everywhere.</small>
-                                                                                </div>
-                                                                                <div className="cinema-media-action-controls">
-                                                                                    <button type="button" onClick={() => handleLogoDisplayChange('visible', !logoDisplay.visible)} className={logoDisplay.visible ? 'is-active' : ''}>{logoDisplay.visible ? 'Shown' : 'Hidden'}</button>
-                                                                                    <button type="button" onClick={() => openSettingImageCrop('logo', 'logos')} aria-label="Crop logo"><Crop size={15} /></button>
-                                                                                </div>
-                                                                                <label className="cinema-range-row">
-                                                                                    <span>Size</span>
-                                                                                    <input type="range" min="48" max="176" value={logoDisplay.size} onChange={(event) => handleLogoDisplayChange('size', Number(event.target.value))} />
-                                                                                    <b>{logoDisplay.size}px</b>
-                                                                                </label>
-                                                                            </section>
-                                                                            <section className="cinema-media-action-card">
-                                                                                <div>
-                                                                                    <strong>Banner on booking page</strong>
-                                                                                    <small>Shared from Business Profile. Use crop to reframe the image.</small>
-                                                                                </div>
-                                                                                <div className="cinema-media-action-controls">
-                                                                                    <button type="button" onClick={() => handleBannerDisplayChange('visible', !bannerDisplay.visible)} className={bannerDisplay.visible ? 'is-active' : ''}>{bannerDisplay.visible ? 'Shown' : 'Hidden'}</button>
-                                                                                    <button type="button" onClick={() => openSettingImageCrop('bannerImage', 'banners')} aria-label="Crop banner"><Crop size={15} /></button>
-                                                                                </div>
-                                                                                <label className="cinema-range-row">
-                                                                                    <span>Height</span>
-                                                                                    <input type="range" min="120" max="360" value={bannerDisplay.height} onChange={(event) => handleBannerDisplayChange('height', Number(event.target.value))} />
-                                                                                    <b>{bannerDisplay.height}px</b>
-                                                                                </label>
-                                                                            </section>
-                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+
+                                                            {activeScene.id === 'logo' && (() => {
+                                                                const logoDisplay = getLogoDisplay(settings);
+                                                                return (
+                                                                    <div className="cinema-media-room">
+                                                                        <div className="cinema-control-title"><span>Logo placement</span><small>Use the logo as a precise brand mark, not a loose image block.</small></div>
+                                                                        <section className="cinema-media-action-card is-wide">
+                                                                            <div>
+                                                                                <strong>{settings.logo ? 'Logo asset ready' : 'No logo uploaded'}</strong>
+                                                                                <small>{settings.logo ? 'Shared from Business Profile. Crop changes stay linked everywhere.' : 'Add or crop a logo before showing it on the booking page.'}</small>
+                                                                            </div>
+                                                                            <div className="cinema-media-action-controls">
+                                                                                {settings.logo ? (
+                                                                                    <>
+                                                                                        <button type="button" onClick={() => handleLogoDisplayChange('visible', !logoDisplay.visible)} className={logoDisplay.visible ? 'is-active' : ''}>{logoDisplay.visible ? 'Shown' : 'Hidden'}</button>
+                                                                                        <button type="button" onClick={() => openSettingImageCrop('logo', 'logos')} aria-label="Crop logo"><Crop size={15} /></button>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <button type="button" onClick={() => openSettingImageCrop('logo', 'logos')} className="is-active is-add-media"><ImagePlus size={15} />Add logo</button>
+                                                                                )}
+                                                                            </div>
+                                                                        </section>
+                                                                        <InterfaceLookGrid
+                                                                            label="Logo position"
+                                                                            looks={[
+                                                                                { id: 'title', label: 'Title Lockup', note: 'Logo sits beside the page name like a brand system.' },
+                                                                                { id: 'top', label: 'Top Mark', note: 'Logo appears above the headline as a quiet masthead.' },
+                                                                                { id: 'badge', label: 'Corner Badge', note: 'Logo becomes a small premium badge in the hero.' }
+                                                                            ]}
+                                                                            value={logoDisplay.placement}
+                                                                            onChange={(value) => handleLogoDisplayChange('placement', value)}
+                                                                        />
+                                                                        <details className="cinema-setting-group cinema-alignment-room" open>
+                                                                            <summary><AlignCenter size={15}/> Logo alignment</summary>
+                                                                            <div className="cinema-align-grid">
+                                                                                {[
+                                                                                    ['left', AlignLeft],
+                                                                                    ['center', AlignCenter],
+                                                                                    ['right', AlignRight]
+                                                                                ].map(([alignment, Icon]) => (
+                                                                                    <button key={alignment} type="button" onClick={() => handleLogoDisplayChange('alignment', alignment)} className={logoDisplay.alignment === alignment ? 'is-active' : ''}>
+                                                                                        <Icon size={15}/>{alignment}
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                        </details>
+                                                                        <label className="cinema-range-row">
+                                                                            <span>Logo size</span>
+                                                                            <input type="range" min="48" max="176" value={logoDisplay.size} style={{ '--range-progress': `${((logoDisplay.size - 48) / 128) * 100}%` }} onChange={(event) => handleLogoDisplayChange('size', Number(event.target.value))} />
+                                                                            <b>{logoDisplay.size}px</b>
+                                                                        </label>
+                                                                    </div>
+                                                                );
+                                                            })()}
+
+                                                            {activeScene.id === 'banner' && (() => {
+                                                                const bannerDisplay = getBannerDisplay(settings);
+                                                                return (
+                                                                    <div className="cinema-media-room">
+                                                                        <div className="cinema-control-title"><span>Banner placement</span><small>Decide whether the banner leads the page, supports the hero, or becomes a finishing panel.</small></div>
+                                                                        <section className="cinema-media-action-card is-wide">
+                                                                            <div>
+                                                                                <strong>{settings.bannerImage ? 'Banner uploaded' : 'No banner uploaded'}</strong>
+                                                                                <small>{settings.bannerImage ? 'Show, hide, or crop the uploaded banner from here.' : 'Add a banner before showing it on the booking page.'}</small>
+                                                                            </div>
+                                                                            <div className="cinema-media-action-controls">
+                                                                                {settings.bannerImage ? (
+                                                                                    <>
+                                                                                        <button type="button" onClick={() => handleBannerDisplayChange('visible', !bannerDisplay.visible)} className={bannerDisplay.visible ? 'is-active' : ''}>{bannerDisplay.visible ? 'Shown' : 'Hidden'}</button>
+                                                                                        <button type="button" onClick={() => openSettingImageCrop('bannerImage', 'banners')} aria-label="Crop banner" title="Crop banner"><Crop size={15} /></button>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <button type="button" onClick={() => openSettingImageCrop('bannerImage', 'banners')} className="is-active is-add-media"><ImagePlus size={15} />Add banner</button>
+                                                                                )}
+                                                                            </div>
+                                                                        </section>
+                                                                        <InterfaceLookGrid
+                                                                            label="Banner position"
+                                                                            looks={[
+                                                                                { id: 'hero', label: 'Hero Media', note: 'Banner sits beside the copy like a website hero.' },
+                                                                                { id: 'top', label: 'Top Strip', note: 'Banner stretches above the intro as a cinematic opener.' },
+                                                                                { id: 'footer', label: 'Footer Panel', note: 'Banner appears after the intro as a calmer visual pause.' }
+                                                                            ]}
+                                                                            value={bannerDisplay.placement}
+                                                                            onChange={(value) => handleBannerDisplayChange('placement', value)}
+                                                                        />
+                                                                        <label className="cinema-range-row">
+                                                                            <span>Banner height</span>
+                                                                            <input type="range" min="120" max="360" value={bannerDisplay.height} style={{ '--range-progress': `${((bannerDisplay.height - 120) / 240) * 100}%` }} onChange={(event) => handleBannerDisplayChange('height', Number(event.target.value))} />
+                                                                            <b>{bannerDisplay.height}px</b>
+                                                                        </label>
+                                                                        <label className="cinema-range-row">
+                                                                            <span>Banner opacity</span>
+                                                                            <input type="range" min="15" max="100" value={bannerDisplay.opacity} style={{ '--range-progress': `${((bannerDisplay.opacity - 15) / 85) * 100}%` }} onChange={(event) => handleBannerDisplayChange('opacity', Number(event.target.value))} />
+                                                                            <b>{bannerDisplay.opacity}%</b>
+                                                                        </label>
                                                                     </div>
                                                                 );
                                                             })()}
@@ -8578,30 +8539,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     <StyleSegmentedControl value={settings.faqStyle || 'outline'} onChange={(value) => handleSettingChange('faqStyle', value)} label="Border style" />
                                                                 </InterfaceLookGrid>
                                                                 <div className="cinema-field-grid"><label>FAQ background<input type="color" value={settings.faqBgColor === 'transparent' ? '#ffffff' : settings.faqBgColor || '#ffffff'} onChange={(event) => handleSettingChange('faqBgColor', event.target.value)} /></label><label>FAQ border<input type="color" value={settings.faqBorderColor || settings.primaryColor || '#39ff14'} onChange={(event) => handleSettingChange('faqBorderColor', event.target.value)} /></label></div>
-                                                                <div className="cinema-faq-editor">
-                                                                    <div className="cinema-faq-editor-head">
-                                                                        <div>
-                                                                            <strong>Questions clients ask</strong>
-                                                                            <small>Keep answers short, useful, and confidence-building.</small>
-                                                                        </div>
-                                                                        <button type="button" onClick={addFaqItem}><Plus size={14}/> Add question</button>
+                                                                <div className="cinema-faq-routing-note">
+                                                                    <span><HelpCircle size={16} /></span>
+                                                                    <div>
+                                                                        <strong>Questions live in Business Profile</strong>
+                                                                        <small>Set the actual FAQ questions and answers in your Business Profile. This room is just for the booking page styling.</small>
                                                                     </div>
-                                                                    {(settings.features?.faqs || []).map((faq, index) => (
-                                                                        <article key={index} className="cinema-faq-card">
-                                                                            <div className="cinema-faq-card-head">
-                                                                                <span>FAQ {index + 1}</span>
-                                                                                <button type="button" onClick={() => removeFaqItem(index)}><Trash2 size={13}/> Remove</button>
-                                                                            </div>
-                                                                            <label>
-                                                                                <span>Question</span>
-                                                                                <input value={faq.q} onChange={(event) => updateFaqItem(index, 'q', event.target.value)} placeholder="How do I know my booking is confirmed?" />
-                                                                            </label>
-                                                                            <label>
-                                                                                <span>Answer</span>
-                                                                                <textarea value={faq.a} onChange={(event) => updateFaqItem(index, 'a', event.target.value)} placeholder="You will receive an update as soon as the business approves your request." />
-                                                                            </label>
-                                                                        </article>
-                                                                    ))}
+                                                                    <button type="button" onClick={() => { setActiveTab('profile'); setActiveProfileSection('business'); }}>
+                                                                        Open profile
+                                                                    </button>
                                                                 </div>
                                                             </>}
 
@@ -8624,18 +8570,30 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     <label><span>Gallery text</span><input value={settings.venueIntro || ''} onChange={(event) => handleSettingChange('venueIntro', event.target.value)} placeholder="See the place before you book." /></label>
                                                                     <label className="is-wide"><span>Google Maps / address</span><input value={settings.features?.location || ''} onChange={(event) => handleFeatureChange('location', event.target.value)} placeholder="Business address or maps link" /></label>
                                                                 </div>
-                                                                <div className="cinema-feature-preview">
-                                                                    {(Array.isArray(settings.venuePhotos) ? settings.venuePhotos.slice(0, 5) : []).map((photo, index) => <span key={`${photo}-${index}`} className="is-on">Photo {index + 1}</span>)}
-                                                                    {(!Array.isArray(settings.venuePhotos) || settings.venuePhotos.length === 0) && <span>Upload venue photos in Business Profile</span>}
-                                                                </div>
+                                                                {Array.isArray(settings.venuePhotos) && settings.venuePhotos.length > 0 ? (
+                                                                    <div className="cinema-feature-preview">
+                                                                        {settings.venuePhotos.slice(0, 5).map((photo, index) => <span key={`${photo}-${index}`} className="is-on">Photo {index + 1}</span>)}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="cinema-faq-routing-note cinema-venue-routing-note">
+                                                                        <span><Images size={16} /></span>
+                                                                        <div>
+                                                                            <strong>Venue photos live in Business Profile</strong>
+                                                                            <small>Upload venue photos in Business Profile. This room is just for the gallery, map, and direction styling.</small>
+                                                                        </div>
+                                                                        <button type="button" onClick={() => { setActiveTab('profile'); setActiveProfileSection('business'); }}>
+                                                                            Open profile
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>}
 
                                                             {activeScene.id === 'social' && <div className="cinema-social-room">
-                                                                <div className="cinema-toggle-grid cinema-toggle-grid-compact"><button type="button" onClick={() => handleFeatureChange('socialLinks', !settings.features?.socialLinks)} className={settings.features?.socialLinks ? 'is-on' : ''}><span>Show social footer</span><i /></button></div>
+                                                                <div className="cinema-toggle-grid cinema-toggle-grid-compact"><button type="button" onClick={() => handleFeatureChange('socialLinks', !settings.features?.socialLinks)} className={settings.features?.socialLinks ? 'is-on' : ''}><span>Show social links</span><i /></button></div>
                                                                 <section className="cinema-social-card">
                                                                     <div className="cinema-social-card-head">
-                                                                        <strong>Social footer</strong>
-                                                                        <small>Choose how link icons appear below the booking action.</small>
+                                                                        <strong>Social links</strong>
+                                                                        <small>Choose how social links appear. Set the actual links in Business Profile.</small>
                                                                     </div>
                                                                     <InterfaceLookGrid
                                                                         label="Social display"
@@ -8647,12 +8605,26 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                         }}
                                                                     />
                                                                     <StyleSegmentedControl value={settings.socialIconStyle || 'outline'} onChange={(value) => handleSettingChange('socialIconStyle', value)} label="Icon style" />
+                                                                    <InterfaceLookGrid
+                                                                        label="Social placement"
+                                                                        looks={[
+                                                                            { id: 'intro', label: 'Below Intro', note: 'Social links sit near the opening brand copy.' },
+                                                                            { id: 'booking', label: 'Before Venue', note: 'Links appear after the booking controls, before venue details.' },
+                                                                            { id: 'footer', label: 'Footer', note: 'Links finish the page below venue and directions.' }
+                                                                        ]}
+                                                                        value={settings.socialPlacement || 'footer'}
+                                                                        onChange={(value) => handleSettingChange('socialPlacement', value)}
+                                                                    />
                                                                 </section>
-                                                                <div className="cinema-social-fields">
-                                                                    <label><span>Instagram</span><input value={settings.socials?.instagram || ''} onChange={(event) => handleSocialChange('instagram', event.target.value)} placeholder="@yourhandle" /></label>
-                                                                    <label><span>TikTok</span><input value={settings.socials?.tiktok || ''} onChange={(event) => handleSocialChange('tiktok', event.target.value)} placeholder="@yourtiktok" /></label>
-                                                                    <label><span>Facebook</span><input value={settings.socials?.facebook || ''} onChange={(event) => handleSocialChange('facebook', event.target.value)} placeholder="facebook page" /></label>
-                                                                    <label><span>Website</span><input value={settings.socials?.website || ''} onChange={(event) => handleSocialChange('website', event.target.value)} placeholder="https://yourwebsite.com" /></label>
+                                                                <div className="cinema-faq-routing-note cinema-social-routing-note">
+                                                                    <span><Globe size={16} /></span>
+                                                                    <div>
+                                                                        <strong>Social links live in Business Profile</strong>
+                                                                        <small>Add Instagram, TikTok, Facebook, and website links in Business Profile. This room controls visibility, placement, and style.</small>
+                                                                    </div>
+                                                                    <button type="button" onClick={() => { setActiveTab('profile'); setActiveProfileSection('business'); }}>
+                                                                        Open profile
+                                                                    </button>
                                                                 </div>
                                                             </div>}
                                                         </div>
@@ -8663,6 +8635,76 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     })()}
                                 </div>
 
+                            </div>
+                            {editorLaunchPanel && (
+                                <div className="editor-floating-launch-popover">
+                                    <div className="editor-launch-popover-head">
+                                        <div>
+                                            <span>{editorLaunchPanel === 'booking' ? 'Booking page' : 'Draft versions'}</span>
+                                            <strong>{editorLaunchPanel === 'booking' ? `/book/${bookingPageSlug}` : `${editorDraftVersions.length} saved`}</strong>
+                                        </div>
+                                        <button type="button" onClick={() => setEditorLaunchPanel(null)} aria-label="Close editor panel">
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                    {editorLaunchPanel === 'booking' ? (
+                                        <div className="editor-launch-popover-body">
+                                            <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')} className="editor-link-pill" title={bookingPageUrl}>
+                                                <span>/book/{bookingPageSlug}</span>
+                                                <Share2 size={13} />
+                                            </button>
+                                            <div className="editor-launch-actions">
+                                                <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}>Copy link</button>
+                                                <button type="button" onClick={openBookingPage}>Open page</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="editor-launch-popover-body">
+                                            <div className="editor-version-save-row">
+                                                <input
+                                                    value={editorDraftNameInput}
+                                                    onChange={(event) => setEditorDraftNameInput(event.target.value)}
+                                                    placeholder="Version name"
+                                                />
+                                                <button type="button" onClick={saveEditorVersion}>Save version</button>
+                                            </div>
+                                            <div className="editor-version-list">
+                                                {editorDraftVersions.length > 0 ? editorDraftVersions.slice(0, 4).map(version => (
+                                                    <article key={version.id} className="editor-version-row">
+                                                        <button type="button" onClick={() => { restoreEditorVersion(version); setEditorLaunchPanel(null); }} title="Restore this version">
+                                                            <strong>{version.name || 'Saved version'}</strong>
+                                                            <span>{formatEditorVersionTime(version.savedAt)}</span>
+                                                        </button>
+                                                        <button type="button" onClick={() => deleteEditorVersion(version.id)} aria-label={`Delete ${version.name || 'saved version'}`}>
+                                                            <Trash2 size={13} />
+                                                        </button>
+                                                    </article>
+                                                )) : (
+                                                    <p>No named versions yet. Save one before you experiment.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <div className="editor-floating-launch-toolbar">
+                                <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'booking' ? null : 'booking')} className={editorLaunchPanel === 'booking' ? 'is-active' : ''} aria-label="Booking page link" title="Booking page link">
+                                    <Globe size={16} />
+                                    <span className="editor-launch-action-label">Page</span>
+                                </button>
+                                <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'drafts' ? null : 'drafts')} className={editorLaunchPanel === 'drafts' ? 'is-active' : ''} aria-label="Draft versions" title="Draft versions">
+                                    <History size={16} />
+                                    <span className="editor-launch-action-label">Versions</span>
+                                    {editorDraftVersions.length > 0 && <span className="editor-launch-count">{editorDraftVersions.length}</span>}
+                                </button>
+                                <button type="button" onClick={() => saveSettingsDraft(settings, "Editor draft saved.")} aria-label="Save draft" title="Save draft">
+                                    <CheckCircle2 size={16} />
+                                    <span className="editor-launch-action-label">Save</span>
+                                </button>
+                                <button type="button" onClick={saveSettings} className="is-primary" aria-label="Publish to web" title="Publish to web">
+                                    <ArrowRight size={16} />
+                                    <span className="editor-launch-action-label">Publish</span>
+                                </button>
                             </div>
                             </>
                         )}
@@ -8680,76 +8722,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                         {/* LIVE SIMULATOR ENVIRONMENT */}
                         <div ref={containerRef} className="mobile-editor-preview flex-1 bg-[#F5F5F7] flex flex-col items-center justify-center relative overflow-hidden p-6 md:p-8">
-                        {editorLaunchPanel && !editorStudioModal && (
-                            <div className="editor-floating-launch-popover">
-                                <div className="editor-launch-popover-head">
-                                    <div>
-                                        <span>{editorLaunchPanel === 'booking' ? 'Booking page' : 'Draft versions'}</span>
-                                        <strong>{editorLaunchPanel === 'booking' ? `/book/${bookingPageSlug}` : `${editorDraftVersions.length} saved`}</strong>
-                                    </div>
-                                    <button type="button" onClick={() => setEditorLaunchPanel(null)} aria-label="Close editor panel">
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                {editorLaunchPanel === 'booking' ? (
-                                    <div className="editor-launch-popover-body">
-                                        <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')} className="editor-link-pill" title={bookingPageUrl}>
-                                            <span>/book/{bookingPageSlug}</span>
-                                            <Share2 size={13} />
-                                        </button>
-                                        <div className="editor-launch-actions">
-                                            <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}>Copy link</button>
-                                            <button type="button" onClick={openBookingPage}>Open page</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="editor-launch-popover-body">
-                                        <div className="editor-version-save-row">
-                                            <input
-                                                value={editorDraftNameInput}
-                                                onChange={(event) => setEditorDraftNameInput(event.target.value)}
-                                                placeholder="Version name"
-                                            />
-                                            <button type="button" onClick={saveEditorVersion}>Save version</button>
-                                        </div>
-                                        <div className="editor-version-list">
-                                            {editorDraftVersions.length > 0 ? editorDraftVersions.slice(0, 4).map(version => (
-                                                <article key={version.id} className="editor-version-row">
-                                                    <button type="button" onClick={() => { restoreEditorVersion(version); setEditorLaunchPanel(null); }} title="Restore this version">
-                                                        <strong>{version.name || 'Saved version'}</strong>
-                                                        <span>{formatEditorVersionTime(version.savedAt)}</span>
-                                                    </button>
-                                                    <button type="button" onClick={() => deleteEditorVersion(version.id)} aria-label={`Delete ${version.name || 'saved version'}`}>
-                                                        <Trash2 size={13} />
-                                                    </button>
-                                                </article>
-                                            )) : (
-                                                <p>No named versions yet. Save one before you experiment.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        <div className="editor-floating-launch-toolbar">
-                            <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'booking' ? null : 'booking')} className={editorLaunchPanel === 'booking' ? 'is-active' : ''} aria-label="Booking page link" title="Booking page link">
-                                <Globe size={16} />
-                                <span className="editor-launch-action-label">Page</span>
-                            </button>
-                            <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'drafts' ? null : 'drafts')} className={editorLaunchPanel === 'drafts' ? 'is-active' : ''} aria-label="Draft versions" title="Draft versions">
-                                <History size={16} />
-                                <span className="editor-launch-action-label">Versions</span>
-                                {editorDraftVersions.length > 0 && <span className="editor-launch-count">{editorDraftVersions.length}</span>}
-                            </button>
-                            <button type="button" onClick={() => saveSettingsDraft(settings, "Editor draft saved.")} aria-label="Save draft" title="Save draft">
-                                <CheckCircle2 size={16} />
-                                <span className="editor-launch-action-label">Save</span>
-                            </button>
-                            <button type="button" onClick={saveSettings} className="is-primary" aria-label="Publish to web" title="Publish to web">
-                                <ArrowRight size={16} />
-                                <span className="editor-launch-action-label">Publish</span>
-                            </button>
-                        </div>
                         <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 flex flex-col md:flex-row items-center gap-3 md:gap-12 z-50">
                             <div className="mobile-editor-device-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
                                 <button onClick={() => handleEditorDeviceChange('desktop')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
@@ -8835,22 +8807,24 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 <p>Landscape gives the PC preview enough room to edit without squashing the page.</p>
                                 <button type="button" onClick={() => handleEditorDeviceChange('mobile')}>Back to mobile</button>
                             </div>
-                        ) : editorPreviewBooting ? (
-                            <div className="editor-preview-boot-loader" role="status" aria-live="polite">
-                                <BrandLoader label="Loading preview" />
-                            </div>
                         ) : (
                         <div
                             style={{
                                 width: `${editorPreviewFrame.width}px`,
                                 height: `${editorPreviewFrame.height}px`,
                                 transform: `scale(${scale})`,
-                                transformOrigin: isCompactEditorViewport ? 'top center' : 'center center',
+                                transformOrigin: isCompactEditorViewport ? 'top center' : 'center center'
+                            }}
+                            className="editor-preview-mount-shell"
+                        >
+                        <div
+                            style={{
+                                width: `${editorPreviewFrame.width}px`,
+                                height: `${editorPreviewFrame.height}px`,
                                 '--booking-preview-input-color': settings.headingColor || '#050505'
                             }}
                             className={`editor-preview-frame ${device === 'mobile' ? 'is-mobile-preview' : 'is-desktop-preview'} relative flex flex-col shrink-0 bg-white shadow-[0_100px_200px_-50px_rgba(0,0,0,0.15)] border-black overflow-hidden ${editorPreviewFrameClass}`}
                         >
-                            
                             {device === 'desktop' && (
                                 <div className={`absolute top-0 left-1/2 -translate-x-1/2 bg-black rounded-b-3xl z-[100] flex items-center justify-center ${isCompactEditorViewport ? 'w-40 h-5' : 'w-48 h-6'}`}>
                                     <div className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-white/5 shadow-inner" />
@@ -8897,6 +8871,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 </div>
                             )}
                             </div>
+                        </div>
                         </div>
                         )}
                         </div>
@@ -9056,7 +9031,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     <span>Payment Status</span>
                                                     <select name="paymentStatus" defaultValue="unpaid">
                                                         <option value="unpaid">Unpaid</option>
-                                                        <option value="manual_pending">Open</option>
+                                                        <option value="manual_pending">Pending payment</option>
                                                         <option value="paid">Paid</option>
                                                     </select>
                                                 </label>
