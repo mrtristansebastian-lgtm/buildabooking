@@ -6772,7 +6772,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     </div>
                 </nav>
 
-                <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden pb-28 md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
+                <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
                     {activeTab === 'overview' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -8742,16 +8742,20 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         <div className="editor-floating-launch-toolbar">
                             <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'booking' ? null : 'booking')} className={editorLaunchPanel === 'booking' ? 'is-active' : ''} aria-label="Booking page link" title="Booking page link">
                                 <Globe size={16} />
+                                <span className="editor-launch-action-label">Page</span>
                             </button>
                             <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'drafts' ? null : 'drafts')} className={editorLaunchPanel === 'drafts' ? 'is-active' : ''} aria-label="Draft versions" title="Draft versions">
                                 <History size={16} />
-                                {editorDraftVersions.length > 0 && <span>{editorDraftVersions.length}</span>}
+                                <span className="editor-launch-action-label">Versions</span>
+                                {editorDraftVersions.length > 0 && <span className="editor-launch-count">{editorDraftVersions.length}</span>}
                             </button>
                             <button type="button" onClick={() => saveSettingsDraft(settings, "Editor draft saved.")} aria-label="Save draft" title="Save draft">
                                 <CheckCircle2 size={16} />
+                                <span className="editor-launch-action-label">Save</span>
                             </button>
                             <button type="button" onClick={saveSettings} className="is-primary" aria-label="Publish to web" title="Publish to web">
                                 <ArrowRight size={16} />
+                                <span className="editor-launch-action-label">Publish</span>
                             </button>
                         </div>
                         <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 flex flex-col md:flex-row items-center gap-3 md:gap-12 z-50">
