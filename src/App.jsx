@@ -6754,14 +6754,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 setMobileNavOpen(open => !open);
                             }}
                         >
-                            {isGuestWorkspace && (
-                                <svg className="mobile-nav-guest-orbit" viewBox="0 0 120 52" aria-hidden="true">
-                                    <path id="mobileGuestModeArc" d="M18 36 Q60 8 102 36" fill="none" />
-                                    <text>
-                                        <textPath href="#mobileGuestModeArc" startOffset="50%" textAnchor="middle">Guest mode</textPath>
-                                    </text>
-                                </svg>
-                            )}
                             <BuildABookingMark className="mobile-nav-logo-mark" variant={dashboardThemeMode === 'dark' ? 'light' : 'dark'} />
                         </button>
                         {isGuestWorkspace && (

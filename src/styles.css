@@ -3711,25 +3711,6 @@ body {
             z-index: -1;
         }
 
-        .mobile-nav-guest-orbit {
-            position: absolute;
-            top: -2.55rem;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 7.55rem;
-            height: 3.28rem;
-            color: #475467;
-            pointer-events: none;
-        }
-
-        .mobile-nav-guest-orbit text {
-            fill: currentColor;
-            font-size: 0.58rem;
-            font-weight: 900;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-        }
-
         .mobile-guest-dock-action {
             position: relative;
             z-index: 3;
@@ -3874,10 +3855,6 @@ body {
             background:
                 linear-gradient(180deg, rgba(5,5,5,0.94), rgba(5,5,5,0.78)) padding-box,
                 var(--native-accent-button-gradient) border-box;
-        }
-
-        .native-ui.dashboard-dark .mobile-nav-guest-orbit {
-            color: rgba(255,255,255,0.48);
         }
 
         .native-ui.dashboard-dark .mobile-guest-dock-action {
