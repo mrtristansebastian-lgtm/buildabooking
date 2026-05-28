@@ -15,7 +15,8 @@ import { getLocalDateStr } from '../utils/dates';
             workspaceRole = 'owner',
             googleCalendarState = {},
             onConnectGoogleCalendar,
-            onSyncGoogleCalendar
+            onSyncGoogleCalendar,
+            onSettingsDirty
         }) => {
             const [currentMonth, setCurrentMonth] = useState(new Date());
             const [expandedDate, setExpandedDate] = useState(getLocalDateStr(new Date()));
@@ -263,6 +264,7 @@ import { getLocalDateStr } from '../utils/dates';
 
             const updateDateConfigForCalendar = (calendarId, dateStr, nextConfig) => {
                 if (!guardCalendarEdit(calendarId)) return false;
+                onSettingsDirty?.();
                 setSettings(prev => {
                     if (calendarId === 'workspace') {
                         return {
@@ -940,13 +942,13 @@ import { getLocalDateStr } from '../utils/dates';
                                         <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">{calendarTitle}</h3>
                                     </div>
                                     <div className="schedule-calendar-controls flex flex-col gap-3 w-full lg:w-auto lg:items-end">
-                                        <div className="schedule-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1.5 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                        <div className="schedule-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
                                             {['day', 'week', 'month'].map(period => (
                                                 <button
                                                     key={period}
                                                     type="button"
                                                     onClick={() => setSchedulePeriod(period)}
-                                                    className={`schedule-period-tab flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'is-active bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                    className={`schedule-period-tab flex-1 sm:flex-none h-10 px-5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${scheduleStatsPeriod === period ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
                                                 >
                                                     {period}
                                                 </button>
@@ -962,9 +964,9 @@ import { getLocalDateStr } from '../utils/dates';
                                                 type="button"
                                                 aria-pressed={hidePastDays}
                                                 onClick={toggleHidePastDays}
-                                                className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'is-active bg-black text-white border-black shadow-lg' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
+                                                className={`schedule-hide-toggle h-11 sm:h-auto px-3 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hidePastDays ? 'is-active' : 'bg-white text-neutral-500 border-neutral-200 hover:text-black'}`}
                                             >
-                                                <span className={`w-5 h-5 rounded-full border flex items-center justify-center ${hidePastDays ? 'bg-[#39FF14] border-transparent text-black' : 'bg-neutral-50 border-neutral-200'}`}>
+                                                <span className={`schedule-hide-toggle-icon w-5 h-5 rounded-full border flex items-center justify-center ${hidePastDays ? 'is-active' : 'bg-neutral-50 border-neutral-200'}`}>
                                                     {hidePastDays && <Check size={11}/>}
                                                 </span>
                                                 Hide past

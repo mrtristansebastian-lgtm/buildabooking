@@ -969,13 +969,13 @@ export const FinancePaymentSettings = ({ appId, businessId, isGuestWorkspace = f
                 ))}
               </select>
             </label>
-            <div className="grid grid-cols-5 rounded-2xl border border-neutral-100 bg-neutral-50 p-1 min-w-full sm:min-w-[520px]">
+            <div className="finance-period-tabs schedule-scope-toggle grid grid-cols-5 rounded-lg bg-neutral-100 p-1 min-w-full sm:min-w-[520px]">
               {['all', 'day', 'week', 'month', 'custom'].map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => (item === 'custom' ? setRangeDialogOpen(true) : setPeriod(item))}
-                  className={`h-10 rounded-xl text-[9px] md:text-[10px] font-bold uppercase tracking-widest transition-all ${period === item ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-400 hover:text-black'}`}
+                  className={`finance-period-tab h-10 rounded-md text-[9px] md:text-[10px] font-bold uppercase tracking-widest transition-all ${period === item ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
                 >
                   {item === 'all' ? 'all time' : item}
                 </button>

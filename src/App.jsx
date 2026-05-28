@@ -62,6 +62,24 @@ const FinancePaymentSettings = lazy(() => (
   import('./components/FinancePaymentSettings').then((module) => ({ default: module.FinancePaymentSettings }))
 ));
 
+const bookingPaymentFilterOptions = [
+    ['all', 'All payments'],
+    ['paid', 'Paid'],
+    ['open', 'Open'],
+    ['cash', 'Cash'],
+    ['card', 'Card'],
+    ['eft', 'Manual EFT']
+];
+
+const bookingSortOptions = [
+    ['newest', 'Newest first'],
+    ['oldest', 'Oldest first'],
+    ['amount-high', 'Amount high'],
+    ['amount-low', 'Amount low'],
+    ['client', 'Client A-Z'],
+    ['service', 'Service A-Z']
+];
+
 const BrandLoader = ({ label = 'Loading workspace', variant = 'dark' }) => (
   <div className="text-center">
     <div className="brand-loader-orbit mx-auto mb-6">
@@ -1820,6 +1838,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [device, setDevice] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches ? 'mobile' : 'desktop'
             )); 
+            const [editorPreviewBooting, setEditorPreviewBooting] = useState(false);
             const [previewKey, setPreviewKey] = useState(0); 
             const [scale, setScale] = useState(1);
             const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -1888,6 +1907,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [ownerNotifications, setOwnerNotifications] = useState([]);
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
             const toastTimerRef = useRef(null);
+            const unsavedWorkspaceChangesRef = useRef(false);
             const ownerNotificationSeenRef = useRef(new Set());
             const ownerNotificationsReadyRef = useRef(false);
             
@@ -1896,11 +1916,40 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setToast(msg);
                 toastTimerRef.current = window.setTimeout(() => setToast(null), 4000);
             };
+            const markWorkspaceDirty = () => {
+                unsavedWorkspaceChangesRef.current = true;
+            };
+            const clearWorkspaceDirty = () => {
+                unsavedWorkspaceChangesRef.current = false;
+            };
+            const confirmLeavingUnsavedChanges = () => {
+                if (!unsavedWorkspaceChangesRef.current || typeof window === 'undefined') return true;
+                const confirmed = window.confirm('Leave without saving?');
+                if (confirmed) clearWorkspaceDirty();
+                return confirmed;
+            };
+            const navigateWorkspaceTab = (nextTab, nextEditorTab) => {
+                if (!nextTab) return false;
+                if (nextTab !== activeTab && !confirmLeavingUnsavedChanges()) return false;
+                setActiveTab(nextTab);
+                if (nextEditorTab) setEditorTab(nextEditorTab);
+                return true;
+            };
 
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
             useEffect(() => () => editorRoomNavDragRef.current?.cleanup?.(), []);
+            useEffect(() => {
+                if (typeof window === 'undefined') return undefined;
+                const confirmPageExit = (event) => {
+                    if (!unsavedWorkspaceChangesRef.current) return;
+                    event.preventDefault();
+                    event.returnValue = '';
+                };
+                window.addEventListener('beforeunload', confirmPageExit);
+                return () => window.removeEventListener('beforeunload', confirmPageExit);
+            }, []);
             useEffect(() => {
                 safeLocalSet('build-a-booking-dashboard-theme', dashboardThemeMode);
             }, [dashboardThemeMode]);
@@ -2817,8 +2866,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             const openOwnerNotification = (notification) => {
-                if (notification?.tab) setActiveTab(notification.tab);
-                if (notification?.editorTab) setEditorTab(notification.editorTab);
+                if (notification?.tab) navigateWorkspaceTab(notification.tab, notification.editorTab);
+                else if (notification?.editorTab) setEditorTab(notification.editorTab);
             };
 
             const dashboardPortfolio = useMemo(() => {
@@ -2860,6 +2909,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     return Number.isNaN(parsed.getTime()) ? null : getLocalDateStr(parsed);
                 };
                 const periodConfig = {
+                    all: {
+                        id: 'all',
+                        label: 'All time',
+                        title: 'All time overview',
+                        rangeLabel: 'All time',
+                        start: null,
+                        end: null,
+                        emptyTitle: 'No bookings yet',
+                        emptyText: 'Your full booking history will appear here once clients start booking.'
+                    },
                     today: {
                         id: 'today',
                         label: 'Today',
@@ -2892,12 +2951,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
                 };
                 const activePeriod = periodConfig[dashboardPeriod] || periodConfig.today;
-                const startKey = getLocalDateStr(activePeriod.start);
-                const endKey = getLocalDateStr(activePeriod.end);
+                const isDashboardAllTime = activePeriod.id === 'all';
+                const startKey = isDashboardAllTime ? '' : getLocalDateStr(activePeriod.start);
+                const endKey = isDashboardAllTime ? '9999-12-31' : getLocalDateStr(activePeriod.end);
                 const defaultTimes = settings.availableTimes || [];
                 const dateKeys = [];
-                for (let cursor = new Date(activePeriod.start), guard = 0; cursor <= activePeriod.end && guard < 45; cursor = addDays(cursor, 1), guard += 1) {
-                    dateKeys.push(getLocalDateStr(cursor));
+                if (!isDashboardAllTime) {
+                    for (let cursor = new Date(activePeriod.start), guard = 0; cursor <= activePeriod.end && guard < 45; cursor = addDays(cursor, 1), guard += 1) {
+                        dateKeys.push(getLocalDateStr(cursor));
+                    }
                 }
                 const periodCapacity = dateKeys.reduce((total, dateKey) => {
                     const daySchedule = settings.schedule?.[dateKey] || {};
@@ -2909,7 +2971,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 const bookingsWithDates = visibleBookings.map(booking => ({ ...booking, dateKeyResolved: parseBookingDate(booking) }));
                 const activeBookings = bookingsWithDates.filter(booking => booking.status !== 'declined');
-                const periodBookings = bookingsWithDates.filter(booking => booking.dateKeyResolved && booking.dateKeyResolved >= startKey && booking.dateKeyResolved <= endKey);
+                const periodBookings = isDashboardAllTime
+                    ? bookingsWithDates
+                    : bookingsWithDates.filter(booking => booking.dateKeyResolved && booking.dateKeyResolved >= startKey && booking.dateKeyResolved <= endKey);
                 const periodActiveBookings = periodBookings.filter(booking => booking.status !== 'declined');
                 const pending = periodActiveBookings.filter(booking => booking.status === 'pending').length;
                 const waitlist = periodActiveBookings.filter(booking => booking.status === 'waitlist').length;
@@ -3337,7 +3401,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     resizeObserver?.disconnect();
                     window.removeEventListener('resize', updateScale); 
                 };
-            }, [device, activeTab, sidebarCollapsed, editorCollapsed, mobileNavCollapsed, shouldMountEditorPreview]);
+            }, [device, activeTab, sidebarCollapsed, editorCollapsed, mobileNavCollapsed, editorStudioModal, shouldMountEditorPreview]);
+
+            useEffect(() => {
+                if (activeTab !== 'editor') return undefined;
+                setEditorPreviewBooting(true);
+                const timer = window.setTimeout(() => setEditorPreviewBooting(false), 520);
+                return () => window.clearTimeout(timer);
+            }, [activeTab, device]);
 
             useEffect(() => {
                 if (activeTab !== 'editor') return;
@@ -3417,12 +3488,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const applyWorkspaceRoute = (route = {}) => {
                 const nextRoute = normalizeWorkspaceRoute(route, { view: 'dashboard', activeTab: 'overview', editorTab: 'themes' });
+                const leavingCurrentWork = nextRoute.view !== view || (nextRoute.view === 'dashboard' && nextRoute.activeTab !== activeTab);
+                if (leavingCurrentWork && !confirmLeavingUnsavedChanges()) return false;
                 setView(nextRoute.view);
                 if (nextRoute.view === 'dashboard') {
                     setActiveTab(nextRoute.activeTab);
                     if (nextRoute.activeTab === 'editor') setEditorTab(nextRoute.editorTab || 'themes');
                 }
                 saveWorkspaceRoute(nextRoute);
+                return true;
             };
 
             useEffect(() => {
@@ -3960,7 +4034,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             const saveSettings = async () => {
-                await publishSettings(settings);
+                const saved = await publishSettings(settings);
+                if (saved) clearWorkspaceDirty();
+                return saved;
             };
 
             const saveSettingsDraft = async (nextSettings = settings, successMessage = "Editor draft saved.") => {
@@ -3981,6 +4057,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 writeEditorDraft(workspaceOwnerId || editorDraftOwnerKey, draftPayload);
                 if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
                     setSettings(draftSettings);
+                    clearWorkspaceDirty();
                     showToast(successMessage);
                     return true;
                 }
@@ -3997,6 +4074,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     cloudEditorDraftRef.current = draftPayload;
                     editorDraftCloudFingerprintRef.current = stableSettingsFingerprint(draftPayload.settings);
                     setSettings(prev => ({ ...prev, ...draftSettings }));
+                    clearWorkspaceDirty();
                     showToast(successMessage);
                     return true;
                 } catch (err) {
@@ -4034,6 +4112,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const restoreEditorVersion = (version) => {
                 if (!version?.settings) return;
+                markWorkspaceDirty();
                 setSettings(prev => mergeStateIfChanged(prev, version.settings));
                 if (version.route?.editorTab && editorTabIds.includes(version.route.editorTab)) {
                     setEditorTab(version.route.editorTab);
@@ -4336,6 +4415,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     return;
                 }
                 if (normalizedRoomId === 'faq') {
+                    markWorkspaceDirty();
                     setSettings(prev => ({
                         ...prev,
                         features: {
@@ -4407,7 +4487,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
             const handleInspect = (tab) => {
-                if (activeTab !== 'editor') setActiveTab('editor');
+                if (activeTab !== 'editor') navigateWorkspaceTab('editor');
                 setEditorCollapsed(false);
                 const inspectRoomMap = {
                     identity: 'introduction',
@@ -4472,7 +4552,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
 
-            const handleSettingChange = (key, value) => { setSettings(prev => ({ ...prev, [key]: value })); };
+            const handleSettingChange = (key, value) => {
+                markWorkspaceDirty();
+                setSettings(prev => ({ ...prev, [key]: value }));
+            };
             const getEditorColorDepth = (paletteId, depthInput = settings.editorColorDepths || settings.editorColorDepth || 50) => {
                 if (typeof depthInput === 'object' && depthInput !== null) {
                     return Number(depthInput[paletteId] ?? settings.editorColorDepths?.[paletteId] ?? settings.editorColorDepth ?? 50);
@@ -4517,6 +4600,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const lighterAlpha = darkMode ? '22' : '12';
                 const activeText = readableTextFor(primary);
                 const slotText = readableTextFor(secondary);
+                markWorkspaceDirty();
                 setSettings(prev => ({
                     ...prev,
                     primaryColor: primary,
@@ -4541,6 +4625,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const applyFontStylePreset = (preset) => {
                 if (!preset) return;
+                markWorkspaceDirty();
                 setSettings(prev => ({
                     ...prev,
                     fontFamily: preset.fontFamily,
@@ -4555,6 +4640,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 showToast(`${preset.label} font style applied`);
             };
             const handleLogoDisplayChange = (key, value) => {
+                markWorkspaceDirty();
                 setSettings(prev => ({
                     ...prev,
                     logoDisplay: {
@@ -4567,6 +4653,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }));
             };
             const handleBannerDisplayChange = (key, value) => {
+                markWorkspaceDirty();
                 setSettings(prev => ({
                     ...prev,
                     bannerDisplay: {
@@ -4579,6 +4666,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }));
             };
             const handleFeatureChange = (key, value) => {
+                markWorkspaceDirty();
                 setSettings(prev => {
                     const nextFeatures = { ...prev.features, [key]: value };
                     if (key === 'collectClientEmail' && value === false) {
@@ -4588,6 +4676,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             };
             const toggleFaqFeature = () => {
+                markWorkspaceDirty();
                 setSettings(prev => {
                     const enabled = !prev.features?.faqEnabled;
                     const existingFaqs = Array.isArray(prev.features?.faqs) ? prev.features.faqs : [];
@@ -4609,6 +4698,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const addFaqItem = () => handleFeatureChange('faqs', [...(settings.features?.faqs || []), { q: '', a: '' }]);
             const removeFaqItem = (index) => handleFeatureChange('faqs', (settings.features?.faqs || []).filter((_, idx) => idx !== index));
             const handleSocialChange = (key, value) => {
+                markWorkspaceDirty();
                 setSettings(prev => ({ ...prev, socials: { ...(prev.socials || {}), [key]: value } }));
             };
             const copyToClipboard = async (value, label = 'Link') => {
@@ -5038,6 +5128,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
             const handleSignOut = async () => {
+                if (!confirmLeavingUnsavedChanges()) return;
                 setAuthBusy(true);
                 try {
                     if (isNativeAppRuntime) {
@@ -5065,6 +5156,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setActiveWorkspaceOwnerId('');
                 safeLocalRemove('build-a-booking-active-workspace');
                 resetWorkspaceRuntimeState();
+                clearWorkspaceDirty();
                 saveWorkspaceRoute({ view: 'landing', activeTab: 'overview', editorTab: 'themes' });
                 setView('landing');
                 setActiveTab('overview');
@@ -5108,6 +5200,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     safeLocalRemove(guestModeStorageKey);
                     setWorkspaceAccess([]);
                     setActiveWorkspaceOwnerId('');
+                    clearWorkspaceDirty();
                     saveWorkspaceRoute({ view: 'landing', activeTab: 'overview', editorTab: 'themes' });
                     setView('landing');
                     setActiveTab('overview');
@@ -5684,6 +5777,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     return;
                 }
                 if (isGuestWorkspace) {
+                    if (!confirmLeavingUnsavedChanges()) return;
                     setSupportThreadFocus({ threadId: `guest-thread-${booking.id}`, bookingId: booking.id, requestId: Date.now() });
                     setActiveTab('communications');
                     return;
@@ -5751,6 +5845,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
                 }
 
+                if (!confirmLeavingUnsavedChanges()) return;
                 setSupportThreadFocus({ threadId, bookingId: booking.id, requestId: Date.now() });
                 setActiveTab('communications');
             };
@@ -6201,6 +6296,17 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const editorPreviewFrameClass = device === 'desktop'
                 ? (isCompactEditorViewport ? 'rounded-lg border-[12px]' : 'rounded-lg border-[22px]')
                 : (isCompactEditorViewport ? 'rounded-[3rem] border-[12px]' : 'rounded-[5rem] md:rounded-[5.5rem] border-[16px] md:border-[18px]');
+            const showPortraitDesktopEditorPrompt = isPortraitMobileRuntime && device === 'desktop';
+            const handleEditorDeviceChange = async (nextDevice) => {
+                setDevice(nextDevice);
+                if (nextDevice !== 'desktop' || !isPortraitMobileRuntime) return;
+                setEditorStudioModal(null);
+                try {
+                    await window.screen?.orientation?.lock?.('landscape');
+                } catch (error) {
+                    // The rotate prompt in the preview handles locked-orientation browsers.
+                }
+            };
             const profileSections = [
                 {
                     id: 'account',
@@ -6446,9 +6552,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 themeMode={dashboardThemeMode}
                                 onClose={() => setShowOwnerManual(false)}
                                 onNavigate={(targetTab, targetEditorTab) => {
+                                    if (!navigateWorkspaceTab(targetTab, targetEditorTab)) return;
                                     setShowOwnerManual(false);
-                                    setActiveTab(targetTab);
-                                    if (targetEditorTab) setEditorTab(targetEditorTab);
                                 }}
                             />
                         </AppErrorBoundary>
@@ -6470,7 +6575,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 <div className={`dashboard-sidebar hidden md:flex transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex-col relative z-50 shadow-sm ${sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-80 p-8'}`}>
                     {!sidebarCollapsed && (
                     <>
-                        <div className="flex items-center mb-8 px-2 cursor-pointer group" onClick={() => setView('landing')}>
+                        <div className="flex items-center mb-8 px-2 cursor-pointer group" onClick={() => applyWorkspaceRoute({ view: 'landing' })}>
                             <BuildABookingBrand className="w-[190px] h-auto transition-transform duration-300 group-hover:scale-[1.02]" variant={dashboardThemeMode === 'dark' ? 'light' : 'dark'} />
                         </div>
                         {user && (
@@ -6511,7 +6616,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         {navItems.map(item => {
                             const IconCmp = item.icon;
                             return (
-                                <button key={item.id} data-tour={`nav-${item.id}`} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-lg text-[11px] font-bold transition-all duration-700 ${activeTab === item.id ? 'bg-[#39FF14] text-black shadow-xl shadow-[#39FF14]/20 scale-[1.02]' : 'text-neutral-400 hover:bg-neutral-50 hover:text-black'}`}>
+                                <button key={item.id} data-tour={`nav-${item.id}`} onClick={() => navigateWorkspaceTab(item.id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-lg text-[11px] font-bold transition-all duration-700 ${activeTab === item.id ? 'bg-[#39FF14] text-black shadow-xl shadow-[#39FF14]/20 scale-[1.02]' : 'text-neutral-400 hover:bg-neutral-50 hover:text-black'}`}>
                                 <IconCmp size={18} strokeWidth={2.5} /> {item.label.toUpperCase()}
                                 {item.badge && <div className={`ml-auto w-2 h-2 rounded-full animate-pulse ${activeTab === item.id ? 'bg-black' : 'bg-[#39FF14]'}`} />}
                                 </button>
@@ -6585,7 +6690,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     key={item.id}
                                     data-tour={`mobile-nav-${item.id}`}
                                     aria-label={item.label}
-                                    onClick={() => setActiveTab(item.id)}
+                                    onClick={() => navigateWorkspaceTab(item.id)}
                                     className={`relative min-w-[56px] h-14 rounded-lg flex items-center justify-center transition-all ${isActive ? 'bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20 scale-[1.03]' : 'text-neutral-400 bg-neutral-50'}`}
                                 >
                                     <IconCmp size={20} strokeWidth={2.35} />
@@ -6608,7 +6713,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <button onClick={() => setShowOwnerManual(true)} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
                                         <BookOpen size={14}/><span className="sm:hidden">Manual</span><span className="hidden sm:inline">Owner Manual</span>
                                     </button>
-                                    <button onClick={() => setActiveTab('editor')} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-black text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-800 transition-colors">
+                                    <button onClick={() => navigateWorkspaceTab('editor')} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-black text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-800 transition-colors">
                                         <Palette size={14}/><span className="sm:hidden">Edit</span><span className="hidden sm:inline">Edit Page</span>
                                     </button>
                                     <button data-tour="publish-button" onClick={saveSettings} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-[#39FF14] text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:brightness-95 transition-all">
@@ -6630,22 +6735,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-stretch sm:items-end gap-3">
-                                        <div className="inline-grid grid-cols-3 gap-1 rounded-lg bg-neutral-100 p-1">
+                                        <div className="dashboard-period-tabs schedule-scope-toggle inline-grid grid-cols-4 gap-1 rounded-lg bg-neutral-100 p-1">
                                             {dashboardPortfolio.periods.map(period => (
                                                 <button
                                                     key={period.id}
                                                     onClick={() => setDashboardPeriod(period.id)}
-                                                    className={`h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
+                                                    className={`dashboard-period-tab h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
                                                 >
                                                     {period.label}
                                                 </button>
                                             ))}
                                         </div>
                                         <div className="flex flex-col sm:flex-row gap-2">
-                                            <button onClick={() => setActiveTab('bookings')} className="h-11 px-4 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
+                                            <button onClick={() => navigateWorkspaceTab('bookings')} className="h-11 px-4 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
                                                 <Bell size={15}/> Review
                                             </button>
-                                            <button onClick={() => setActiveTab('business')} className="h-11 px-4 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
+                                            <button onClick={() => navigateWorkspaceTab('business')} className="h-11 px-4 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
                                                 <Calendar size={15}/> Schedule
                                             </button>
                                         </div>
@@ -6681,7 +6786,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             <h2 className="text-lg font-bold tracking-tight">Activity</h2>
                                             <p className="text-sm text-neutral-500">{dashboardPortfolio.period.title} bookings, requests, and waitlist spots.</p>
                                         </div>
-                                        <button onClick={() => setActiveTab('bookings')} className="h-10 px-4 rounded-lg bg-neutral-50 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors">View Queue</button>
+                                        <button onClick={() => navigateWorkspaceTab('bookings')} className="h-10 px-4 rounded-lg bg-neutral-50 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors">View Queue</button>
                                     </div>
                                     <div className="divide-y divide-neutral-100">
                                         {dashboardPortfolio.activityList.slice(0, 6).map(b => {
@@ -6771,7 +6876,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             ].map(action => {
                                                 const IconCmp = action.icon;
                                                 return (
-                                                    <button key={action.title} onClick={() => setActiveTab(action.tab)} className="w-full rounded-lg border border-neutral-200 bg-white p-4 text-left text-black transition-all hover:border-neutral-300 hover:shadow-lg">
+                                                    <button key={action.title} onClick={() => navigateWorkspaceTab(action.tab)} className="w-full rounded-lg border border-neutral-200 bg-white p-4 text-left text-black transition-all hover:border-neutral-300 hover:shadow-lg">
                                                         <div className="flex items-start justify-between gap-4">
                                                             <div className="min-w-0">
                                                                 <p className="text-sm font-bold truncate text-black">{action.title}</p>
@@ -6847,7 +6952,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </div>
                                         ))}
                                     </div>
-                                    <button onClick={() => setActiveTab('business')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Tune Schedule</button>
+                                    <button onClick={() => navigateWorkspaceTab('business')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Tune Schedule</button>
                                 </section>
 
                                 <section className="xl:col-span-4 saas-card p-5 md:p-6">
@@ -6871,7 +6976,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </div>
                                             ))}
                                     </div>
-                                    <button onClick={() => setActiveTab('clients')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Open Clients</button>
+                                    <button onClick={() => navigateWorkspaceTab('clients')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Open Clients</button>
                                 </section>
                             </div>
                         </div>
@@ -7351,6 +7456,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         staffList={displayStaffList}
                                         activeStaffId={activeStaffProfile?.id || 'owner'}
                                         workspaceRole={workspaceRole}
+                                        onSettingsDirty={markWorkspaceDirty}
                                         googleCalendarState={{
                                             connected: Boolean(googleCalendarAuth.accessToken),
                                             email: googleCalendarAuth.email || settings.googleCalendar?.connectedEmail || '',
@@ -7424,6 +7530,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             if (industryId) setThemeFilterValue('industry', industryId);
                                         }}
                                         onUpdateSettings={async (nextSettings, message) => {
+                                            markWorkspaceDirty();
                                             setSettings(nextSettings);
                                             await saveSettingsDraft(nextSettings, message || 'Services saved.');
                                         }}
@@ -7678,7 +7785,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <button onClick={() => setActiveTab('bookings')} className="h-11 px-5 rounded-lg border border-neutral-200 bg-white text-[10px] font-bold uppercase tracking-widest text-neutral-600 hover:text-black hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2">
+                                                        <button onClick={() => navigateWorkspaceTab('bookings')} className="h-11 px-5 rounded-lg border border-neutral-200 bg-white text-[10px] font-bold uppercase tracking-widest text-neutral-600 hover:text-black hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2">
                                                             <History size={15}/> Open Bookings
                                                         </button>
                                                     </div>
@@ -8578,8 +8685,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         </div>
                         <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 flex flex-col md:flex-row items-center gap-3 md:gap-12 z-50">
                             <div className="mobile-editor-device-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
-                                <button onClick={() => setDevice('desktop')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
-                                <button onClick={() => setDevice('mobile')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'mobile' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>Mobile</button>
+                                <button onClick={() => handleEditorDeviceChange('desktop')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
+                                <button onClick={() => handleEditorDeviceChange('mobile')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'mobile' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>Mobile</button>
                             </div>
                             <div className="mobile-editor-toolbar-actions flex items-center gap-2">
                                 <button onClick={handleAddToHomeScreen} className="mobile-editor-install-action hidden h-11 px-4 rounded-full bg-black text-white shadow-lg border border-black transition-all items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-widest">
@@ -8651,6 +8758,17 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             })}
                         </div>
 
+                        {showPortraitDesktopEditorPrompt ? (
+                            <div className="editor-portrait-desktop-prompt" role="status" aria-live="polite">
+                                <div>
+                                    <RefreshCw size={20} />
+                                    <span>PC mockup</span>
+                                </div>
+                                <h3>Please rotate your phone.</h3>
+                                <p>Landscape gives the PC preview enough room to edit without squashing the page.</p>
+                                <button type="button" onClick={() => handleEditorDeviceChange('mobile')}>Back to mobile</button>
+                            </div>
+                        ) : (
                         <div
                             style={{
                                 width: `${editorPreviewFrame.width}px`,
@@ -8691,7 +8809,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             </div>
 
                             <div className="flex-1 overflow-y-auto no-scrollbar relative group/simulator" style={{ backgroundColor: settings.backgroundColor }}>
-                            {shouldMountEditorPreview ? (
+                            {shouldMountEditorPreview && !editorPreviewBooting ? (
                                 <>
                                 <div className="absolute top-8 right-8 z-50 flex items-center gap-2 px-4 py-2 bg-black/10 backdrop-blur-md rounded-full text-[9px] font-bold uppercase tracking-[0.2em] opacity-0 group-hover/simulator:opacity-100 transition-opacity pointer-events-none text-black">
                                     <MousePointerClick size={12} /> Design Inspector Live
@@ -8704,11 +8822,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 </>
                             ) : (
                                 <div className="h-full w-full flex items-center justify-center">
-                                    <BrandLoader label="Preview paused on portrait" />
+                                    <BrandLoader label={showPortraitDesktopEditorPrompt ? 'Rotate to preview PC' : 'Loading preview'} />
                                 </div>
                             )}
                             </div>
                         </div>
+                        )}
                         </div>
                     </div>
                     )}
@@ -8924,7 +9043,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     setBookingDeskPeriod(period.id);
                                                     if (period.id === 'custom') setBookingRangeDialogOpen(true);
                                                 }}
-                                                className={`booking-period-tab flex-1 sm:flex-none h-10 px-4 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'is-active bg-black text-white shadow-lg' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                className={`booking-period-tab flex-1 sm:flex-none h-10 px-4 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
                                             >
                                                 {period.label}
                                             </button>
@@ -8944,62 +9063,48 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         />
                                     </label>
                                     <div className="booking-desk-selects grid grid-cols-2 gap-2 xl:w-[420px]">
-                                        <label className="booking-desk-select-field relative">
-                                            <span className="sr-only">Filter by payment</span>
-                                            <span className="booking-desk-select-face" aria-hidden="true">
-                                                <span>
-                                                    {{
-                                                        all: 'All payments',
-                                                        paid: 'Paid',
-                                                        open: 'Open',
-                                                        cash: 'Cash',
-                                                        card: 'Card',
-                                                        eft: 'Manual EFT'
-                                                    }[bookingPaymentFilter] || 'All payments'}
-                                                </span>
-                                            </span>
-                                            <select
-                                                value={bookingPaymentFilter}
-                                                onChange={(event) => setBookingPaymentFilter(event.target.value)}
-                                                className="booking-desk-select booking-desk-native-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
-                                            >
-                                                <option value="all">All payments</option>
-                                                <option value="paid">Paid</option>
-                                                <option value="open">Open</option>
-                                                <option value="cash">Cash</option>
-                                                <option value="card">Card</option>
-                                                <option value="eft">Manual EFT</option>
-                                            </select>
-                                            <ChevronDown size={14} aria-hidden="true" />
-                                        </label>
-                                        <label className="booking-desk-select-field relative">
-                                            <span className="sr-only">Sort bookings</span>
-                                            <span className="booking-desk-select-face" aria-hidden="true">
-                                                <span>
-                                                    {{
-                                                        newest: 'Newest first',
-                                                        oldest: 'Oldest first',
-                                                        'amount-high': 'Amount high',
-                                                        'amount-low': 'Amount low',
-                                                        client: 'Client A-Z',
-                                                        service: 'Service A-Z'
-                                                    }[bookingSort] || 'Newest first'}
-                                                </span>
-                                            </span>
-                                            <select
-                                                value={bookingSort}
-                                                onChange={(event) => setBookingSort(event.target.value)}
-                                                className="booking-desk-select booking-desk-native-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
-                                            >
-                                                <option value="newest">Newest first</option>
-                                                <option value="oldest">Oldest first</option>
-                                                <option value="amount-high">Amount high</option>
-                                                <option value="amount-low">Amount low</option>
-                                                <option value="client">Client A-Z</option>
-                                                <option value="service">Service A-Z</option>
-                                            </select>
-                                            <ChevronDown size={14} aria-hidden="true" />
-                                        </label>
+                                        <details name="booking-desk-filter-menu" className="booking-desk-menu relative" onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.removeAttribute('open')}>
+                                            <summary className="booking-desk-select-face">
+                                                <span>{bookingPaymentFilterOptions.find(([value]) => value === bookingPaymentFilter)?.[1] || 'All payments'}</span>
+                                                <ChevronDown size={14} aria-hidden="true" />
+                                            </summary>
+                                            <div className="booking-desk-menu-panel">
+                                                {bookingPaymentFilterOptions.map(([value, label]) => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        className={bookingPaymentFilter === value ? 'is-selected' : ''}
+                                                        onClick={(event) => {
+                                                            setBookingPaymentFilter(value);
+                                                            event.currentTarget.closest('details')?.removeAttribute('open');
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </details>
+                                        <details name="booking-desk-filter-menu" className="booking-desk-menu relative" onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.removeAttribute('open')}>
+                                            <summary className="booking-desk-select-face">
+                                                <span>{bookingSortOptions.find(([value]) => value === bookingSort)?.[1] || 'Newest first'}</span>
+                                                <ChevronDown size={14} aria-hidden="true" />
+                                            </summary>
+                                            <div className="booking-desk-menu-panel">
+                                                {bookingSortOptions.map(([value, label]) => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        className={bookingSort === value ? 'is-selected' : ''}
+                                                        onClick={(event) => {
+                                                            setBookingSort(value);
+                                                            event.currentTarget.closest('details')?.removeAttribute('open');
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </details>
                                     </div>
                                     <div className="booking-filter-rail flex flex-wrap items-center gap-2">
                                         {bookingDesk.filters.map(filter => {

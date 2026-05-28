@@ -1660,6 +1660,8 @@ body {
             }
         }
 
+        .dashboard-period-tabs,
+        .finance-period-tabs,
         .schedule-period-tabs,
         .schedule-month-switcher,
         .schedule-hide-toggle {
@@ -1671,33 +1673,51 @@ body {
             -webkit-backdrop-filter: blur(18px) saturate(1.1);
         }
 
+        .dashboard-period-tabs,
+        .finance-period-tabs,
         .schedule-period-tabs {
             min-height: 3rem;
             padding: 0.25rem !important;
-            gap: 0.2rem;
+            gap: 0.25rem;
+            border: 0 !important;
+            border-radius: 0.74rem !important;
+            background: #f4f4f4 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
+        .dashboard-period-tab,
+        .finance-period-tab,
         .schedule-period-tab {
             min-width: 3.55rem;
             min-height: 2.42rem;
-            border-radius: 0.76rem !important;
+            border-radius: 0.42rem !important;
             font-size: 0.64rem !important;
             font-weight: 840 !important;
-            letter-spacing: 0.025em !important;
+            letter-spacing: 0.04em !important;
             color: #667085 !important;
             box-shadow: none !important;
         }
 
+        .dashboard-period-tab:hover,
+        .finance-period-tab:hover,
         .schedule-period-tab:hover {
             background: rgba(255,255,255,0.76) !important;
             color: #050505 !important;
         }
 
+        .dashboard-period-tab.is-active,
+        .finance-period-tab.is-active,
         .schedule-period-tab.is-active,
         .schedule-hide-toggle.is-active {
-            background: #050505 !important;
-            color: #fff !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 14px 28px -20px rgba(0,0,0,0.62) !important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            color: #050505 !important;
+            box-shadow: none !important;
         }
 
         .schedule-month-switcher {
@@ -2202,27 +2222,24 @@ body {
         }
 
         .booking-period-tabs {
-            min-height: 3.15rem;
-            padding: 0.28rem !important;
-            gap: 0.2rem;
-            border-radius: 1rem !important;
-            border-color: rgba(15, 23, 42, 0.08) !important;
-            background:
-                linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,248,250,0.88)) !important;
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.92),
-                0 18px 44px -38px rgba(15,23,42,0.45);
-            backdrop-filter: blur(18px) saturate(1.1);
-            -webkit-backdrop-filter: blur(18px) saturate(1.1);
+            min-height: 3rem;
+            padding: 0.25rem !important;
+            gap: 0.25rem;
+            border: 0 !important;
+            border-radius: 0.74rem !important;
+            background: #f4f4f4 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
         .booking-period-tab {
             min-width: 5.4rem;
-            min-height: 2.5rem;
-            border-radius: 0.76rem !important;
-            letter-spacing: 0.02em !important;
+            min-height: 2.42rem;
+            border-radius: 0.42rem !important;
+            letter-spacing: 0.04em !important;
             font-size: 0.64rem !important;
-            font-weight: 820 !important;
+            font-weight: 840 !important;
             text-transform: uppercase;
             color: #667085 !important;
             box-shadow: none !important;
@@ -2234,11 +2251,13 @@ body {
         }
 
         .booking-period-tab.is-active {
-            background: #050505 !important;
-            color: #ffffff !important;
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.14),
-                0 14px 28px -20px rgba(0,0,0,0.62) !important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            color: #050505 !important;
+            box-shadow: none !important;
         }
 
         .booking-desk-controls {
@@ -2280,8 +2299,22 @@ body {
             text-transform: none;
         }
 
-        .booking-desk-select-field {
+        .booking-desk-select-field,
+        .booking-desk-menu {
             min-width: 0;
+        }
+
+        .booking-desk-menu {
+            font-family: inherit;
+        }
+
+        .booking-desk-menu summary {
+            list-style: none;
+            cursor: pointer;
+        }
+
+        .booking-desk-menu summary::-webkit-details-marker {
+            display: none;
         }
 
         .booking-desk-select-face {
@@ -2299,13 +2332,14 @@ body {
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.96);
             color: #050505;
             transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 160ms ease;
+            font-family: inherit;
         }
 
         .booking-desk-select-kicker {
             display: none;
         }
 
-        .booking-desk-select-face span:last-child {
+        .booking-desk-select-face > span {
             display: block;
             min-width: 0;
             overflow: hidden;
@@ -2315,6 +2349,41 @@ body {
             font-weight: 650;
             line-height: 1.2;
             letter-spacing: 0;
+        }
+
+        .booking-desk-menu-panel {
+            position: absolute;
+            z-index: 80;
+            top: calc(100% + 0.42rem);
+            left: 0;
+            right: 0;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 0.9rem;
+            background: rgba(255,255,255,0.98);
+            box-shadow: 0 24px 48px -34px rgba(15,23,42,0.6), inset 0 1px 0 rgba(255,255,255,0.86);
+            padding: 0.28rem;
+        }
+
+        .booking-desk-menu-panel button {
+            width: 100%;
+            min-height: 2.15rem;
+            border-radius: 0.64rem;
+            padding: 0.48rem 0.72rem;
+            text-align: left;
+            color: #111827;
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 620;
+            line-height: 1.1;
+            letter-spacing: 0;
+            transition: background 140ms ease, color 140ms ease;
+        }
+
+        .booking-desk-menu-panel button:hover,
+        .booking-desk-menu-panel button.is-selected {
+            background: #f4f5f7;
+            color: #050505;
         }
 
         .booking-desk-native-select {
@@ -2328,7 +2397,10 @@ body {
 
         .booking-desk-select-field:hover .booking-desk-select-face,
         .booking-desk-native-select:focus + .booking-desk-select-face,
-        .booking-desk-select-field:focus-within .booking-desk-select-face {
+        .booking-desk-select-field:focus-within .booking-desk-select-face,
+        .booking-desk-menu:hover .booking-desk-select-face,
+        .booking-desk-menu[open] .booking-desk-select-face,
+        .booking-desk-menu:focus-within .booking-desk-select-face {
             border-color: rgba(5, 5, 5, 0.18);
             background: #ffffff;
             box-shadow:
@@ -2336,7 +2408,8 @@ body {
                 inset 0 1px 0 rgba(255,255,255,0.96);
         }
 
-        .booking-desk-select-field svg {
+        .booking-desk-select-field svg,
+        .booking-desk-menu svg {
             position: absolute;
             right: 0.85rem;
             top: 50%;
@@ -3563,7 +3636,8 @@ body {
         .editor-preview-frame {
             max-width: none;
             max-height: none;
-            will-change: width, height, transform;
+            transition: opacity 160ms ease, box-shadow 180ms ease, border-radius 180ms ease !important;
+            will-change: auto;
         }
 
         .dashboard-page-header h1,
@@ -14345,6 +14419,123 @@ body {
             box-shadow: 0 20px 42px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.14) !important;
         }
 
+        .dashboard-period-tabs,
+        .booking-period-tabs,
+        .schedule-period-tabs,
+        .finance-period-tabs {
+            border: 0 !important;
+            border-radius: 0.74rem !important;
+            background: #f4f4f4 !important;
+            box-shadow: none !important;
+            padding: 0.25rem !important;
+            gap: 0.25rem !important;
+        }
+
+        .dashboard-period-tab,
+        .booking-period-tab,
+        .schedule-period-tab,
+        .finance-period-tab {
+            min-height: 2.42rem !important;
+            border-radius: 0.42rem !important;
+            color: #667085 !important;
+            font-weight: 840 !important;
+            letter-spacing: 0.04em !important;
+            box-shadow: none !important;
+        }
+
+        .dashboard-period-tab.is-active,
+        .booking-period-tab.is-active,
+        .schedule-period-tab.is-active,
+        .finance-period-tab.is-active {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            color: #050505 !important;
+            box-shadow: none !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-period-tabs,
+        html body .native-ui.dashboard-dark .booking-period-tabs,
+        html body .native-ui.dashboard-dark .schedule-period-tabs,
+        html body .native-ui.dashboard-dark .finance-period-tabs {
+            background: #191919 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        html body .native-ui.dashboard-dark .dashboard-period-tab.is-active,
+        html body .native-ui.dashboard-dark .booking-period-tab.is-active,
+        html body .native-ui.dashboard-dark .schedule-period-tab.is-active,
+        html body .native-ui.dashboard-dark .finance-period-tab.is-active {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08)),
+                var(--native-accent-button-gradient) !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            color: #050505 !important;
+            box-shadow: none !important;
+        }
+
+        .schedule-hide-toggle,
+        .schedule-hide-toggle.is-active {
+            border: 1px solid rgba(15, 23, 42, 0.055) !important;
+            background: rgba(255, 255, 255, 0.72) !important;
+            color: #667085 !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.76) !important;
+        }
+
+        .schedule-hide-toggle.is-active {
+            border-color: transparent !important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,250,249,0.94)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            color: #050505 !important;
+            box-shadow: 0 18px 40px -34px var(--native-accent-glow), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+        }
+
+        .schedule-hide-toggle-icon {
+            color: #667085 !important;
+            background: #ffffff !important;
+        }
+
+        .schedule-hide-toggle-icon.is-active {
+            border-color: transparent !important;
+            background:
+                linear-gradient(180deg, #ffffff, #ffffff) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            color: #050505 !important;
+        }
+
+        html body .native-ui.dashboard-dark .schedule-hide-toggle,
+        html body .native-ui.dashboard-dark .schedule-hide-toggle.is-active {
+            background:
+                linear-gradient(180deg, rgba(22,22,22,0.98), rgba(15,15,15,0.98)) padding-box,
+                var(--native-accent-button-gradient) border-box !important;
+            border-color: transparent !important;
+            color: #f5f5f5 !important;
+        }
+
+        @media (min-width: 1024px) {
+            .schedule-calendar-card.schedule-mode-month,
+            .schedule-calendar-card.schedule-mode-week {
+                overflow: visible !important;
+            }
+
+            .schedule-calendar-card.schedule-mode-month .schedule-calendar-scroll-zone,
+            .schedule-calendar-card.schedule-mode-week .schedule-calendar-scroll-zone {
+                max-height: none !important;
+                overflow: visible !important;
+                scrollbar-gutter: auto !important;
+            }
+
+            .schedule-calendar-card.schedule-mode-month .schedule-calendar-grid,
+            .schedule-calendar-card.schedule-mode-week .schedule-calendar-grid {
+                overflow: visible !important;
+            }
+        }
+
         /* Absolute final rule: gradient CTA text and icons must always be black. */
         html body .native-ui .native-gradient-button,
         html body .native-ui .native-gradient-button :where(*),
@@ -15437,6 +15628,15 @@ body {
                 overflow: hidden !important;
             }
 
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime:not(.mobile-editor-room-open) .mobile-editor-preview {
+                padding-top: calc(0.8rem + env(safe-area-inset-top)) !important;
+                padding-bottom: calc(3.7rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime:not(.mobile-editor-room-open) .editor-floating-launch-toolbar {
+                bottom: calc(3.15rem + env(safe-area-inset-bottom)) !important;
+            }
+
             .editor-fullscreen-workspace.mobile-editor-portrait-runtime .editor-preview-frame {
                 width: min(21.5rem, calc(100vw - 3.25rem)) !important;
                 height: min(33.5rem, calc(100dvh - 16.5rem)) !important;
@@ -15572,6 +15772,7 @@ body {
         .editor-fullscreen-workspace {
             position: relative !important;
             background: #f6f7f9 !important;
+            --editor-panel-dock-width: clamp(22rem, 32vw, 28rem);
         }
 
         .editor-fullscreen-workspace .mobile-editor-preview {
@@ -15588,8 +15789,8 @@ body {
             right: clamp(0.75rem, 2vw, 1.25rem) !important;
             bottom: clamp(0.75rem, 2vh, 1.2rem) !important;
             left: auto !important;
-            width: min(31rem, calc(100vw - 23rem)) !important;
-            min-width: 24rem !important;
+            width: min(var(--editor-panel-dock-width), calc(100vw - 2rem)) !important;
+            min-width: min(22rem, calc(100vw - 2rem)) !important;
             max-width: calc(100vw - 2rem) !important;
             z-index: 120 !important;
             border: 1px solid rgba(15, 23, 42, 0.085) !important;
@@ -15610,6 +15811,17 @@ body {
             opacity: 1 !important;
             pointer-events: auto !important;
             transform: translateX(0) scale(1) !important;
+        }
+
+        @media (min-width: 901px) {
+            .editor-fullscreen-workspace.mobile-editor-room-open .mobile-editor-preview {
+                padding-right: calc(var(--editor-panel-dock-width) + clamp(1.4rem, 3vw, 2.6rem)) !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-room-open .editor-preview-room-nav.is-desktop,
+            .editor-fullscreen-workspace.mobile-editor-room-open .editor-preview-room-nav.is-phone {
+                right: calc(var(--editor-panel-dock-width) + clamp(1.45rem, 3vw, 2.75rem)) !important;
+            }
         }
 
         .editor-fullscreen-workspace .editor-cinema-header {
@@ -15772,93 +15984,72 @@ body {
             -webkit-backdrop-filter: blur(20px) saturate(1.12);
         }
 
+        .editor-portrait-desktop-prompt {
+            width: min(22rem, calc(100vw - 2rem));
+            min-height: 18rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 24px;
+            background:
+                linear-gradient(#ffffff, #ffffff) padding-box,
+                var(--native-accent-gradient) border-box;
+            padding: 1.25rem;
+            color: #050505;
+            box-shadow: 0 24px 70px -46px rgba(15, 23, 42, 0.48);
+        }
+
+        .editor-portrait-desktop-prompt > div {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #667085;
+            font-size: 0.64rem;
+            font-weight: 850;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .editor-portrait-desktop-prompt h3 {
+            margin: 0;
+            font-size: clamp(1.55rem, 7vw, 2.15rem);
+            line-height: 0.96;
+            letter-spacing: -0.04em;
+        }
+
+        .editor-portrait-desktop-prompt p {
+            margin: 0;
+            color: #667085;
+            font-size: 0.86rem;
+            font-weight: 680;
+            line-height: 1.45;
+        }
+
+        .editor-portrait-desktop-prompt button {
+            min-height: 2.55rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 999px;
+            background: #050505;
+            padding: 0 1.1rem;
+            color: #ffffff;
+            font-size: 0.64rem;
+            font-weight: 850;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
         .editor-fullscreen-workspace.mobile-editor-room-open .editor-floating-launch-popover {
             display: none !important;
         }
 
         .editor-fullscreen-workspace.mobile-editor-room-open .editor-floating-launch-toolbar {
             opacity: 0.46;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile.mobile-editor-room-open .mobile-editor-panel {
-            top: auto !important;
-            left: 50% !important;
-            right: auto !important;
-            bottom: 0.75rem !important;
-            width: min(30rem, calc(100% - 1rem)) !important;
-            min-width: 0 !important;
-            max-height: min(42vh, 24rem) !important;
-            border-radius: 18px !important;
-            transform: translate(-50%, 0) scale(1) !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .mobile-editor-panel {
-            transform: translate(-50%, 1rem) scale(0.99) !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-header {
-            min-height: 3.55rem !important;
-            padding: 0.64rem 0.74rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-header h2 {
-            font-size: 1.08rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-modal-kicker {
-            font-size: 0.52rem !important;
-            margin-bottom: 0.08rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-modal-close-button {
-            width: 2rem !important;
-            height: 2rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-panel-scroll {
-            max-height: calc(min(42vh, 24rem) - 3.65rem) !important;
-            padding: 0.5rem 0.58rem 0.72rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-stage-body {
-            padding: 0 !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-control-panel {
-            padding: 0.54rem !important;
-            gap: 0.5rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-look-grid {
-            gap: 0.36rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-look-grid button {
-            min-height: 3.85rem !important;
-            padding: 0.48rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-look-grid small {
-            display: -webkit-box !important;
-            -webkit-line-clamp: 1 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-toggle-grid button {
-            min-height: 2.44rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-field-grid label,
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-social-fields label,
-        .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-faq-card label {
-            padding: 0.48rem !important;
-        }
-
-        .editor-fullscreen-workspace.editor-preview-device-mobile.mobile-editor-room-open .editor-floating-launch-toolbar {
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transform: translateX(-50%) translateY(0.8rem) !important;
         }
 
         .editor-fullscreen-workspace.editor-preview-device-mobile .editor-preview-room-nav.is-desktop,
@@ -15868,7 +16059,95 @@ body {
             max-height: min(64vh, 32rem) !important;
         }
 
+        @media (min-width: 901px) {
+            .editor-fullscreen-workspace.editor-preview-device-mobile.mobile-editor-room-open .editor-preview-room-nav.is-desktop,
+            .editor-fullscreen-workspace.editor-preview-device-mobile.mobile-editor-room-open .editor-preview-room-nav.is-phone {
+                right: calc(var(--editor-panel-dock-width) + clamp(1.45rem, 3vw, 2.75rem)) !important;
+            }
+        }
+
         @media (max-width: 900px) {
+            .editor-fullscreen-workspace.editor-preview-device-mobile.mobile-editor-room-open .mobile-editor-panel {
+                top: auto !important;
+                left: 50% !important;
+                right: auto !important;
+                bottom: 0.75rem !important;
+                width: min(30rem, calc(100% - 1rem)) !important;
+                min-width: 0 !important;
+                max-height: min(42vh, 24rem) !important;
+                border-radius: 18px !important;
+                transform: translate(-50%, 0) scale(1) !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .mobile-editor-panel {
+                transform: translate(-50%, 1rem) scale(0.99) !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-header {
+                min-height: 3.55rem !important;
+                padding: 0.64rem 0.74rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-header h2 {
+                font-size: 1.08rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-modal-kicker {
+                font-size: 0.52rem !important;
+                margin-bottom: 0.08rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-modal-close-button {
+                width: 2rem !important;
+                height: 2rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-panel-scroll {
+                max-height: calc(min(42vh, 24rem) - 3.65rem) !important;
+                padding: 0.5rem 0.58rem 0.72rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-stage-body {
+                padding: 0 !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .editor-cinema-control-panel {
+                padding: 0.54rem !important;
+                gap: 0.5rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-look-grid {
+                gap: 0.36rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-look-grid button {
+                min-height: 3.85rem !important;
+                padding: 0.48rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-look-grid small {
+                display: -webkit-box !important;
+                -webkit-line-clamp: 1 !important;
+                -webkit-box-orient: vertical !important;
+                overflow: hidden !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-toggle-grid button {
+                min-height: 2.44rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-field-grid label,
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-social-fields label,
+            .editor-fullscreen-workspace.editor-preview-device-mobile .cinema-faq-card label {
+                padding: 0.48rem !important;
+            }
+
+            .editor-fullscreen-workspace.editor-preview-device-mobile.mobile-editor-room-open .editor-floating-launch-toolbar {
+                opacity: 0 !important;
+                pointer-events: none !important;
+                transform: translateX(-50%) translateY(0.8rem) !important;
+            }
+
             .editor-fullscreen-workspace .mobile-editor-preview {
                 padding: 0.85rem !important;
             }
@@ -15897,6 +16176,58 @@ body {
             .editor-preview-room-nav.is-phone {
                 right: 0.75rem !important;
                 left: auto !important;
+            }
+        }
+
+        @media (max-width: 767px) and (orientation: portrait) {
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.mobile-editor-room-open .mobile-editor-preview {
+                justify-content: flex-start !important;
+                padding-top: calc(4.9rem + env(safe-area-inset-top)) !important;
+                padding-bottom: calc(20.2rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.mobile-editor-room-open .editor-preview-frame.is-mobile-preview {
+                width: min(19.4rem, calc(100vw - 5.4rem)) !important;
+                height: min(20.7rem, calc(100dvh - 32.4rem)) !important;
+                min-height: 18.5rem !important;
+                max-width: calc(100vw - 5.4rem) !important;
+                border-width: 8px !important;
+                border-radius: 2.1rem !important;
+                box-shadow: 0 18px 58px -38px rgba(15, 23, 42, 0.48) !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.editor-preview-device-desktop .editor-preview-room-nav {
+                display: none !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.editor-preview-device-desktop .mobile-editor-preview {
+                justify-content: center !important;
+                padding: 5.5rem 0.8rem calc(11rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime .editor-portrait-desktop-prompt {
+                margin-top: -1.4rem;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.mobile-editor-room-open .mobile-editor-panel {
+                top: auto !important;
+                left: 0.55rem !important;
+                right: 0.55rem !important;
+                bottom: calc(9.6rem + env(safe-area-inset-bottom)) !important;
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                max-height: min(32vh, 18rem) !important;
+                transform: translateY(0) scale(1) !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.mobile-editor-room-open .mobile-editor-portrait-guides {
+                display: none !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.mobile-editor-room-open .editor-panel-scroll {
+                max-height: calc(min(32vh, 18rem) - 3.55rem) !important;
+                padding: 0.5rem 0.58rem 0.72rem !important;
             }
         }
 
