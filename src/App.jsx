@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, GripVertical, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
+    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, GripVertical, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -1408,6 +1408,7 @@ const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
 const editorDraftStoragePrefix = 'build-a-booking-editor-draft-v2';
+const editorDraftVersionsStoragePrefix = 'build-a-booking-editor-draft-versions-v1';
 const bookingsCacheStoragePrefix = 'build-a-booking-bookings-cache-v1';
 const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'services', 'finance', 'clients', 'staff', 'profile'];
 const workspaceTabAliases = {
@@ -1476,6 +1477,43 @@ const writeEditorDraft = (ownerId, payload = {}) => {
 
 const clearEditorDraft = (ownerId) => {
   safeLocalRemove(getEditorDraftKey(ownerId));
+};
+
+const getEditorDraftVersionsKey = (ownerId = 'guest') => (
+  `${editorDraftVersionsStoragePrefix}-${String(ownerId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '-')}`
+);
+
+const readEditorDraftVersions = (ownerId) => {
+  const versions = safeJsonParse(safeLocalGet(getEditorDraftVersionsKey(ownerId)), []);
+  if (!Array.isArray(versions)) return [];
+  return versions
+    .filter(version => version && typeof version === 'object' && version.settings)
+    .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))
+    .slice(0, 12);
+};
+
+const writeEditorDraftVersions = (ownerId, versions = []) => {
+  const nextVersions = Array.isArray(versions)
+    ? versions
+      .filter(version => version && typeof version === 'object' && version.settings)
+      .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))
+      .slice(0, 12)
+    : [];
+  return safeLocalSet(getEditorDraftVersionsKey(ownerId), JSON.stringify(nextVersions));
+};
+
+const formatEditorVersionTime = (timestamp) => {
+  if (!timestamp) return 'Not saved yet';
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(timestamp));
+  } catch {
+    return 'Saved version';
+  }
 };
 
 const getBookingsCacheKey = (ownerId = 'guest') => (
@@ -1837,6 +1875,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const publishedSettingsSnapshotRef = useRef(null);
             const cloudEditorDraftRef = useRef(null);
             const guestDemoSeededRef = useRef(false);
+            const [editorDraftVersions, setEditorDraftVersions] = useState([]);
+            const [editorDraftNameInput, setEditorDraftNameInput] = useState('');
+            const [editorLaunchPanel, setEditorLaunchPanel] = useState(null);
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [runningLateDialog, setRunningLateDialog] = useState(null);
@@ -2061,6 +2102,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 });
             };
             const isEditorWorkspaceOpen = view === 'dashboard' && activeTab === 'editor';
+            const bookingPageSlug = useMemo(
+                () => buildBookingSlug(settings.slug || settings.brandName || settings.businessName || 'studio'),
+                [settings.brandName, settings.businessName, settings.slug]
+            );
+            const bookingPageUrl = useMemo(() => {
+                if (typeof window === 'undefined') return `#/book/${bookingPageSlug}`;
+                return `${window.location.origin}${window.location.pathname}#/book/${bookingPageSlug}`;
+            }, [bookingPageSlug]);
             const resetWorkspaceRuntimeState = () => {
                 publishedSettingsSnapshotRef.current = null;
                 cloudEditorDraftRef.current = null;
@@ -2087,6 +2136,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (publicSlug || loading || user) return;
                 resetWorkspaceRuntimeState();
             }, [publicSlug, loading, user?.uid, guestMode]);
+
+            useEffect(() => {
+                if (!isEditorWorkspaceOpen || !editorDraftOwnerKey) return;
+                const versions = readEditorDraftVersions(editorDraftOwnerKey);
+                setEditorDraftVersions(versions);
+                setEditorDraftNameInput(current => current || settings.draftName || settings.brandName || 'Working Draft');
+            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, settings.brandName, settings.draftName]);
 
             useEffect(() => {
                 if (!isGuestWorkspace) {
@@ -3948,6 +4004,63 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
 
+            const saveEditorVersion = async () => {
+                const savedAt = Date.now();
+                const versionName = (editorDraftNameInput || '').trim() || settings.draftName || settings.brandName || 'Saved version';
+                const versionSettings = {
+                    ...settings,
+                    draftName: versionName,
+                    draftStatus: 'version',
+                    draftSavedAt: savedAt,
+                    draftAutosavedAt: savedAt,
+                    updatedAt: settings.updatedAt || 0
+                };
+                const version = {
+                    id: `version-${savedAt}`,
+                    name: versionName,
+                    savedAt,
+                    route: { view, activeTab, editorTab },
+                    editorStudioScene,
+                    settings: versionSettings
+                };
+                const nextVersions = [version, ...editorDraftVersions.filter(item => item.id !== version.id)].slice(0, 12);
+                writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
+                setEditorDraftVersions(nextVersions);
+                await saveSettingsDraft(versionSettings, `Saved "${versionName}".`);
+                return true;
+            };
+
+            const restoreEditorVersion = (version) => {
+                if (!version?.settings) return;
+                setSettings(prev => mergeStateIfChanged(prev, version.settings));
+                if (version.route?.editorTab && editorTabIds.includes(version.route.editorTab)) {
+                    setEditorTab(version.route.editorTab);
+                }
+                if (version.editorStudioScene) {
+                    setEditorStudioScene(version.editorStudioScene);
+                }
+                setEditorDraftNameInput(version.name || version.settings.draftName || 'Restored version');
+                writeEditorDraft(editorDraftOwnerKey, buildEditorDraftPayload(version.settings, {
+                    route: version.route || { view, activeTab, editorTab },
+                    editorStudioScene: version.editorStudioScene || editorStudioScene,
+                    status: 'restored',
+                    name: version.name || version.settings.draftName || 'Restored version'
+                }));
+                showToast(`Restored "${version.name || 'saved version'}".`);
+            };
+
+            const deleteEditorVersion = (versionId) => {
+                const nextVersions = editorDraftVersions.filter(version => version.id !== versionId);
+                writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
+                setEditorDraftVersions(nextVersions);
+                showToast('Version removed.');
+            };
+
+            const openBookingPage = () => {
+                if (typeof window === 'undefined') return;
+                window.open(bookingPageUrl, '_blank', 'noopener,noreferrer');
+            };
+
             const writeStaffAccessGrant = async (staff) => {
                 const emailKey = normalizeEmail(staff.email);
                 if (!emailKey || !workspaceOwnerId) return;
@@ -4213,8 +4326,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
             const openEditorRoom = (roomId) => {
                 const normalizedRoomId = roomId === 'identity' ? 'introduction' : roomId;
-                setEditorStudioModal(normalizedRoomId);
+                const shouldCloseRoom = editorStudioModal === normalizedRoomId;
+                setEditorStudioModal(shouldCloseRoom ? null : normalizedRoomId);
                 setEditorTab(roomTabMap[normalizedRoomId] || 'identity');
+                if (shouldCloseRoom) {
+                    playEditorStudioSound('step');
+                    return;
+                }
                 if (normalizedRoomId === 'faq') {
                     setSettings(prev => ({
                         ...prev,
@@ -5162,6 +5280,87 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 } catch (error) {
                     console.error(error);
                     showToast('Manual booking could not be saved.');
+                }
+            };
+
+            const createManualBookingFromChat = async (payload = {}) => {
+                const bookingDateKey = String(payload.bookingDate || '').trim() || getLocalDateStr(new Date());
+                const bookingDate = new Date(`${bookingDateKey}T00:00:00`);
+                const selectedService = workspaceServices.find(service => service.id === payload.serviceId) || null;
+                const serviceName = selectedService?.name || String(payload.serviceName || '').trim() || 'Manual service';
+                const servicePrice = String(selectedService?.price ?? payload.servicePrice ?? '').trim();
+                const serviceDuration = String(selectedService?.duration ?? payload.serviceDuration ?? '').trim();
+                const priceNumber = Number(String(servicePrice).replace(/[^\d.]/g, ''));
+                const now = Date.now();
+                const bookingRecord = {
+                    clientName: String(payload.clientName || '').trim(),
+                    clientPhone: String(payload.clientPhone || '').trim(),
+                    clientEmail: String(payload.clientEmail || '').trim(),
+                    clientBirthday: String(payload.clientBirthday || '').trim(),
+                    clientNote: String(payload.clientNote || '').trim(),
+                    clientEmailOptIn: Boolean(String(payload.clientEmail || '').trim()),
+                    serviceId: selectedService?.id || '',
+                    serviceName,
+                    serviceDescription: selectedService?.description || '',
+                    servicePrice,
+                    servicePriceType: selectedService?.priceType || 'fixed',
+                    serviceDuration,
+                    serviceCategory: selectedService?.category || '',
+                    amountInCents: Number.isFinite(priceNumber) ? Math.round(priceNumber * 100) : 0,
+                    currency: settings.currency || 'ZAR',
+                    paymentMethod: '',
+                    paymentGateway: '',
+                    paymentProviderName: '',
+                    paymentStatus: 'unpaid',
+                    paymentReference: '',
+                    notificationChannels: {
+                        email: Boolean(String(payload.clientEmail || '').trim()),
+                        portal: Boolean(String(payload.clientEmail || '').trim())
+                    },
+                    date: bookingDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+                    dateKey: bookingDateKey,
+                    time: String(payload.bookingTime || '').trim(),
+                    status: String(payload.bookingStatus || 'confirmed'),
+                    staffId: String(payload.staffId || '').trim(),
+                    noShowHistory: false,
+                    source: 'support-chat',
+                    threadId: String(payload.threadId || ''),
+                    timestamp: now,
+                    createdAt: now,
+                    updatedAt: now
+                };
+
+                if (!bookingRecord.clientName || !bookingRecord.dateKey || !bookingRecord.time) {
+                    showToast('Add a client name, date, and time first.');
+                    return false;
+                }
+
+                if (!isFirebaseConfigured || !user) {
+                    setBookingsAndCache(prev => [{ id: `manual-chat-${now}`, ...bookingRecord }, ...prev]);
+                    setBookingFilter('upcoming');
+                    showToast('Booking added from chat.');
+                    return true;
+                }
+
+                try {
+                    const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
+                    await createOwnerNotification(makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+                        title: `Chat booking added for ${bookingRecord.clientName}`,
+                        body: `${bookingRecord.serviceName} / ${bookingRecord.date} at ${bookingRecord.time}.`,
+                        ownerId: workspaceOwnerId,
+                        booking: { ...bookingRecord, id: bookingRef.id },
+                        bookingId: bookingRef.id,
+                        tab: 'bookings',
+                        priority: 'normal'
+                    }));
+                    setBookingFilter('upcoming');
+                    showToast('Booking added from chat.');
+                    return true;
+                } catch (error) {
+                    console.error(error);
+                    showToast('Chat booking could not be saved.');
+                    return false;
                 }
             };
 
@@ -6497,7 +6696,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             return (
                                                 <div key={b.id} className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-50 transition-colors">
                                                     <div className="flex items-center gap-4 min-w-0">
-                                                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold shrink-0 overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : statusStyle}`}>
+                                                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold shrink-0 overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : 'booking-avatar-placeholder'}`}>
                                                             {clientAvatar ? <img src={clientAvatar} alt="" className="w-full h-full object-cover" /> : b.clientName.charAt(0)}
                                                         </div>
                                                         <div className="min-w-0">
@@ -7196,7 +7395,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             bookings={visibleBookings}
                                             clientDirectory={clientDirectory}
                                             staffList={displayStaffList}
+                                            services={workspaceServices}
                                             updateBooking={updateBooking}
+                                            onCreateManualBooking={createManualBookingFromChat}
                                             setActiveTab={setActiveTab}
                                             focusTarget={supportThreadFocus}
                                             showToast={showToast}
@@ -7812,14 +8013,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ); })()}
 
                     {activeTab === 'editor' && (
-                    <div className={`flex-1 flex overflow-hidden mobile-editor-shell bg-[#F5F5F7] ${isPortraitMobileRuntime ? 'mobile-editor-portrait-runtime' : ''} ${editorCollapsed ? 'mobile-editor-panel-is-collapsed' : ''} ${mobileNavCollapsed ? 'mobile-editor-nav-is-collapsed' : ''}`}>
+                    <div className={`flex-1 flex overflow-hidden mobile-editor-shell editor-fullscreen-workspace editor-preview-device-${device} bg-[#F5F5F7] ${editorStudioModal ? 'mobile-editor-room-open' : ''} ${isPortraitMobileRuntime ? 'mobile-editor-portrait-runtime' : ''} ${editorCollapsed ? 'mobile-editor-panel-is-collapsed' : ''} ${mobileNavCollapsed ? 'mobile-editor-nav-is-collapsed' : ''}`}>
                         <div className={`mobile-editor-panel transition-all duration-700 ease-in-out bg-white border-r border-neutral-100 flex flex-col shadow-2xl relative z-40 overflow-hidden ${editorCollapsed ? 'mobile-editor-panel-collapsed w-0 opacity-0 pointer-events-none' : 'w-full md:w-[600px] lg:w-[700px]'}`}>
                         {!editorCollapsed && (
                             <>
                             <header className="editor-panel-header editor-cinema-header flex-shrink-0">
                                 <div>
-                                    <h2>Editor</h2>
+                                    <p className="editor-modal-kicker">Editing room</p>
+                                    <h2>{editorRoomScenes.find(scene => scene.id === (editorStudioModal || 'introduction'))?.title || 'Editor'}</h2>
                                 </div>
+                                <button type="button" onClick={() => setEditorStudioModal(null)} className="editor-modal-close-button" aria-label="Close editor settings" title="Close editor settings">
+                                    <X size={16} />
+                                </button>
                             </header>
 
                             <div ref={editorContentRef} className="editor-panel-scroll flex-1 overflow-y-auto p-5 sm:p-6 md:p-12 space-y-8 md:space-y-12 no-scrollbar">
@@ -8287,26 +8492,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 </div>
 
                             </div>
-                            <div className="editor-publish-footer p-2.5 sm:p-5 md:p-8 border-t border-neutral-50 flex-shrink-0 bg-white">
-                                <p className="mb-2 sm:mb-3 text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.18em] text-neutral-400">
-                                    Drafts stay private. Publish updates the live booking page.
-                                </p>
-                                <div className="grid grid-cols-2 sm:grid-cols-[0.72fr_1fr] gap-2 sm:gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => saveSettingsDraft(settings, "Editor draft saved.")}
-                                        className="h-10 sm:h-12 md:h-16 rounded-[999px] border border-neutral-200 bg-white text-black text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.16em] sm:tracking-[0.22em] hover:border-black hover:shadow-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2"
-                                    >
-                                        <CheckCircle2 size={14} />
-                                        <span className="sm:hidden">Draft</span>
-                                        <span className="hidden sm:inline">Save Draft</span>
-                                    </button>
-                                    <ProButton onClick={saveSettings} variant="primary" className="editor-publish-button w-full py-3 sm:py-5 md:py-7 text-[8px] sm:text-[9px] md:text-[11px] uppercase shadow-2xl shadow-black/20">
-                                        <span className="sm:hidden">Publish</span>
-                                        <span className="hidden sm:inline">Publish To Web</span>
-                                    </ProButton>
-                                </div>
-                            </div>
                             </>
                         )}
                         </div>
@@ -8322,7 +8507,73 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         </button>
 
                         {/* LIVE SIMULATOR ENVIRONMENT */}
-                        <div ref={containerRef} className="mobile-editor-preview flex-1 bg-[#F5F5F7] hidden md:flex flex-col items-center justify-center relative overflow-hidden p-6 md:p-8">
+                        <div ref={containerRef} className="mobile-editor-preview flex-1 bg-[#F5F5F7] flex flex-col items-center justify-center relative overflow-hidden p-6 md:p-8">
+                        {editorLaunchPanel && !editorStudioModal && (
+                            <div className="editor-floating-launch-popover">
+                                <div className="editor-launch-popover-head">
+                                    <div>
+                                        <span>{editorLaunchPanel === 'booking' ? 'Booking page' : 'Draft versions'}</span>
+                                        <strong>{editorLaunchPanel === 'booking' ? `/book/${bookingPageSlug}` : `${editorDraftVersions.length} saved`}</strong>
+                                    </div>
+                                    <button type="button" onClick={() => setEditorLaunchPanel(null)} aria-label="Close editor panel">
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                {editorLaunchPanel === 'booking' ? (
+                                    <div className="editor-launch-popover-body">
+                                        <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')} className="editor-link-pill" title={bookingPageUrl}>
+                                            <span>/book/{bookingPageSlug}</span>
+                                            <Share2 size={13} />
+                                        </button>
+                                        <div className="editor-launch-actions">
+                                            <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}>Copy link</button>
+                                            <button type="button" onClick={openBookingPage}>Open page</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="editor-launch-popover-body">
+                                        <div className="editor-version-save-row">
+                                            <input
+                                                value={editorDraftNameInput}
+                                                onChange={(event) => setEditorDraftNameInput(event.target.value)}
+                                                placeholder="Version name"
+                                            />
+                                            <button type="button" onClick={saveEditorVersion}>Save version</button>
+                                        </div>
+                                        <div className="editor-version-list">
+                                            {editorDraftVersions.length > 0 ? editorDraftVersions.slice(0, 4).map(version => (
+                                                <article key={version.id} className="editor-version-row">
+                                                    <button type="button" onClick={() => { restoreEditorVersion(version); setEditorLaunchPanel(null); }} title="Restore this version">
+                                                        <strong>{version.name || 'Saved version'}</strong>
+                                                        <span>{formatEditorVersionTime(version.savedAt)}</span>
+                                                    </button>
+                                                    <button type="button" onClick={() => deleteEditorVersion(version.id)} aria-label={`Delete ${version.name || 'saved version'}`}>
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                </article>
+                                            )) : (
+                                                <p>No named versions yet. Save one before you experiment.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <div className="editor-floating-launch-toolbar">
+                            <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'booking' ? null : 'booking')} className={editorLaunchPanel === 'booking' ? 'is-active' : ''} aria-label="Booking page link" title="Booking page link">
+                                <Globe size={16} />
+                            </button>
+                            <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'drafts' ? null : 'drafts')} className={editorLaunchPanel === 'drafts' ? 'is-active' : ''} aria-label="Draft versions" title="Draft versions">
+                                <History size={16} />
+                                {editorDraftVersions.length > 0 && <span>{editorDraftVersions.length}</span>}
+                            </button>
+                            <button type="button" onClick={() => saveSettingsDraft(settings, "Editor draft saved.")} aria-label="Save draft" title="Save draft">
+                                <CheckCircle2 size={16} />
+                            </button>
+                            <button type="button" onClick={saveSettings} className="is-primary" aria-label="Publish to web" title="Publish to web">
+                                <ArrowRight size={16} />
+                            </button>
+                        </div>
                         <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 flex flex-col md:flex-row items-center gap-3 md:gap-12 z-50">
                             <div className="mobile-editor-device-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
                                 <button onClick={() => setDevice('desktop')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
@@ -8650,19 +8901,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                         <section data-tour="bookings-queue" className="saas-card booking-desk-shell overflow-hidden">
                             <div className="booking-desk-command p-4 md:p-5 border-b border-neutral-100">
-                                <div className="booking-desk-head flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
-                                    <div className="booking-desk-title-block">
-                                        <p className="booking-desk-eyebrow text-[10px] font-bold uppercase text-neutral-400 mb-2">Booking Desk</p>
-                                        <h2 className="booking-desk-title text-2xl md:text-3xl font-bold tracking-tight text-black">
-                                            {bookingDesk.activeFilter === 'upcoming' ? 'Latest Upcoming' : `${bookingDesk.activeFilterLabel} Bookings`}
-                                        </h2>
+                                    <div className="booking-desk-head flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+                                        <div className="booking-desk-title-block">
+                                            <p className="booking-desk-eyebrow text-[10px] font-bold uppercase text-neutral-400 mb-2">Booking Desk</p>
+                                            <h2 className="booking-desk-title text-2xl md:text-3xl font-bold tracking-tight text-black">
+                                                {bookingDesk.activeFilter === 'upcoming' ? 'Latest Upcoming' : `${bookingDesk.activeFilterLabel} Bookings`}
+                                            </h2>
                                         <p className="booking-desk-subcopy text-sm text-neutral-500 mt-1">
                                             {showBookingExample
                                                 ? '0 real records. Example shown for layout only.'
                                                 : `${bookingRows.length} shown / ${bookingDesk.period.rangeLabel}.`}
                                         </p>
                                     </div>
-                                    <div className="booking-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                    <div className="booking-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit xl:mt-4 xl:ml-auto">
                                         {bookingDesk.periods.map(period => (
                                             <button
                                                 key={period.id}
@@ -8691,12 +8942,24 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         />
                                     </label>
                                     <div className="booking-desk-selects grid grid-cols-2 gap-2 xl:w-[420px]">
-                                        <label className="relative">
+                                        <label className="booking-desk-select-field relative">
                                             <span className="sr-only">Filter by payment</span>
+                                            <span className="booking-desk-select-face" aria-hidden="true">
+                                                <span>
+                                                    {{
+                                                        all: 'All payments',
+                                                        paid: 'Paid',
+                                                        open: 'Open',
+                                                        cash: 'Cash',
+                                                        card: 'Card',
+                                                        eft: 'Manual EFT'
+                                                    }[bookingPaymentFilter] || 'All payments'}
+                                                </span>
+                                            </span>
                                             <select
                                                 value={bookingPaymentFilter}
                                                 onChange={(event) => setBookingPaymentFilter(event.target.value)}
-                                                className="booking-desk-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
+                                                className="booking-desk-select booking-desk-native-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
                                             >
                                                 <option value="all">All payments</option>
                                                 <option value="paid">Paid</option>
@@ -8705,13 +8968,26 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 <option value="card">Card</option>
                                                 <option value="eft">Manual EFT</option>
                                             </select>
+                                            <ChevronDown size={14} aria-hidden="true" />
                                         </label>
-                                        <label className="relative">
+                                        <label className="booking-desk-select-field relative">
                                             <span className="sr-only">Sort bookings</span>
+                                            <span className="booking-desk-select-face" aria-hidden="true">
+                                                <span>
+                                                    {{
+                                                        newest: 'Newest first',
+                                                        oldest: 'Oldest first',
+                                                        'amount-high': 'Amount high',
+                                                        'amount-low': 'Amount low',
+                                                        client: 'Client A-Z',
+                                                        service: 'Service A-Z'
+                                                    }[bookingSort] || 'Newest first'}
+                                                </span>
+                                            </span>
                                             <select
                                                 value={bookingSort}
                                                 onChange={(event) => setBookingSort(event.target.value)}
-                                                className="booking-desk-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
+                                                className="booking-desk-select booking-desk-native-select w-full h-12 rounded-lg bg-white border border-neutral-200 px-3 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
                                             >
                                                 <option value="newest">Newest first</option>
                                                 <option value="oldest">Oldest first</option>
@@ -8720,6 +8996,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 <option value="client">Client A-Z</option>
                                                 <option value="service">Service A-Z</option>
                                             </select>
+                                            <ChevronDown size={14} aria-hidden="true" />
                                         </label>
                                     </div>
                                     <div className="booking-filter-rail flex flex-wrap items-center gap-2">
@@ -8772,7 +9049,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
                                                 <div className="2xl:col-span-5 flex items-center gap-4 min-w-0">
                                                     <div className="relative shrink-0">
-                                                        <div className={`w-14 h-14 rounded-lg flex items-center justify-center font-bold text-xl shadow-inner uppercase overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : statusStyle}`}>
+                                                        <div className={`w-14 h-14 rounded-lg flex items-center justify-center font-bold text-xl uppercase overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : 'booking-avatar-placeholder'}`}>
                                                             {clientAvatar ? <img src={clientAvatar} alt="" className="w-full h-full object-cover" /> : b.clientName.charAt(0)}
                                                         </div>
                                                         {b.noShowHistory && <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm" title="No-show history" />}
