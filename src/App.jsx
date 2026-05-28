@@ -1817,7 +1817,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [detectedThemeStyle, setDetectedThemeStyle] = useState('');
             const customThemeColor = '#755CFF';
             const [paletteDetecting, setPaletteDetecting] = useState(false);
-            const [device, setDevice] = useState('desktop'); 
+            const [device, setDevice] = useState(() => (
+                typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches ? 'mobile' : 'desktop'
+            )); 
             const [previewKey, setPreviewKey] = useState(0); 
             const [scale, setScale] = useState(1);
             const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -3174,7 +3176,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 : selectedPaletteFilter.id === 'all'
                     ? 'a full color range'
                     : `${selectedPaletteFilter.name.toLowerCase()} colors`;
-            const shouldMountEditorPreview = activeTab === 'editor' && !isPortraitMobileRuntime;
+            const shouldMountEditorPreview = activeTab === 'editor';
 
             const setThemeFilterValue = (groupId, filterId) => {
                 startTransition(() => {
