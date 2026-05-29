@@ -24886,3 +24886,73 @@ body {
                 min-height: 7rem !important;
             }
         }
+
+        @media (min-width: 1050px) {
+            html body .native-ui .finance-timeline-chart,
+            html body .native-ui.dashboard-dark .finance-timeline-chart {
+                display: grid !important;
+                grid-template-columns: minmax(22rem, 0.92fr) minmax(0, 1.08fr) !important;
+                align-items: stretch !important;
+                gap: 1.05rem !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar {
+                height: 100% !important;
+                min-height: clamp(22rem, 29vw, 25rem) !important;
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                grid-template-rows: minmax(13rem, 1.35fr) minmax(7rem, 0.75fr) !important;
+                gap: 0.78rem !important;
+                margin: 0 !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div {
+                min-height: 0 !important;
+                height: 100% !important;
+                padding: clamp(1rem, 1.55vw, 1.35rem) !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:first-child {
+                grid-column: 1 / -1 !important;
+                grid-row: 1 !important;
+                min-height: 0 !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:first-child p:nth-child(2) {
+                font-size: clamp(3.1rem, 5.2vw, 4.55rem) !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:not(:first-child) p:nth-child(2) {
+                font-size: clamp(1.42rem, 2vw, 1.9rem) !important;
+            }
+
+            html body .native-ui .finance-chart-module,
+            html body .native-ui.dashboard-dark .finance-chart-module {
+                width: 100% !important;
+                height: 100% !important;
+                min-height: clamp(22rem, 29vw, 25rem) !important;
+                margin: 0 !important;
+                align-self: stretch !important;
+                display: flex !important;
+                align-items: stretch !important;
+            }
+
+            html body .native-ui .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen),
+            html body .native-ui.dashboard-dark .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen) {
+                width: 100% !important;
+                height: auto !important;
+                min-height: clamp(22rem, 29vw, 25rem) !important;
+                flex: 1 1 auto !important;
+            }
+
+            html body .native-ui .finance-chart-expand-button {
+                top: 0.62rem !important;
+                right: 0.62rem !important;
+            }
+
+            html body .native-ui .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen) svg,
+            html body .native-ui.dashboard-dark .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen) svg {
+                transform: translateY(1.35rem) !important;
+                transform-origin: center bottom !important;
+            }
+        }
