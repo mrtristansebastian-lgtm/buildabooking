@@ -1028,6 +1028,7 @@ const landingStopActions = [
   'chasing clients for replies',
   'losing bookings in DMs',
   'double booking your calendar',
+  'clients hoping a slot is free',
   'typing the same answers',
   'manually checking who paid',
   'messy client records',
@@ -1040,8 +1041,8 @@ const landingBenefitCards = [
   {
     icon: CalendarCheck,
     label: 'Bookings',
-    title: 'Clients book from a real page.',
-    copy: 'Services, times, staff, notes, and requests land cleanly before they reach your calendar.'
+    title: 'Clients see real availability.',
+    copy: 'As bookings are confirmed, taken slots disappear from your booking page, so clients never choose times you cannot actually take.'
   },
   {
     icon: MessageSquare,
@@ -6477,7 +6478,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                           <article className="landing-benefits-command">
                             <div className="landing-benefits-command-head">
                               <span>Replace the busywork</span>
-                              <strong>10 problems gone</strong>
+                              <strong>11 problems gone</strong>
                             </div>
                             <div className="landing-benefit-chip-grid" aria-label="Problems Build A Booking helps stop">
                               {landingStopActions.map(action => (
