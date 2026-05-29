@@ -1027,41 +1027,26 @@ const landingStopActions = [
   'manual booking management',
   'using confusing business tools',
   'losing bookings in DMs',
-  'double booking your calendar',
+  'back-and-forth staff schedule messages',
   'clients hoping a slot is free',
-  'explaining prices and times manually',
+  'explaining services in every chat',
   'manually checking who paid',
   'messy client records',
   'late reschedule chaos',
-  'sending every booking update by hand',
   'running your studio on memory'
 ];
 
-const landingBenefitCards = [
-  {
-    icon: CalendarCheck,
-    label: 'Bookings',
-    title: 'Clients see real availability.',
-    copy: 'Skip confusing business tools. Confirmed bookings update availability automatically, so clients only see open times.'
-  },
-  {
-    icon: MessageSquare,
-    label: 'Support',
-    title: 'Every chat keeps context.',
-    copy: 'Questions, late updates, and reschedules stay connected to the client and booking.'
-  },
-  {
-    icon: CreditCard,
-    label: 'Finance',
-    title: 'Paid and pending stay clear.',
-    copy: 'Manual payments, revenue, and finance history stay readable without spreadsheet guesswork.'
-  },
-  {
-    icon: ShieldCheck,
-    label: 'Clients',
-    title: 'Client records build themselves.',
-    copy: 'Profiles grow from real bookings, uploads, messages, payments, and repeat visits.'
-  }
+const landingGainActions = [
+  'booking page collects requests for you',
+  'dashboard keeps every tool in one place',
+  'inbox connects messages to bookings',
+  'team schedules show bookings clearly',
+  'live availability updates automatically',
+  'service menu shows price and duration',
+  'finance tracks paid and pending income',
+  'client directory stores details, even birthdays',
+  'reschedule tools keep changes controlled',
+  'timeline stores clients, chats, and payments'
 ];
 
 const safeJsonParse = (value, fallback = null) => {
@@ -6464,56 +6449,46 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                       </div>
                     </section>
 
-                    <LandingFeatureBook onGuestDashboard={openGuestDashboard} />
+                    <LandingFeatureBook />
 
                     <section className="landing-stop-section px-4 sm:px-6 py-16 md:py-24 border-b border-neutral-100">
                       <div className="landing-stop-panel max-w-7xl mx-auto">
-                        <div className="landing-benefits-header">
-                          <span>Less admin. More booked clients.</span>
-                          <h2>Stop messy booking work.</h2>
-                          <p>Clients book, messages stay attached, payments stay clear, and your schedule updates from one clean workspace.</p>
-                        </div>
-
                         <div className="landing-benefits-layout">
                           <article className="landing-benefits-command">
                             <div className="landing-benefits-command-head">
-                              <span>Replace the busywork</span>
-                              <strong>11 problems gone</strong>
+                              <div>
+                                <span>Replace the busywork</span>
+                                <strong>10<br />problems<br />gone</strong>
+                              </div>
                             </div>
                             <div className="landing-benefit-chip-grid" aria-label="Problems Build A Booking helps stop">
                               {landingStopActions.map(action => (
                                 <span key={action} className="landing-benefit-chip">
-                                  <Check size={13} />
+                                  <X size={13} />
                                   {action}
                                 </span>
                               ))}
                             </div>
                           </article>
 
-                          <div className="landing-benefits-grid">
-                            {landingBenefitCards.map(({ icon: Icon, label, title, copy }) => (
-                              <article key={title} className="landing-benefit-card">
-                                <div className="landing-benefit-card-top">
-                                  <span className="landing-benefit-card-icon"><Icon size={18} /></span>
-                                  <small>{label}</small>
-                                </div>
-                                <strong>{title}</strong>
-                                <p>{copy}</p>
-                              </article>
-                            ))}
-                          </div>
+                          <article className="landing-benefits-gain">
+                            <div className="landing-benefits-gain-head">
+                              <div>
+                                <span>Let your software work</span>
+                                <strong>10<br />wins<br />gained</strong>
+                              </div>
+                            </div>
+                            <div className="landing-gain-chip-grid" aria-label="Benefits Build A Booking gives your business">
+                              {landingGainActions.map(action => (
+                                <span key={action} className="landing-gain-chip">
+                                  <Check size={13} />
+                                  {action}
+                                </span>
+                              ))}
+                            </div>
+                          </article>
                         </div>
 
-                        <div className="landing-benefits-route" aria-label="Build A Booking workflow">
-                          {['Booking page', 'Schedule', 'Inbox', 'Payments', 'Client profile'].map(step => (
-                            <span key={step}>{step}</span>
-                          ))}
-                        </div>
-
-                        <div className="landing-benefits-actions">
-                          <button type="button" onClick={openSignupOrDashboard}>Start building <ArrowRight size={15} /></button>
-                          <button type="button" onClick={openGuestDashboard}>View guest workspace <Eye size={15} /></button>
-                        </div>
                       </div>
                     </section>
 

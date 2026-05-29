@@ -295,13 +295,6 @@ body {
             gap: clamp(1rem, 2vw, 1.35rem);
         }
 
-        .landing-benefits-header {
-            max-width: 62rem;
-            display: grid;
-            gap: 0.85rem;
-        }
-
-        .landing-benefits-header > span,
         .landing-benefits-command-head span,
         .landing-benefit-card small {
             color: #8a94a6;
@@ -312,35 +305,16 @@ body {
             text-transform: uppercase;
         }
 
-        .landing-benefits-header h2 {
-            max-width: 44rem;
-            margin: 0;
-            color: #050505;
-            font-size: clamp(2.5rem, 5.6vw, 5.15rem);
-            font-weight: 920;
-            letter-spacing: -0.058em;
-            line-height: 0.88;
-        }
-
-        .landing-benefits-header p {
-            max-width: 44rem;
-            margin: 0;
-            color: #667085;
-            font-size: clamp(1rem, 1.7vw, 1.2rem);
-            font-weight: 620;
-            line-height: 1.45;
-        }
-
         .landing-benefits-layout {
             display: grid;
-            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: clamp(0.85rem, 2vw, 1.15rem);
             align-items: stretch;
         }
 
         .landing-benefits-command,
-        .landing-benefit-card,
-        .landing-benefits-route {
+        .landing-benefits-gain,
+        .landing-benefit-card {
             position: relative;
             border-radius: 8px;
             border: 1px solid rgba(15, 23, 42, 0.08);
@@ -349,13 +323,16 @@ body {
 
         .landing-benefits-command {
             min-height: 100%;
-            padding: clamp(0.9rem, 1.7vw, 1.08rem);
+            padding: clamp(0.86rem, 1.6vw, 1.05rem);
             display: grid;
-            align-content: space-between;
+            grid-template-rows: auto minmax(0, 1fr);
+            align-content: start;
             gap: 0.8rem;
-            background: #050505;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.055), transparent 30%),
+                linear-gradient(180deg, #0b0b0c 0%, #050505 100%);
             color: #ffffff;
-            box-shadow: 0 30px 90px -68px rgba(0, 0, 0, 0.85);
+            box-shadow: 0 30px 90px -68px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
         .landing-benefits-command::before {
@@ -384,43 +361,163 @@ body {
             gap: 0.75rem;
         }
 
+        .landing-benefits-command-head {
+            padding: 0.2rem 0.15rem 0;
+        }
+
+        .landing-benefits-command-head,
+        .landing-benefits-gain-head {
+            min-height: clamp(8.8rem, 14vw, 10.55rem);
+        }
+
         .landing-benefits-command-head strong {
+            display: block;
+            max-width: 12rem;
+            margin-top: 0.2rem;
             color: #ffffff;
-            font-size: clamp(1.55rem, 3vw, 2.55rem);
+            font-size: clamp(1.85rem, 3.35vw, 3rem);
             font-weight: 920;
             letter-spacing: -0.06em;
             line-height: 0.92;
-            text-align: right;
+            text-align: left;
         }
 
         .landing-benefit-chip-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.38rem;
+            gap: 0.42rem;
+            align-content: start;
         }
 
         .landing-benefit-chip {
             min-width: 0;
-            min-height: 2.38rem;
+            min-height: 2.42rem;
             display: flex;
             align-items: center;
-            gap: 0.42rem;
+            gap: 0.48rem;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.06);
-            padding: 0.48rem 0.58rem;
-            color: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.095);
+            background: rgba(255, 255, 255, 0.052);
+            padding: 0.48rem 0.56rem;
+            color: rgba(255, 255, 255, 0.8);
             font-size: 0.7rem;
             font-weight: 760;
             line-height: 1.16;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
         }
 
         .landing-benefit-chip svg {
-            width: 0.82rem;
-            height: 0.82rem;
+            width: 1.08rem;
+            height: 1.08rem;
             flex: 0 0 auto;
-            color: #d9ff63;
+            color: #ff6b6b;
+            border-radius: 999px;
+            background: rgba(255,107,107,0.12);
+            padding: 0.18rem;
             stroke-width: 2.5;
+        }
+
+        .landing-benefits-gain {
+            min-height: 100%;
+            padding: clamp(0.86rem, 1.6vw, 1.05rem);
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            align-content: start;
+            gap: 0.8rem;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86)),
+                linear-gradient(180deg, #ffffff 0%, #f7f8f6 100%);
+            color: #050505;
+            box-shadow: 0 30px 90px -68px rgba(15, 23, 42, 0.42), inset 0 1px 0 rgba(255,255,255,0.92);
+        }
+
+        .landing-benefits-gain::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--native-accent-button-gradient);
+            background-size: 420% 420%;
+            background-position: var(--native-accent-x) 50%;
+            pointer-events: none;
+        }
+
+        .landing-benefits-gain > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .landing-benefits-gain-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.2rem 0.15rem 0;
+        }
+
+        .landing-benefits-gain-head > div {
+            transform: translateY(0.86rem);
+        }
+
+        .landing-benefits-gain-head span {
+            display: block;
+            position: relative;
+            top: -0.44rem;
+            color: #8a94a6;
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+
+        .landing-benefits-gain-head strong {
+            display: block;
+            max-width: 12rem;
+            margin-top: 0.2rem;
+            color: #050505;
+            font-size: clamp(1.85rem, 3.35vw, 3rem);
+            font-weight: 920;
+            letter-spacing: -0.06em;
+            line-height: 0.92;
+            text-align: left;
+        }
+
+        .landing-gain-chip-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.42rem;
+            align-content: start;
+        }
+
+        .landing-gain-chip {
+            min-width: 0;
+            min-height: 2.42rem;
+            display: flex;
+            align-items: center;
+            gap: 0.48rem;
+            border-radius: 8px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.84);
+            padding: 0.48rem 0.56rem;
+            color: #1d2939;
+            font-size: 0.7rem;
+            font-weight: 780;
+            line-height: 1.16;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+        }
+
+        .landing-gain-chip svg {
+            width: 1.08rem;
+            height: 1.08rem;
+            flex: 0 0 auto;
+            color: #1f8f3a;
+            border-radius: 999px;
+            background: rgba(31,143,58,0.12);
+            padding: 0.18rem;
+            stroke-width: 2.6;
         }
 
         .landing-benefits-grid {
@@ -470,60 +567,6 @@ body {
             line-height: 1.42;
         }
 
-        .landing-benefits-route {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 0.45rem;
-            background: rgba(255, 255, 255, 0.72);
-            padding: 0.58rem;
-        }
-
-        .landing-benefits-route span {
-            min-height: 2.45rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 999px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            background: #ffffff;
-            padding: 0 0.85rem;
-            color: #050505;
-            font-size: 0.72rem;
-            font-weight: 850;
-            letter-spacing: 0.02em;
-            line-height: 1;
-        }
-
-        .landing-benefits-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.65rem;
-        }
-
-        .landing-benefits-actions button {
-            min-height: 3.1rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.45rem;
-            border-radius: 999px;
-            border: 1px solid rgba(15, 23, 42, 0.1);
-            background: #ffffff;
-            padding: 0 1.25rem;
-            color: #050505;
-            font-size: 0.78rem;
-            font-weight: 850;
-            line-height: 1;
-            box-shadow: 0 18px 42px -36px rgba(15, 23, 42, 0.48);
-        }
-
-        .landing-benefits-actions button:first-child {
-            border-color: #050505;
-            background: #050505;
-            color: #ffffff;
-        }
-
         @media (max-width: 900px) {
             .landing-benefits-layout,
             .landing-benefits-grid {
@@ -536,11 +579,11 @@ body {
         }
 
         @media (max-width: 640px) {
-            .landing-benefits-header h2 {
-                font-size: clamp(2.45rem, 12vw, 4rem);
+            .landing-benefits-command-head {
+                display: grid;
             }
 
-            .landing-benefits-command-head {
+            .landing-benefits-gain-head {
                 display: grid;
             }
 
@@ -548,25 +591,20 @@ body {
                 text-align: left;
             }
 
-            .landing-benefit-chip {
+            .landing-benefit-chip,
+            .landing-gain-chip {
                 min-height: 2.55rem;
                 padding: 0.46rem 0.5rem;
                 font-size: 0.62rem;
                 line-height: 1.12;
             }
 
-            .landing-benefit-chip svg {
+            .landing-benefit-chip svg,
+            .landing-gain-chip svg {
                 width: 0.72rem;
                 height: 0.72rem;
             }
 
-            .landing-benefits-route span {
-                flex: 1 1 calc(50% - 0.45rem);
-            }
-
-            .landing-benefits-actions button {
-                width: 100%;
-            }
         }
 
         .native-ui .native-gradient-button,
@@ -1550,6 +1588,151 @@ body {
         .native-feature-wave-list .native-feature-card:nth-child(6) { --feature-wave-delay: 7.25s; }
         .native-feature-wave-list .native-feature-card:nth-child(7) { --feature-wave-delay: 8.7s; }
         .native-feature-wave-list .native-feature-card:nth-child(8) { --feature-wave-delay: 10.15s; }
+
+        .landing-feature-list-section {
+            display: grid;
+            gap: clamp(1.15rem, 2vw, 1.55rem);
+        }
+
+        .landing-feature-list-head {
+            max-width: 56rem;
+            display: grid;
+            gap: 0.92rem;
+        }
+
+        .landing-feature-list-head h2 {
+            margin: 0;
+            color: #050505;
+            font-size: clamp(2.5rem, 4.9vw, 5.25rem);
+            font-weight: 920;
+            letter-spacing: -0.058em;
+            line-height: 0.9;
+        }
+
+        .landing-feature-list-head p {
+            max-width: 45rem;
+            margin: 0;
+            color: #667085;
+            font-size: clamp(1.04rem, 1.5vw, 1.18rem);
+            font-weight: 610;
+            letter-spacing: 0;
+            line-height: 1.65;
+        }
+
+        .native-feature-compact-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.82rem;
+        }
+
+        .native-feature-compact-card {
+            grid-column: span 2;
+            min-height: 10.35rem;
+            display: grid;
+            align-content: start;
+            gap: 1rem;
+            border-radius: 8px;
+            border-color: color-mix(in srgb, var(--feature-tile-color, #050505) 82%, #000000) !important;
+            background: var(--feature-tile-color, #ffffff) !important;
+            padding: clamp(1rem, 1.55vw, 1.2rem);
+            box-shadow:
+                0 24px 72px -58px color-mix(in srgb, var(--feature-tile-color, #050505) 58%, #000000),
+                inset 0 1px 0 rgba(255,255,255,0.28);
+        }
+
+        .native-feature-compact-card.is-wide,
+        .native-feature-compact-card.is-accent {
+            grid-column: span 3;
+            min-height: 11.1rem;
+        }
+
+        .native-feature-compact-card.is-final {
+            grid-column: span 6;
+        }
+
+        .native-feature-compact-card.is-accent {
+            background: var(--feature-tile-color, #ffffff) !important;
+        }
+
+        .native-feature-compact-card::before,
+        .native-feature-compact-card::after {
+            display: none;
+            animation: none;
+        }
+
+        .native-feature-card-topline {
+            display: flex;
+            align-items: center;
+            gap: 0.78rem;
+        }
+
+        .native-feature-compact-icon {
+            width: 2.68rem;
+            height: 2.68rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border-radius: 8px;
+            border: 0;
+            background: rgba(255,255,255,0.24);
+            color: #ffffff;
+            line-height: 1;
+            box-shadow:
+                0 18px 44px -34px color-mix(in srgb, var(--feature-tile-color, #050505) 62%, #000000),
+                inset 0 1px 0 rgba(255,255,255,0.26);
+        }
+
+        .native-feature-compact-icon svg {
+            display: block;
+        }
+
+        .native-feature-compact-card h3 {
+            margin: 0;
+            color: #ffffff;
+            font-size: clamp(1.22rem, 1.85vw, 1.58rem);
+            font-weight: 880;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .native-feature-compact-card p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 0.94rem;
+            font-weight: 590;
+            line-height: 1.38;
+        }
+
+        @media (max-width: 1024px) {
+            .native-feature-compact-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .native-feature-compact-card,
+            .native-feature-compact-card.is-wide,
+            .native-feature-compact-card.is-accent,
+            .native-feature-compact-card.is-final {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .landing-feature-list-head h2 {
+                font-size: clamp(2.25rem, 12vw, 3.75rem);
+            }
+
+            .native-feature-compact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .native-feature-compact-card,
+            .native-feature-compact-card.is-wide,
+            .native-feature-compact-card.is-accent,
+            .native-feature-compact-card.is-final {
+                min-height: auto;
+            }
+        }
 
         .native-ui .native-stat-grid .native-stat-card:nth-child(1) { --stat-wave-delay: 0s; }
         .native-ui .native-stat-grid .native-stat-card:nth-child(2) { --stat-wave-delay: 1.45s; }
@@ -13311,28 +13494,28 @@ body {
             border-color: rgba(255,255,255,0.08) !important;
         }
 
-        .native-home.native-home-dark .landing-benefits-header h2,
-        .native-home.native-home-dark .landing-benefit-card strong,
-        .native-home.native-home-dark .landing-benefits-route span,
-        .native-home.native-home-dark .landing-benefits-actions button {
+        .native-home.native-home-dark .landing-benefit-card strong {
             color: #f8fafc !important;
         }
 
-        .native-home.native-home-dark .landing-benefits-header p,
         .native-home.native-home-dark .landing-benefit-card p {
             color: #a8b3c7 !important;
         }
 
         .native-home.native-home-dark .landing-benefits-command,
-        .native-home.native-home-dark .landing-benefit-card,
-        .native-home.native-home-dark .landing-benefits-route,
-        .native-home.native-home-dark .landing-benefits-actions button {
+        .native-home.native-home-dark .landing-benefit-card {
             background: rgba(17, 18, 22, 0.88) !important;
             border-color: rgba(255,255,255,0.1) !important;
         }
 
-        .native-home.native-home-dark .landing-benefit-card-icon,
-        .native-home.native-home-dark .landing-benefits-actions button:first-child {
+        .native-home.native-home-dark .landing-benefits-command {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.06), transparent 32%),
+                linear-gradient(180deg, #0b0c10 0%, #050506 100%) !important;
+            box-shadow: 0 30px 90px -68px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        }
+
+        .native-home.native-home-dark .landing-benefit-card-icon {
             background: #ffffff !important;
             color: #050505 !important;
             border-color: #ffffff !important;
@@ -13342,11 +13525,6 @@ body {
             border-color: rgba(255,255,255,0.11) !important;
             background: rgba(255,255,255,0.055) !important;
             color: rgba(255,255,255,0.76) !important;
-        }
-
-        .native-home.native-home-dark .landing-benefits-route span {
-            background: rgba(255,255,255,0.055) !important;
-            border-color: rgba(255,255,255,0.1) !important;
         }
 
         .native-home.native-home-dark .native-feature-book-cover,
