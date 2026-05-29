@@ -1112,36 +1112,41 @@ export const MigrationImportPanel = ({
       </div>
 
       <div className="p-4 md:p-5 border-b border-neutral-100">
-        <div className="grid xl:grid-cols-[minmax(0,1fr)_340px] gap-4">
-          <div className="finance-migration-guide rounded-2xl border border-neutral-100 bg-neutral-50 p-4">
+        <div className="finance-migration-guide rounded-2xl border border-neutral-100 bg-neutral-50 p-4 md:p-5">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
             <div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Step 1 / Format briefing</p>
-                <h4 className="mt-1 text-xl font-black tracking-tight text-black">What kind of CSV are you uploading?</h4>
-              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Step 1 / Format briefing</p>
+              <h4 className="mt-1 text-xl md:text-2xl font-black tracking-tight text-black">What kind of CSV are you uploading?</h4>
             </div>
-
-            <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-2">
-              {migrationGuideOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => selectGuide(option.id)}
-                  className={`finance-migration-guide-card rounded-2xl border bg-white p-4 text-left transition-all ${guideId === option.id ? 'is-selected' : ''}`}
-                >
-                  <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{option.eyebrow}</span>
-                  <span className="mt-2 block text-base font-black tracking-tight text-black">{option.title}</span>
-                  <span className="mt-2 block text-xs font-bold leading-relaxed text-neutral-500">{option.description}</span>
-                </button>
-              ))}
-            </div>
+            <p className="text-xs md:text-sm font-bold leading-relaxed text-neutral-500 max-w-xl">
+              Choose the closest export type first. The import plan and sample CSV shape will update before you upload.
+            </p>
           </div>
 
-          <aside className="finance-migration-guide-summary rounded-2xl border border-neutral-100 bg-white p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Prepared for</p>
-            <h4 className="mt-1 text-lg font-black tracking-tight text-black">{activeGuide.title}</h4>
-            <p className="mt-1 text-xs font-bold text-neutral-400">The selected format controls the import plan below.</p>
-            <div className="mt-4 space-y-3">
+          <div className="mt-5 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+            {migrationGuideOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => selectGuide(option.id)}
+                className={`finance-migration-guide-card rounded-2xl border bg-white p-4 text-left transition-all ${guideId === option.id ? 'is-selected' : ''}`}
+              >
+                <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{option.eyebrow}</span>
+                <span className="mt-2 block text-base font-black tracking-tight text-black">{option.title}</span>
+                <span className="mt-2 block text-xs font-bold leading-relaxed text-neutral-500">{option.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <section className="finance-migration-guide-summary mt-4 rounded-2xl border border-neutral-100 bg-white p-4 md:p-5">
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] gap-5">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Prepared for</p>
+              <h4 className="mt-1 text-2xl font-black tracking-tight text-black">{activeGuide.title}</h4>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-neutral-500 max-w-2xl">{activeGuide.outcome}</p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-3">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Need at least</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1159,33 +1164,33 @@ export const MigrationImportPanel = ({
                 </div>
               </div>
             </div>
-            <p className="mt-4 rounded-2xl border border-neutral-100 bg-neutral-50 p-3 text-xs font-bold leading-relaxed text-neutral-500">{activeGuide.outcome}</p>
-            <div className="finance-migration-csv-preview mt-4 rounded-2xl border border-neutral-100 bg-neutral-50 overflow-hidden">
-              <div className="px-3 py-2 border-b border-neutral-100 bg-white flex items-center justify-between gap-3">
-                <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Your CSV should look like</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-neutral-300">{activeGuide.csvColumns.length} columns</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left">
-                  <thead>
-                    <tr>
-                      {activeGuide.csvColumns.map((column) => (
-                        <th key={column} className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-neutral-500 whitespace-nowrap">{column}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      {activeGuide.sampleRow.map((value, index) => (
-                        <td key={`${activeGuide.id}-${index}`} className="px-3 py-2 text-[11px] font-bold text-neutral-400 whitespace-nowrap">{value}</td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+          </div>
+
+          <div className="finance-migration-csv-preview mt-5 rounded-2xl border border-neutral-100 bg-neutral-50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-neutral-100 bg-white flex items-center justify-between gap-3">
+              <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-neutral-400">Your CSV should look like</span>
+              <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-neutral-300">{activeGuide.csvColumns.length} columns</span>
             </div>
-          </aside>
-        </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr>
+                    {activeGuide.csvColumns.map((column) => (
+                      <th key={column} className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-neutral-500 whitespace-nowrap">{column}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {activeGuide.sampleRow.map((value, index) => (
+                      <td key={`${activeGuide.id}-${index}`} className="px-4 py-3 text-[12px] font-bold text-neutral-500 whitespace-nowrap">{value}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div className="p-4 md:p-5 grid xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
