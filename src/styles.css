@@ -24106,3 +24106,783 @@ body {
                 padding-right: 2.35rem !important;
             }
         }
+
+        /* Final desktop seamless workspace surfaces: make PC feel like an app, not nested website cards. */
+        @media (min-width: 768px) {
+            html body .native-ui.dashboard-light .dashboard-main > div:not(.mobile-editor-shell),
+            html body .native-ui.dashboard-light .dashboard-overview-page,
+            html body .native-ui.dashboard-light .finance-studio {
+                background: #f6f7f9 !important;
+                background-image: none !important;
+            }
+
+            html body .native-ui.dashboard-dark .dashboard-main > div:not(.mobile-editor-shell),
+            html body .native-ui.dashboard-dark .dashboard-overview-page,
+            html body .native-ui.dashboard-dark .finance-studio {
+                background: #0b0b0b !important;
+                background-image: none !important;
+            }
+
+            html body .native-ui .booking-desk-shell,
+            html body .native-ui .service-desk-shell,
+            html body .native-ui .client-directory-card,
+            html body .native-ui .support-inbox-card.support-desk-shell:not(.fixed),
+            html body .native-ui .schedule-google-panel,
+            html body .native-ui .schedule-team-card,
+            html body .native-ui .schedule-calendar-card,
+            html body .native-ui .finance-desk,
+            html body .native-ui.dashboard-dark .booking-desk-shell,
+            html body .native-ui.dashboard-dark .service-desk-shell,
+            html body .native-ui.dashboard-dark .client-directory-card,
+            html body .native-ui.dashboard-dark .support-inbox-card.support-desk-shell:not(.fixed),
+            html body .native-ui.dashboard-dark .schedule-google-panel,
+            html body .native-ui.dashboard-dark .schedule-team-card,
+            html body .native-ui.dashboard-dark .schedule-calendar-card,
+            html body .native-ui.dashboard-dark .finance-desk {
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .support-inbox-card > .native-gradient-line,
+            html body .native-ui.dashboard-dark .support-inbox-card > .native-gradient-line {
+                display: none !important;
+            }
+
+            html body .native-ui .booking-desk-command,
+            html body .native-ui .service-desk-command,
+            html body .native-ui .client-directory-command,
+            html body .native-ui .schedule-google-status,
+            html body .native-ui .schedule-calendar-command,
+            html body .native-ui .finance-desk-head,
+            html body .native-ui .finance-desk-controls,
+            html body .native-ui.dashboard-dark .booking-desk-command,
+            html body .native-ui.dashboard-dark .service-desk-command,
+            html body .native-ui.dashboard-dark .client-directory-command,
+            html body .native-ui.dashboard-dark .schedule-google-status,
+            html body .native-ui.dashboard-dark .schedule-calendar-command,
+            html body .native-ui.dashboard-dark .finance-desk-head,
+            html body .native-ui.dashboard-dark .finance-desk-controls {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                border-bottom: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+            }
+
+            html body .native-ui .booking-record-list,
+            html body .native-ui .finance-desk-list,
+            html body .native-ui.dashboard-dark .booking-record-list,
+            html body .native-ui.dashboard-dark .finance-desk-list {
+                border-top: 1px solid rgba(15, 23, 42, 0.07) !important;
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            html body .native-ui.dashboard-dark .booking-record-list,
+            html body .native-ui.dashboard-dark .finance-desk-list {
+                border-top-color: rgba(255, 255, 255, 0.085) !important;
+            }
+
+            html body .native-ui .booking-record-row,
+            html body .native-ui .booking-record-row:hover,
+            html body .native-ui .finance-desk-row,
+            html body .native-ui .finance-desk-row:hover,
+            html body .native-ui .client-directory-row:not(.is-active),
+            html body .native-ui .client-directory-row:not(.is-active):hover,
+            html body .native-ui.dashboard-dark .booking-record-row,
+            html body .native-ui.dashboard-dark .booking-record-row:hover,
+            html body .native-ui.dashboard-dark .finance-desk-row,
+            html body .native-ui.dashboard-dark .finance-desk-row:hover,
+            html body .native-ui.dashboard-dark .client-directory-row:not(.is-active),
+            html body .native-ui.dashboard-dark .client-directory-row:not(.is-active):hover {
+                margin: 0 !important;
+                border-width: 0 0 1px !important;
+                border-style: solid !important;
+                border-color: rgba(15, 23, 42, 0.07) !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                transform: none !important;
+            }
+
+            html body .native-ui.dashboard-dark .booking-record-row,
+            html body .native-ui.dashboard-dark .booking-record-row:hover,
+            html body .native-ui.dashboard-dark .finance-desk-row,
+            html body .native-ui.dashboard-dark .finance-desk-row:hover,
+            html body .native-ui.dashboard-dark .client-directory-row:not(.is-active),
+            html body .native-ui.dashboard-dark .client-directory-row:not(.is-active):hover {
+                border-color: rgba(255, 255, 255, 0.085) !important;
+            }
+
+            html body .native-ui .booking-record-service,
+            html body .native-ui .booking-record-time,
+            html body .native-ui.dashboard-dark .booking-record-service,
+            html body .native-ui.dashboard-dark .booking-record-time {
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+            }
+
+            html body .native-ui .support-desk-shell .support-workspace-grid,
+            html body .native-ui .support-desk-shell .support-thread-list,
+            html body .native-ui .support-desk-shell .support-thread-search,
+            html body .native-ui .support-desk-shell .support-chat-panel,
+            html body .native-ui .support-desk-shell .support-chat-header,
+            html body .native-ui .support-desk-shell .support-chat-canvas,
+            html body .native-ui .support-desk-shell .support-chat-composer,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-workspace-grid,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-list,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-search,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-panel,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-header,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-canvas,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-composer {
+                border-color: rgba(15, 23, 42, 0.07) !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+            }
+
+            html body .native-ui.dashboard-dark .support-desk-shell .support-workspace-grid,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-list,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-search,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-panel,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-header,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-canvas,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-chat-composer {
+                border-color: rgba(255, 255, 255, 0.085) !important;
+            }
+
+            html body .native-ui .support-desk-shell .support-thread-row,
+            html body .native-ui .support-desk-shell .support-thread-row:hover,
+            html body .native-ui .support-desk-shell .support-thread-row.is-active,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row:hover,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row.is-active {
+                margin: 0 !important;
+                border-width: 0 0 1px !important;
+                border-style: solid !important;
+                border-color: rgba(15, 23, 42, 0.07) !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                transform: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row:hover,
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row.is-active {
+                border-color: rgba(255, 255, 255, 0.085) !important;
+            }
+
+            html body .native-ui .support-desk-shell .support-thread-row.is-active {
+                background:
+                    linear-gradient(90deg, rgba(57,255,20,0.052), rgba(20,184,166,0.04), transparent 62%) !important;
+            }
+
+            html body .native-ui.dashboard-dark .support-desk-shell .support-thread-row.is-active {
+                background:
+                    linear-gradient(90deg, rgba(203,255,184,0.07), rgba(185,227,255,0.048), transparent 64%) !important;
+            }
+
+            html body .native-ui .schedule-calendar-scroll-zone,
+            html body .native-ui .schedule-calendar-scroll-zone.bg-gradient-to-b,
+            html body .native-ui.dashboard-dark .schedule-calendar-scroll-zone,
+            html body .native-ui.dashboard-dark .schedule-calendar-scroll-zone.bg-gradient-to-b {
+                border: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            html body .native-ui .schedule-calendar-grid,
+            html body .native-ui .schedule-calendar-grid.grid,
+            html body .native-ui.dashboard-dark .schedule-calendar-grid,
+            html body .native-ui.dashboard-dark .schedule-calendar-grid.grid {
+                background: transparent !important;
+                background-image: none !important;
+                border: 0 !important;
+                box-shadow: none !important;
+            }
+
+            html body .native-ui .finance-chart-module,
+            html body .native-ui .finance-timeline-chart,
+            html body .native-ui .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen),
+            html body .native-ui.dashboard-dark .finance-chart-module,
+            html body .native-ui.dashboard-dark .finance-timeline-chart,
+            html body .native-ui.dashboard-dark .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen) {
+                background: transparent !important;
+                background-image: none !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .finance-desk-row {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            html body .native-ui .schedule-team-layout,
+            html body .native-ui.dashboard-dark .schedule-team-layout {
+                align-items: center !important;
+                gap: 1.1rem !important;
+            }
+
+            html body .native-ui .schedule-team-rail,
+            html body .native-ui.dashboard-dark .schedule-team-rail {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                justify-content: flex-start !important;
+                padding-bottom: 0.25rem !important;
+            }
+
+            html body .native-ui .schedule-team-chip,
+            html body .native-ui.dashboard-dark .schedule-team-chip {
+                min-width: 7.55rem !important;
+                max-width: 8.6rem !important;
+            }
+        }
+
+        /* Final booking polish: rows stay calm; only explicit controls feel interactive. */
+        html body .native-ui .booking-record-row,
+        html body .native-ui .booking-record-row:hover,
+        html body .native-ui .booking-record-row:focus,
+        html body .native-ui .booking-record-row:active,
+        html body .native-ui.dashboard-dark .booking-record-row,
+        html body .native-ui.dashboard-dark .booking-record-row:hover,
+        html body .native-ui.dashboard-dark .booking-record-row:focus,
+        html body .native-ui.dashboard-dark .booking-record-row:active {
+            cursor: default !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            transform: none !important;
+            transition: none !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-modal {
+            background:
+                linear-gradient(180deg, rgba(21, 21, 22, 0.98), rgba(12, 12, 13, 0.98)),
+                radial-gradient(circle at 12% 0%, rgba(203, 255, 184, 0.055), transparent 30%),
+                radial-gradient(circle at 88% 0%, rgba(185, 227, 255, 0.06), transparent 34%) !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+            color: #f8fafc !important;
+            box-shadow:
+                0 28px 80px -46px rgba(0, 0, 0, 0.95),
+                inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-modal h2,
+        html body .native-ui.dashboard-dark .booking-info-modal .text-black {
+            color: #f8fafc !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-modal p {
+            color: rgba(226, 232, 240, 0.68) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-modal button[aria-label="Close booking info"] {
+            background: rgba(255, 255, 255, 0.06) !important;
+            border-color: rgba(255, 255, 255, 0.11) !important;
+            color: rgba(248, 250, 252, 0.72) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-grid {
+            border-color: rgba(255, 255, 255, 0.105) !important;
+            background: rgba(255, 255, 255, 0.045) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-field {
+            background: rgba(255, 255, 255, 0.055) !important;
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            color: #f8fafc !important;
+        }
+
+        @media (max-width: 767px) {
+            html body .native-ui.dashboard-dark .booking-info-field {
+                background: transparent !important;
+                border-bottom-color: rgba(255, 255, 255, 0.085) !important;
+            }
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-field span {
+            color: rgba(248, 250, 252, 0.92) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-field strong {
+            color: rgba(226, 232, 240, 0.78) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-danger-button {
+            background: rgba(248, 113, 113, 0.105) !important;
+            border-color: rgba(248, 113, 113, 0.22) !important;
+            color: #ff6b6b !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+        }
+
+        html body .native-ui.dashboard-dark .booking-info-danger-button:hover {
+            background: rgba(248, 113, 113, 0.15) !important;
+            border-color: rgba(248, 113, 113, 0.32) !important;
+        }
+
+        /* Desktop app dock: mirror the mobile dock language while showing every workspace page. */
+        @media (min-width: 768px) {
+            html body .native-ui .dashboard-sidebar,
+            html body .native-ui .desktop-sidebar-toggle {
+                display: none !important;
+            }
+
+            html body .native-ui .dashboard-main {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            html body .native-ui .dashboard-main > div:not(.mobile-editor-shell) {
+                padding-left: clamp(7.6rem, 8.5vw, 9.1rem) !important;
+                padding-bottom: clamp(2.2rem, 4vh, 3.2rem) !important;
+            }
+
+            .desktop-bottom-nav {
+                left: 1rem !important;
+                top: 0.75rem !important;
+                bottom: 0.75rem !important;
+                transform: none !important;
+                width: 6.25rem;
+                height: auto;
+                pointer-events: none;
+            }
+
+            .desktop-nav-dock {
+                width: 100%;
+                height: 100%;
+                max-height: none;
+                min-height: 0;
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(10, minmax(0, 1fr));
+                gap: 0.16rem;
+                padding: 0.42rem;
+                border-radius: 1.45rem;
+                border: 1px solid rgba(15, 23, 42, 0.08);
+                background: rgba(255, 255, 255, 0.94);
+                color: #050505;
+                overflow-y: auto;
+                overflow-x: hidden;
+                pointer-events: auto;
+                box-shadow:
+                    0 28px 90px -52px rgba(15, 23, 42, 0.5),
+                    0 10px 28px -24px rgba(15, 23, 42, 0.34),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+            }
+
+            .desktop-nav-tab {
+                position: relative;
+                min-width: 0;
+                min-height: 0;
+                display: inline-flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 0.34rem;
+                border: 1px solid transparent;
+                border-radius: 1.18rem;
+                background: transparent;
+                color: #8a93a3;
+                font-size: 0.62rem;
+                font-weight: 900;
+                letter-spacing: 0.02em;
+                line-height: 1;
+                transition: color 170ms ease, background 170ms ease, border-color 170ms ease, transform 170ms ease;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: geometricPrecision;
+            }
+
+            .desktop-nav-tab:hover {
+                color: #050505;
+                background: rgba(15, 23, 42, 0.035);
+            }
+
+            .desktop-nav-tab:active {
+                transform: scale(0.985);
+            }
+
+            .desktop-nav-tab.is-active {
+                color: #050505;
+                background:
+                    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08)),
+                    var(--native-accent-button-gradient);
+                background-size: 100% 100%, 420% 420%;
+                background-position: 0 0, var(--native-accent-x) 50%;
+                border-color: transparent;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
+            }
+
+            .desktop-nav-tab-icon {
+                position: relative;
+                width: 2.25rem;
+                height: 2.25rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .desktop-nav-tab-icon svg {
+                width: 1.55rem;
+                height: 1.55rem;
+            }
+
+            .desktop-nav-tab-icon i {
+                position: absolute;
+                top: 0.05rem;
+                right: 0.02rem;
+                width: 0.43rem;
+                height: 0.43rem;
+                border-radius: 999px;
+                background: #39ff14;
+                box-shadow: 0 0 0 3px rgba(57, 255, 20, 0.14);
+            }
+
+            html body .native-ui.dashboard-dark .desktop-nav-dock {
+                border-color: rgba(255, 255, 255, 0.1);
+                background: rgba(8, 8, 9, 0.98);
+                color: #ffffff;
+                box-shadow:
+                    0 30px 92px -48px rgba(0, 0, 0, 0.95),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            }
+
+            html body .native-ui.dashboard-dark .desktop-nav-tab {
+                color: rgba(255, 255, 255, 0.64);
+            }
+
+            html body .native-ui.dashboard-dark .desktop-nav-tab:hover {
+                color: #ffffff;
+                background: rgba(255, 255, 255, 0.055);
+            }
+
+            html body .native-ui.dashboard-dark .desktop-nav-tab.is-active {
+                color: #050505;
+            }
+        }
+
+        @media (min-width: 768px) {
+            html body .native-ui .finance-studio {
+                width: min(100%, 76rem) !important;
+                max-width: 76rem !important;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) auto !important;
+                align-items: end !important;
+                gap: 1.25rem !important;
+                margin-bottom: 1.25rem !important;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header h2 {
+                font-size: clamp(3.2rem, 5vw, 4.65rem) !important;
+                line-height: 0.9 !important;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header p {
+                display: none !important;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header > div:last-child {
+                width: auto !important;
+                min-width: min(30rem, 42vw) !important;
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(12rem, 1fr)) !important;
+                gap: 0.72rem !important;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header button {
+                height: 3rem !important;
+                border-radius: 1.05rem !important;
+            }
+
+            html body .native-ui .finance-hero,
+            html body .native-ui.dashboard-dark .finance-hero {
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .finance-hero-accent {
+                display: none !important;
+            }
+
+            html body .native-ui .finance-hero-head,
+            html body .native-ui.dashboard-dark .finance-hero-head {
+                padding: 0 0 1rem !important;
+                border: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                align-items: end !important;
+            }
+
+            html body .native-ui .finance-hero-head h3 {
+                font-size: clamp(2rem, 3.2vw, 3rem) !important;
+                line-height: 0.95 !important;
+            }
+
+            html body .native-ui .finance-hero-head > div:last-child {
+                display: grid !important;
+                grid-template-columns: minmax(9rem, 10.5rem) minmax(24rem, 35rem) !important;
+                gap: 0.7rem !important;
+                width: auto !important;
+            }
+
+            html body .native-ui .finance-hero-head label {
+                width: 100% !important;
+            }
+
+            html body .native-ui .finance-hero-head select {
+                height: 2.95rem !important;
+                border-radius: 0.95rem !important;
+            }
+
+            html body .native-ui .finance-period-tabs {
+                min-width: 0 !important;
+                height: 2.95rem !important;
+                border-radius: 0.95rem !important;
+                align-items: stretch !important;
+            }
+
+            html body .native-ui .finance-period-tab {
+                min-height: 0 !important;
+                height: 100% !important;
+                border-radius: 0.72rem !important;
+            }
+
+            html body .native-ui .finance-hero-body,
+            html body .native-ui.dashboard-dark .finance-hero-body {
+                padding: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            html body .native-ui .finance-timeline-chart,
+            html body .native-ui.dashboard-dark .finance-timeline-chart {
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1.25fr) minmax(16rem, 0.8fr) !important;
+                grid-template-rows: repeat(2, minmax(5.35rem, auto)) !important;
+                gap: 0.78rem !important;
+                margin-bottom: 1.35rem !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div {
+                min-width: 0 !important;
+                min-height: 5.35rem !important;
+                border: 0 !important;
+                border-radius: 1.18rem !important;
+                background:
+                    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 250, 249, 0.76)) !important;
+                padding: 1.1rem 1.2rem !important;
+                box-shadow:
+                    0 20px 52px -46px rgba(15, 23, 42, 0.46),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:first-child {
+                grid-row: 1 / 3 !important;
+                min-height: 11.5rem !important;
+                background:
+                    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08)),
+                    var(--native-accent-button-gradient) !important;
+                background-size: 100% 100%, 420% 420% !important;
+                background-position: 0 0, var(--native-accent-x) 50% !important;
+                color: #050505 !important;
+                box-shadow:
+                    0 28px 68px -54px var(--native-accent-glow),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div p:first-child {
+                color: rgba(5, 5, 5, 0.52) !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:first-child p:nth-child(2) {
+                color: #050505 !important;
+                font-size: clamp(2.5rem, 5vw, 4.15rem) !important;
+                line-height: 0.88 !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:not(:first-child) p:nth-child(2) {
+                font-size: clamp(1.55rem, 2.1vw, 2rem) !important;
+                line-height: 0.96 !important;
+            }
+
+            html body .native-ui .finance-chart-module,
+            html body .native-ui.dashboard-dark .finance-chart-module {
+                width: min(100%, 55rem) !important;
+                margin: 0 auto !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen),
+            html body .native-ui.dashboard-dark .finance-timeline-canvas:not(.finance-timeline-canvas-fullscreen) {
+                height: clamp(19rem, 27vw, 23rem) !important;
+                min-height: 19rem !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                background-image: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+
+            html body .native-ui .finance-chart-expand-button {
+                top: 0.55rem !important;
+                right: 0.55rem !important;
+                min-width: 2.85rem !important;
+                width: 2.85rem !important;
+                height: 2.85rem !important;
+                border-radius: 999px !important;
+            }
+
+            html body .native-ui .finance-chart-expand-button span {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                white-space: nowrap;
+            }
+
+            html body .native-ui .finance-axis-label {
+                font-size: 22px !important;
+                font-weight: 830 !important;
+                fill: #667085 !important;
+            }
+
+            html body .native-ui .finance-axis-label-x {
+                font-size: 20px !important;
+                fill: #7d8797 !important;
+            }
+
+            html body .native-ui .finance-axis-line {
+                stroke: transparent !important;
+            }
+
+            html body .native-ui .finance-axis-baseline {
+                stroke: rgba(15, 23, 42, 0.12) !important;
+            }
+
+            html body .native-ui .finance-grid-line {
+                stroke: rgba(148, 163, 184, 0.2) !important;
+            }
+
+            html body .native-ui .finance-chart-line {
+                stroke-width: 4.2 !important;
+            }
+
+            html body .native-ui.dashboard-dark .finance-timeline-statbar > div:not(:first-child) {
+                background: rgba(255, 255, 255, 0.045) !important;
+                color: #f8fafc !important;
+                box-shadow:
+                    0 24px 58px -48px rgba(0, 0, 0, 0.8),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.055) !important;
+            }
+
+            html body .native-ui.dashboard-dark .finance-timeline-statbar > div:not(:first-child) p:first-child {
+                color: rgba(248, 250, 252, 0.5) !important;
+            }
+
+            html body .native-ui.dashboard-dark .finance-timeline-statbar > div:not(:first-child) p:nth-child(2) {
+                color: #f8fafc !important;
+            }
+
+            html body .native-ui.dashboard-dark .finance-axis-baseline {
+                stroke: rgba(255, 255, 255, 0.14) !important;
+            }
+
+            html body .native-ui.dashboard-dark .finance-grid-line {
+                stroke: rgba(255, 255, 255, 0.1) !important;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1040px) {
+            html body .native-ui .dashboard-main > div:not(.mobile-editor-shell) {
+                padding-left: 6.75rem !important;
+            }
+
+            .desktop-bottom-nav {
+                left: 0.85rem !important;
+                width: 5.35rem;
+            }
+
+            .desktop-nav-dock {
+                grid-template-columns: 1fr;
+                grid-auto-rows: minmax(3.72rem, auto);
+                gap: 0.12rem;
+                padding: 0.36rem;
+            }
+
+            .desktop-nav-tab {
+                font-size: 0.5rem;
+                border-radius: 1.05rem;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header,
+            html body .native-ui .finance-hero-head {
+                grid-template-columns: 1fr !important;
+            }
+
+            html body .native-ui .finance-studio .dashboard-page-header > div:last-child,
+            html body .native-ui .finance-hero-head > div:last-child {
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                grid-template-rows: auto auto !important;
+            }
+
+            html body .native-ui .finance-timeline-statbar > div:first-child {
+                grid-column: 1 / -1 !important;
+                grid-row: auto !important;
+                min-height: 7rem !important;
+            }
+        }

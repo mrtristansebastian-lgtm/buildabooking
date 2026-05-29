@@ -6793,6 +6793,33 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
                 </button>
 
+                <nav className="desktop-bottom-nav hidden md:flex fixed left-1/2 bottom-5 z-[120]" aria-label="Desktop workspace navigation">
+                    <div className="desktop-nav-dock">
+                        {navItems.map(item => {
+                            const IconCmp = item.icon;
+                            const isActive = activeTab === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    data-tour={`desktop-dock-${item.id}`}
+                                    type="button"
+                                    aria-current={isActive ? 'page' : undefined}
+                                    aria-label={item.label}
+                                    title={item.label}
+                                    onClick={() => navigateWorkspaceTab(item.id)}
+                                    className={`desktop-nav-tab ${isActive ? 'is-active' : ''}`}
+                                >
+                                    <span className="desktop-nav-tab-icon">
+                                        <IconCmp size={18} strokeWidth={2.35} />
+                                        {item.badge && <i />}
+                                    </span>
+                                    <span>{item.id === 'communications' ? 'Support' : item.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </nav>
+
                 <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] transition-all duration-500 ${mobileNavOpen ? 'is-open' : ''} ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-bottom-nav-collapsed' : ''}`} aria-label="Mobile workspace navigation">
                     {mobileNavOpen && (
                         <button
@@ -9628,7 +9655,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     const hasManualPayment = Boolean(b.paymentMethod || b.paymentGateway || b.paymentStatus === 'manual_pending');
                                     const isPaid = b.paymentStatus === 'paid';
                                     return (
-                                        <div key={b.id} className={`booking-record-row p-4 md:p-5 transition-all hover:bg-neutral-50/70 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
+                                        <div key={b.id} className={`booking-record-row p-4 md:p-5 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
                                             <div className="booking-record-grid grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
                                                 <div className="booking-record-client 2xl:col-span-5 flex items-center gap-4 min-w-0">
                                                     <div className="booking-record-avatar-wrap relative shrink-0">
