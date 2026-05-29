@@ -597,12 +597,6 @@ const migrationGuideById = migrationGuideOptions.reduce((acc, option) => {
   return acc;
 }, {});
 
-const migrationSourceOptions = [
-  { id: 'spreadsheet', label: 'Spreadsheet', hint: 'Manual CSV' },
-  { id: 'booking', label: 'Booking app', hint: 'Acuity, Calendly, etc.' },
-  { id: 'payments', label: 'Payment app', hint: 'Stripe, bank, processor' }
-];
-
 const buildGuideScopeSelection = (guideId, detectedScopes = {}) => {
   const guideScopes = migrationGuideById[guideId]?.scopes || migrationGuideById.mixed.scopes;
   if (guideId === 'mixed') {
@@ -1001,14 +995,12 @@ export const MigrationImportPanel = ({
   const [fileName, setFileName] = useState('');
   const [csvError, setCsvError] = useState('');
   const [guideId, setGuideId] = useState('clients');
-  const [sourceType, setSourceType] = useState('spreadsheet');
   const [selectedScopes, setSelectedScopes] = useState({ clients: true, bookings: false, finance: false });
   const [batchId, setBatchId] = useState(`csv-${Date.now()}`);
   const [importing, setImporting] = useState(false);
   const [clearing, setClearing] = useState(false);
 
   const activeGuide = migrationGuideById[guideId] || migrationGuideById.clients;
-  const activeSource = migrationSourceOptions.find((option) => option.id === sourceType) || migrationSourceOptions[0];
   const preview = useMemo(
     () => buildCsvMigrationPayload(parsedCsv, selectedScopes, displayCurrency, batchId),
     [batchId, displayCurrency, parsedCsv, selectedScopes]
@@ -1122,22 +1114,10 @@ export const MigrationImportPanel = ({
       <div className="p-4 md:p-5 border-b border-neutral-100">
         <div className="grid xl:grid-cols-[minmax(0,1fr)_340px] gap-4">
           <div className="finance-migration-guide rounded-2xl border border-neutral-100 bg-neutral-50 p-4">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Step 1 / Format briefing</p>
                 <h4 className="mt-1 text-xl font-black tracking-tight text-black">What kind of CSV are you uploading?</h4>
-              </div>
-              <div className="grid grid-cols-3 rounded-2xl border border-neutral-100 bg-white p-1 sm:min-w-[320px]">
-                {migrationSourceOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setSourceType(option.id)}
-                    className={`h-10 rounded-xl text-[8px] font-bold uppercase tracking-widest transition-all ${sourceType === option.id ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-neutral-400 hover:text-black'}`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -1160,7 +1140,7 @@ export const MigrationImportPanel = ({
           <aside className="finance-migration-guide-summary rounded-2xl border border-neutral-100 bg-white p-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Prepared for</p>
             <h4 className="mt-1 text-lg font-black tracking-tight text-black">{activeGuide.title}</h4>
-            <p className="mt-1 text-xs font-bold text-neutral-400">{activeSource.hint}</p>
+            <p className="mt-1 text-xs font-bold text-neutral-400">The selected format controls the import plan below.</p>
             <div className="mt-4 space-y-3">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Need at least</p>
