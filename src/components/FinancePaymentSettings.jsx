@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Banknote,
   CalendarCheck,
+  ChevronDown,
   Check,
   CreditCard,
   Download,
@@ -1690,6 +1691,24 @@ export const FinancePaymentSettings = ({
     }
   ]), [displayCurrency, financeMetrics]);
 
+  const financeStatusFilterOptions = [
+    ['all', 'All statuses'],
+    ['paid', 'Paid'],
+    ['open', 'Pending payment'],
+    ['cash', 'Cash'],
+    ['card', 'Card'],
+    ['eft', 'Manual EFT']
+  ];
+
+  const financeSortOptions = [
+    ['newest', 'Newest first'],
+    ['oldest', 'Oldest first'],
+    ['amount-high', 'Amount high'],
+    ['amount-low', 'Amount low'],
+    ['client', 'Client A-Z'],
+    ['status', 'Status A-Z']
+  ];
+
   const visibleDeskRows = useMemo(() => {
     const rows = effectiveFinanceRecords;
     const queryText = search.trim().toLowerCase();
@@ -1927,32 +1946,48 @@ export const FinancePaymentSettings = ({
                 className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold text-black outline-none focus:border-black transition-colors placeholder:text-neutral-300"
               />
             </div>
-            <select
-              aria-label="Filter finance records by status"
-              value={deskStatusFilter}
-              onChange={(event) => setDeskStatusFilter(event.target.value)}
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
-            >
-              <option value="all">All statuses</option>
-              <option value="paid">Paid</option>
-              <option value="open">Pending payment</option>
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="eft">Manual EFT</option>
-            </select>
-            <select
-              aria-label="Sort finance records"
-              value={deskSort}
-              onChange={(event) => setDeskSort(event.target.value)}
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-[10px] font-bold uppercase tracking-widest text-black outline-none focus:border-black"
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="amount-high">Amount high</option>
-              <option value="amount-low">Amount low</option>
-              <option value="client">Client A-Z</option>
-              <option value="status">Status A-Z</option>
-            </select>
+            <details name="finance-desk-filter-menu" className="booking-desk-menu finance-desk-menu relative" onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.removeAttribute('open')}>
+              <summary className="booking-desk-select-face" aria-label="Filter finance records by status">
+                <span>{financeStatusFilterOptions.find(([value]) => value === deskStatusFilter)?.[1] || 'All statuses'}</span>
+                <ChevronDown size={14} aria-hidden="true" />
+              </summary>
+              <div className="booking-desk-menu-panel">
+                {financeStatusFilterOptions.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={deskStatusFilter === value ? 'is-selected' : ''}
+                    onClick={(event) => {
+                      setDeskStatusFilter(value);
+                      event.currentTarget.closest('details')?.removeAttribute('open');
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </details>
+            <details name="finance-desk-filter-menu" className="booking-desk-menu finance-desk-menu relative" onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.removeAttribute('open')}>
+              <summary className="booking-desk-select-face" aria-label="Sort finance records">
+                <span>{financeSortOptions.find(([value]) => value === deskSort)?.[1] || 'Newest first'}</span>
+                <ChevronDown size={14} aria-hidden="true" />
+              </summary>
+              <div className="booking-desk-menu-panel">
+                {financeSortOptions.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={deskSort === value ? 'is-selected' : ''}
+                    onClick={(event) => {
+                      setDeskSort(value);
+                      event.currentTarget.closest('details')?.removeAttribute('open');
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </details>
           </div>
           <div className="finance-desk-list divide-y divide-neutral-100">
             {visibleDeskRows.map((row) => {
