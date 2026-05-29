@@ -4107,6 +4107,18 @@ body {
             padding-top: calc(env(safe-area-inset-top) + 0.35rem);
         }
 
+        .notification-center.notification-center-compact {
+            top: calc(4.35rem + env(safe-area-inset-top)) !important;
+            right: 0.75rem !important;
+        }
+
+        @media (min-width: 768px) {
+            .notification-center.notification-center-compact {
+                top: 1.5rem !important;
+                right: 1.5rem !important;
+            }
+        }
+
         .mobile-nav-dim {
             position: fixed;
             inset: 0;
@@ -4645,15 +4657,30 @@ body {
             margin-top: 0.55rem;
         }
 
+        .mobile-nav-auth-row.mobile-nav-auth-row-guest {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
         .mobile-nav-auth-row button {
             height: 2.75rem;
             border-radius: 1.15rem;
             background: #050505;
             color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.32rem;
             font-size: 0.62rem;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+
+        .mobile-nav-auth-row button svg {
+            width: 0.82rem;
+            height: 0.82rem;
+            flex: 0 0 auto;
         }
 
         .mobile-nav-auth-row button:last-child {

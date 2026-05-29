@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useLayoutEffect, useMemo, u
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, GripVertical, HelpCircle, History, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
+    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, GripVertical, HelpCircle, History, Home, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -6565,6 +6565,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         onMarkRead={markOwnerNotificationRead}
                         onMarkAllRead={markAllOwnerNotificationsRead}
                         onOpenNotification={openOwnerNotification}
+                        compact
                     />
                 )}
 
@@ -6699,7 +6700,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             })}
                         </div>
                         {isGuestWorkspace && (
-                            <div className="mobile-nav-auth-row">
+                            <div className="mobile-nav-auth-row mobile-nav-auth-row-guest">
+                                <button type="button" onClick={handleSignOut}>
+                                    <Home size={13} /> Home
+                                </button>
                                 <button type="button" onClick={() => openAuthPanel('signin', 'owner')}>Sign In</button>
                                 <button type="button" onClick={() => openAuthPanel('signup', 'owner')}>Save For Real</button>
                             </div>

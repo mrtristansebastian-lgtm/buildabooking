@@ -31,7 +31,7 @@ export function NotificationCenter({
   };
 
   return (
-    <div className={`notification-center fixed ${compact ? 'top-[4.75rem] right-3 md:top-24 md:right-6' : 'top-4 right-4 md:top-6 md:right-6'} z-[180]`}>
+    <div className={`notification-center fixed ${compact ? 'notification-center-compact top-[4.75rem] right-3 md:top-24 md:right-6' : 'top-4 right-4 md:top-6 md:right-6'} z-[180]`}>
       <button
         type="button"
         onClick={() => setOpen(true)}
