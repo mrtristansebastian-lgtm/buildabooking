@@ -1029,11 +1029,11 @@ const landingStopActions = [
   'losing bookings in DMs',
   'double booking your calendar',
   'clients hoping a slot is free',
-  'typing the same answers',
+  'explaining prices and times manually',
   'manually checking who paid',
   'messy client records',
   'late reschedule chaos',
-  'copying links all day',
+  'sending every booking update by hand',
   'running your studio on memory'
 ];
 
