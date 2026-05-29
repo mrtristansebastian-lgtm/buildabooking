@@ -63,6 +63,10 @@ const FinancePaymentSettings = lazy(() => (
   import('./components/FinancePaymentSettings').then((module) => ({ default: module.FinancePaymentSettings }))
 ));
 
+const MigrationImportPanel = lazy(() => (
+  import('./components/FinancePaymentSettings').then((module) => ({ default: module.MigrationImportPanel }))
+));
+
 const bookingPaymentFilterOptions = [
     ['all', 'All payments'],
     ['paid', 'Paid'],
@@ -6284,6 +6288,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     quick: ['Logo & banner', 'Venue gallery', 'Social links']
                 },
                 {
+                    id: 'migration',
+                    title: 'Migration Studio',
+                    note: 'CSV import for clients, bookings, and finance history',
+                    icon: FileText,
+                    meta: `${importedMigrationCounts.clients + importedMigrationCounts.bookings + importedMigrationCounts.financeRecords} uploads`,
+                    quick: ['Upload CSV', 'Choose fields', 'Delete uploads']
+                },
+                {
                     id: 'manual',
                     title: 'Owner Manual',
                     note: 'Feature guide and setup help',
@@ -7209,6 +7221,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     </section>
                                 </div>
 
+                                <section className={`profile-section profile-section-migration ${activeProfileSection === 'migration' ? 'block' : 'hidden'}`}>
+                                    <Suspense fallback={<LazySectionFallback label="Loading migration studio" />}>
+                                        <AppErrorBoundary compact label="Migration Studio" resetKey={`${workspaceOwnerId}-${importedMigrationCounts.clients}-${importedMigrationCounts.bookings}-${importedMigrationCounts.financeRecords}`}>
+                                            <MigrationImportPanel
+                                                canManageWorkspace={canManageWorkspace}
+                                                displayCurrency={settings.currency || 'ZAR'}
+                                                importedCounts={importedMigrationCounts}
+                                                onImportMigrationCsv={handleCsvMigrationImport}
+                                                onClearMigrationData={handleClearCsvMigrationData}
+                                                showToast={showToast}
+                                            />
+                                        </AppErrorBoundary>
+                                    </Suspense>
+                                </section>
+
                                 <section className={`profile-section profile-section-billing ${activeProfileSection === 'billing' ? 'block' : 'hidden'} bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]`}>
                                     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
                                         <div className="flex items-start gap-4">
@@ -7594,9 +7621,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         showToast={showToast}
                                         bookings={bookings}
                                         importedFinanceRecords={financeImports}
-                                        importedMigrationCounts={importedMigrationCounts}
-                                        onImportMigrationCsv={handleCsvMigrationImport}
-                                        onClearMigrationData={handleClearCsvMigrationData}
                                         onMarkBookingPaid={markBookingPaid}
                                     />
                                 </AppErrorBoundary>

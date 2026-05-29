@@ -911,7 +911,7 @@ const buildCsvMigrationPayload = (parsedCsv, selectedScopes, displayCurrency, ba
   };
 };
 
-const MigrationImportPanel = ({
+export const MigrationImportPanel = ({
   canManageWorkspace,
   displayCurrency,
   importedCounts = {},
@@ -1295,9 +1295,6 @@ export const FinancePaymentSettings = ({
   showToast,
   bookings = [],
   importedFinanceRecords = [],
-  importedMigrationCounts = {},
-  onImportMigrationCsv,
-  onClearMigrationData,
   onMarkBookingPaid
 }) => {
   const [saved, setSaved] = useState({});
@@ -1661,17 +1658,6 @@ export const FinancePaymentSettings = ({
           </button>
         </div>
       </header>
-
-      <div className="mb-4 md:mb-5">
-        <MigrationImportPanel
-          canManageWorkspace={canManageWorkspace}
-          displayCurrency={displayCurrency}
-          importedCounts={importedMigrationCounts}
-          onImportMigrationCsv={onImportMigrationCsv}
-          onClearMigrationData={onClearMigrationData}
-          showToast={showToast}
-        />
-      </div>
 
       <div className="finance-hero rounded-[1.25rem] border border-neutral-200 bg-white shadow-sm overflow-hidden">
         <div className="finance-hero-accent" />
