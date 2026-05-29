@@ -1025,7 +1025,7 @@ const workspaceTabAliases = {
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
 const landingStopActions = [
   'manual booking management',
-  'sending clients to confusing platforms',
+  'using confusing business tools',
   'losing bookings in DMs',
   'double booking your calendar',
   'clients hoping a slot is free',
@@ -1042,7 +1042,7 @@ const landingBenefitCards = [
     icon: CalendarCheck,
     label: 'Bookings',
     title: 'Clients see real availability.',
-    copy: 'As bookings are confirmed, taken slots disappear from your booking page, so clients never choose times you cannot actually take.'
+    copy: 'Skip confusing business tools. Confirmed bookings update availability automatically, so clients only see open times.'
   },
   {
     icon: MessageSquare,
