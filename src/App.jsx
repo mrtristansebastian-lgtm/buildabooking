@@ -1025,7 +1025,7 @@ const workspaceTabAliases = {
 const editorTabIds = ['identity', 'themes', 'visuals', 'features', 'copy'];
 const landingStopActions = [
   'manual booking management',
-  'chasing clients for replies',
+  'sending clients to confusing platforms',
   'losing bookings in DMs',
   'double booking your calendar',
   'clients hoping a slot is free',
