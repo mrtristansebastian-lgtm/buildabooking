@@ -2876,6 +2876,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 { id: 'staff', icon: Users, label: 'Team' },
                 { id: 'profile', icon: User, label: 'Profile' }
             ];
+            const mobilePrimaryNavIds = ['overview', 'bookings', 'communications', 'editor'];
+            const mobilePrimaryNavItems = navItems.filter(item => mobilePrimaryNavIds.includes(item.id));
+            const mobileMoreNavItems = navItems.filter(item => !mobilePrimaryNavIds.includes(item.id));
+            const mobileMoreActive = mobileMoreNavItems.some(item => item.id === activeTab);
+            const mobileMoreHasBadge = mobileMoreNavItems.some(item => item.badge);
             const collectsClientPhone = settings.features?.collectClientPhone !== false;
             const collectsClientEmail = settings.features?.collectClientEmail !== false;
             const collectsClientNotes = Boolean(settings.features?.collectClientNotes);
@@ -6642,18 +6647,19 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     {dashboardThemeMode === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
                 </button>
 
-                <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] transition-all duration-500 ${mobileNavOpen ? 'is-open' : ''} ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-bottom-nav-collapsed' : ''}`}>
+                <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] transition-all duration-500 ${mobileNavOpen ? 'is-open' : ''} ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-bottom-nav-collapsed' : ''}`} aria-label="Mobile workspace navigation">
                     {mobileNavOpen && (
                         <button
                             type="button"
-                            aria-label="Close mobile navigation"
+                            aria-label="Close more navigation"
                             className="mobile-nav-dim"
                             onClick={() => setMobileNavOpen(false)}
                         />
                     )}
-                    <div className="mobile-nav-menu-popover">
-                        <div className="mobile-nav-menu-grid">
-                            {navItems.map(item => {
+                    <div className="mobile-nav-more-sheet">
+                        <div className="mobile-nav-more-handle" />
+                        <div className="mobile-nav-more-grid">
+                            {mobileMoreNavItems.map(item => {
                                 const IconCmp = item.icon;
                                 const isActive = activeTab === item.id;
                                 return (
@@ -6662,13 +6668,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         data-tour={`mobile-nav-${item.id}`}
                                         type="button"
                                         aria-current={isActive ? 'page' : undefined}
-                                        onClick={(event) => {
-                                            navigateWorkspaceTab(item.id);
-                                            setMobileNavOpen(false);
+                                        onClick={() => {
+                                            if (navigateWorkspaceTab(item.id)) {
+                                                setMobileNavOpen(false);
+                                            }
                                         }}
-                                        className={`mobile-nav-menu-item ${isActive ? 'is-active' : ''}`}
+                                        className={`mobile-nav-more-item ${isActive ? 'is-active' : ''}`}
                                     >
-                                        <span className="mobile-nav-menu-icon">
+                                        <span className="mobile-nav-more-icon">
                                             <IconCmp size={17} strokeWidth={2.3} />
                                             {item.badge && <i />}
                                         </span>
@@ -6677,30 +6684,54 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 );
                             })}
                         </div>
+                        {isGuestWorkspace && (
+                            <div className="mobile-nav-auth-row">
+                                <button type="button" onClick={() => openAuthPanel('signin', 'owner')}>Sign In</button>
+                                <button type="button" onClick={() => openAuthPanel('signup', 'owner')}>Save For Real</button>
+                            </div>
+                        )}
                     </div>
                     <div className="mobile-nav-dock">
-                        {isGuestWorkspace && (
-                            <button type="button" onClick={() => openAuthPanel('signin', 'owner')} className="mobile-guest-dock-action mobile-guest-dock-signin">
-                                Sign In
-                            </button>
-                        )}
+                        {mobilePrimaryNavItems.map(item => {
+                            const IconCmp = item.icon;
+                            const isActive = activeTab === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    data-tour={`mobile-dock-${item.id}`}
+                                    type="button"
+                                    aria-current={isActive ? 'page' : undefined}
+                                    onClick={() => {
+                                        if (navigateWorkspaceTab(item.id)) {
+                                            setMobileNavOpen(false);
+                                        }
+                                    }}
+                                    className={`mobile-nav-tab ${isActive ? 'is-active' : ''}`}
+                                >
+                                    <span className="mobile-nav-tab-icon">
+                                        <IconCmp size={18} strokeWidth={2.35} />
+                                        {item.badge && <i />}
+                                    </span>
+                                    <span>{item.label === 'Support Inbox' ? 'Inbox' : item.label}</span>
+                                </button>
+                            );
+                        })}
                         <button
                             type="button"
-                            className={`mobile-nav-logo-button ${isGuestWorkspace ? 'is-guest-mode' : ''}`}
-                            aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                            className={`mobile-nav-tab mobile-nav-more-button ${mobileMoreActive || mobileNavOpen ? 'is-active' : ''}`}
+                            aria-label={mobileNavOpen ? 'Close more navigation' : 'Open more navigation'}
                             aria-expanded={mobileNavOpen}
                             onClick={() => {
                                 playMobileNavSound();
                                 setMobileNavOpen(open => !open);
                             }}
                         >
-                            <BuildABookingMark className="mobile-nav-logo-mark" variant={dashboardThemeMode === 'dark' ? 'light' : 'dark'} />
+                            <span className="mobile-nav-tab-icon">
+                                <Layers size={18} strokeWidth={2.35} />
+                                {mobileMoreHasBadge && <i />}
+                            </span>
+                            <span>More</span>
                         </button>
-                        {isGuestWorkspace && (
-                            <button type="button" onClick={() => openAuthPanel('signup', 'owner')} className="mobile-guest-dock-action mobile-guest-dock-signup">
-                                Sign Up
-                            </button>
-                        )}
                     </div>
                 </nav>
 
