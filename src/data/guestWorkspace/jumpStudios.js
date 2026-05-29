@@ -147,7 +147,7 @@ const clientProfiles = [
   ['Tomasz Kowalski', 'Poland', 'Krakow', 'CET/CEST', 'IT manager', 'Conditioning for hiking season', 'hiit-live', 14, 12, 'Athlete', 'Likes clear effort scales and mountain prep.'],
   ['Chloe Martin', 'France', 'Paris', 'CET/CEST', 'Fashion buyer', 'Strength and posture before market weeks', 'form-review', 28, 9, 'Travel', 'Asks for luggage-friendly exercise swaps.'],
   ['Daniel Adeyemi', 'Nigeria', 'Lagos', 'WAT', 'Agency owner', 'Lose weight with accountability and no fluff', 'academy-intake', 28, 12, 'VIP', 'Prefers direct coaching and weekly progress calls.'],
-  ['Sara Lindgren', 'Norway', 'Oslo', 'CET/CEST', 'Consultant', 'Train through winter without losing motivation', 'hiit-live', 14, 14, 'Regular', 'Needs mood-friendly planning and consistency nudges.'],
+  ['Sara Lindgren', 'Norway', 'Oslo', 'CET/CEST', 'Consultant', 'Train through winter without losing motivation', 'hiit-live', 14, 14, 'Regular', 'Needs mood-friendly planning and consistency check-ins.'],
   ['Omar Farouk', 'United Arab Emirates', 'Abu Dhabi', 'GST', 'Pilot', 'Maintain fitness across changing rosters', 'mobility-reset', 21, 11, 'Shift Work', 'Books based on flight roster and recovery needs.'],
   ['Julia Novak', 'Austria', 'Vienna', 'CET/CEST', 'Legal counsel', 'Build strength after a long break', 'jump-start-assessment', 42, 7, 'Beginner', 'Careful, thoughtful client who wants a realistic start.'],
   ['Mpho Dlamini', 'South Africa', 'Pretoria', 'SAST', 'Operations lead', 'Corporate wellness for remote team', 'team-energy-session', 30, 8, 'Teams', 'Books for a 14-person remote team once a month.'],

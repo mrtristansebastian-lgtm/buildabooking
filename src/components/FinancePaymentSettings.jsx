@@ -11,6 +11,7 @@ import {
   KeyRound,
   Landmark,
   LockKeyhole,
+  Maximize2,
   RefreshCw,
   ReceiptText,
   Search,
@@ -1325,10 +1326,11 @@ export const MigrationImportPanel = ({
 };
 
 const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR', statItems = [] }) => {
+  const [chartExpanded, setChartExpanded] = useState(false);
   const safeBuckets = buckets.length ? buckets : [{ label: 'No data', rangeLabel: 'No paid records', value: 0, count: 0 }];
-  const chartWidth = 920;
+  const chartWidth = 640;
   const chartHeight = 360;
-  const padding = { top: 28, right: 42, bottom: 58, left: 92 };
+  const padding = { top: 34, right: 24, bottom: 64, left: 118 };
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
   const totalValue = safeBuckets.reduce((sum, bucket) => sum + Number(bucket.value || 0), 0);
@@ -1358,92 +1360,118 @@ const FinanceTimelineChart = ({ buckets = [], currency = 'ZAR', statItems = [] }
     { label: 'Average Monthly Revenue', value: formatMoney(totalValue, currency), caption: 'Across paid months' },
     { label: 'Pending Payments', value: formatMoney(0, currency), caption: 'Awaiting confirmation' }
   ];
+  const renderChartSvg = (idPrefix = 'financeTimeline') => (
+    <svg className="h-full w-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Cumulative paid revenue over time">
+      <title>Cumulative paid revenue over time</title>
+      <defs>
+        <linearGradient id={`${idPrefix}Area`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.22" />
+          <stop offset="58%" stopColor="#14b8a6" stopOpacity="0.09" />
+          <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`${idPrefix}Line`} x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stopColor="#111827" />
+          <stop offset="45%" stopColor="#0f9f8f" />
+          <stop offset="100%" stopColor="#7c3aed" />
+        </linearGradient>
+      </defs>
+
+      {yTicks.map((tick, index) => {
+        const y = padding.top + plotHeight - ((tick / chartMax) * plotHeight);
+        const isZero = tick === 0;
+        const label = index === 0 && totalValue > 0 ? formatMoney(tick, currency) : formatCompactMoney(tick, currency);
+        return (
+          <g key={`${tick}-${index}`}>
+            <line className={isZero ? 'finance-axis-baseline' : 'finance-grid-line'} x1={padding.left} x2={chartWidth - padding.right} y1={y} y2={y} />
+            <text className="finance-axis-label finance-axis-label-y" x={padding.left - 18} y={y + 7} textAnchor="end">
+              {label}
+            </text>
+          </g>
+        );
+      })}
+
+      <line className="finance-axis-line" x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + plotHeight} />
+      <line className="finance-axis-line" x1={padding.left} x2={chartWidth - padding.right} y1={padding.top + plotHeight} y2={padding.top + plotHeight} />
+
+      <path d={areaPath} fill={`url(#${idPrefix}Area)`} />
+      <path className="finance-chart-line-shadow" d={linePath} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path className="finance-chart-line" d={linePath} fill="none" stroke={`url(#${idPrefix}Line)`} strokeLinecap="round" strokeLinejoin="round" />
+
+      {xLabelIndexes.map((index) => {
+        const point = points[index];
+        if (!point) return null;
+        return (
+          <g key={`x-axis-${point.label}-${index}`}>
+            <line className="finance-x-axis-tick" x1={point.x} x2={point.x} y1={padding.top + plotHeight} y2={padding.top + plotHeight + 8} />
+            <text
+              className="finance-axis-label finance-axis-label-x"
+              x={point.x}
+              y={chartHeight - 24}
+              textAnchor={index === 0 ? 'start' : index === points.length - 1 ? 'end' : 'middle'}
+            >
+              {point.label}
+            </text>
+          </g>
+        );
+      })}
+
+      {points.map((point, index) => {
+        const isPeak = index === peakPointIndex && Number(point.cumulativeValue || 0) > 0;
+        const hasValue = Number(point.cumulativeValue || 0) > 0;
+        return (
+          <g key={`${point.label}-${point.startMs || index}`}>
+            {hasValue && (
+              <>
+                <circle className="finance-chart-hit-dot" cx={point.x} cy={point.y} r="13">
+                  <title>{`${point.rangeLabel || point.label}: ${formatMoney(point.rawValue || 0, currency)} from ${point.count || 0} paid booking${point.count === 1 ? '' : 's'} · ${formatMoney(point.cumulativeValue || 0, currency)} cumulative`}</title>
+                </circle>
+                <circle className={`finance-chart-dot ${isPeak ? 'is-peak' : ''}`} cx={point.x} cy={point.y} r={isPeak ? 7 : 4.8} />
+              </>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
 
   return (
     <div className="finance-timeline-chart rounded-[1.35rem] border border-neutral-100 bg-white p-3 md:p-4">
       <div className="finance-timeline-statbar grid grid-cols-1 sm:grid-cols-3 gap-px overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-100 mb-4">
-        {summaryItems.map(({ label, value, caption }) => (
+        {summaryItems.map(({ label, value }) => (
           <div key={label} className="bg-white px-4 py-3">
             <p className="text-[8px] font-black uppercase tracking-widest text-neutral-400">{label}</p>
             <p className="mt-1 text-lg md:text-xl font-black tracking-tight text-black truncate">{value}</p>
-            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-neutral-300 truncate">{caption}</p>
           </div>
         ))}
       </div>
 
-      <div className="finance-timeline-canvas h-[20rem] rounded-[1.15rem] border border-neutral-100 bg-[#FBFCFE] overflow-hidden">
-        <svg className="h-full w-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Cumulative paid revenue over time">
-          <title>Cumulative paid revenue over time</title>
-          <defs>
-            <linearGradient id="financeTimelineArea" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.16" />
-              <stop offset="68%" stopColor="#14b8a6" stopOpacity="0.06" />
-              <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="financeTimelineLine" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0%" stopColor="#111827" />
-              <stop offset="48%" stopColor="#14b8a6" />
-              <stop offset="100%" stopColor="#8b5cf6" />
-            </linearGradient>
-          </defs>
-
-          {yTicks.map((tick, index) => {
-            const y = padding.top + plotHeight - ((tick / chartMax) * plotHeight);
-            const isZero = tick === 0;
-            const label = index === 0 && totalValue > 0 ? formatMoney(tick, currency) : formatCompactMoney(tick, currency);
-            return (
-              <g key={`${tick}-${index}`}>
-                <line className={isZero ? 'finance-axis-baseline' : 'finance-grid-line'} x1={padding.left} x2={chartWidth - padding.right} y1={y} y2={y} />
-                <text className="finance-axis-label finance-axis-label-y" x={padding.left - 16} y={y + 5} textAnchor="end">
-                  {label}
-                </text>
-              </g>
-            );
-          })}
-
-          <line className="finance-axis-line" x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + plotHeight} />
-          <line className="finance-axis-line" x1={padding.left} x2={chartWidth - padding.right} y1={padding.top + plotHeight} y2={padding.top + plotHeight} />
-
-          <path d={areaPath} fill="url(#financeTimelineArea)" />
-          <path className="finance-chart-line-shadow" d={linePath} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <path className="finance-chart-line" d={linePath} fill="none" stroke="url(#financeTimelineLine)" strokeLinecap="round" strokeLinejoin="round" />
-
-          {xLabelIndexes.map((index) => {
-            const point = points[index];
-            if (!point) return null;
-            return (
-              <g key={`x-axis-${point.label}-${index}`}>
-                <line className="finance-x-axis-tick" x1={point.x} x2={point.x} y1={padding.top + plotHeight} y2={padding.top + plotHeight + 7} />
-                <text
-                  className="finance-axis-label finance-axis-label-x"
-                  x={point.x}
-                  y={chartHeight - 21}
-                  textAnchor={index === 0 ? 'start' : index === points.length - 1 ? 'end' : 'middle'}
-                >
-                  {point.label}
-                </text>
-              </g>
-            );
-          })}
-
-          {points.map((point, index) => {
-            const isPeak = index === peakPointIndex && Number(point.cumulativeValue || 0) > 0;
-            const hasValue = Number(point.cumulativeValue || 0) > 0;
-            return (
-              <g key={`${point.label}-${point.startMs || index}`}>
-                {hasValue && (
-                  <>
-                    <circle className="finance-chart-hit-dot" cx={point.x} cy={point.y} r="11">
-                      <title>{`${point.rangeLabel || point.label}: ${formatMoney(point.rawValue || 0, currency)} from ${point.count || 0} paid booking${point.count === 1 ? '' : 's'} · ${formatMoney(point.cumulativeValue || 0, currency)} cumulative`}</title>
-                    </circle>
-                    <circle className={`finance-chart-dot ${isPeak ? 'is-peak' : ''}`} cx={point.x} cy={point.y} r={isPeak ? 6 : 4.2} />
-                  </>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+      <div className="finance-chart-module">
+        <button type="button" onClick={() => setChartExpanded(true)} aria-label="Open finance chart fullscreen" className="finance-chart-expand-button">
+          <Maximize2 size={15} />
+          <span>Fullscreen</span>
+        </button>
+        <div className="finance-timeline-canvas h-[20rem] rounded-[1.15rem] border border-neutral-100 bg-[#FBFCFE] overflow-hidden">
+          {renderChartSvg('financeTimeline')}
+        </div>
       </div>
+      {chartExpanded && (
+        <div className="finance-chart-fullscreen fixed inset-0 z-[1600] bg-white p-4 md:p-8">
+          <div className="finance-chart-fullscreen-panel">
+            <div className="finance-chart-fullscreen-head">
+              <div>
+                <p>Finance chart</p>
+                <h3>Cumulative revenue</h3>
+              </div>
+              <button type="button" onClick={() => setChartExpanded(false)} aria-label="Close fullscreen finance chart">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="finance-timeline-canvas finance-timeline-canvas-fullscreen">
+              {renderChartSvg('financeTimelineExpanded')}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1821,7 +1849,7 @@ export const FinancePaymentSettings = ({
 
       <div className="finance-hero rounded-[1.25rem] border border-neutral-200 bg-white shadow-sm overflow-hidden">
         <div className="finance-hero-accent" />
-        <div className="p-4 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div className="finance-hero-head p-4 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Revenue pulse</p>
             <h3 className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-black">{periodRange.label}</h3>
@@ -1859,19 +1887,19 @@ export const FinancePaymentSettings = ({
           </div>
         </div>
 
-        <div className="p-4 md:p-6">
+        <div className="finance-hero-body p-4 md:p-6">
           <FinanceTimelineChart buckets={chartBuckets} currency={displayCurrency} statItems={financeStatItems} />
         </div>
       </div>
 
       <div className="mt-4 md:mt-5">
         <section className="finance-desk rounded-[1.25rem] border border-neutral-200 bg-white shadow-sm overflow-hidden">
-          <div className="p-4 md:p-5 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="finance-desk-head p-4 md:p-5 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Finance desk</p>
               <h3 className="text-2xl font-black tracking-tight text-black mt-1">Transactions and invoices</h3>
             </div>
-            <div className="grid grid-cols-3 rounded-2xl border border-neutral-100 bg-neutral-50 p-1 min-w-full sm:min-w-[360px]">
+            <div className="finance-desk-tabs grid grid-cols-3 rounded-2xl border border-neutral-100 bg-neutral-50 p-1 min-w-full sm:min-w-[360px]">
               {[
                 ['transactions', 'Transactions'],
                 ['invoices', 'Invoices'],
@@ -1888,7 +1916,7 @@ export const FinancePaymentSettings = ({
               ))}
             </div>
           </div>
-          <div className="p-4 md:p-5 border-b border-neutral-100 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
+          <div className="finance-desk-controls p-4 md:p-5 border-b border-neutral-100 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
             <div className="relative">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" />
               <input
@@ -1926,7 +1954,7 @@ export const FinancePaymentSettings = ({
               <option value="status">Status A-Z</option>
             </select>
           </div>
-          <div className="divide-y divide-neutral-100">
+          <div className="finance-desk-list divide-y divide-neutral-100">
             {visibleDeskRows.map((row) => {
               const gateway = gatewayById[row.gatewayType] || gatewayCards[0];
               return (

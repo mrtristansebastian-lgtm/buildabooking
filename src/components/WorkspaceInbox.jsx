@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bell, Calendar, Check, ChevronDown, Clock, Info, Maximize2, MessageCircle, Minimize2, Plus, RefreshCw, Search, Send, Users, Wrench, X } from 'lucide-react';
+import { ArrowLeft, Bell, Calendar, Check, ChevronDown, Clock, Hourglass, Info, Maximize2, MessageCircle, Minimize2, Plus, RefreshCw, Search, SendHorizontal, Users, Wrench, X } from 'lucide-react';
 import { buildJumpGuestChatScript } from '../data/guestWorkspace/jumpStudios';
 import * as FirebaseSDK from '../services/firebase';
 import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
@@ -285,6 +285,7 @@ export function WorkspaceInbox({
   const assignedStaff = useMemo(() => (
     linkedBooking?.staffId ? staffList.find(staff => staff.id === linkedBooking.staffId) : null
   ), [linkedBooking?.staffId, staffList]);
+  const assignedStaffColor = assignedStaff?.color || activeStaff?.color || '#39FF14';
   const activeClientProfile = activeThread ? getThreadClientProfile(activeThread) : null;
   const activeThreadPrefill = useMemo(() => ({
     clientName: activeClientProfile?.name || activeThread?.clientName || '',
@@ -772,7 +773,7 @@ export function WorkspaceInbox({
               const StatusIcon = bookingStatus === 'confirmed'
                 ? Check
                 : bookingStatus === 'waitlist'
-                  ? Bell
+                  ? Hourglass
                   : bookingStatus === 'declined'
                     ? X
                     : Clock;
@@ -836,11 +837,18 @@ export function WorkspaceInbox({
                     {getThreadAvatar(activeThread) ? <img src={getThreadAvatar(activeThread)} alt="" className="w-full h-full object-cover" /> : (activeThread.clientName || 'C').charAt(0).toUpperCase()}
                   </div>
                   <div className="support-chat-identity min-w-0">
-                    <h3 className="text-base md:text-xl font-bold text-black truncate">{activeThread.clientName || 'Client'}</h3>
-                    <p className="text-xs md:text-sm text-neutral-500 truncate">
-                      {assignedStaff ? `Assigned to ${assignedStaff.name}` : activeThread.clientEmail || 'Active support thread'}
-                    </p>
-                    <p className="support-presence-label hidden md:flex">
+                    <h3 className="support-chat-name-line text-base md:text-xl font-bold text-black">
+                      <span className="truncate">{activeThread.clientName || 'Client'}</span>
+                      {assignedStaff && (
+                        <span
+                          className="support-chat-staff-dot"
+                          style={{ backgroundColor: assignedStaffColor }}
+                          title={`Assigned to ${assignedStaff.name}`}
+                          aria-label={`Assigned to ${assignedStaff.name}`}
+                        />
+                      )}
+                    </h3>
+                    <p className="support-presence-label text-xs md:text-sm text-neutral-500 truncate">
                       {clientPresenceLabel}
                     </p>
                   </div>
@@ -983,7 +991,7 @@ export function WorkspaceInbox({
                     className="support-chat-reply-field flex-1 resize-none rounded-lg bg-white border border-neutral-200 px-4 py-3 text-sm font-medium outline-none focus:border-black transition-colors"
                   />
                   <button type="button" aria-label="Send reply" onClick={() => sendMessage()} disabled={!draft.trim() || sending} className="support-chat-send-button h-12 w-12 rounded-lg flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
-                    <Send size={17} />
+                    <SendHorizontal size={18} strokeWidth={2.5} />
                   </button>
                 </div>
               </div>

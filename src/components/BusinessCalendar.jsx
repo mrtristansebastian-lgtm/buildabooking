@@ -641,7 +641,7 @@ import { getLocalDateStr } from '../utils/dates';
                     { label: '2h', minutes: 120 }
                 ];
                 const setTimeField = (field, value) => updateEditor({ [field]: value });
-                const nudgeTimeField = (field, delta) => {
+                const adjustTimeField = (field, delta) => {
                     const fallback = field === 'end' ? addMinutesToTime(slotEditor.start, 60) : '09:00';
                     setTimeField(field, addMinutesToTime(slotEditor[field], delta, fallback));
                 };
@@ -676,8 +676,8 @@ import { getLocalDateStr } from '../utils/dates';
                                     <p className="text-2xl sm:text-3xl font-black tracking-tight text-black mt-1">{value}</p>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <button type="button" onClick={() => nudgeTimeField(field, -15)} className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 text-sm font-black text-black hover:border-black transition-colors" aria-label={`Move ${label} back 15 minutes`}>-</button>
-                                    <button type="button" onClick={() => nudgeTimeField(field, 15)} className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 text-sm font-black text-black hover:border-black transition-colors" aria-label={`Move ${label} forward 15 minutes`}>+</button>
+                                    <button type="button" onClick={() => adjustTimeField(field, -15)} className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 text-sm font-black text-black hover:border-black transition-colors" aria-label={`Move ${label} back 15 minutes`}>-</button>
+                                    <button type="button" onClick={() => adjustTimeField(field, 15)} className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 text-sm font-black text-black hover:border-black transition-colors" aria-label={`Move ${label} forward 15 minutes`}>+</button>
                                 </div>
                             </div>
 
@@ -868,8 +868,8 @@ import { getLocalDateStr } from '../utils/dates';
 
             return (
                 <div className="w-full max-w-7xl mx-auto pb-32 animate-in fade-in duration-700">
-                    <div className="mb-4 md:mb-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-3">
-                        <div className="rounded-lg border border-neutral-100 bg-white px-4 py-3 shadow-sm flex items-center justify-between gap-4">
+                    <div className="schedule-google-panel mb-4 md:mb-6">
+                        <div className="schedule-google-status rounded-lg border border-neutral-100 bg-white px-4 py-3 shadow-sm flex items-center justify-between gap-4">
                             <div className="min-w-0">
                                 <p className="text-[9px] font-bold uppercase tracking-[0.26em] text-neutral-400">Google Calendar</p>
                                 <p className="text-sm font-bold text-black truncate">
@@ -878,15 +878,23 @@ import { getLocalDateStr } from '../utils/dates';
                             </div>
                             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${googleCalendarConnected ? 'bg-[#39FF14] shadow-[0_0_0_5px_rgba(57,255,20,0.15)]' : 'bg-neutral-200'}`} />
                         </div>
-                        <button onClick={() => onConnectGoogleCalendar?.()} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-white border border-neutral-200 text-[10px] md:text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors shadow-sm text-black flex items-center justify-center gap-2">
-                            <CalendarCheck size={15} /> {googleCalendarLabel}
-                        </button>
-                        <button onClick={() => onSyncGoogleCalendar?.(selectedCalendarId)} disabled={googleCalendarState.syncing} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-white border border-neutral-200 text-[10px] md:text-[11px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors shadow-sm text-black flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait">
-                            <RefreshCw size={15} className={googleCalendarState.syncing ? 'animate-spin' : ''} /> {googleCalendarState.syncing ? 'Syncing' : `Sync ${googleSyncableBookings.length}`}
-                        </button>
-                        <button onClick={onSave} className="h-10 md:h-11 px-4 md:px-5 rounded-lg bg-black text-white text-[10px] md:text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10">
-                            <Check size={15}/> Save Schedule
-                        </button>
+                        <div className="schedule-google-actions">
+                            <button onClick={() => onConnectGoogleCalendar?.()} className="schedule-google-button">
+                                <CalendarCheck size={15} />
+                                <span className="schedule-google-label-full">{googleCalendarLabel}</span>
+                                <span className="schedule-google-label-short">{googleCalendarConnected ? 'Reconnect' : 'Connect'}</span>
+                            </button>
+                            <button onClick={() => onSyncGoogleCalendar?.(selectedCalendarId)} disabled={googleCalendarState.syncing} className="schedule-google-button disabled:opacity-50 disabled:cursor-wait">
+                                <RefreshCw size={15} className={googleCalendarState.syncing ? 'animate-spin' : ''} />
+                                <span className="schedule-google-label-full">{googleCalendarState.syncing ? 'Syncing' : `Sync ${googleSyncableBookings.length}`}</span>
+                                <span className="schedule-google-label-short">{googleCalendarState.syncing ? 'Syncing' : `Sync ${googleSyncableBookings.length}`}</span>
+                            </button>
+                            <button onClick={onSave} className="schedule-google-button schedule-google-save">
+                                <Check size={15}/>
+                                <span className="schedule-google-label-full">Save Schedule</span>
+                                <span className="schedule-google-label-short">Save</span>
+                            </button>
+                        </div>
                     </div>
 
                     <section className="saas-card schedule-team-card p-3 md:p-4 mb-6">

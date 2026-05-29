@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useLayoutEffect, useMemo, u
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, Briefcase, Calendar, CalendarCheck, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, Eye, FileText, Globe, GripVertical, HelpCircle, History, Home, ImagePlus, Images, Instagram, Layers, Layout, Mail, MessageCircle, MessageSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, Wifi, X, Zap
+    AlignCenter, AlignLeft, AlignRight, ArrowRight, Battery, Bell, BookOpen, BookOpenCheck, Briefcase, BriefcaseBusiness, Calendar, CalendarCheck, CalendarDays, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, DollarSign, Eye, FileText, Globe, GripVertical, HeartHandshake, HelpCircle, History, Home, Hourglass, ImagePlus, Images, Info, Instagram, Layers, Layout, LayoutDashboard, Mail, MessageCircle, MessageSquare, MessagesSquare, Monitor, Moon, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Settings2, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Sun, Tag, Trash2, Type, User, Users, UsersRound, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -66,6 +66,27 @@ const FinancePaymentSettings = lazy(() => (
 const MigrationImportPanel = lazy(() => (
   import('./components/FinancePaymentSettings').then((module) => ({ default: module.MigrationImportPanel }))
 ));
+
+const RunningPersonIcon = ({ size = 14, strokeWidth = 2.6, ...props }) => (
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+    >
+        <circle cx="14" cy="4.5" r="2" />
+        <path d="m11.8 8.2 4.2 2.2 2.3-2.2" />
+        <path d="m13.3 10.1-2.6 3.7 3.6 2.2 1.9 3.8" />
+        <path d="m10.6 13.8-3.2 1.1-2 3" />
+        <path d="M7 7.8h4.4" />
+    </svg>
+);
 
 const bookingPaymentFilterOptions = [
     ['all', 'All payments'],
@@ -1489,6 +1510,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [bookingSearch, setBookingSearch] = useState('');
             const [bookingSort, setBookingSort] = useState('newest');
             const [bookingPaymentFilter, setBookingPaymentFilter] = useState('all');
+            const [bookingInfoDialog, setBookingInfoDialog] = useState(null);
             const [manualBookingOpen, setManualBookingOpen] = useState(false);
             const [manualBookingServiceId, setManualBookingServiceId] = useState('custom');
             const [clientRecords, setClientRecords] = useState(() => getInitialGuestWorkspace()?.clientRecords || []);
@@ -1530,6 +1552,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [supportThreadFocus, setSupportThreadFocus] = useState(null);
             const [legalPanel, setLegalPanel] = useState(null);
             const [ownerNotifications, setOwnerNotifications] = useState([]);
+            const [guestNotificationReadIds, setGuestNotificationReadIds] = useState(() => new Set());
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
             const toastTimerRef = useRef(null);
             const unsavedWorkspaceChangesRef = useRef(false);
@@ -2325,6 +2348,59 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const filteredBookings = bookingDesk.filteredRows;
             const showBookingExample = isGuestWorkspace && bookingsReady && visibleBookings.length === 0;
             const bookingRows = showBookingExample ? [exampleBooking] : filteredBookings;
+            const guestOwnerNotifications = useMemo(() => {
+                if (!isGuestWorkspace) return [];
+                const recentBooking = visibleBookings.find(booking => booking.status === 'pending' || booking.status === 'waitlist') || visibleBookings[0] || exampleBooking;
+                const paidBooking = visibleBookings.find(booking => String(booking.paymentStatus || '').toLowerCase().includes('paid')) || visibleBookings[1] || recentBooking;
+                const birthdayClient = clientRecords.find(client => client.birthday) || null;
+                return [
+                    makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+                        title: `${recentBooking.clientName || 'New client'} requested a booking`,
+                        body: `${recentBooking.serviceName || 'A service'} is ready for review in the booking desk.`,
+                        ownerId: 'guest-workspace',
+                        booking: recentBooking,
+                        tab: 'bookings',
+                        priority: 'high',
+                        metadata: { demo: true }
+                    }),
+                    makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.NEW_MESSAGE,
+                        title: 'Support reply waiting',
+                        body: 'A client thread has new booking context attached.',
+                        ownerId: 'guest-workspace',
+                        threadId: recentBooking.threadId || recentBooking.id || '',
+                        tab: 'communications',
+                        priority: 'normal',
+                        metadata: { demo: true }
+                    }),
+                    makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BOOKING_CONFIRMED,
+                        title: 'Payment status updated',
+                        body: `${paidBooking.clientName || 'Client'} is reflected in finance and bookings.`,
+                        ownerId: 'guest-workspace',
+                        booking: paidBooking,
+                        tab: 'finance',
+                        priority: 'normal',
+                        metadata: { demo: true }
+                    }),
+                    ...(birthdayClient ? [makeOwnerNotification({
+                        type: NOTIFICATION_TYPES.BIRTHDAY_REMINDER,
+                        title: `${birthdayClient.name}'s birthday is saved`,
+                        body: 'Client profiles keep small details close to the work.',
+                        ownerId: 'guest-workspace',
+                        tab: 'clients',
+                        priority: 'normal',
+                        metadata: { demo: true }
+                    })] : [])
+                ].map((notification, index) => ({
+                    ...notification,
+                    id: `guest-alert-${index}`,
+                    read: guestNotificationReadIds.has(`guest-alert-${index}`),
+                    createdAtMs: Date.now() - (index * 11 * 60 * 1000)
+                }));
+            }, [clientRecords, exampleBooking, guestNotificationReadIds, isGuestWorkspace, visibleBookings]);
+            const workspaceNotifications = isGuestWorkspace ? guestOwnerNotifications : ownerNotifications;
 
             const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers Chat', 'High Value', 'No-show Risk'];
             const buildClientKey = (name, phone) => {
@@ -2518,6 +2594,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (notification?.tab) navigateWorkspaceTab(notification.tab, notification.editorTab);
                 else if (notification?.editorTab) setEditorTab(notification.editorTab);
             };
+            const markWorkspaceNotificationRead = isGuestWorkspace
+                ? (notificationId) => setGuestNotificationReadIds(prev => new Set([...prev, notificationId]))
+                : markOwnerNotificationRead;
+            const markAllWorkspaceNotificationsRead = isGuestWorkspace
+                ? () => setGuestNotificationReadIds(prev => new Set([...prev, ...guestOwnerNotifications.map(notification => notification.id)]))
+                : markAllOwnerNotificationsRead;
 
             const dashboardPortfolio = useMemo(() => {
                 const today = new Date();
@@ -2852,16 +2934,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [clientDirectory, db, isFirebaseConfigured, user?.uid, workspaceOwnerId]);
 
             const navItems = [
-                { id: 'overview', icon: Layout, label: 'Dashboard' },
-                { id: 'bookings', icon: BookOpen, label: 'Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
-                { id: 'business', icon: Calendar, label: 'Schedule' },
-                { id: 'communications', icon: MessageSquare, label: 'Support Inbox' },
-                { id: 'editor', icon: Paintbrush, label: 'Editor' },
-                { id: 'services', icon: Briefcase, label: 'Services' },
-                { id: 'finance', icon: CreditCard, label: 'Finance' },
-                { id: 'clients', icon: Star, label: 'Clients', badge: clientMetrics.firstTimers > 0 },
-                { id: 'staff', icon: Users, label: 'Team' },
-                { id: 'profile', icon: User, label: 'Profile' }
+                { id: 'overview', icon: LayoutDashboard, label: 'Dashboard' },
+                { id: 'bookings', icon: BookOpenCheck, label: 'Bookings', badge: visibleBookings.some(b => b.status === 'pending' || b.status === 'waitlist') },
+                { id: 'business', icon: CalendarDays, label: 'Schedule' },
+                { id: 'communications', icon: MessagesSquare, label: 'Support Inbox' },
+                { id: 'editor', icon: Palette, label: 'Editor' },
+                { id: 'services', icon: BriefcaseBusiness, label: 'Services' },
+                { id: 'finance', icon: DollarSign, label: 'Finance' },
+                { id: 'clients', icon: HeartHandshake, label: 'Clients', badge: clientMetrics.firstTimers > 0 },
+                { id: 'staff', icon: UsersRound, label: 'Team' },
+                { id: 'profile', icon: Settings2, label: 'Profile' }
             ];
             const mobilePrimaryNavIds = ['communications', 'bookings', 'business', 'finance'];
             const mobilePrimaryNavItems = mobilePrimaryNavIds.map(id => navItems.find(item => item.id === id)).filter(Boolean);
@@ -5854,7 +5936,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const sendReviewToBooking = async (booking) => {
                 await sendBookingEmail(booking, 'review');
                 await createClientNotification(booking.clientEmail, makeClientNotification({
-                    type: NOTIFICATION_TYPES.REVIEW_NUDGE,
+                    type: NOTIFICATION_TYPES.REVIEW_REQUEST,
                     title: 'Quick follow-up from your visit',
                     body: `${settings.brandName || 'The business'} sent a quick thank-you and review request.`,
                     ownerId: workspaceOwnerId,
@@ -5862,19 +5944,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     view: 'chats',
                     priority: 'normal'
                 }));
-            };
-
-            const sendNudgeToBooking = async (booking) => {
-                const sent = await createClientNotification(booking.clientEmail, makeClientNotification({
-                    type: NOTIFICATION_TYPES.BOOKING_NUDGE,
-                    title: 'Your booking needs one quick look',
-                    body: `${settings.brandName || 'The business'} nudged this booking so you can check the latest update or reply.`,
-                    ownerId: workspaceOwnerId,
-                    booking,
-                    view: 'bookings',
-                    priority: 'normal'
-                }));
-                showToast(sent ? `Nudge sent to ${booking.clientName}.` : 'Client portal nudges need a client email.');
             };
 
             const connectGoogleCalendar = async () => {
@@ -6148,6 +6217,76 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 {confirmDialog.actionLabel || 'Confirm'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            );
+
+            const bookingInfoDetails = bookingInfoDialog ? (() => {
+                const booking = bookingInfoDialog;
+                const serviceDetails = getBookingService(booking);
+                const assignedStaff = staffList.find(staff => staff.id === booking.staffId);
+                const serviceName = serviceDetails?.name || booking.serviceName || 'Not set';
+                const serviceDuration = formatServiceDuration(serviceDetails?.duration || booking.duration);
+                const servicePrice = formatServicePrice(serviceDetails || booking);
+                const paymentStatus = booking.paymentStatus === 'paid'
+                    ? 'Paid'
+                    : booking.paymentStatus === 'manual_pending'
+                        ? 'Pending manual payment'
+                        : booking.paymentStatus || 'Not marked';
+                return [
+                    { label: 'Client', value: booking.clientName || 'Client' },
+                    { label: 'Status', value: booking.status === 'waitlist' ? 'Standby' : booking.status || 'Pending' },
+                    { label: 'Phone', value: booking.clientPhone || 'Not collected' },
+                    { label: 'Email', value: booking.clientEmail || 'Not collected' },
+                    { label: 'Birthday', value: booking.clientBirthday || 'Not collected' },
+                    { label: 'Service', value: [serviceName, serviceDuration, servicePrice].filter(Boolean).join(' / ') },
+                    { label: 'Date', value: booking.date || booking.dateKey || 'Not set' },
+                    { label: 'Time', value: booking.time || 'Not set' },
+                    { label: 'Staff', value: assignedStaff?.name || 'Unassigned' },
+                    { label: 'Payment', value: paymentStatus },
+                    { label: 'Method', value: booking.paymentMethod || booking.paymentGateway || 'Not selected' },
+                    { label: 'Note', value: booking.clientNote || 'No note saved' }
+                ];
+            })() : [];
+
+            const bookingInfoDialogView = bookingInfoDialog && (
+                <div className="fixed inset-0 z-[1000] bg-black/45 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="booking-info-modal w-full sm:max-w-lg bg-white rounded-t-[1.5rem] sm:rounded-lg border border-neutral-100 shadow-2xl p-5 md:p-7 animate-in fade-in zoom-in-95 duration-300 max-h-[calc(100dvh-1rem)] overflow-y-auto">
+                        <div className="flex items-start justify-between gap-4 mb-5">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400 mb-2">Booking Info</p>
+                                <h2 className="text-2xl font-bold tracking-tight text-black">{bookingInfoDialog.clientName || 'Client'}</h2>
+                                <p className="mt-2 text-sm leading-relaxed text-neutral-500">Full booking, client, staff, and payment context.</p>
+                            </div>
+                            <button type="button" aria-label="Close booking info" onClick={() => setBookingInfoDialog(null)} className="w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="booking-info-grid">
+                            {bookingInfoDetails.map(item => (
+                                <div key={item.label} className={`booking-info-field ${item.label === 'Note' ? 'is-wide' : ''}`}>
+                                    <span>{item.label}</span>
+                                    <strong>{item.value}</strong>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const booking = bookingInfoDialog;
+                                setBookingInfoDialog(null);
+                                setConfirmDialog({
+                                    eyebrow: 'Booking Record',
+                                    title: 'Remove this booking?',
+                                    body: 'This deletes the record from your workspace. Client profiles and other bookings stay untouched.',
+                                    actionLabel: 'Remove',
+                                    onConfirm: () => deleteBooking(booking.id)
+                                });
+                            }}
+                            className="booking-info-danger-button mt-4"
+                        >
+                            <Trash2 size={14} /> Remove Booking
+                        </button>
                     </div>
                 </div>
             );
@@ -6528,6 +6667,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 {authDialog}
                 {legalDialog}
                 {confirmActionDialog}
+                {bookingInfoDialogView}
                 {runningLateActionDialog}
                 {accountDeleteDialog}
                 <ImageCropModal
@@ -6555,15 +6695,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         </AppErrorBoundary>
                     </Suspense>
                 )}
-                {user && !publicSlug && (
+                {(user || isGuestWorkspace) && !publicSlug && (
                     <NotificationCenter
                         title="Workspace Alerts"
-                        subtitle="Booking requests, chat messages, client nudges, and birthday reminders."
-                        notifications={ownerNotifications}
+                        subtitle="Booking requests, chat messages, and birthday reminders."
+                        notifications={workspaceNotifications}
                         permission={browserNotificationPermission}
                         onRequestPermission={requestOwnerBrowserNotifications}
-                        onMarkRead={markOwnerNotificationRead}
-                        onMarkAllRead={markAllOwnerNotificationsRead}
+                        onMarkRead={markWorkspaceNotificationRead}
+                        onMarkAllRead={markAllWorkspaceNotificationsRead}
                         onOpenNotification={openOwnerNotification}
                         compact
                     />
@@ -6651,15 +6791,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     className="desktop-sidebar-toggle hidden md:flex fixed bottom-6 left-6 md:bottom-10 md:left-10 z-[100] w-12 h-12 bg-white border border-neutral-100 rounded-full shadow-2xl items-center justify-center text-neutral-400 hover:text-black transition-all hover:scale-110"
                 >
                     {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => setDashboardThemeMode(mode => mode === 'dark' ? 'light' : 'dark')}
-                    className="dashboard-theme-floating md:hidden fixed right-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[140] w-11 h-11 rounded-full bg-white border border-neutral-200 shadow-xl shadow-black/10 flex items-center justify-center text-black"
-                    aria-label={dashboardThemeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                    {dashboardThemeMode === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
                 </button>
 
                 <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-[120] transition-all duration-500 ${mobileNavOpen ? 'is-open' : ''} ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-bottom-nav-collapsed' : ''}`} aria-label="Mobile workspace navigation">
@@ -6755,7 +6886,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
                     {activeTab === 'overview' && (
-                        <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
+                        <div className="dashboard-overview-page flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
                             <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                 <div>
                                     <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Dashboard</h1>
@@ -6832,7 +6963,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             </section>
 
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                                <section className="xl:col-span-8 saas-card overflow-hidden">
+                                <section className="dashboard-overview-shell xl:col-span-8 saas-card overflow-hidden">
                                     <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div>
                                             <h2 className="text-lg font-bold tracking-tight">Activity</h2>
@@ -6887,7 +7018,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 </section>
 
                                 <aside className="xl:col-span-4 space-y-6">
-                                    <section className="saas-card p-5 md:p-6">
+                                    <section className="dashboard-overview-shell saas-card p-5 md:p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <div>
                                                 <h2 className="text-lg font-bold tracking-tight">Next Actions</h2>
@@ -6943,7 +7074,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     </section>
                                 </aside>
 
-                                <section className="xl:col-span-4 saas-card p-5 md:p-6">
+                                <section className="dashboard-overview-shell xl:col-span-4 saas-card p-5 md:p-6">
                                     <div className="flex items-center justify-between mb-6">
                                         <div>
                                             <h2 className="text-lg font-bold tracking-tight">Period Breakdown</h2>
@@ -6974,7 +7105,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     </div>
                                 </section>
 
-                                <section className="xl:col-span-4 saas-card p-5 md:p-6">
+                                <section className="dashboard-overview-shell xl:col-span-4 saas-card p-5 md:p-6">
                                     <div className="flex items-center justify-between mb-6">
                                         <div>
                                             <h2 className="text-lg font-bold tracking-tight">Schedule</h2>
@@ -7007,7 +7138,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <button onClick={() => navigateWorkspaceTab('business')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Tune Schedule</button>
                                 </section>
 
-                                <section className="xl:col-span-4 saas-card p-5 md:p-6">
+                                <section className="dashboard-overview-shell xl:col-span-4 saas-card p-5 md:p-6">
                                     <div className="flex items-center justify-between mb-6">
                                         <div>
                                             <h2 className="text-lg font-bold tracking-tight">Clients</h2>
@@ -7042,13 +7173,29 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Profile</h2>
                                         <p className="text-neutral-500 font-medium text-sm md:text-base mt-2 max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
                                     </div>
-                                    <div className="hidden md:flex flex-col sm:flex-row gap-3">
-                                        <button onClick={() => setShowOwnerManual(true)} className="h-12 px-7 bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/5 hover:-translate-y-0.5 hover:border-black transition-all flex items-center justify-center gap-2">
-                                            <BookOpen size={14}/> Owner Manual
+                                    <div className="profile-header-actions">
+                                        <button
+                                            type="button"
+                                            aria-pressed={dashboardThemeMode === 'dark'}
+                                            aria-label={dashboardThemeMode === 'dark' ? 'Switch workspace to light mode' : 'Switch workspace to dark mode'}
+                                            onClick={() => setDashboardThemeMode(mode => mode === 'dark' ? 'light' : 'dark')}
+                                            className="profile-theme-toggle-pro"
+                                        >
+                                            <span className="profile-theme-toggle-orb">
+                                                {dashboardThemeMode === 'dark' ? <Sun size={16} strokeWidth={2.4} /> : <Moon size={16} strokeWidth={2.4} />}
+                                            </span>
+                                            <span className="profile-theme-toggle-copy">
+                                                <strong>{dashboardThemeMode === 'dark' ? 'Light mode' : 'Dark mode'}</strong>
+                                            </span>
                                         </button>
-                                        <button onClick={saveProfileChanges} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
-                                            <Check size={14}/> Save Profile
-                                        </button>
+                                        <div className="hidden md:flex flex-col sm:flex-row gap-3">
+                                            <button onClick={() => setShowOwnerManual(true)} className="h-12 px-7 bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/5 hover:-translate-y-0.5 hover:border-black transition-all flex items-center justify-center gap-2">
+                                                <BookOpen size={14}/> Owner Manual
+                                            </button>
+                                            <button onClick={saveProfileChanges} className="h-12 px-7 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-xl shadow-black/10 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                                                <Check size={14}/> Save Profile
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </header>
@@ -7059,31 +7206,42 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         {profileSections.map(section => {
                                             const IconCmp = section.icon;
                                             return (
-                                                <button
+                                                <div
                                                     key={section.id}
-                                                    type="button"
-                                                    onClick={() => section.action ? section.action() : setActiveProfileSection(section.id)}
                                                     className="profile-command-card"
                                                 >
-                                                    <span className="profile-command-card-top">
-                                                        <span className="profile-command-icon native-gradient-icon">
-                                                            <IconCmp size={18} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => section.action ? section.action() : setActiveProfileSection(section.id)}
+                                                        className="profile-command-primary"
+                                                        aria-label={`Open ${section.title}`}
+                                                    >
+                                                        <span className="profile-command-card-top">
+                                                            <span className="profile-command-icon">
+                                                                <IconCmp size={18} />
+                                                            </span>
+                                                            <span className="profile-command-meta">{section.meta}</span>
                                                         </span>
-                                                        <span className="profile-command-meta">{section.meta}</span>
-                                                    </span>
-                                                    <span className="profile-command-copy">
-                                                        <span>{section.title}</span>
-                                                        <small>{section.note}</small>
-                                                    </span>
+                                                        <span className="profile-command-copy">
+                                                            <span>{section.title}</span>
+                                                        </span>
+                                                        <span className="profile-command-arrow" aria-hidden="true">
+                                                            <ChevronRight size={17} />
+                                                        </span>
+                                                    </button>
                                                     <span className="profile-command-quick">
                                                         {(section.quick || []).map(item => (
-                                                            <span key={item}>{item}</span>
+                                                            <button
+                                                                key={item}
+                                                                type="button"
+                                                                onClick={() => section.action ? section.action() : setActiveProfileSection(section.id)}
+                                                                aria-label={`Open ${section.title}: ${item}`}
+                                                            >
+                                                                {item}
+                                                            </button>
                                                         ))}
                                                     </span>
-                                                    <span className="profile-command-arrow" aria-hidden="true">
-                                                        <ChevronRight size={17} />
-                                                    </span>
-                                                </button>
+                                                </div>
                                             );
                                         })}
                                     </div>
@@ -7589,7 +7747,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     )}
 
                     {activeTab === 'communications' && (
-                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F6F7F9]">
+                        <div className="communications-page flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F6F7F9]">
                             <header className="dashboard-page-header mb-4 md:mb-6 max-w-[88rem] mx-auto">
                                 <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                                   <div className="max-w-4xl">
@@ -9456,7 +9614,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     const assignedStaff = staffList.find(s => s.id === b.staffId);
                                     const isExampleBooking = Boolean(b.isExample);
                                     const clientAvatar = getBookingClientAvatar(b);
-                                    const contactSummary = [b.clientPhone, b.clientEmail, b.clientBirthday ? `Bday: ${b.clientBirthday}` : '', b.clientNote ? `Note: ${b.clientNote}` : ''].filter(Boolean).join(' / ');
                                     const serviceDetails = getBookingService(b);
                                     const serviceSummary = serviceDetails?.name
                                         ? [serviceDetails.name, formatServiceDuration(serviceDetails.duration), formatServicePrice(serviceDetails)].filter(Boolean).join(' / ')
@@ -9472,23 +9629,31 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     const isPaid = b.paymentStatus === 'paid';
                                     return (
                                         <div key={b.id} className={`booking-record-row p-4 md:p-5 transition-all hover:bg-neutral-50/70 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
-                                            <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
-                                                <div className="2xl:col-span-5 flex items-center gap-4 min-w-0">
-                                                    <div className="relative shrink-0">
+                                            <div className="booking-record-grid grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
+                                                <div className="booking-record-client 2xl:col-span-5 flex items-center gap-4 min-w-0">
+                                                    <div className="booking-record-avatar-wrap relative shrink-0">
                                                         <div className={`w-14 h-14 rounded-lg flex items-center justify-center font-bold text-xl uppercase overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : 'booking-avatar-placeholder'}`}>
                                                             {clientAvatar ? <img src={clientAvatar} alt="" className="w-full h-full object-cover" /> : b.clientName.charAt(0)}
                                                         </div>
                                                         {b.noShowHistory && <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm" title="No-show history" />}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <div className="flex items-center gap-3 mb-1">
+                                                        <div className="booking-record-client-head flex items-center gap-3 mb-1">
                                                             <h3 className="text-lg md:text-xl font-bold tracking-tight text-black truncate">{b.clientName}</h3>
                                                             {isExampleBooking && <span className="shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest bg-neutral-100 text-neutral-500">Example Only</span>}
-                                                            <span className={`shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${statusStyle}`}>{b.status === 'waitlist' ? 'Standby' : b.status}</span>
+                                                            <span className={`booking-record-status shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${statusStyle}`}>{b.status === 'waitlist' ? 'Standby' : b.status}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setBookingInfoDialog(b)}
+                                                                className="booking-record-info-button"
+                                                                aria-label={`View booking information for ${b.clientName}`}
+                                                            >
+                                                                <Info size={13} />
+                                                                <span>Info</span>
+                                                            </button>
                                                         </div>
-                                                        <p className="text-sm text-neutral-500 truncate">{isExampleBooking ? 'Preview only - not saved, synced, or counted in stats' : contactSummary || 'No contact details collected'}</p>
                                                         {serviceSummary && (
-                                                            <p className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-neutral-500">
+                                                            <p className="booking-record-service mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-neutral-500">
                                                                 <Briefcase size={12} className="shrink-0" />
                                                                 <span className="truncate">{serviceSummary}</span>
                                                             </p>
@@ -9496,12 +9661,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     </div>
                                                 </div>
 
-                                                <div className="2xl:col-span-2">
+                                                <div className="booking-record-time 2xl:col-span-2">
                                                     <p className="metric-value text-2xl font-bold tracking-tight text-black">{b.time}</p>
                                                     <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{b.date}</p>
                                                 </div>
 
-                                                <div className="2xl:col-span-3">
+                                                <div className="booking-record-staff 2xl:col-span-3">
                                                     {isExampleBooking ? (
                                                         <div className="inline-flex h-10 items-center px-3 rounded-lg bg-neutral-50 border border-neutral-100 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                                                             Example preview
@@ -9523,17 +9688,17 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                     )}
                                                 </div>
 
-                                                <div className="2xl:col-span-2 flex flex-wrap items-center justify-start 2xl:justify-end gap-2">
+                                                <div className="booking-record-actions 2xl:col-span-2 flex flex-wrap items-center justify-start 2xl:justify-end gap-2">
                                                     {isExampleBooking ? (
                                                         <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2">
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
                                                                 <Calendar size={14} /> Reschedule
                                                             </button>
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-500 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
-                                                                <MessageCircle size={14} /> Chat
+                                                                <MessagesSquare size={14} /> Chat
                                                             </button>
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-amber-700 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
-                                                                <Bell size={14} /> Waitlist
+                                                                <Hourglass size={14} /> Waitlist
                                                             </button>
                                                             <button type="button" disabled className="h-10 px-3 rounded-lg native-gradient-button flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-default">
                                                                 <Check size={15} strokeWidth={3} /> Approve
@@ -9546,47 +9711,57 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         <>
                                                             <button
                                                                 onClick={() => openBookingChat(b)}
+                                                                aria-label={`Open chat for ${b.clientName}`}
                                                                 className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black hover:border-black transition-all"
                                                             >
-                                                                <MessageCircle size={14} /> Chat
+                                                                <MessagesSquare size={14} /> Chat
                                                             </button>
                                                             <button
                                                                 onClick={() => sendRunningLateToBooking(b)}
-                                                                className="h-10 px-3 rounded-lg bg-black text-white flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all"
+                                                                aria-label={`Send running late update to ${b.clientName}`}
+                                                                title="Running late"
+                                                                className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black hover:border-neutral-300 transition-all"
                                                             >
-                                                                <Clock size={14} /> Late
+                                                                <RunningPersonIcon size={14} /> Late
                                                             </button>
                                                             {hasManualPayment && (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => markBookingPaid(b)}
-                                                                    disabled={isPaid}
-                                                                    className={`h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 cursor-default' : 'native-gradient-button text-black hover:-translate-y-0.5'}`}
+                                                                    onClick={() => {
+                                                                        if (isPaid) return;
+                                                                        setConfirmDialog({
+                                                                            eyebrow: 'Payment',
+                                                                            title: 'Mark this booking as paid?',
+                                                                            body: 'This will move the manual payment from pending into paid revenue.',
+                                                                            actionLabel: 'Yes',
+                                                                            onConfirm: () => markBookingPaid(b)
+                                                                        });
+                                                                    }}
+                                                                    aria-label={isPaid ? `${b.clientName} payment is paid` : `Mark ${b.clientName} booking as paid`}
+                                                                    aria-disabled={isPaid}
+                                                                    className={`booking-payment-button h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${isPaid ? 'is-paid native-gradient-button text-black cursor-default' : 'is-unpaid bg-neutral-100 text-neutral-500 border border-neutral-200 hover:bg-white hover:text-black hover:border-neutral-300 hover:-translate-y-0.5'}`}
                                                                 >
-                                                                    <CreditCard size={14} /> {isPaid ? 'Paid' : 'Mark Paid'}
+                                                                    <DollarSign size={14} strokeWidth={2.8} /> {isPaid ? 'Paid' : 'Mark Paid'}
                                                                 </button>
                                                             )}
                                                             <button
                                                                 onClick={() => sendReviewToBooking(b)}
+                                                                aria-label={`Send review request to ${b.clientName}`}
                                                                 className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"
                                                             >
                                                                 <Mail size={14} /> Review
                                                             </button>
                                                             <button
-                                                                onClick={() => sendNudgeToBooking(b)}
-                                                                className="h-10 px-3 rounded-lg bg-white border border-neutral-200 text-neutral-600 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-50 hover:text-black transition-all"
-                                                            >
-                                                                <Zap size={14} /> Nudge
-                                                            </button>
-                                                            <button
                                                                 onClick={() => sendWaitlistToBooking(b)}
+                                                                aria-label={b.status === 'waitlist' ? `Notify ${b.clientName} from waitlist` : `Move ${b.clientName} to waitlist`}
+                                                                title={b.status === 'waitlist' ? 'Notify waitlist' : 'Move to waitlist'}
                                                                 className={`h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${b.status === 'waitlist' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-amber-50 hover:text-amber-700'}`}
                                                             >
-                                                                <Bell size={14} /> {b.status === 'waitlist' ? 'Notify' : 'Waitlist'}
+                                                                <Hourglass size={14} /> {b.status === 'waitlist' ? 'Notify' : 'Waitlist'}
                                                             </button>
                                                             {(b.status === 'pending' || b.status === 'waitlist') && (
                                                                 <>
-                                                                    <button onClick={() => approveBooking(b)} className="h-10 px-3 rounded-lg bg-[#39FF14] text-black flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:brightness-95 transition-all">
+                                                                    <button onClick={() => approveBooking(b)} aria-label={`Approve booking for ${b.clientName}`} className="h-10 px-3 rounded-lg bg-[#39FF14] text-black flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:brightness-95 transition-all">
                                                                         <Check size={15} strokeWidth={3} /> Approve
                                                                     </button>
                                                                     <button type="button" aria-label={`Deny booking for ${b.clientName}`} onClick={() => updateBooking(b.id, { status: 'declined' })} className="h-10 w-10 rounded-lg bg-white border border-neutral-200 flex items-center justify-center text-red-500 hover:bg-red-50 transition-all">
@@ -9594,15 +9769,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            <button type="button" aria-label={`Remove booking for ${b.clientName}`} onClick={() => setConfirmDialog({
-                                                                eyebrow: 'Booking Record',
-                                                                title: 'Remove this booking?',
-                                                                body: 'This deletes the record from your workspace. Client profiles and other bookings stay untouched.',
-                                                                actionLabel: 'Remove',
-                                                                onConfirm: () => deleteBooking(b.id)
-                                                            })} className="h-10 w-10 rounded-lg flex items-center justify-center text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                                                <Trash2 size={16} />
-                                                            </button>
                                                         </>
                                                     )}
                                                 </div>

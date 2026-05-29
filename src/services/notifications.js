@@ -12,8 +12,7 @@ export const NOTIFICATION_TYPES = {
   BOOKING_RESCHEDULED: 'booking_rescheduled',
   RESCHEDULE_REQUEST: 'reschedule_request',
   RUNNING_LATE: 'running_late',
-  REVIEW_NUDGE: 'review_nudge',
-  BOOKING_NUDGE: 'booking_nudge',
+  REVIEW_REQUEST: 'review_request',
   NEW_MESSAGE: 'new_message',
   BIRTHDAY_REMINDER: 'birthday_reminder'
 };
