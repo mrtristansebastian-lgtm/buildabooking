@@ -1036,6 +1036,33 @@ const landingStopActions = [
   'running your studio on memory'
 ];
 
+const landingBenefitCards = [
+  {
+    icon: CalendarCheck,
+    label: 'Bookings',
+    title: 'Clients book from a real page.',
+    copy: 'Services, times, staff, notes, and requests land cleanly before they reach your calendar.'
+  },
+  {
+    icon: MessageSquare,
+    label: 'Support',
+    title: 'Every chat keeps context.',
+    copy: 'Questions, late updates, and reschedules stay connected to the client and booking.'
+  },
+  {
+    icon: CreditCard,
+    label: 'Finance',
+    title: 'Paid and pending stay clear.',
+    copy: 'Manual payments, revenue, and finance history stay readable without spreadsheet guesswork.'
+  },
+  {
+    icon: ShieldCheck,
+    label: 'Clients',
+    title: 'Client records build themselves.',
+    copy: 'Profiles grow from real bookings, uploads, messages, payments, and repeat visits.'
+  }
+];
+
 const safeJsonParse = (value, fallback = null) => {
   if (!value) return fallback;
   try {
@@ -1515,9 +1542,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [runningLateDialog, setRunningLateDialog] = useState(null);
             const [supportThreadFocus, setSupportThreadFocus] = useState(null);
-            const [landingStopText, setLandingStopText] = useState('');
-            const [landingStopIndex, setLandingStopIndex] = useState(0);
-            const [landingStopDeleting, setLandingStopDeleting] = useState(false);
             const [legalPanel, setLegalPanel] = useState(null);
             const [ownerNotifications, setOwnerNotifications] = useState([]);
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
@@ -1555,29 +1579,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
             useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
             useEffect(() => () => editorRoomNavDragRef.current?.cleanup?.(), []);
-            useEffect(() => {
-                const phrase = landingStopActions[landingStopIndex] || '';
-                const isComplete = !landingStopDeleting && landingStopText === phrase;
-                const isCleared = landingStopDeleting && landingStopText.length === 0;
-                const delay = isComplete ? 1300 : isCleared ? 220 : landingStopDeleting ? 34 : 58;
-                const timer = window.setTimeout(() => {
-                    if (isComplete) {
-                        setLandingStopDeleting(true);
-                        return;
-                    }
-                    if (isCleared) {
-                        setLandingStopDeleting(false);
-                        setLandingStopIndex(index => (index + 1) % landingStopActions.length);
-                        return;
-                    }
-                    setLandingStopText(current => (
-                        landingStopDeleting
-                            ? current.slice(0, Math.max(0, current.length - 1))
-                            : phrase.slice(0, current.length + 1)
-                    ));
-                }, delay);
-                return () => window.clearTimeout(timer);
-            }, [landingStopDeleting, landingStopIndex, landingStopText]);
             useEffect(() => {
                 if (typeof window === 'undefined') return undefined;
                 const confirmPageExit = (event) => {
@@ -6466,14 +6467,51 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                     <section className="landing-stop-section px-4 sm:px-6 py-16 md:py-24 border-b border-neutral-100">
                       <div className="landing-stop-panel max-w-7xl mx-auto">
-                        <div className="landing-stop-copy">
-                          <h2>
-                            <b>STOP</b>
-                            <strong className="native-accent-text" aria-live="polite">
-                              {landingStopText}
-                              <i aria-hidden="true" />
-                            </strong>
-                          </h2>
+                        <div className="landing-benefits-header">
+                          <span>Less admin. More booked clients.</span>
+                          <h2>Stop messy booking work.</h2>
+                          <p>Clients book, messages stay attached, payments stay clear, and your schedule updates from one clean workspace.</p>
+                        </div>
+
+                        <div className="landing-benefits-layout">
+                          <article className="landing-benefits-command">
+                            <div className="landing-benefits-command-head">
+                              <span>Replace the busywork</span>
+                              <strong>10 problems gone</strong>
+                            </div>
+                            <div className="landing-benefit-chip-grid" aria-label="Problems Build A Booking helps stop">
+                              {landingStopActions.map(action => (
+                                <span key={action} className="landing-benefit-chip">
+                                  <Check size={13} />
+                                  {action}
+                                </span>
+                              ))}
+                            </div>
+                          </article>
+
+                          <div className="landing-benefits-grid">
+                            {landingBenefitCards.map(({ icon: Icon, label, title, copy }) => (
+                              <article key={title} className="landing-benefit-card">
+                                <div className="landing-benefit-card-top">
+                                  <span className="landing-benefit-card-icon"><Icon size={18} /></span>
+                                  <small>{label}</small>
+                                </div>
+                                <strong>{title}</strong>
+                                <p>{copy}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="landing-benefits-route" aria-label="Build A Booking workflow">
+                          {['Booking page', 'Schedule', 'Inbox', 'Payments', 'Client profile'].map(step => (
+                            <span key={step}>{step}</span>
+                          ))}
+                        </div>
+
+                        <div className="landing-benefits-actions">
+                          <button type="button" onClick={openSignupOrDashboard}>Start building <ArrowRight size={15} /></button>
+                          <button type="button" onClick={openGuestDashboard}>View guest workspace <Eye size={15} /></button>
                         </div>
                       </div>
                     </section>
