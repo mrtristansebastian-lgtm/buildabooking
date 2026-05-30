@@ -3111,7 +3111,20 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         compactViewportRef.current = compact;
                         setIsCompactEditorViewport(compact);
                     }
-                    const frame = getEditorPreviewFrame(device, compact);
+                    const shortLandscapeEditor = compact
+                        && device === 'desktop'
+                        && window.matchMedia('(orientation: landscape)').matches
+                        && window.innerHeight <= 700
+                        && window.innerWidth <= 1400;
+                    const baseFrame = getEditorPreviewFrame(device, compact);
+                    const frame = shortLandscapeEditor
+                        ? {
+                            ...baseFrame,
+                            maxScale: Math.min(baseFrame.maxScale, 0.72),
+                            paddingX: Math.max(baseFrame.paddingX, 120),
+                            paddingY: Math.max(baseFrame.paddingY, 190)
+                        }
+                        : baseFrame;
                     const collapsedNavGain = compact && mobileNavCollapsed ? 24 : 0;
                     const collapsedPanelGain = editorCollapsed ? (compact ? 16 : 28) : 0;
                     const paddingX = Math.max(12, frame.paddingX - collapsedPanelGain);
@@ -9197,15 +9210,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         <div className="mobile-editor-compact-controls md:hidden absolute right-4 bottom-4 z-[180] items-center gap-2 rounded-full bg-black/80 p-1.5 shadow-2xl backdrop-blur-xl border border-white/10">
                             <button
                                 type="button"
-                                onClick={() => setEditorCollapsed(prev => !prev)}
-                                className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${editorCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
-                                aria-pressed={editorCollapsed}
-                            >
-                                {editorCollapsed ? <PanelRightOpen size={14} /> : <PanelRightClose size={14} />}
-                                Panel
-                            </button>
-                            <button
-                                type="button"
                                 onClick={() => setMobileNavCollapsed(prev => !prev)}
                                 className={`h-10 px-3 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest transition-all ${mobileNavCollapsed ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
                                 aria-pressed={mobileNavCollapsed}
@@ -9654,6 +9658,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 : 'bg-black text-white';
                                     const hasManualPayment = Boolean(b.paymentMethod || b.paymentGateway || b.paymentStatus === 'manual_pending');
                                     const isPaid = b.paymentStatus === 'paid';
+                                    const isConfirmed = b.status === 'confirmed';
                                     return (
                                         <div key={b.id} className={`booking-record-row p-4 md:p-5 ${b.status === 'declined' ? 'opacity-50 grayscale' : ''}`}>
                                             <div className="booking-record-grid grid grid-cols-1 2xl:grid-cols-12 gap-4 2xl:items-center">
@@ -9766,7 +9771,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                     }}
                                                                     aria-label={isPaid ? `${b.clientName} payment is paid` : `Mark ${b.clientName} booking as paid`}
                                                                     aria-disabled={isPaid}
-                                                                    className={`booking-payment-button h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${isPaid ? 'is-paid native-gradient-button text-black cursor-default' : 'is-unpaid bg-neutral-100 text-neutral-500 border border-neutral-200 hover:bg-white hover:text-black hover:border-neutral-300 hover:-translate-y-0.5'}`}
+                                                                    className={`booking-payment-button h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${isPaid ? 'is-paid cursor-default' : 'is-unpaid bg-white text-neutral-700 border border-neutral-200 hover:bg-white hover:text-black hover:border-neutral-300 hover:-translate-y-0.5'}`}
                                                                 >
                                                                     <DollarSign size={14} strokeWidth={2.8} /> {isPaid ? 'Paid' : 'Mark Paid'}
                                                                 </button>
@@ -9779,10 +9784,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 <Mail size={14} /> Review
                                                             </button>
                                                             <button
-                                                                onClick={() => sendWaitlistToBooking(b)}
+                                                                onClick={() => {
+                                                                    if (isConfirmed) return;
+                                                                    sendWaitlistToBooking(b);
+                                                                }}
                                                                 aria-label={b.status === 'waitlist' ? `Notify ${b.clientName} from waitlist` : `Move ${b.clientName} to waitlist`}
-                                                                title={b.status === 'waitlist' ? 'Notify waitlist' : 'Move to waitlist'}
-                                                                className={`h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${b.status === 'waitlist' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-amber-50 hover:text-amber-700'}`}
+                                                                aria-disabled={isConfirmed}
+                                                                disabled={isConfirmed}
+                                                                title={b.status === 'waitlist' ? 'Notify waitlist' : isConfirmed ? 'Already confirmed' : 'Move to waitlist'}
+                                                                className={`booking-waitlist-button h-10 px-3 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${b.status === 'waitlist' ? 'is-waitlist bg-amber-100 text-amber-800 hover:bg-amber-200' : isConfirmed ? 'is-disabled bg-white border border-neutral-200 text-neutral-300 cursor-default' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-amber-50 hover:text-amber-700'}`}
                                                             >
                                                                 <Hourglass size={14} /> {b.status === 'waitlist' ? 'Notify' : 'Waitlist'}
                                                             </button>

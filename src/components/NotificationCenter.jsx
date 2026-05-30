@@ -47,32 +47,32 @@ export function NotificationCenter({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[181] flex items-start justify-end bg-black/10 backdrop-blur-[2px]" onClick={() => setOpen(false)}>
+        <div className="notification-overlay fixed inset-0 z-[181] flex items-start justify-end bg-black/10 backdrop-blur-[2px]" onClick={() => setOpen(false)}>
           <aside
             className="notification-panel m-3 md:m-5 w-[calc(100vw-1.5rem)] max-w-md max-h-[calc(100vh-1.5rem)] md:max-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[1.35rem] md:rounded-2xl bg-white shadow-2xl shadow-black/20 border border-neutral-200 flex flex-col"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="h-1 native-gradient-line shrink-0" />
-            <header className="p-5 border-b border-neutral-100">
+            <header className="notification-panel-head p-5 border-b border-neutral-100">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="w-11 h-11 rounded-xl native-gradient-icon flex items-center justify-center mb-4">
+                  <div className="notification-panel-icon w-11 h-11 rounded-xl native-gradient-icon flex items-center justify-center mb-4">
                     <BellRing size={18} />
                   </div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Alert Center</p>
-                  <h2 className="text-2xl font-bold tracking-tight text-black">{title}</h2>
-                  <p className="text-sm text-neutral-500 mt-1 leading-relaxed">{subtitle}</p>
+                  <p className="notification-panel-kicker text-[9px] font-bold uppercase tracking-[0.35em] text-neutral-400 mb-2">Alert Center</p>
+                  <h2 className="notification-panel-title text-2xl font-bold tracking-tight text-black">{title}</h2>
+                  <p className="notification-panel-subtitle text-sm text-neutral-500 mt-1 leading-relaxed">{subtitle}</p>
                 </div>
-                <button type="button" onClick={() => setOpen(false)} className="h-10 w-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
+                <button type="button" onClick={() => setOpen(false)} className="notification-panel-close h-10 w-10 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
                   <X size={16} />
                 </button>
               </div>
-              <div className="mt-5 grid grid-cols-2 gap-2">
+              <div className="notification-panel-actions mt-5 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={onRequestPermission}
                   disabled={permission === 'granted' || permission === 'unsupported'}
-                  className="h-11 rounded-full bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-black disabled:text-neutral-400 disabled:cursor-default"
+                  className="notification-panel-permission h-11 rounded-full bg-neutral-50 border border-neutral-100 text-[9px] font-bold uppercase tracking-widest text-black disabled:text-neutral-400 disabled:cursor-default"
                 >
                   {permissionCopy[permission] || 'Allow alerts'}
                 </button>
@@ -80,32 +80,32 @@ export function NotificationCenter({
                   type="button"
                   onClick={onMarkAllRead}
                   disabled={!unreadCount}
-                  className="h-11 rounded-full bg-black text-white text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-25 disabled:cursor-default"
+                  className="notification-panel-clear h-11 rounded-full bg-black text-white text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-25 disabled:cursor-default"
                 >
                   <CheckCheck size={14} /> Clear
                 </button>
               </div>
             </header>
 
-            <div className="overflow-y-auto p-3 space-y-2">
+            <div className="notification-panel-list overflow-y-auto p-3 space-y-2">
               {visibleNotifications.length ? visibleNotifications.map(notification => (
                 <button
                   key={notification.id}
                   type="button"
                   onClick={() => handleOpenNotification(notification)}
-                  className={`group w-full text-left rounded-2xl border p-4 transition-all ${notification.read ? 'bg-white border-neutral-100 hover:border-neutral-200' : 'native-stat-card border-neutral-200 shadow-sm'}`}
+                  className={`notification-card group w-full text-left rounded-2xl border p-4 transition-all ${notification.read ? 'is-read bg-white border-neutral-100 hover:border-neutral-200' : 'is-unread native-stat-card border-neutral-200 shadow-sm'}`}
                 >
                   <div className="flex items-start gap-3">
-                    <span className={`mt-0.5 h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${notification.read ? 'bg-neutral-50 text-neutral-400' : 'native-gradient-icon text-black'}`}>
+                    <span className={`notification-card-icon mt-0.5 h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${notification.read ? 'bg-neutral-50 text-neutral-400' : 'native-gradient-icon text-black'}`}>
                       <Bell size={15} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start justify-between gap-3">
-                        <span className="font-bold text-black leading-snug">{notification.title || 'New update'}</span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-300 whitespace-nowrap">{formatNotificationTime(notification.createdAtMs || notification.createdAt)}</span>
+                        <span className="notification-card-title font-bold text-black leading-snug">{notification.title || 'New update'}</span>
+                        <span className="notification-card-time text-[9px] font-bold uppercase tracking-widest text-neutral-300 whitespace-nowrap">{formatNotificationTime(notification.createdAtMs || notification.createdAt)}</span>
                       </span>
-                      <span className="block text-sm leading-relaxed text-neutral-500 mt-1">{notification.body || 'Open Build A Booking for the latest update.'}</span>
-                      <span className="mt-3 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-neutral-400 group-hover:text-black">
+                      <span className="notification-card-body block text-sm leading-relaxed text-neutral-500 mt-1">{notification.body || 'Open Build A Booking for the latest update.'}</span>
+                      <span className="notification-card-link mt-3 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-neutral-400 group-hover:text-black">
                         Open <ChevronRight size={13} />
                       </span>
                     </span>
