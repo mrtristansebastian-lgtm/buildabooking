@@ -753,6 +753,29 @@ const parseAmountToCents = (value) => {
   return Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100)) : 0;
 };
 
+const dateValueToMs = (value) => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value?.toMillis) return value.toMillis();
+  if (value?.seconds) return value.seconds * 1000;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const formatDashboardMoney = (amountInCents = 0, currency = 'ZAR') => {
+  const code = /^[A-Z]{3}$/.test(String(currency || '').toUpperCase()) ? String(currency).toUpperCase() : 'ZAR';
+  const amount = Math.max(0, Math.round(Number(amountInCents) || 0)) / 100;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: code,
+      maximumFractionDigits: amount % 1 ? 2 : 0
+    }).format(amount);
+  } catch {
+    return `${code} ${amount.toFixed(amount % 1 ? 2 : 0)}`;
+  }
+};
+
 const getBannerDisplay = (settings = {}) => {
   const bannerDisplay = settings.bannerDisplay || {};
   const height = Number(bannerDisplay.height);
@@ -1768,6 +1791,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const [bookings, setBookings] = useState(() => getInitialGuestWorkspace()?.bookings || []);
             const [financeImports, setFinanceImports] = useState(() => getInitialGuestWorkspace()?.financeImports || []);
+            const [financePaymentAttempts, setFinancePaymentAttempts] = useState([]);
             const [bookingsReady, setBookingsReady] = useState(() => Boolean(getInitialGuestWorkspace()) || !isFirebaseConfigured);
             const [staffList, setStaffList] = useState(() => getInitialGuestWorkspace()?.staffList || [{id: 'owner', name: 'Admin', color: '#39FF14'}]);
             const [accountProfileOverride, setAccountProfileOverride] = useState(() => getInitialGuestWorkspace()?.settings?.accountProfiles?.['guest-workspace'] || {});
@@ -2713,6 +2737,82 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const reservedSlots = periodActiveBookings.filter(booking => booking.status !== 'waitlist' && booking.time !== 'Waitlist').length;
                 const openSlots = Math.max(0, periodCapacity - reservedSlots);
                 const bookingRate = periodActiveBookings.length ? Math.round((confirmed / periodActiveBookings.length) * 100) : 0;
+                const dashboardManualGateways = new Set(['manual_eft', 'cash']);
+                const financePeriodStartMs = isDashboardAllTime ? 0 : new Date(`${startKey}T00:00:00`).getTime();
+                const financePeriodEndMs = isDashboardAllTime ? Number.POSITIVE_INFINITY : addDays(new Date(`${endKey}T00:00:00`), 1).getTime();
+                const normalizeFinanceStatus = (value = '', amountInCents = 0) => {
+                    const clean = String(value || '').trim().toLowerCase();
+                    if (clean.includes('unpaid') || clean.includes('not paid') || clean.includes('not_paid')) return 'manual_pending';
+                    if ((clean.includes('paid') && !clean.includes('unpaid')) || clean.includes('settled') || clean.includes('complete') || clean.includes('success')) return 'paid';
+                    if (clean.includes('pending') || clean.includes('manual') || clean.includes('open')) return 'manual_pending';
+                    return Number(amountInCents || 0) > 0 ? 'paid' : 'manual_pending';
+                };
+                const financeRecordMsFromBooking = (booking) => (
+                    dateValueToMs(booking.paidAt || booking.updatedAt || booking.timestamp || booking.createdAt) ||
+                    (booking.dateKeyResolved ? new Date(`${booking.dateKeyResolved}T00:00:00`).getTime() : 0)
+                );
+                const financeRecordsForDashboard = [
+                    ...bookingsWithDates
+                        .filter((booking) => {
+                            if (!booking || booking.isExample) return false;
+                            const method = booking.paymentGateway || booking.paymentMethod || '';
+                            return isGuestWorkspace || dashboardManualGateways.has(method) || booking.paymentStatus === 'manual_pending';
+                        })
+                        .map((booking) => {
+                            const amountInCents = Number(booking.amountInCents || booking.amountPaidInCents || 0) || parseAmountToCents(booking.total || booking.servicePrice || booking.price || booking.deposit || 0);
+                            return {
+                                status: booking.paymentStatus === 'paid' ? 'paid' : 'manual_pending',
+                                amountInCents,
+                                currency: booking.currency || settings.currency || 'ZAR',
+                                updatedAtMs: financeRecordMsFromBooking(booking)
+                            };
+                        }),
+                    ...financeImports
+                        .filter((record) => record && !record.isExample)
+                        .map((record) => {
+                            const amountInCents = Number(record.amountInCents || record.amountPaidInCents || 0) || parseAmountToCents(record.amount || record.total || record.price || 0);
+                            return {
+                                status: normalizeFinanceStatus(record.status || record.paymentStatus, amountInCents),
+                                amountInCents,
+                                currency: record.currency || settings.currency || 'ZAR',
+                                updatedAtMs: dateValueToMs(record.updatedAtMs || record.updatedAt || record.paidAt || record.createdAt)
+                            };
+                        }),
+                    ...financePaymentAttempts
+                        .filter((record) => record && !record.isExample)
+                        .map((record) => ({
+                            status: record.status || 'initiated',
+                            amountInCents: Number(record.amountInCents || record.amountPaidInCents || 0),
+                            currency: record.currency || settings.currency || 'ZAR',
+                            updatedAtMs: dateValueToMs(record.paidAt || record.updatedAtMs || record.updatedAt || record.createdAt)
+                        }))
+                ];
+                const paidFinanceRecords = financeRecordsForDashboard.filter(record => (
+                    normalizeFinanceStatus(record.status, record.amountInCents) === 'paid' &&
+                    record.updatedAtMs >= financePeriodStartMs &&
+                    record.updatedAtMs < financePeriodEndMs
+                ));
+                const pendingFinanceRecords = financeRecordsForDashboard.filter(record => (
+                    normalizeFinanceStatus(record.status, record.amountInCents) !== 'paid' &&
+                    record.updatedAtMs >= financePeriodStartMs &&
+                    record.updatedAtMs < financePeriodEndMs
+                ));
+                const totalRevenueInCents = paidFinanceRecords.reduce((sum, record) => sum + Number(record.amountInCents || 0), 0);
+                const pendingRevenueInCents = pendingFinanceRecords.reduce((sum, record) => sum + Number(record.amountInCents || 0), 0);
+                const currencyCounts = financeRecordsForDashboard.reduce((acc, record) => {
+                    const code = String(record.currency || '').toUpperCase();
+                    if (/^[A-Z]{3}$/.test(code)) acc[code] = (acc[code] || 0) + 1;
+                    return acc;
+                }, {});
+                const financeCurrencyStorageKey = `build-a-booking-finance-currency-${String(workspaceOwnerId || (isGuestWorkspace ? 'guest' : 'local')).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+                const storedFinanceCurrency = String(safeLocalGet(financeCurrencyStorageKey) || '').toUpperCase();
+                const dominantFinanceCurrency = Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+                const dashboardRevenueCurrency = /^[A-Z]{3}$/.test(storedFinanceCurrency)
+                    ? storedFinanceCurrency
+                    : (dominantFinanceCurrency || settings.currency || 'ZAR');
+                const totalRevenueLabel = formatDashboardMoney(totalRevenueInCents, dashboardRevenueCurrency);
+                const pendingRevenueLabel = formatDashboardMoney(pendingRevenueInCents, dashboardRevenueCurrency);
+                const totalRevenueHint = `${paidFinanceRecords.length} paid ${paidFinanceRecords.length === 1 ? 'record' : 'records'}`;
                 const periodClientIds = new Set(periodActiveBookings.map(booking => buildClientKey(booking.clientName, booking.clientPhone)));
                 const firstTimers = Array.from(periodClientIds).filter(id => {
                     const client = clientDirectory.find(profile => profile.id === id);
@@ -2756,6 +2856,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     todayCapacity: todayAvailable ? todayTimes.length : 0,
                     todayAvailable,
                     bookingRate,
+                    totalRevenueLabel,
+                    totalRevenueHint,
+                    totalRevenueInCents,
+                    totalRevenuePaidCount: paidFinanceRecords.length,
+                    pendingRevenueLabel,
+                    pendingFinanceCount: pendingFinanceRecords.length,
                     pending,
                     waitlist,
                     confirmed,
@@ -2774,7 +2880,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     activeBookings: periodActiveBookings.length,
                     allActiveBookings: activeBookings.length
                 };
-            }, [visibleBookings, dashboardPeriod, settings.schedule, settings.availableTimes, settings.brandName, settings.slug, settings.welcomeMessage, communications, clientMetrics, clientDirectory]);
+            }, [visibleBookings, financeImports, financePaymentAttempts, dashboardPeriod, settings.schedule, settings.availableTimes, settings.brandName, settings.slug, settings.welcomeMessage, settings.currency, communications, clientMetrics, clientDirectory, isGuestWorkspace, workspaceOwnerId]);
 
             const filteredClients = useMemo(() => {
                 const query = clientSearch.trim().toLowerCase();
@@ -3717,6 +3823,37 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 return () => { unsubSettings(); unsubEditorDraft(); unsubStaff(); unsubComms(); unsubClients(); unsubFinanceImports(); };
             }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL, isEditorWorkspaceOpen, canManageWorkspace]);
+
+            useEffect(() => {
+                if (publicSlug || isGuestWorkspace || !isFirebaseConfigured || !db || !workspaceOwnerId) {
+                    setFinancePaymentAttempts(prev => prev.length ? [] : prev);
+                    return undefined;
+                }
+
+                const paymentAttemptsQuery = FirebaseSDK.query(
+                    FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'finance', 'paymentAttempts'),
+                    FirebaseSDK.orderBy('updatedAtMs', 'desc'),
+                    FirebaseSDK.limit(240)
+                );
+                const unsubscribe = FirebaseSDK.onSnapshot(paymentAttemptsQuery, (snapshot) => {
+                    const nextAttempts = snapshot.docs.map((docSnap) => {
+                        const data = docSnap.data() || {};
+                        return {
+                            id: docSnap.id,
+                            gatewayType: data.gatewayType || 'stripe',
+                            status: data.status || 'initiated',
+                            amountInCents: Number(data.amountInCents || data.amountPaidInCents || 0),
+                            currency: data.currency || settingsRef.current?.currency || 'ZAR',
+                            customerName: data.customerName || data.clientName || 'Client',
+                            bookingId: data.bookingId || '',
+                            updatedAtMs: dateValueToMs(data.paidAt || data.updatedAt || data.createdAt)
+                        };
+                    });
+                    setFinancePaymentAttempts(prev => areJsonEqual(prev, nextAttempts) ? prev : nextAttempts);
+                }, (error) => console.error('Finance payment attempts sync failed', error));
+
+                return () => unsubscribe();
+            }, [workspaceOwnerId, publicSlug, isGuestWorkspace]);
 
             useEffect(() => {
                 if (publicSlug) {
@@ -6927,292 +7064,157 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 <div className={`dashboard-main relative z-10 flex-1 flex overflow-hidden md:pb-0 ${activeTab === 'editor' && mobileNavCollapsed ? 'mobile-nav-space-collapsed' : ''}`}>
                     {activeTab === 'overview' && (
                         <div className="dashboard-overview-page flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                                <div>
-                                    <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Dashboard</h1>
-                                    <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">A clean operating view for bookings, capacity, requests, and client movement.</p>
-                                </div>
-                                <div className="dashboard-overview-actions grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-3">
-                                    <button onClick={() => setShowOwnerManual(true)} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-white border border-neutral-200 text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-50 transition-colors">
-                                        <BookOpen size={14}/><span className="sm:hidden">Manual</span><span className="hidden sm:inline">Owner Manual</span>
-                                    </button>
-                                    <button onClick={() => navigateWorkspaceTab('editor')} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-black text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-neutral-800 transition-colors">
-                                        <Palette size={14}/><span className="sm:hidden">Edit</span><span className="hidden sm:inline">Edit Page</span>
-                                    </button>
-                                    <button data-tour="publish-button" onClick={saveSettings} className="dashboard-overview-action h-10 sm:h-11 px-2 sm:px-5 rounded-lg bg-[#39FF14] text-black text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 hover:brightness-95 transition-all">
-                                        <Check size={14}/> Publish
-                                    </button>
-                                </div>
-                            </header>
-
-                            <section data-tour="dashboard-hero" className="mb-6 saas-card p-5 md:p-6 lg:p-8">
-                                <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-8">
-                                    <div className="max-w-3xl">
-                                        <div className="inline-flex items-center gap-2 rounded-lg bg-neutral-50 border border-neutral-100 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-5">
-                                            <span className="w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_0_4px_rgba(57,255,20,0.14)]" />
+                            <section data-tour="dashboard-hero" className="dashboard-lumia-board">
+                                <div className="dashboard-lumia-topline">
+                                    <div className="dashboard-lumia-greeting">
+                                        <div className="dashboard-lumia-live">
+                                            <span />
                                             Live Workspace
                                         </div>
-                                        <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-none text-black mb-3">{dashboardPortfolio.greeting}, {dashboardGreetingName}</h2>
-                                        <p className="text-neutral-500 text-base md:text-lg leading-relaxed">
-                                            {dashboardPortfolio.period.title} / {dashboardPortfolio.period.rangeLabel}. Focus on requests, confirmed work, and available capacity.
+                                        <h2>{dashboardPortfolio.greeting}, {dashboardGreetingName}</h2>
+                                        <p>
+                                            {dashboardPortfolio.period.title} / {dashboardPortfolio.period.rangeLabel}. Your most useful numbers, actions, and signals are ready.
                                         </p>
                                     </div>
-                                    <div className="flex flex-col items-stretch sm:items-end gap-3">
-                                        <div className="dashboard-period-tabs schedule-scope-toggle inline-grid grid-cols-4 gap-1 rounded-lg bg-neutral-100 p-1">
-                                            {dashboardPortfolio.periods.map(period => (
-                                                <button
-                                                    key={period.id}
-                                                    onClick={() => setDashboardPeriod(period.id)}
-                                                    className={`dashboard-period-tab h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
-                                                >
-                                                    {period.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <div className="flex flex-col sm:flex-row gap-2">
-                                            <button onClick={() => navigateWorkspaceTab('bookings')} className="h-11 px-4 rounded-lg bg-[#39FF14] text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-95 transition-all">
-                                                <Bell size={15}/> Review
+                                    <div className="dashboard-period-tabs schedule-scope-toggle inline-grid grid-cols-4 gap-1 rounded-lg bg-neutral-100 p-1">
+                                        {dashboardPortfolio.periods.map(period => (
+                                            <button
+                                                key={period.id}
+                                                onClick={() => setDashboardPeriod(period.id)}
+                                                className={`dashboard-period-tab h-10 px-4 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${dashboardPeriod === period.id ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black'}`}
+                                            >
+                                                {period.label}
                                             </button>
-                                            <button onClick={() => navigateWorkspaceTab('business')} className="h-11 px-4 rounded-lg bg-white border border-neutral-200 text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-black transition-colors">
-                                                <Calendar size={15}/> Schedule
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="native-stat-grid grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 md:gap-3">
-                                    {[
-                                        { label: 'Bookings', value: dashboardPortfolio.activeBookings, hint: `${dashboardPortfolio.confirmed} confirmed`, icon: CalendarCheck },
-                                        { label: 'Needs Review', value: dashboardPortfolio.needsAttention, hint: `${dashboardPortfolio.pending} requests / ${dashboardPortfolio.waitlist} waitlist`, icon: Bell },
-                                        { label: 'Booking Rate', value: `${dashboardPortfolio.bookingRate}%`, hint: `${dashboardPortfolio.confirmed}/${dashboardPortfolio.activeBookings || 0} confirmed`, icon: ShieldCheck },
-                                        { label: 'Open Slots', value: dashboardPortfolio.openSlots, hint: `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity} booked`, icon: Clock }
-                                    ].map(metric => {
-                                    const IconCmp = metric.icon;
-                                    return (
-                                        <div key={metric.label} className="native-stat-card rounded-lg border border-neutral-100 bg-white p-5 text-black">
-                                            <div className="flex items-start justify-between mb-7">
-                                                <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-black"><IconCmp size={17}/></div>
-                                                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-500">{metric.hint}</span>
-                                            </div>
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-2 text-neutral-400">{metric.label}</p>
-                                            <p className="metric-value text-3xl md:text-4xl font-bold tracking-tight text-black">{metric.value}</p>
-                                        </div>
-                                    );
-                                })}
-                                </div>
-                            </section>
-
-                            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                                <section className="dashboard-overview-shell xl:col-span-8 saas-card overflow-hidden">
-                                    <div className="p-5 md:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div>
-                                            <h2 className="text-lg font-bold tracking-tight">Activity</h2>
-                                            <p className="text-sm text-neutral-500">{dashboardPortfolio.period.title} bookings, requests, and waitlist spots.</p>
-                                        </div>
-                                        <button onClick={() => navigateWorkspaceTab('bookings')} className="h-10 px-4 rounded-lg bg-neutral-50 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors">View Queue</button>
-                                    </div>
-                                    <div className="divide-y divide-neutral-100">
-                                        {dashboardPortfolio.activityList.slice(0, 6).map(b => {
-                                            const assignedStaff = staffList.find(staff => staff.id === b.staffId);
-                                            const clientAvatar = getBookingClientAvatar(b);
-                                            const contactSummary = [b.clientPhone, b.clientEmail, b.clientBirthday ? `Bday: ${b.clientBirthday}` : '', b.clientNote ? `Note: ${b.clientNote}` : ''].filter(Boolean).join(' / ');
-                                            const statusStyle = b.status === 'confirmed'
-                                                ? 'bg-[#39FF14] text-black'
-                                                : b.status === 'waitlist'
-                                                    ? 'bg-amber-100 text-amber-800'
-                                                    : b.status === 'declined'
-                                                        ? 'bg-red-50 text-red-600'
-                                                        : 'bg-black text-white';
-                                            return (
-                                                <div key={b.id} className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-50 transition-colors">
-                                                    <div className="flex items-center gap-4 min-w-0">
-                                                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold shrink-0 overflow-hidden ${clientAvatar ? 'bg-neutral-100 text-black' : 'booking-avatar-placeholder'}`}>
-                                                            {clientAvatar ? <img src={clientAvatar} alt="" className="w-full h-full object-cover" /> : b.clientName.charAt(0)}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                                <h3 className="font-bold text-black truncate">{b.clientName}</h3>
-                                                                {b.noShowHistory && <span className="px-2 py-1 rounded-md bg-red-50 text-red-600 text-[8px] font-bold uppercase tracking-widest">Risk</span>}
-                                                            </div>
-                                                            <p className="text-sm text-neutral-500 truncate">{contactSummary || 'No contact details collected'}{assignedStaff ? ` / ${assignedStaff.name}` : ''}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center justify-between md:justify-end gap-4">
-                                                        <div className="text-left md:text-right">
-                                                            <p className="metric-value text-base font-bold">{b.time}</p>
-                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{b.date}</p>
-                                                        </div>
-                                                        <span className={`min-w-[92px] text-center text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-md ${statusStyle}`}>{b.status === 'waitlist' ? 'Standby' : b.status}</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {!dashboardPortfolio.activityList.length && (
-                                            <div className="p-12 text-center">
-                                                <div className="w-14 h-14 rounded-lg bg-neutral-100 flex items-center justify-center mx-auto mb-5 text-neutral-400"><CalendarCheck size={22}/></div>
-                                                <h3 className="text-lg font-bold tracking-tight text-black mb-2">{dashboardPortfolio.period.emptyTitle}</h3>
-                                                <p className="text-sm text-neutral-500">{dashboardPortfolio.period.emptyText}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </section>
-
-                                <aside className="xl:col-span-4 space-y-6">
-                                    <section className="dashboard-overview-shell saas-card p-5 md:p-6">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div>
-                                                <h2 className="text-lg font-bold tracking-tight">Next Actions</h2>
-                                                <p className="text-sm text-neutral-500">The work most likely to matter now.</p>
-                                            </div>
-                                            <div className="w-10 h-10 rounded-lg bg-[#39FF14] text-black flex items-center justify-center shadow-lg shadow-[#39FF14]/20"><Zap size={17}/></div>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {[
-                                                {
-                                                    title: dashboardPortfolio.needsAttention ? `Review ${dashboardPortfolio.needsAttention} booking${dashboardPortfolio.needsAttention === 1 ? '' : 's'}` : 'No requests waiting',
-                                                    detail: `${dashboardPortfolio.pending} pending / ${dashboardPortfolio.waitlist} waitlist`,
-                                                    tab: 'bookings',
-                                                    icon: Bell,
-                                                    active: dashboardPortfolio.needsAttention > 0
-                                                },
-                                                {
-                                                    title: dashboardPortfolio.openSlots ? `${dashboardPortfolio.openSlots} slots still open` : 'No open slots in this period',
-                                                    detail: `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity} capacity booked`,
-                                                    tab: 'business',
-                                                    icon: Calendar,
-                                                    active: dashboardPortfolio.openSlots > 0
-                                                },
-                                                {
-                                                    title: `${dashboardPortfolio.clientCount} client${dashboardPortfolio.clientCount === 1 ? '' : 's'} in view`,
-                                                    detail: `${dashboardPortfolio.firstTimers} first-time booker${dashboardPortfolio.firstTimers === 1 ? '' : 's'}`,
-                                                    tab: 'clients',
-                                                    icon: Users,
-                                                    active: dashboardPortfolio.clientCount > 0
-                                                },
-                                                {
-                                                    title: dashboardPortfolio.pageReadiness === 100 ? 'Booking page ready' : 'Finish booking page setup',
-                                                    detail: `${dashboardPortfolio.pageReadiness}% setup complete`,
-                                                    tab: 'editor',
-                                                    icon: Palette,
-                                                    active: dashboardPortfolio.pageReadiness < 100
-                                                }
-                                            ].map(action => {
-                                                const IconCmp = action.icon;
-                                                return (
-                                                    <button key={action.title} onClick={() => navigateWorkspaceTab(action.tab)} className="w-full rounded-lg border border-neutral-200 bg-white p-4 text-left text-black transition-all hover:border-neutral-300 hover:shadow-lg">
-                                                        <div className="flex items-start justify-between gap-4">
-                                                            <div className="min-w-0">
-                                                                <p className="text-sm font-bold truncate text-black">{action.title}</p>
-                                                                <p className="text-xs font-medium mt-1 text-neutral-500">{action.detail}</p>
-                                                            </div>
-                                                            <div className="w-9 h-9 rounded-lg bg-[#39FF14] text-black flex items-center justify-center shrink-0 shadow-lg shadow-[#39FF14]/20"><IconCmp size={15}/></div>
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </section>
-                                </aside>
-
-                                <section className="dashboard-overview-shell xl:col-span-4 saas-card p-5 md:p-6">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div>
-                                            <h2 className="text-lg font-bold tracking-tight">Period Breakdown</h2>
-                                            <p className="text-sm text-neutral-500">{dashboardPortfolio.period.rangeLabel}</p>
-                                        </div>
-                                        <Layers size={18} className="text-neutral-300" />
-                                    </div>
-                                    <div className="space-y-4">
-                                        {[
-                                            ['Confirmed', dashboardPortfolio.confirmed, 'bg-[#39FF14]'],
-                                            ['Pending', dashboardPortfolio.pending, 'bg-black'],
-                                            ['Waitlist', dashboardPortfolio.waitlist, 'bg-amber-400'],
-                                            ['Declined', dashboardPortfolio.declined, 'bg-red-400']
-                                        ].map(row => {
-                                            const percent = dashboardPortfolio.periodBookings.length ? Math.round((row[1] / dashboardPortfolio.periodBookings.length) * 100) : 0;
-                                            return (
-                                                <div key={row[0]}>
-                                                    <div className="flex items-center justify-between gap-4 mb-2">
-                                                        <span className="text-sm font-bold text-black">{row[0]}</span>
-                                                        <span className="metric-value text-sm font-bold text-neutral-500">{row[1]}</span>
-                                                    </div>
-                                                    <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
-                                                        <div className={`h-full rounded-full ${row[2]}`} style={{ width: `${percent}%` }} />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </section>
-
-                                <section className="dashboard-overview-shell xl:col-span-4 saas-card p-5 md:p-6">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div>
-                                            <h2 className="text-lg font-bold tracking-tight">Schedule</h2>
-                                            <p className="text-sm text-neutral-500">Capacity for the selected timeframe.</p>
-                                        </div>
-                                        <Calendar size={18} className="text-neutral-300" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 mb-5">
-                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Capacity</p>
-                                            <p className="metric-value text-2xl font-bold text-black">{dashboardPortfolio.capacity}</p>
-                                        </div>
-                                        <div className="rounded-lg bg-neutral-50 border border-neutral-100 p-4">
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Open</p>
-                                            <p className="metric-value text-2xl font-bold text-black">{dashboardPortfolio.openSlots}</p>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {[
-                                            ['Booked slots', `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity}`],
-                                            ['Today status', dashboardPortfolio.todayAvailable ? `${dashboardPortfolio.todayOpenSlots} open today` : 'Closed today'],
-                                            ['Default slots', `${(settings.availableTimes || []).length} times`]
-                                        ].map(row => (
-                                            <div key={row[0]} className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-3 last:border-0 last:pb-0">
-                                                <span className="text-sm text-neutral-500">{row[0]}</span>
-                                                <span className="text-sm font-bold text-black text-right">{row[1]}</span>
-                                            </div>
                                         ))}
                                     </div>
-                                    <button onClick={() => navigateWorkspaceTab('business')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Tune Schedule</button>
-                                </section>
+                                </div>
 
-                                <section className="dashboard-overview-shell xl:col-span-4 saas-card p-5 md:p-6">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div>
-                                            <h2 className="text-lg font-bold tracking-tight">Clients</h2>
-                                            <p className="text-sm text-neutral-500">People connected to this timeframe.</p>
-                                        </div>
-                                        <Star size={18} className="text-neutral-300" />
-                                    </div>
-                                    <div className="space-y-4">
-                                        {[
-                                            ['Clients in period', dashboardPortfolio.clientCount],
-                                            ['First-time bookers', dashboardPortfolio.firstTimers],
-                                            ['All saved profiles', clientMetrics.total],
-                                            ['No-show risk flags', dashboardPortfolio.noShowRisk]
-                                        ].map(row => (
-                                            <div key={row[0]} className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-4 last:border-0 last:pb-0">
-                                                <span className="text-sm text-neutral-500">{row[0]}</span>
-                                                <span className="metric-value text-lg font-bold text-black">{row[1]}</span>
-                                            </div>
-                                            ))}
-                                    </div>
-                                    <button onClick={() => navigateWorkspaceTab('clients')} className="mt-6 w-full h-11 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors">Open Clients</button>
-                                </section>
-                            </div>
+                                <div className="dashboard-lumia-grid">
+                                    {[
+                                        {
+                                            id: 'finance',
+                                            tone: 'finance',
+                                            icon: DollarSign,
+                                            eyebrow: 'Finance Overview',
+                                            title: 'Revenue moving',
+                                            value: dashboardPortfolio.totalRevenueLabel,
+                                            label: 'Paid revenue',
+                                            detail: `${dashboardPortfolio.totalRevenuePaidCount} paid ${dashboardPortfolio.totalRevenuePaidCount === 1 ? 'record' : 'records'} in view`,
+                                            metrics: [
+                                                ['Pending', dashboardPortfolio.pendingRevenueLabel],
+                                                ['Waiting', dashboardPortfolio.pendingFinanceCount],
+                                                ['Currency', settings.currency || 'ZAR']
+                                            ],
+                                            actions: [
+                                                { label: 'Open Finance', tab: 'finance', icon: ArrowRight },
+                                                { label: 'Payments', tab: 'finance', icon: DollarSign }
+                                            ]
+                                        },
+                                        {
+                                            id: 'bookings',
+                                            tone: 'bookings',
+                                            icon: BookOpenCheck,
+                                            eyebrow: 'Bookings Overview',
+                                            title: 'Queue under control',
+                                            value: dashboardPortfolio.activeBookings,
+                                            label: 'Active bookings',
+                                            detail: `${dashboardPortfolio.confirmed} confirmed / ${dashboardPortfolio.needsAttention} to review`,
+                                            metrics: [
+                                                ['Pending', dashboardPortfolio.pending],
+                                                ['Waitlist', dashboardPortfolio.waitlist],
+                                                ['No-show risk', dashboardPortfolio.noShowRisk]
+                                            ],
+                                            actions: [
+                                                { label: 'Review Queue', tab: 'bookings', icon: Bell },
+                                                { label: 'Add Booking', tab: 'bookings', icon: Plus }
+                                            ]
+                                        },
+                                        {
+                                            id: 'schedule',
+                                            tone: 'schedule',
+                                            icon: CalendarDays,
+                                            eyebrow: 'Schedule Overview',
+                                            title: 'Capacity stays clear',
+                                            value: dashboardPortfolio.openSlots,
+                                            label: 'Open slots',
+                                            detail: `${dashboardPortfolio.reservedSlots}/${dashboardPortfolio.capacity} booked for this view`,
+                                            metrics: [
+                                                ['Today', dashboardPortfolio.todayAvailable ? `${dashboardPortfolio.todayOpenSlots} open` : 'Closed'],
+                                                ['Default slots', (settings.availableTimes || []).length],
+                                                ['Capacity', dashboardPortfolio.capacity]
+                                            ],
+                                            actions: [
+                                                { label: 'Tune Schedule', tab: 'business', icon: Calendar },
+                                                { label: 'Team View', tab: 'business', icon: Users }
+                                            ]
+                                        },
+                                        {
+                                            id: 'chat',
+                                            tone: 'support',
+                                            icon: MessagesSquare,
+                                            eyebrow: 'Chat Overview',
+                                            title: 'Replies stay attached',
+                                            value: workspaceNotifications.filter(item => !item.read).length,
+                                            label: 'Unread alerts',
+                                            detail: `${workspaceNotifications.length} workspace signals across bookings, payments, and clients`,
+                                            metrics: [
+                                                ['Automations', `${dashboardPortfolio.emailAutomations}/${dashboardPortfolio.emailAutomationTotal}`],
+                                                ['Clients', dashboardPortfolio.clientCount],
+                                                ['Page ready', `${dashboardPortfolio.pageReadiness}%`]
+                                            ],
+                                            actions: [
+                                                { label: 'Open Inbox', tab: 'communications', icon: MessagesSquare },
+                                                { label: 'Client List', tab: 'clients', icon: Users }
+                                            ]
+                                        }
+                                    ].map(tile => {
+                                        const IconCmp = tile.icon;
+                                        return (
+                                            <article key={tile.id} className={`dashboard-lumia-tile dashboard-lumia-tile-${tile.tone}`}>
+                                                <div className="dashboard-lumia-tile-head">
+                                                    <span className="dashboard-lumia-icon"><IconCmp size={21} strokeWidth={2.4} /></span>
+                                                    <span className="dashboard-lumia-eyebrow">{tile.eyebrow}</span>
+                                                </div>
+                                                <div className="dashboard-lumia-tile-main">
+                                                    <div>
+                                                        <h3>{tile.title}</h3>
+                                                        <p>{tile.detail}</p>
+                                                    </div>
+                                                    <div className="dashboard-lumia-value">
+                                                        <strong className="metric-value">{tile.value}</strong>
+                                                        <span>{tile.label}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="dashboard-lumia-metrics">
+                                                    {tile.metrics.map(([label, value]) => (
+                                                        <div key={label}>
+                                                            <span>{label}</span>
+                                                            <strong className="metric-value">{value}</strong>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="dashboard-lumia-actions">
+                                                    {tile.actions.map(action => {
+                                                        const ActionIcon = action.icon;
+                                                        return (
+                                                            <button key={action.label} type="button" onClick={() => navigateWorkspaceTab(action.tab)}>
+                                                                <ActionIcon size={14} strokeWidth={2.45} />
+                                                                {action.label}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            </section>
                         </div>
                     )}
 
                     {activeTab === 'profile' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F7F7F5]">
-                            <header className="dashboard-page-header max-w-6xl mb-4 md:mb-6">
-                                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-                                    <div>
-                                        <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Profile</h2>
-                                        <p className="text-neutral-500 font-medium text-sm md:text-base mt-2 max-w-2xl">Manage your owner account, brand identity, and the links clients use to recognize your business.</p>
-                                    </div>
+                            <div className="dashboard-action-strip max-w-6xl mb-4 md:mb-6">
                                     <div className="profile-header-actions">
                                         <button
                                             type="button"
@@ -7237,8 +7239,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </button>
                                         </div>
                                     </div>
-                                </div>
-                            </header>
+                            </div>
 
                             <div className="profile-mobile-hub max-w-6xl mb-4">
                                 {!activeProfileSection ? (
@@ -7753,10 +7754,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                     {activeTab === 'business' && (
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#FBFBFB]">
-                            <header className="dashboard-page-header mb-4 md:mb-6">
-                                <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Schedule</h2>
-                                <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Open days, tune staff calendars, and keep booking capacity clear.</p>
-                            </header>
                             <Suspense fallback={<LazySectionFallback label="Loading schedule" />}>
                                 <AppErrorBoundary compact label="Schedule" resetKey={`${activeTab}-${workspaceOwnerId}-${dashboardThemeMode}`}>
                                     <BusinessCalendar
@@ -7788,22 +7785,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                     {activeTab === 'communications' && (
                         <div className="communications-page flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 lg:p-12 relative bg-[#F6F7F9]">
-                            <header className="dashboard-page-header mb-4 md:mb-6 max-w-[88rem] mx-auto">
-                                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-                                  <div className="max-w-4xl">
-                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Support Inbox</h2>
-                                    <p className="mt-2 text-sm md:text-base text-neutral-500 font-medium max-w-3xl">Chat with your clients, manage their bookings, and keep every request, reschedule, and update in one clean workspace.</p>
-                                  </div>
-                                  <div className="hidden xl:flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-                                    <span className="w-2.5 h-2.5 rounded-full native-gradient-button shadow-[0_0_18px_rgba(120,110,255,0.28)]" />
-                                    <div>
-                                      <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-400">Live Desk</p>
-                                      <p className="text-sm font-bold text-black">Ready for client replies</p>
-                                    </div>
-                                  </div>
-                                </div>
-                            </header>
-
                             <div className="support-page-shell max-w-[88rem] mx-auto">
                                 <Suspense fallback={<LazySectionFallback label="Loading client inbox" />}>
                                     <AppErrorBoundary compact label="Support Inbox" resetKey={`${workspaceOwnerId}-${supportThreadFocus?.requestId || 'inbox'}`}>
@@ -7877,11 +7858,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                     {activeTab === 'clients' && (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                                <div>
-                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Clients</h2>
-                                    <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Profiles are built from bookings automatically, with space for notes, labels, photos, and manual walk-ins.</p>
-                                </div>
+                            <div className="dashboard-action-strip mb-4 md:mb-6 flex justify-end">
                                 <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
                                     <button
                                         type="button"
@@ -7894,7 +7871,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                         <Check size={15}/> Save
                                     </button>
                                 </div>
-                            </header>
+                            </div>
 
                             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                                 <section className={`${activeClient ? 'xl:col-span-5' : 'xl:col-span-12'} space-y-4 md:space-y-6 ${clientMobileView === 'directory' || clientMobileView === 'add' ? '' : 'hidden md:block'}`}>
@@ -8280,23 +8257,18 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                         return (
                         <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                            <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                                <div>
-                                    <h2 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Team</h2>
-                                    <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Tap a teammate to open their file, or add someone new when the roster grows.</p>
-                                </div>
-                                <button onClick={() => { saveStaff(staffList); showToast("Team setup saved"); }} className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto">
-                                    <Check size={15}/> Save Team
-                                </button>
-                            </header>
-
                             <section data-tour="team-roster" className="saas-card p-4 md:p-6 overflow-hidden">
                                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-6">
                                     <div>
                                         <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">Team Roster</h3>
                                         <p className="text-sm text-neutral-500">Floating profiles for staff files, assignment checks, and calendar ownership.</p>
                                     </div>
-                                    <span className="inline-flex w-fit text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-md">{displayStaffList.length} Active</span>
+                                    <div className="team-roster-actions">
+                                        <span className="team-roster-active-count inline-flex w-fit text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-md">{displayStaffList.length} Active</span>
+                                        <button onClick={() => { saveStaff(staffList); showToast("Team setup saved"); }} className="team-save-inline-button">
+                                            <Check size={14}/> Save Team
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="team-roster-rail flex gap-3 md:gap-4 overflow-x-auto no-scrollbar pb-2">
                                     <button
@@ -9342,23 +9314,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                     {activeTab === 'bookings' && (
                     <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-4 sm:p-6 md:p-10 lg:p-12">
-                        <header className="dashboard-page-header mb-4 md:mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-black">Bookings</h1>
-                                <p className="text-neutral-500 text-sm md:text-base mt-2 max-w-2xl">Review requests, confirm clients, assign your team, and keep every appointment moving.</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
-                                    setManualBookingOpen(true);
-                                }}
-                                className="h-11 px-5 rounded-lg bg-black text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xl shadow-black/10 w-full sm:w-auto"
-                            >
-                                <Plus size={15}/> Booking
-                            </button>
-                        </header>
-
                         {manualBookingOpen && (
                             <div className="manual-booking-overlay fixed inset-0 z-[220] bg-black/45 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6">
                                 <form onSubmit={handleManualBookingSubmit} className="manual-booking-sheet w-full md:max-w-5xl max-h-[94dvh] overflow-y-auto bg-white rounded-t-[1.6rem] md:rounded-2xl border border-neutral-100 shadow-2xl shadow-black/30">
@@ -9542,20 +9497,32 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 : `${bookingRows.length} shown / ${bookingDesk.period.rangeLabel}.`}
                                         </p>
                                     </div>
-                                    <div className="booking-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit xl:mt-4 xl:ml-auto">
-                                        {bookingDesk.periods.map(period => (
-                                            <button
-                                                key={period.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setBookingDeskPeriod(period.id);
-                                                    if (period.id === 'custom') setBookingRangeDialogOpen(true);
-                                                }}
-                                                className={`booking-period-tab flex-1 sm:flex-none h-10 px-4 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
-                                            >
-                                                {period.label}
-                                            </button>
-                                        ))}
+                                    <div className="booking-desk-head-actions">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
+                                                setManualBookingOpen(true);
+                                            }}
+                                            className="booking-add-inline-button"
+                                        >
+                                            <Plus size={14}/> Booking
+                                        </button>
+                                        <div className="booking-period-tabs schedule-scope-toggle flex bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-fit">
+                                            {bookingDesk.periods.map(period => (
+                                                <button
+                                                    key={period.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setBookingDeskPeriod(period.id);
+                                                        if (period.id === 'custom') setBookingRangeDialogOpen(true);
+                                                    }}
+                                                    className={`booking-period-tab flex-1 sm:flex-none h-10 px-4 rounded-md text-[10px] font-bold uppercase transition-all ${bookingDeskPeriod === period.id ? 'is-active bg-[#39FF14] text-black shadow-lg shadow-[#39FF14]/20' : 'text-neutral-500 hover:text-black hover:bg-white'}`}
+                                                >
+                                                    {period.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 

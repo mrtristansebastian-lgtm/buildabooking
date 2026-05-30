@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bell, Calendar, Check, ChevronDown, Clock, Hourglass, Info, Maximize2, MessageCircle, Minimize2, Plus, RefreshCw, Search, SendHorizontal, Users, Wrench, X } from 'lucide-react';
+import { ArrowLeft, Bell, Calendar, Check, ChevronDown, Clock, Hourglass, Info, MessageCircle, Plus, RefreshCw, Search, SendHorizontal, Users, Wrench, X } from 'lucide-react';
 import { buildJumpGuestChatScript } from '../data/guestWorkspace/jumpStudios';
 import * as FirebaseSDK from '../services/firebase';
 import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
@@ -857,9 +857,6 @@ export function WorkspaceInbox({
                   <div className="support-chat-inline-actions hidden md:flex items-center gap-1.5">
                     <button type="button" aria-label="Open client file" title="Client file" onClick={() => setClientFileOpen(true)} className="support-chat-action">
                       <Info size={15} />
-                    </button>
-                    <button type="button" aria-label={chatFullscreen ? 'Exit full screen chat' : 'Open full screen chat'} title={chatFullscreen ? 'Exit full screen' : 'Full screen'} onClick={() => setChatFullscreen(value => !value)} className="support-chat-icon-action">
-                      {chatFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                     </button>
                     <button onClick={() => setQuickBookingOpen(true)} className="support-chat-action-primary" aria-label="Add booking from chat" title="Add booking">
                       <Plus size={15} />

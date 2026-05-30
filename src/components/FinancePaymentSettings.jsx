@@ -1841,31 +1841,6 @@ export const FinancePaymentSettings = ({
 
   return (
     <section className="finance-studio w-full max-w-7xl mx-auto">
-      <header className="dashboard-page-header mb-5 md:mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-        <div>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-black">Finance</h2>
-          <p className="mt-2 text-sm md:text-base text-neutral-500 max-w-2xl">
-            Track money in, connect gateways, and keep payments tied to bookings without exposing secret keys in the browser.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 sm:flex gap-2 w-full xl:w-auto">
-          <button
-            type="button"
-            onClick={() => openGatewayModal()}
-            className="h-12 px-4 md:px-5 rounded-2xl native-gradient-button text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-black/10"
-          >
-            <Settings size={15} /> Gateway setup
-          </button>
-          <button
-            type="button"
-            onClick={downloadFinanceCsv}
-            className="h-12 px-4 md:px-5 rounded-2xl finance-export-button text-black text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-black/5"
-          >
-            <Download size={15} /> Export
-          </button>
-        </div>
-      </header>
-
       <div className="finance-hero rounded-[1.25rem] border border-neutral-200 bg-white shadow-sm overflow-hidden">
         <div className="finance-hero-accent" />
         <div className="finance-hero-head p-4 md:p-6 border-b border-neutral-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
@@ -1918,12 +1893,33 @@ export const FinancePaymentSettings = ({
               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Finance desk</p>
               <h3 className="text-2xl font-black tracking-tight text-black mt-1">Transactions and invoices</h3>
             </div>
-            <div className="finance-desk-tabs grid grid-cols-3 rounded-2xl border border-neutral-100 bg-neutral-50 p-1 min-w-full sm:min-w-[360px]">
-              {[
-                ['transactions', 'Transactions'],
-                ['invoices', 'Invoices'],
-                ['paid', 'Paid']
-              ].map(([id, label]) => (
+            <div className="finance-desk-head-actions">
+              <div className="finance-desk-icon-actions" aria-label="Finance actions">
+                <button
+                  type="button"
+                  onClick={() => openGatewayModal()}
+                  className="finance-desk-icon-button is-primary"
+                  aria-label="Gateway setup"
+                  title="Gateway setup"
+                >
+                  <Settings size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadFinanceCsv}
+                  className="finance-desk-icon-button"
+                  aria-label="Export finance CSV"
+                  title="Export finance CSV"
+                >
+                  <Download size={16} />
+                </button>
+              </div>
+              <div className="finance-desk-tabs grid grid-cols-3 rounded-2xl border border-neutral-100 bg-neutral-50 p-1 min-w-full sm:min-w-[360px]">
+                {[
+                  ['transactions', 'Transactions'],
+                  ['invoices', 'Invoices'],
+                  ['paid', 'Paid']
+                ].map(([id, label]) => (
                 <button
                   key={id}
                   type="button"
@@ -1932,7 +1928,8 @@ export const FinancePaymentSettings = ({
                 >
                   {label}
                 </button>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
           <div className="finance-desk-controls p-4 md:p-5 border-b border-neutral-100 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
