@@ -1,6 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Bell, Calendar, Check, ChevronDown, Clock, Hourglass, Info, MessageCircle, Plus, RefreshCw, Search, SendHorizontal, Users, Wrench, X } from 'lucide-react';
-import { buildJumpGuestChatScript } from '../data/guestWorkspace/jumpStudios';
 import * as FirebaseSDK from '../services/firebase';
 import { makeClientNotification, notificationEmailKey, NOTIFICATION_TYPES } from '../services/notifications';
 
@@ -13,34 +12,6 @@ const timestampValue = (value) => {
 };
 
 const LIVE_MESSAGE_LIMIT = 20;
-
-const buildGuestBookingScript = ({ clientName = 'Client', serviceName = 'session', note = '', status = 'pending', chatPreview = '', chatMessages = [] } = {}) => {
-  if (Array.isArray(chatMessages) && chatMessages.length) {
-    const messages = chatMessages
-      .map(message => (typeof message === 'string' ? message : message?.text))
-      .filter(Boolean);
-    if (messages.length) {
-      return {
-        preview: chatPreview || messages[0],
-        messages
-      };
-    }
-  }
-  const direct = buildJumpGuestChatScript({ clientName, serviceName, note, status });
-  const cleanNote = String(note || '').replace(/\s+/g, ' ').trim();
-  const topic = cleanNote || direct.preview;
-  return {
-    preview: direct.preview || topic,
-    messages: direct.messages?.length ? direct.messages : [
-      `Hi Jump Studios, I am checking in about my ${serviceName} booking.`,
-      topic,
-      `Absolutely. We have that noted for your ${serviceName}, and the coaching team will shape the session around it.`,
-      status === 'waitlist'
-        ? 'Thanks. Please keep me posted if a better slot opens.'
-        : 'Perfect, thank you. This makes the plan feel clear.'
-    ]
-  };
-};
 
 const formatPresenceTime = (value) => {
   const ms = timestampValue(value);
@@ -87,103 +58,7 @@ export function WorkspaceInbox({
   const [quickBookingOpen, setQuickBookingOpen] = useState(false);
   const [quickBookingSaving, setQuickBookingSaving] = useState(false);
 
-  const exampleThread = useMemo(() => ({
-    id: 'example-support-thread',
-    clientName: 'Mina Patel',
-    clientEmail: 'mina.patel@jump-client.example',
-    clientPhotoURL: '',
-    workspaceName: 'Jump Studios',
-    lastMessage: 'Can we keep the assessment focused on training around a product launch?',
-    bookingId: 'example-support-booking',
-    bookingStatus: 'pending',
-    serviceName: 'Jump Start Assessment',
-    ownerUnread: 1,
-    clientUnread: 0,
-    rescheduleStatus: 'requested',
-    isExample: true
-  }), []);
-
-  const exampleBooking = useMemo(() => ({
-    id: 'example-support-booking',
-    clientName: 'Mina Patel',
-    clientEmail: 'mina.patel@jump-client.example',
-    clientPhotoURL: '',
-    date: 'Thursday, May 28',
-    time: '17:00',
-    status: 'pending',
-    serviceName: 'Jump Start Assessment',
-    isExample: true
-  }), []);
-
-  const exampleMessages = useMemo(() => ([
-    {
-      id: 'example-system',
-      senderRole: 'system',
-      senderName: 'Booking update',
-      text: 'Example Jump Start Assessment request received for Thursday, May 28 at 17:00.'
-    },
-    {
-      id: 'example-client',
-      senderRole: 'client',
-      senderName: 'Mina Patel',
-      text: 'Hey, can we keep the assessment focused on training around a product launch?'
-    },
-    {
-      id: 'example-owner',
-      senderRole: 'owner',
-      senderName: 'Jump Studios',
-      text: 'Absolutely. We can map your launch schedule, training windows, and recovery plan in the first session.'
-    }
-  ]), []);
-
-  const guestDemoThreads = useMemo(() => {
-    if (!isGuestWorkspace || !Array.isArray(bookings) || bookings.length === 0) return [];
-    const seenClients = new Set();
-    return bookings
-      .filter((booking) => ['pending', 'confirmed', 'waitlist'].includes(String(booking.status || '').toLowerCase()))
-      .filter((booking) => {
-        const key = notificationEmailKey(booking.clientEmail || '') || String(booking.clientName || '').toLowerCase();
-        if (!key || seenClients.has(key)) return false;
-        seenClients.add(key);
-        return true;
-      })
-      .slice(0, 50)
-      .map((booking, index) => {
-        const script = buildGuestBookingScript({
-          clientName: booking.clientName,
-          serviceName: booking.serviceName,
-          note: booking.clientNote,
-          status: booking.status,
-          chatPreview: booking.chatPreview,
-          chatMessages: booking.chatMessages
-        });
-        return {
-          id: `guest-thread-${booking.id}`,
-          clientName: booking.clientName,
-          clientEmail: booking.clientEmail,
-          clientPhotoURL: '',
-          workspaceName: booking.workspaceName || 'Jump Studios',
-          lastMessage: script.preview,
-          chatMessages: script.messages,
-          bookingId: booking.id,
-          bookingStatus: booking.status,
-          serviceName: booking.serviceName,
-          ownerUnread: index % 4 === 0 ? 2 : index % 3 === 0 ? 1 : 0,
-          clientUnread: 0,
-          staffId: booking.staffId || '',
-          rescheduleStatus: index % 5 === 0 ? 'requested' : '',
-          clientOnline: index < 2,
-          clientLastSeenMs: Date.now() - (index + 1) * 38 * 60 * 1000,
-          lastMessageAt: booking.updatedAt || booking.timestamp,
-          updatedAt: booking.updatedAt || booking.timestamp,
-          isExample: true,
-          isGuestDemo: true
-        };
-      });
-  }, [bookings, isGuestWorkspace]);
-
-  const shouldShowExampleThread = isGuestWorkspace && threadsReady && threads.length === 0 && bookings.length === 0;
-  const threadSource = threads.length ? threads : (guestDemoThreads.length ? guestDemoThreads : (shouldShowExampleThread ? [exampleThread] : []));
+  const threadSource = threads;
   const clientProfileByEmail = useMemo(() => {
     const profiles = new Map();
     clientDirectory.forEach(client => {
@@ -244,39 +119,10 @@ export function WorkspaceInbox({
     [activeThreadId, threadSource]
   );
   const linkedBooking = useMemo(
-    () => activeThread?.isExample
-      ? bookings.find(booking => booking.id === activeThread?.bookingId) || exampleBooking
-      : bookings.find(booking => booking.id === activeThread?.bookingId) || null,
-    [activeThread?.bookingId, activeThread?.isExample, bookings, exampleBooking]
+    () => bookings.find(booking => booking.id === activeThread?.bookingId) || null,
+    [activeThread?.bookingId, bookings]
   );
-  const guestDemoMessages = useMemo(() => {
-    if (!activeThread?.isExample || activeThread.id === 'example-support-thread') return exampleMessages;
-    const clientName = activeThread.clientName || 'Client';
-    const serviceName = activeThread.serviceName || linkedBooking?.serviceName || 'appointment';
-    const script = Array.isArray(activeThread.chatMessages) && activeThread.chatMessages.length
-      ? activeThread.chatMessages
-      : buildGuestBookingScript({
-        clientName,
-        serviceName,
-        note: activeThread.lastMessage,
-        status: activeThread.bookingStatus
-      }).messages;
-    return [
-      {
-        id: `${activeThread.id}-system`,
-        senderRole: 'system',
-        senderName: 'Booking update',
-        text: `${serviceName} booking is linked to this support thread. Status: ${activeThread.bookingStatus || 'pending'}.`
-      },
-      ...script.map((text, index) => ({
-        id: `${activeThread.id}-msg-${index}`,
-        senderRole: index === 2 ? 'owner' : 'client',
-        senderName: index === 2 ? 'Jump Studios' : clientName,
-        text
-      }))
-    ];
-  }, [activeThread, exampleMessages, linkedBooking?.serviceName]);
-  const visibleMessages = activeThread?.isExample ? guestDemoMessages : [...olderMessages, ...messages];
+  const visibleMessages = [...olderMessages, ...messages];
   const activeStaff = useMemo(() => {
     const emailKey = notificationEmailKey(user?.email || '');
     return staffList.find(staff => notificationEmailKey(staff.email || '') === emailKey || staff.uid === user?.uid) || staffList[0] || null;

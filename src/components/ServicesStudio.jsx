@@ -103,7 +103,8 @@ export const ServicesStudio = ({
       ...settings,
       services: normalizeServiceList(nextServices)
     };
-    await onUpdateSettings?.(nextSettings, message);
+    const saved = await onUpdateSettings?.(nextSettings, message);
+    return saved !== false;
   };
 
   const openCreateService = () => {
@@ -141,8 +142,8 @@ export const ServicesStudio = ({
       ? services.map(service => service.id === cleaned.id ? cleaned : service)
       : [cleaned, ...services];
     setSelectedId(cleaned.id);
-    await saveSettings(nextServices, `${cleaned.name} saved.`);
-    closeServiceModal();
+    const saved = await saveSettings(nextServices, `${cleaned.name} saved.`);
+    if (saved) closeServiceModal();
   };
 
   const removeDraft = async () => {
@@ -150,8 +151,8 @@ export const ServicesStudio = ({
     const nextServices = services.filter(service => service.id !== draft.id);
     setSelectedId('');
     setDraft(blankService());
-    await saveSettings(nextServices, 'Service removed.');
-    closeServiceModal();
+    const saved = await saveSettings(nextServices, 'Service removed.');
+    if (saved) closeServiceModal();
   };
 
   const updateDraft = (key, value) => setDraft(prev => ({ ...prev, [key]: value }));

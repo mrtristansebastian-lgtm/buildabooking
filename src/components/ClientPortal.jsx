@@ -87,56 +87,7 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
   const [browserPermission, setBrowserPermission] = useState(getBrowserNotificationPermission);
   const notificationSeenRef = useRef(new Set());
   const notificationsReadyRef = useRef(false);
-  const exampleBooking = useMemo(() => ({
-    id: 'example-client-booking',
-    threadId: 'example-client-thread',
-    workspaceName: 'Jump Studios',
-    date: 'Thursday, May 28',
-    time: '14:30',
-    status: 'pending',
-    serviceName: 'Jump Start Assessment',
-    serviceDuration: '45',
-    servicePrice: '35',
-    servicePriceType: 'fixed',
-    isExample: true
-  }), []);
-
-  const exampleThread = useMemo(() => ({
-    id: 'example-client-thread',
-    workspaceName: 'Jump Studios',
-    clientName: user?.displayName || 'Mina Patel',
-    clientEmail: emailKey || 'mina.patel@jump-client.example',
-    bookingId: 'example-client-booking',
-    bookingStatus: 'pending',
-    lastMessage: 'We received your request. You can chat here or request a new coaching time.',
-    clientUnread: 1,
-    rescheduleStatus: 'open',
-    isExample: true
-  }), [emailKey, user?.displayName]);
-
-  const exampleMessages = useMemo(() => ([
-    {
-      id: 'example-client-system',
-      senderRole: 'system',
-      senderName: 'Booking update',
-      text: 'Example Jump Start Assessment request sent for Thursday, May 28 at 14:30.'
-    },
-    {
-      id: 'example-client-owner',
-      senderRole: 'owner',
-      senderName: 'Jump Studios',
-      text: 'Thanks for booking. We will approve the request shortly. If you need a different coaching time, send it here.'
-    },
-    {
-      id: 'example-client-reply',
-      senderRole: 'client',
-      senderName: user?.displayName || 'You',
-      text: 'Perfect, please keep me posted.'
-    }
-  ]), [user?.displayName]);
-
-  const showExamplePortal = Boolean(isGuestPreview);
-  const bookingSource = bookings.length ? bookings : (showExamplePortal ? [exampleBooking] : []);
+  const bookingSource = bookings;
   const mergedThreads = useMemo(() => {
     const byId = new Map();
     [...fallbackThreads, ...threads].forEach(thread => {
@@ -144,7 +95,7 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     });
     return Array.from(byId.values()).sort((a, b) => timestampValue(b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAt || a.lastMessageAt));
   }, [fallbackThreads, threads]);
-  const threadSource = mergedThreads.length ? mergedThreads : (showExamplePortal ? [exampleThread] : []);
+  const threadSource = mergedThreads;
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -287,7 +238,7 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     () => bookingSource.find(booking => booking.id === activeThread?.bookingId) || bookingSource[0] || null,
     [activeThread?.bookingId, bookingSource]
   );
-  const visibleMessages = activeThread?.isExample ? exampleMessages : [...olderMessages, ...messages];
+  const visibleMessages = [...olderMessages, ...messages];
   const chatBrandLogo = activeThread?.workspaceLogo || activeBooking?.workspaceLogo || '';
   const chatStaffName = activeThread?.staffName || activeBooking?.staffName || '';
   const chatStaffPhoto = activeThread?.staffPhotoURL || activeBooking?.staffPhotoURL || '';
@@ -479,7 +430,6 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     const bookingId = booking.bookingId || booking.id;
     const threadId = booking.threadId || (booking.ownerId && bookingId ? buildSupportThreadId(booking.ownerId, bookingId) : '');
     if (threadId) openThread(threadId);
-    if (booking.isExample) openThread(exampleThread.id);
     setRescheduleDraft(prev => ({ ...prev, bookingId: booking.id }));
   };
 
@@ -497,7 +447,6 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     const booking = bookingSource.find(item => item.id === rescheduleDraft.bookingId) || activeBooking;
     if (!booking) return;
     if (booking.isExample) {
-      setActiveThreadId(exampleThread.id);
       setRescheduleDraft({ bookingId: booking.id, date: '', time: '' });
       setRescheduleDialogOpen(false);
       setActiveView('chats');

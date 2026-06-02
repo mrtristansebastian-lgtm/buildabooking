@@ -11,7 +11,6 @@ import { LandingPaymentRail } from './components/LandingPaymentRail';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { ProButton } from './components/ProButton';
 import { FONT_OPTIONS, getFontFamily } from './data/fonts';
-import { createJumpGuestWorkspace, jumpStudiosDemoAssets } from './data/guestWorkspace/jumpStudios';
 import * as FirebaseSDK from './services/firebase';
 import { appId, auth, db, functions, initialAuthToken, isFirebaseConfigured, storage } from './services/firebase';
 import { createDefaultEmailConfig, sendClientEmail } from './services/email';
@@ -526,58 +525,6 @@ const getEditorStyleDirection = (directionId) => (
   editorStyleDirections.find(direction => direction.id === directionId) || editorStyleDirections[0]
 );
 
-const editorSampleServiceImages = [
-  jumpStudiosDemoAssets.coaching,
-  jumpStudiosDemoAssets.team,
-  jumpStudiosDemoAssets.strength,
-  jumpStudiosDemoAssets.mobility,
-  jumpStudiosDemoAssets.homeGym,
-  jumpStudiosDemoAssets.weights
-];
-
-const withEditorSampleMedia = (settings = {}) => {
-  const hasLogo = Boolean(settings.logo);
-  const hasBanner = Boolean(settings.bannerImage);
-  const hasFooterImage = Boolean(settings.businessFooterImage);
-  const hasVenuePhotos = Array.isArray(settings.venuePhotos) && settings.venuePhotos.some(Boolean);
-  const services = normalizeServiceList(settings.services || []).map((service, index) => (
-    Array.isArray(service.imageUrls) && service.imageUrls.some(Boolean)
-      ? service
-      : { ...service, imageUrls: [editorSampleServiceImages[index % editorSampleServiceImages.length]] }
-  ));
-
-  return {
-    ...settings,
-    services,
-    logo: hasLogo ? settings.logo : jumpStudiosDemoAssets.logo,
-    bannerImage: hasBanner ? settings.bannerImage : jumpStudiosDemoAssets.studio,
-    businessFooterImage: hasFooterImage ? settings.businessFooterImage : jumpStudiosDemoAssets.homeGym,
-    venuePhotos: hasVenuePhotos
-      ? settings.venuePhotos
-      : [jumpStudiosDemoAssets.studio, jumpStudiosDemoAssets.team, jumpStudiosDemoAssets.homeGym, jumpStudiosDemoAssets.weights],
-    logoDisplay: {
-      visible: hasLogo ? settings.logoDisplay?.visible !== false : true,
-      alignment: settings.logoDisplay?.alignment || 'center',
-      size: Number(settings.logoDisplay?.size) || 88,
-      placement: settings.logoDisplay?.placement || 'title'
-    },
-    bannerDisplay: {
-      visible: hasBanner ? settings.bannerDisplay?.visible !== false : true,
-      height: Number(settings.bannerDisplay?.height) || 240,
-      position: settings.bannerDisplay?.position || 'center',
-      placement: settings.bannerDisplay?.placement || 'hero',
-      opacity: Number(settings.bannerDisplay?.opacity) || 100
-    },
-    features: {
-      ...(settings.features || {}),
-      socialLinks: settings.features?.socialLinks ?? true,
-      location: settings.features?.location || settings.address || 'Online academy - coaching across time zones'
-    },
-    venueGalleryStyle: settings.venueGalleryStyle || 'mosaic',
-    mapDisplayStyle: settings.mapDisplayStyle === 'none' ? 'card' : (settings.mapDisplayStyle || 'card')
-  };
-};
-
 const defaultFaqItems = [
   { q: 'How do I know my booking is confirmed?', a: 'You will see a confirmation on this page and receive a message when the business approves your request.' },
   { q: 'Can I join a waitlist if the day is full?', a: 'Yes. If waitlist is enabled, you can leave your details and the business can contact you when a slot opens.' }
@@ -976,10 +923,13 @@ const createDefaultSettings = () => ({
   socials: { instagram: '', tiktok: '', facebook: '', website: '' }
 });
 
-const createGuestDemoWorkspace = () => createJumpGuestWorkspace({
-  createDefaultSettings,
-  createDefaultCommunications,
-  getLocalDateStr
+const createGuestDemoWorkspace = () => ({
+  settings: createDefaultSettings(),
+  bookings: [],
+  financeImports: [],
+  staffList: [{ id: 'owner', name: 'Admin', color: '#39FF14', role: 'owner', status: 'connected' }],
+  clientRecords: [],
+  communications: createDefaultCommunications()
 });
 const clampNumber = (value, min, max, fallback) => {
   const parsed = Number(value);
@@ -1326,8 +1276,6 @@ const authRedirectStorageKey = 'build-a-booking-auth-return';
 const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
-const editorDraftStoragePrefix = 'build-a-booking-editor-draft-v2';
-const editorDraftVersionsStoragePrefix = 'build-a-booking-editor-draft-versions-v1';
 const bookingsCacheStoragePrefix = 'build-a-booking-bookings-cache-v1';
 const workspaceTabIds = ['overview', 'bookings', 'business', 'communications', 'editor', 'services', 'finance', 'clients', 'staff', 'profile'];
 const workspaceTabAliases = {
@@ -1393,79 +1341,6 @@ const mergeStateIfChanged = (current, incoming) => {
   return areJsonEqual(current, next) ? current : next;
 };
 
-const getEditorDraftKey = (ownerId = 'guest') => (
-  `${editorDraftStoragePrefix}-${String(ownerId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '-')}`
-);
-
-const readEditorDraft = (ownerId) => {
-  const draft = safeJsonParse(safeLocalGet(getEditorDraftKey(ownerId)));
-  if (!draft || typeof draft !== 'object' || !draft.settings) return null;
-  return draft;
-};
-
-const writeEditorDraft = (ownerId, payload = {}) => {
-  const settingsPayload = payload.settings || {};
-  const draft = {
-    version: 3,
-    status: payload.status || 'autosaved',
-    name: payload.name || 'Working Draft',
-    savedAt: Date.now(),
-    ...payload,
-    settings: {
-      ...settingsPayload,
-      // Local drafts should not keep changing their own fingerprint only because sync metadata moved.
-      updatedAt: settingsPayload.updatedAt || 0,
-      draftAutosavedAt: settingsPayload.draftAutosavedAt || 0
-    }
-  };
-  return safeLocalSet(getEditorDraftKey(ownerId), JSON.stringify(draft));
-};
-
-const clearEditorDraft = (ownerId) => {
-  safeLocalRemove(getEditorDraftKey(ownerId));
-};
-
-const getEditorDraftVersionsKey = (ownerId = 'guest') => (
-  `${editorDraftVersionsStoragePrefix}-${String(ownerId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '-')}`
-);
-
-const clearEditorDraftVersions = (ownerId) => {
-  safeLocalRemove(getEditorDraftVersionsKey(ownerId));
-};
-
-const readEditorDraftVersions = (ownerId) => {
-  const versions = safeJsonParse(safeLocalGet(getEditorDraftVersionsKey(ownerId)), []);
-  if (!Array.isArray(versions)) return [];
-  return versions
-    .filter(version => version && typeof version === 'object' && version.settings)
-    .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))
-    .slice(0, 12);
-};
-
-const writeEditorDraftVersions = (ownerId, versions = []) => {
-  const nextVersions = Array.isArray(versions)
-    ? versions
-      .filter(version => version && typeof version === 'object' && version.settings)
-      .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))
-      .slice(0, 12)
-    : [];
-  return safeLocalSet(getEditorDraftVersionsKey(ownerId), JSON.stringify(nextVersions));
-};
-
-const formatEditorVersionTime = (timestamp) => {
-  if (!timestamp) return 'Not saved yet';
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(timestamp));
-  } catch {
-    return 'Saved version';
-  }
-};
-
 const getBookingsCacheKey = (ownerId = 'guest') => (
   `${bookingsCacheStoragePrefix}-${String(ownerId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '-')}`
 );
@@ -1486,16 +1361,7 @@ const writeBookingsCache = (ownerId, bookings = []) => {
   return safeLocalSet(getBookingsCacheKey(ownerId), JSON.stringify(cached));
 };
 
-const stableSettingsFingerprint = (settings = {}) => {
-  const { updatedAt, draftAutosavedAt, draftSavedAt, draftStatus, draftName, publishedAt, ...stable } = settings || {};
-  try {
-    return JSON.stringify(stable);
-  } catch {
-    return '';
-  }
-};
-
-const stripEditorDraftFields = (settings = {}) => {
+const stripLegacyEditorFields = (settings = {}) => {
   const {
     draftAutosavedAt,
     draftSavedAt,
@@ -1504,28 +1370,6 @@ const stripEditorDraftFields = (settings = {}) => {
     ...publishableSettings
   } = settings || {};
   return publishableSettings;
-};
-
-const buildEditorDraftPayload = (settings = {}, payload = {}) => {
-  const savedAt = payload.savedAt || Date.now();
-  return {
-    version: 3,
-    status: payload.status || 'autosaved',
-    name: payload.name || settings.draftName || 'Working Draft',
-    route: payload.route || null,
-    editorStudioScene: payload.editorStudioScene || '',
-    savedAt,
-    updatedAt: savedAt,
-    settings: {
-      ...settings,
-      draftStatus: payload.status || 'autosaved',
-      draftName: payload.name || settings.draftName || 'Working Draft',
-      draftAutosavedAt: savedAt,
-      draftSavedAt: savedAt,
-      // Keep live/published timestamps stable while someone is experimenting.
-      updatedAt: settings.updatedAt || 0
-    }
-  };
 };
 
 const buildPublicBookingIdempotencyKey = ({ workspaceSlug, formData = {}, dateKey, date, time, serviceId }) => {
@@ -1772,7 +1616,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [editorStudioScene, setEditorStudioScene] = useState('introduction');
             const editorStudioSoundEnabled = true;
             const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
-            const themeTemplateName = '';
             const [detectedBrandSignal, setDetectedBrandSignal] = useState(null);
             const [paletteDetecting, setPaletteDetecting] = useState(false);
             const [device, setDevice] = useState(() => (
@@ -1832,17 +1675,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const compactViewportRef = useRef(false);
             const settingsRef = useRef(null);
             const editorRoomNavDragRef = useRef(null);
-            const editorDraftSaveTimerRef = useRef(0);
-            const editorDraftCloudTimerRef = useRef(0);
-            const editorDraftFlushRef = useRef(null);
-            const editorDraftLastFingerprintRef = useRef('');
-            const editorDraftCloudFingerprintRef = useRef('');
-            const editorDraftRecoveredRef = useRef(false);
             const publishedSettingsSnapshotRef = useRef(null);
-            const cloudEditorDraftRef = useRef(null);
             const guestDemoSeededRef = useRef(false);
-            const [editorDraftVersions, setEditorDraftVersions] = useState([]);
-            const [editorDraftNameInput, setEditorDraftNameInput] = useState('');
             const [editorLaunchPanel, setEditorLaunchPanel] = useState(null);
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
@@ -1851,7 +1685,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const [legalPanel, setLegalPanel] = useState(null);
             const [ownerNotifications, setOwnerNotifications] = useState([]);
             const [workspaceClientThreads, setWorkspaceClientThreads] = useState([]);
-            const [guestNotificationReadIds, setGuestNotificationReadIds] = useState(() => new Set());
             const [browserNotificationPermission, setBrowserNotificationPermission] = useState(getBrowserNotificationPermission);
             const toastTimerRef = useRef(null);
             const unsavedWorkspaceChangesRef = useRef(false);
@@ -1884,8 +1717,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             };
 
             useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
-            useEffect(() => () => window.clearTimeout(editorDraftSaveTimerRef.current), []);
-            useEffect(() => () => window.clearTimeout(editorDraftCloudTimerRef.current), []);
             useEffect(() => () => editorRoomNavDragRef.current?.cleanup?.(), []);
             useEffect(() => {
                 if (typeof window === 'undefined') return undefined;
@@ -2097,7 +1928,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const safeFinanceImports = useMemo(() => asArray(financeImports), [financeImports]);
             const visibleBookings = useMemo(() => asArray(bookings), [bookings]);
-            const editorDraftOwnerKey = workspaceOwnerId || user?.uid || (isGuestWorkspace ? 'guest' : 'local');
             const setBookingsAndCache = (updater) => {
                 setBookings(prev => {
                     const nextBookings = typeof updater === 'function' ? updater(prev) : updater;
@@ -2107,7 +1937,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     return nextBookings;
                 });
             };
-            const isEditorWorkspaceOpen = view === 'dashboard' && activeTab === 'editor';
             const bookingPageSlug = useMemo(
                 () => buildBookingSlug(settings.slug || settings.brandName || settings.businessName || 'studio'),
                 [settings.brandName, settings.businessName, settings.slug]
@@ -2119,10 +1948,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [bookingPageRoute]);
             const resetWorkspaceRuntimeState = () => {
                 publishedSettingsSnapshotRef.current = null;
-                cloudEditorDraftRef.current = null;
-                editorDraftRecoveredRef.current = false;
-                editorDraftLastFingerprintRef.current = '';
-                editorDraftCloudFingerprintRef.current = '';
                 guestDemoSeededRef.current = false;
                 ownerNotificationSeenRef.current = new Set();
                 ownerNotificationsReadyRef.current = false;
@@ -2146,18 +1971,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [publicSlug, loading, user?.uid, guestMode, isGuestWorkspace]);
 
             useEffect(() => {
-                if (!isEditorWorkspaceOpen || !editorDraftOwnerKey) return;
-                if (isGuestWorkspace) {
-                    setEditorDraftVersions([]);
-                    setEditorDraftNameInput(settings.draftName || settings.brandName || 'Jump Studios');
-                    return;
-                }
-                const versions = readEditorDraftVersions(editorDraftOwnerKey);
-                setEditorDraftVersions(versions);
-                setEditorDraftNameInput(current => current || settings.draftName || settings.brandName || 'Working Draft');
-            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, isGuestWorkspace, settings.brandName, settings.draftName]);
-
-            useEffect(() => {
                 if (!isGuestWorkspace) {
                     guestDemoSeededRef.current = false;
                     return;
@@ -2165,8 +1978,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (loading) return;
                 if (guestDemoSeededRef.current) return;
 
-                clearEditorDraft('guest');
-                clearEditorDraftVersions('guest');
                 const demoWorkspace = initialGuestWorkspaceRef.current || createGuestDemoWorkspace();
                 setSettings(demoWorkspace.settings);
                 setBookings(asArray(demoWorkspace.bookings));
@@ -2176,100 +1987,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setClientRecords(asArray(demoWorkspace.clientRecords));
                 setCommunications(demoWorkspace.communications);
                 setAccountProfileOverride(demoWorkspace.settings.accountProfiles?.['guest-workspace'] || {});
-                setEditorDraftVersions([]);
-                setEditorDraftNameInput(demoWorkspace.settings.brandName || 'Jump Studios');
                 guestDemoSeededRef.current = true;
             }, [isGuestWorkspace, loading]);
-
-            useEffect(() => {
-                if (publicSlug || isGuestWorkspace || !editorDraftOwnerKey || !isEditorWorkspaceOpen) return;
-                const localDraft = readEditorDraft(editorDraftOwnerKey);
-                if (!localDraft?.settings) return;
-                const localDraftAgeMs = Date.now() - Number(localDraft.savedAt || 0);
-                if (localDraftAgeMs > 1000 * 60 * 60 * 24 * 14) return;
-                const remoteUpdatedAt = getTimestampValue(settingsRef.current?.updatedAt || settings.updatedAt);
-                if (Number(localDraft.savedAt || 0) <= remoteUpdatedAt) return;
-                setSettings(prev => mergeStateIfChanged(prev, localDraft.settings));
-                if (localDraft.editorStudioScene) {
-                    setEditorStudioScene(localDraft.editorStudioScene);
-                }
-                if (!editorDraftRecoveredRef.current) {
-                    editorDraftRecoveredRef.current = true;
-                    showToast('Recovered your latest editor draft on this device.');
-                }
-            }, [editorDraftOwnerKey, isEditorWorkspaceOpen, isGuestWorkspace, publicSlug]);
-
-            useEffect(() => {
-                if (publicSlug || isGuestWorkspace || !editorDraftOwnerKey || !isEditorWorkspaceOpen) {
-                    editorDraftFlushRef.current = null;
-                    return undefined;
-                }
-                const route = { view: 'dashboard', activeTab: 'editor', editorTab };
-                const persistDraft = () => {
-                    const draftPayload = buildEditorDraftPayload(settingsRef.current || settings, {
-                        route,
-                        editorStudioScene,
-                        status: 'autosaved',
-                        name: themeTemplateName || 'Working Draft'
-                    });
-                    writeEditorDraft(editorDraftOwnerKey, draftPayload);
-                };
-                editorDraftFlushRef.current = persistDraft;
-                const fingerprint = JSON.stringify({
-                    owner: editorDraftOwnerKey,
-                    route,
-                    scene: editorStudioScene,
-                    settings: stableSettingsFingerprint(settings)
-                });
-                if (fingerprint === editorDraftLastFingerprintRef.current) return undefined;
-                editorDraftLastFingerprintRef.current = fingerprint;
-                window.clearTimeout(editorDraftSaveTimerRef.current);
-                editorDraftSaveTimerRef.current = window.setTimeout(persistDraft, 400);
-                return undefined;
-            }, [editorDraftOwnerKey, editorStudioScene, editorTab, isEditorWorkspaceOpen, isGuestWorkspace, publicSlug, settings, themeTemplateName]);
-
-            useEffect(() => {
-                if (publicSlug || isGuestWorkspace || !isFirebaseConfigured || !db || !workspaceOwnerId || !canManageWorkspace || activeTab !== 'editor') return undefined;
-                const fingerprint = stableSettingsFingerprint(settings);
-                if (!fingerprint || fingerprint === editorDraftCloudFingerprintRef.current) return undefined;
-                window.clearTimeout(editorDraftCloudTimerRef.current);
-                editorDraftCloudTimerRef.current = window.setTimeout(async () => {
-                    try {
-                        const draftPayload = buildEditorDraftPayload(settingsRef.current || settings, {
-                            route: { view, activeTab, editorTab },
-                            editorStudioScene,
-                            status: 'autosaved',
-                            name: themeTemplateName || 'Working Draft'
-                        });
-                        await FirebaseSDK.setDoc(
-                            FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'editorDraft'),
-                            draftPayload,
-                            { merge: true }
-                        );
-                        editorDraftCloudFingerprintRef.current = stableSettingsFingerprint(draftPayload.settings);
-                    } catch (error) {
-                        console.warn('Editor cloud draft sync paused.', error);
-                    }
-                }, 7000);
-                return undefined;
-            }, [activeTab, canManageWorkspace, editorStudioScene, editorTab, isGuestWorkspace, publicSlug, settings, themeTemplateName, view, workspaceOwnerId]);
-
-            useEffect(() => {
-                const flushLocalDraft = () => {
-                    editorDraftFlushRef.current?.();
-                };
-                const handleVisibility = () => {
-                    if (document.visibilityState !== 'visible') flushLocalDraft();
-                };
-                document.addEventListener('visibilitychange', handleVisibility);
-                window.addEventListener('pagehide', flushLocalDraft);
-                window.addEventListener('beforeunload', flushLocalDraft);
-                return () => {
-                    document.removeEventListener('visibilitychange', handleVisibility);
-                    window.removeEventListener('pagehide', flushLocalDraft);
-                    window.removeEventListener('beforeunload', flushLocalDraft);
-                };
-            }, []);
 
             useEffect(() => {
                 const handleWindowError = (event) => {
@@ -2402,46 +2121,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 return String(source).trim().split(/\s+/)[0] || 'Builder';
             }, [activeStaffProfile?.name, personalDisplayName, settings.brandName, user?.displayName, user?.email]);
 
-            const exampleBooking = useMemo(() => ({
-                id: 'example-booking',
-                clientName: 'Mina Patel',
-                clientPhone: '+44 20 5555 0188',
-                clientEmail: 'mina.patel@jump-client.example',
-                clientNote: 'Example only. Mina booked from the public booking page and wants strength coaching around a busy product launch.',
-                clientBirthday: '12 March 1992',
-                clientPhotoURL: '',
-                clientAvatar: '',
-                avatar: '',
-                serviceName: 'Jump Start Assessment',
-                serviceDuration: '60',
-                servicePrice: '35',
-                paymentMethod: 'stripe',
-                paymentGateway: 'stripe',
-                paymentStatus: 'manual_pending',
-                paymentProviderName: 'Stripe checkout',
-                date: 'Thursday, May 28',
-                time: '17:00',
-                status: 'pending',
-                timestamp: 0,
-                noShowHistory: false,
-                isExample: true
-            }), []);
-            const exampleClient = useMemo(() => ({
-                id: 'example-client',
-                name: 'Mina Patel',
-                phone: '+44 20 5555 0188',
-                email: 'mina.patel@jump-client.example',
-                birthday: '12 March 1992',
-                notes: 'Example only. Product lead in London. Books from the public booking page and wants a realistic training plan that works around launch weeks.',
-                avatar: '',
-                labels: ['Example'],
-                autoLabels: ['First Time'],
-                bookings: [{ ...exampleBooking, id: 'example-client-history', status: 'confirmed' }],
-                bookingCount: 1,
-                lastBooking: { ...exampleBooking, status: 'confirmed' },
-                source: 'example',
-                isExample: true
-            }), [exampleBooking]);
             const bookingDesk = useMemo(() => {
                 const today = new Date();
                 const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -2649,96 +2328,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [bookingDeskPeriod, bookingFilter, bookingSearch, bookingPaymentFilter, bookingSort, visibleBookings, safeStaffList, bookingCustomRange]);
 
             const filteredBookings = bookingDesk.filteredRows;
-            const showBookingExample = isGuestWorkspace && bookingsReady && visibleBookings.length === 0;
-            const bookingRows = showBookingExample ? [exampleBooking] : filteredBookings;
-            const guestOwnerNotifications = useMemo(() => {
-                if (!isGuestWorkspace) return [];
-                const recentBooking = visibleBookings.find(booking => booking.status === 'pending' || booking.status === 'waitlist') || visibleBookings[0] || exampleBooking;
-                const paidBooking = visibleBookings.find(booking => String(booking.paymentStatus || '').toLowerCase().includes('paid')) || visibleBookings[1] || recentBooking;
-                const birthdayClient = safeClientRecords.find(client => client.birthday) || null;
-                return [
-                    makeOwnerNotification({
-                        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
-                        title: `${recentBooking.clientName || 'New client'} requested a booking`,
-                        body: `${recentBooking.serviceName || 'A service'} is ready for review in the booking desk.`,
-                        ownerId: 'guest-workspace',
-                        booking: recentBooking,
-                        tab: 'bookings',
-                        priority: 'high',
-                        metadata: { demo: true }
-                    }),
-                    makeOwnerNotification({
-                        type: NOTIFICATION_TYPES.NEW_MESSAGE,
-                        title: 'Support reply waiting',
-                        body: 'A client thread has new booking context attached.',
-                        ownerId: 'guest-workspace',
-                        threadId: recentBooking.threadId || recentBooking.id || '',
-                        tab: 'communications',
-                        priority: 'normal',
-                        metadata: { demo: true }
-                    }),
-                    makeOwnerNotification({
-                        type: NOTIFICATION_TYPES.BOOKING_CONFIRMED,
-                        title: 'Payment status updated',
-                        body: `${paidBooking.clientName || 'Client'} is reflected in finance and bookings.`,
-                        ownerId: 'guest-workspace',
-                        booking: paidBooking,
-                        tab: 'finance',
-                        priority: 'normal',
-                        metadata: { demo: true }
-                    }),
-                    ...(birthdayClient ? [makeOwnerNotification({
-                        type: NOTIFICATION_TYPES.BIRTHDAY_REMINDER,
-                        title: `${birthdayClient.name}'s birthday is saved`,
-                        body: 'Client profiles keep small details close to the work.',
-                        ownerId: 'guest-workspace',
-                        tab: 'clients',
-                        priority: 'normal',
-                        metadata: { demo: true }
-                    })] : [])
-                ].map((notification, index) => ({
-                    ...notification,
-                    id: `guest-alert-${index}`,
-                    read: guestNotificationReadIds.has(`guest-alert-${index}`),
-                    createdAtMs: Date.now() - (index * 11 * 60 * 1000)
-                }));
-            }, [safeClientRecords, exampleBooking, guestNotificationReadIds, isGuestWorkspace, visibleBookings]);
-            const workspaceNotifications = isGuestWorkspace ? guestOwnerNotifications : ownerNotifications;
+            const bookingRows = filteredBookings;
+            const workspaceNotifications = ownerNotifications;
             const workspaceSupportThreads = useMemo(() => {
-                if (!isGuestWorkspace) return workspaceClientThreads;
-                const seenClients = new Set();
-                return visibleBookings
-                    .filter(booking => ['pending', 'confirmed', 'waitlist'].includes(String(booking.status || '').toLowerCase()))
-                    .filter((booking) => {
-                        const key = notificationEmailKey(booking.clientEmail || '') || String(booking.clientName || '').trim().toLowerCase();
-                        if (!key || seenClients.has(key)) return false;
-                        seenClients.add(key);
-                        return true;
-                    })
-                    .map((booking, index) => {
-                        const chatMessages = Array.isArray(booking.chatMessages) ? booking.chatMessages : [];
-                        const lastClientMessage = chatMessages
-                            .map(message => (typeof message === 'string' ? message : message?.text))
-                            .filter(Boolean)
-                            .find(message => !String(message).toLowerCase().startsWith('absolutely')) || '';
-                        return {
-                            id: `guest-thread-${booking.id}`,
-                            clientName: booking.clientName || 'Client',
-                            clientEmail: booking.clientEmail || '',
-                            bookingId: booking.id,
-                            bookingStatus: booking.status || 'pending',
-                            rescheduleStatus: index % 5 === 0 ? 'requested' : '',
-                            serviceName: booking.serviceName || 'Booking',
-                            lastMessage: booking.chatPreview || lastClientMessage || booking.clientNote || 'Client message waiting.',
-                            lastMessageAt: booking.updatedAt || booking.timestamp || booking.createdAt,
-                            updatedAt: booking.updatedAt || booking.timestamp || booking.createdAt,
-                            ownerUnread: index % 4 === 0 ? 2 : index % 3 === 0 ? 1 : 0,
-                            isGuestDemo: true
-                        };
-                    })
-                    .sort((a, b) => dateValueToMs(b.lastMessageAt || b.updatedAt) - dateValueToMs(a.lastMessageAt || a.updatedAt))
-                    .slice(0, 40);
-            }, [workspaceClientThreads, isGuestWorkspace, visibleBookings]);
+                return workspaceClientThreads;
+            }, [workspaceClientThreads]);
             const clientLabelOptions = ['VIP', 'Needs Follow-up', 'Prefers Chat', 'High Value', 'No-show Risk'];
             const buildClientKey = (name, phone) => {
                 const phoneKey = (phone || '').replace(/\D/g, '');
@@ -2931,12 +2525,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 if (notification?.tab) navigateWorkspaceTab(notification.tab, notification.editorTab);
                 else if (notification?.editorTab) setEditorTab(notification.editorTab);
             };
-            const markWorkspaceNotificationRead = isGuestWorkspace
-                ? (notificationId) => setGuestNotificationReadIds(prev => new Set([...prev, notificationId]))
-                : markOwnerNotificationRead;
-            const markAllWorkspaceNotificationsRead = isGuestWorkspace
-                ? () => setGuestNotificationReadIds(prev => new Set([...prev, ...guestOwnerNotifications.map(notification => notification.id)]))
-                : markAllOwnerNotificationsRead;
+            const markWorkspaceNotificationRead = markOwnerNotificationRead;
+            const markAllWorkspaceNotificationsRead = markAllOwnerNotificationsRead;
 
             const dashboardGreeting = useMemo(() => {
                 const hour = new Date().getHours();
@@ -2986,9 +2576,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const selectedClient = useMemo(() => (
                 clientDirectory.find(client => client.id === selectedClientId) || null
             ), [clientDirectory, selectedClientId]);
-            const showClientExample = isGuestWorkspace && bookingsReady && clientDirectory.length === 0 && !clientSearch.trim();
-            const displayClients = showClientExample ? [exampleClient] : filteredClientDirectory;
-            const activeClient = selectedClient || (showClientExample && selectedClientId === exampleClient.id ? exampleClient : null);
+            const displayClients = filteredClientDirectory;
+            const activeClient = selectedClient;
 
             const clientProfileByKey = useMemo(() => (
                 new Map(clientDirectory.map(client => [client.id, client]))
@@ -3006,14 +2595,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             useEffect(() => {
                 if (!clientDirectory.length) {
-                    if (selectedClientId && (!showClientExample || selectedClientId !== exampleClient.id)) setSelectedClientId(null);
+                    if (selectedClientId) setSelectedClientId(null);
                     return;
                 }
                 if (selectedClientId && !clientDirectory.some(client => client.id === selectedClientId)) {
                     setSelectedClientId(null);
                     setClientMobileView('directory');
                 }
-            }, [clientDirectory, exampleClient.id, selectedClientId, showClientExample]);
+            }, [clientDirectory, selectedClientId]);
 
             useEffect(() => {
                 setClientNoteDraft(selectedClient?.notes || '');
@@ -3148,9 +2737,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
             const currentServiceIndustry = themeFilters.industry || settings.serviceIndustry;
             const shouldMountEditorPreview = activeTab === 'editor';
-            const editorPreviewSettings = useMemo(() => (
-                activeTab === 'editor' ? withEditorSampleMedia(settings) : settings
-            ), [activeTab, settings]);
+            const editorPreviewSettings = settings;
 
             const setThemeFilterValue = (groupId, filterId) => {
                 startTransition(() => {
@@ -3669,7 +3256,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 const localGuestSettings = settingsRef.current || settings;
                 const localGuestSlug = buildBookingSlug(localGuestSettings.slug || localGuestSettings.brandName || localGuestSettings.businessName || 'studio');
                 if (!user && (guestMode || safeLocalGet(guestModeStorageKey) === 'true') && localGuestSlug === publicSlug) {
-                    const publishableGuestSettings = stripEditorDraftFields(localGuestSettings);
+                    const publishableGuestSettings = stripLegacyEditorFields(localGuestSettings);
                     setPublicError('');
                     setPublicWorkspace({
                         ...publishableGuestSettings,
@@ -3776,32 +3363,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     if(data.fontFamily === 'serif') data.fontFamily = 'playfair';
                     if(data.fontFamily === 'mono') data.fontFamily = 'space-mono';
                     if(data.fontFamily === 'display') data.fontFamily = 'syne';
-
-                    const publishedUpdatedAt = Math.max(getTimestampValue(data.updatedAt), getTimestampValue(data.publishedAt));
-                    const cloudDraft = cloudEditorDraftRef.current;
-                    const cloudDraftAt = getTimestampValue(cloudDraft?.savedAt || cloudDraft?.updatedAt);
-                    let recoveredDraft = null;
-
-                    if (isEditorWorkspaceOpen && canManageWorkspace && cloudDraft?.settings && cloudDraftAt > publishedUpdatedAt) {
-                        recoveredDraft = cloudDraft;
-                        data = { ...data, ...cloudDraft.settings };
-                    }
-
-                    const localDraft = readEditorDraft(workspaceOwnerId);
-                    const localDraftAt = getTimestampValue(localDraft?.savedAt);
-                    if (isEditorWorkspaceOpen && canManageWorkspace && localDraft?.settings && localDraftAt > Math.max(publishedUpdatedAt, cloudDraftAt)) {
-                        recoveredDraft = localDraft;
-                        data = { ...data, ...localDraft.settings };
-                    }
-
-                    if (recoveredDraft?.editorStudioScene) {
-                        setEditorStudioScene(recoveredDraft.editorStudioScene);
-                    }
-                    if (recoveredDraft && !editorDraftRecoveredRef.current) {
-                        editorDraftRecoveredRef.current = true;
-                        showToast('Recovered your latest editor draft.');
-                    }
-
                     setSettings(prev => mergeStateIfChanged(prev, data));
                 };
 
@@ -3816,14 +3377,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
                 }, handleSyncError('Settings'));
 
-                const editorDraftRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'editorDraft');
-                const unsubEditorDraft = FirebaseSDK.onSnapshot(editorDraftRef, (docSnap) => {
-                    cloudEditorDraftRef.current = docSnap.exists() ? docSnap.data() : null;
-                    if (cloudEditorDraftRef.current?.settings) {
-                        applyWorkspaceSettings(publishedSettingsSnapshotRef.current || settingsRef.current || {});
-                    }
-                }, handleSyncError('Editor draft'));
-                
                 const staffRef = FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff');
                 const unsubStaff = FirebaseSDK.onSnapshot(staffRef, (docSnap) => { 
                     if (docSnap.exists()) {
@@ -3874,8 +3427,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
                 }, handleSyncError('Finance import'));
 
-                return () => { unsubSettings(); unsubEditorDraft(); unsubStaff(); unsubComms(); unsubClients(); unsubFinanceImports(); };
-            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL, isEditorWorkspaceOpen, canManageWorkspace]);
+                return () => { unsubSettings(); unsubStaff(); unsubComms(); unsubClients(); unsubFinanceImports(); };
+            }, [user, workspaceOwnerId, isWorkspaceOwner, publicSlug, personalDisplayName, personalProfile.email, personalProfile.mobile, personalProfile.photoURL]);
 
             useEffect(() => {
                 if (publicSlug || isGuestWorkspace || !isFirebaseConfigured || !db || !workspaceOwnerId) {
@@ -3962,20 +3515,20 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 return () => unsubBookings();
             }, [isGuestWorkspace, loading, publicSlug, user?.uid, workspaceOwnerId]);
 
-            const publishSettings = async (nextSettings = settings, successMessage = "Booking page published!", options = {}) => {
+            const publishSettings = async (nextSettings = settings, successMessage = "Booking page saved.", options = {}) => {
                 const silent = Boolean(options.silent);
                 if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
                     if (!silent) showToast("Workspace updated in demo mode.");
                     return true;
                 }
                 if (!canManageWorkspace) {
-                    if (!silent) showToast("Only owners and admins can publish workspace settings.");
+                    if (!silent) showToast("Only owners and admins can save workspace settings.");
                     return false;
                 }
-                if (!silent) showToast("Publishing updates...");
+                if (!silent) showToast("Saving updates...");
                 try {
                     const publicSlug = buildBookingSlug(nextSettings.slug || nextSettings.brandName);
-                    const publishableSettings = stripEditorDraftFields(nextSettings);
+                    const publishableSettings = stripLegacyEditorFields(nextSettings);
                     const settingsToPublish = {
                         ...publishableSettings,
                         slug: publicSlug,
@@ -3993,17 +3546,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         ownerEmail: user?.email || '',
                         workspaceName: publicSettingsToPublish.brandName || 'Build A Booking Workspace'
                     });
-                    await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'editorDraft')).catch((draftError) => {
-                        console.warn('Could not clear cloud editor draft after publish.', draftError);
-                    });
-                    cloudEditorDraftRef.current = null;
-                    editorDraftCloudFingerprintRef.current = stableSettingsFingerprint(settingsToPublish);
-                    clearEditorDraft(workspaceOwnerId || editorDraftOwnerKey);
                     if (!silent) showToast(successMessage);
                     return true;
                 } catch (err) {
                     console.error(err);
-                    if (!silent) showToast("Failed to publish.");
+                    if (!silent) showToast("Failed to save.");
                     return false;
                 }
             };
@@ -4014,114 +3561,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 return saved;
             };
 
-            const saveSettingsDraft = async (nextSettings = settings, successMessage = "Editor draft saved.") => {
-                const draftSettings = {
-                    ...nextSettings,
-                    draftStatus: 'saved',
-                    draftName: themeTemplateName || nextSettings.draftName || 'Working Draft',
-                    draftSavedAt: Date.now(),
-                    draftAutosavedAt: Date.now(),
-                    updatedAt: nextSettings.updatedAt || 0
+            const saveWorkspaceSettingsPatch = async (patch = {}, successMessage = 'Workspace saved.') => {
+                const baseSettings = stripLegacyEditorFields(publishedSettingsSnapshotRef.current || settingsRef.current || settings);
+                const nextSettings = {
+                    ...baseSettings,
+                    ...patch
                 };
-                const draftPayload = buildEditorDraftPayload(draftSettings, {
-                    route: { view, activeTab, editorTab },
-                    editorStudioScene,
-                    status: 'saved',
-                    name: draftSettings.draftName
-                });
-                if (isGuestWorkspace) {
-                    setSettings(draftSettings);
+                setSettings(prev => mergeStateIfChanged(prev, { ...prev, ...patch }));
+                const saved = await publishSettings(nextSettings, successMessage, { silent: true });
+                if (saved) {
                     clearWorkspaceDirty();
                     showToast(successMessage);
-                    return true;
+                } else {
+                    showToast('Workspace settings could not be saved.');
                 }
-                writeEditorDraft(workspaceOwnerId || editorDraftOwnerKey, draftPayload);
-                if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
-                    setSettings(draftSettings);
-                    clearWorkspaceDirty();
-                    showToast(successMessage);
-                    return true;
-                }
-                if (!canManageWorkspace) {
-                    showToast("Only owners and admins can save workspace settings.");
-                    return false;
-                }
-                try {
-                    await FirebaseSDK.setDoc(
-                        FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'editorDraft'),
-                        draftPayload,
-                        { merge: true }
-                    );
-                    cloudEditorDraftRef.current = draftPayload;
-                    editorDraftCloudFingerprintRef.current = stableSettingsFingerprint(draftPayload.settings);
-                    setSettings(prev => ({ ...prev, ...draftSettings }));
-                    clearWorkspaceDirty();
-                    showToast(successMessage);
-                    return true;
-                } catch (err) {
-                    console.error(err);
-                    showToast("Draft could not be saved.");
-                    return false;
-                }
-            };
-
-            const saveEditorVersion = async () => {
-                const savedAt = Date.now();
-                const versionName = (editorDraftNameInput || '').trim() || settings.draftName || settings.brandName || 'Saved version';
-                const versionSettings = {
-                    ...settings,
-                    draftName: versionName,
-                    draftStatus: 'version',
-                    draftSavedAt: savedAt,
-                    draftAutosavedAt: savedAt,
-                    updatedAt: settings.updatedAt || 0
-                };
-                const version = {
-                    id: `version-${savedAt}`,
-                    name: versionName,
-                    savedAt,
-                    route: { view, activeTab, editorTab },
-                    editorStudioScene,
-                    settings: versionSettings
-                };
-                const nextVersions = [version, ...editorDraftVersions.filter(item => item.id !== version.id)].slice(0, 12);
-                if (!isGuestWorkspace) {
-                    writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
-                }
-                setEditorDraftVersions(nextVersions);
-                await saveSettingsDraft(versionSettings, `Saved "${versionName}".`);
-                return true;
-            };
-
-            const restoreEditorVersion = (version) => {
-                if (!version?.settings) return;
-                markWorkspaceDirty();
-                setSettings(prev => mergeStateIfChanged(prev, version.settings));
-                if (version.route?.editorTab && editorTabIds.includes(version.route.editorTab)) {
-                    setEditorTab(version.route.editorTab);
-                }
-                if (version.editorStudioScene) {
-                    setEditorStudioScene(version.editorStudioScene);
-                }
-                setEditorDraftNameInput(version.name || version.settings.draftName || 'Restored version');
-                if (!isGuestWorkspace) {
-                    writeEditorDraft(editorDraftOwnerKey, buildEditorDraftPayload(version.settings, {
-                        route: version.route || { view, activeTab, editorTab },
-                        editorStudioScene: version.editorStudioScene || editorStudioScene,
-                        status: 'restored',
-                        name: version.name || version.settings.draftName || 'Restored version'
-                    }));
-                }
-                showToast(`Restored "${version.name || 'saved version'}".`);
-            };
-
-            const deleteEditorVersion = (versionId) => {
-                const nextVersions = editorDraftVersions.filter(version => version.id !== versionId);
-                if (!isGuestWorkspace) {
-                    writeEditorDraftVersions(editorDraftOwnerKey, nextVersions);
-                }
-                setEditorDraftVersions(nextVersions);
-                showToast('Version removed.');
+                return saved;
             };
 
             const openBookingPage = () => {
@@ -4166,6 +3620,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const saveStaff = async (newList, previousList = staffList, options = {}) => {
                 const profileForStaff = options.profile || personalProfile;
                 const displayNameForStaff = options.displayName || personalDisplayName;
+                const silent = Boolean(options.silent);
                 const normalizedList = newList.map((staff, index) => {
                     if (staff.id === 'owner') {
                         return {
@@ -4194,27 +3649,34 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     };
                 });
                 setStaffList(normalizedList);
-                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return true;
                 if (!canManageTeam) {
-                    showToast("Only owners and admins can manage team access.");
-                    return;
+                    if (!silent) showToast("Only owners and admins can manage team access.");
+                    return false;
                 }
 
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff'), { list: normalizedList, updatedAt: Date.now() });
+                try {
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff'), { list: normalizedList, updatedAt: Date.now() });
 
-                const activeStaff = normalizedList.filter(staff => staff.id !== 'owner' && staff.accessEnabled !== false && normalizeEmail(staff.email));
-                const previousStaff = previousList.filter(staff => staff.id !== 'owner' && normalizeEmail(staff.email));
-                const activeEmails = new Set(activeStaff.map(staff => normalizeEmail(staff.email)));
-                await Promise.all(activeStaff.map(writeStaffAccessGrant));
-                await Promise.all(previousStaff.filter(staff => !activeEmails.has(normalizeEmail(staff.email))).map(removeStaffAccessGrant));
+                    const activeStaff = normalizedList.filter(staff => staff.id !== 'owner' && staff.accessEnabled !== false && normalizeEmail(staff.email));
+                    const previousStaff = previousList.filter(staff => staff.id !== 'owner' && normalizeEmail(staff.email));
+                    const activeEmails = new Set(activeStaff.map(staff => normalizeEmail(staff.email)));
+                    await Promise.all(activeStaff.map(writeStaffAccessGrant));
+                    await Promise.all(previousStaff.filter(staff => !activeEmails.has(normalizeEmail(staff.email))).map(removeStaffAccessGrant));
+                    return true;
+                } catch (error) {
+                    console.error('Team save failed', error);
+                    if (!silent) showToast('Team setup could not be saved.');
+                    return false;
+                }
             };
 
             const createStaffMember = async ({ name, email, color, role }) => {
                 const emailKey = normalizeEmail(email);
-                if (!emailKey) return;
+                if (!emailKey) return false;
                 if (!canManageTeam && isFirebaseConfigured) {
                     showToast("Only owners and admins can add staff.");
-                    return;
+                    return false;
                 }
 
                 let detectedAccount = null;
@@ -4243,20 +3705,45 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ...safeStaffList.filter(staff => normalizeEmail(staff.email) !== emailKey),
                     nextStaff
                 ];
-                await saveStaff(nextList, staffList);
-                showToast(detectedAccount ? "Google account detected and access granted." : "Access will activate when they sign in with this email.");
+                const saved = await saveStaff(nextList, staffList);
+                if (saved) showToast(detectedAccount ? "Google account detected and access granted." : "Access will activate when they sign in with this email.");
+                return saved;
             };
 
-            const saveClients = async (newList) => {
+            const saveClients = async (newList, options = {}) => {
+                const silent = Boolean(options.silent);
                 setClientRecords(newList);
-                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients'), { list: newList, updatedAt: Date.now() });
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return true;
+                if (!canManageWorkspace) {
+                    if (!silent) showToast('Only owners and admins can save client records.');
+                    return false;
+                }
+                try {
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients'), { list: newList, updatedAt: Date.now() });
+                    return true;
+                } catch (error) {
+                    console.error('Client save failed', error);
+                    if (!silent) showToast('Client records could not be saved.');
+                    return false;
+                }
             };
 
-            const saveFinanceImports = async (newList) => {
+            const saveFinanceImports = async (newList, options = {}) => {
+                const silent = Boolean(options.silent);
                 setFinanceImports(newList);
-                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return;
-                await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'finance', 'imports'), { list: newList, updatedAt: Date.now() });
+                if (!user || !workspaceOwnerId || !isFirebaseConfigured) return true;
+                if (!canManageWorkspace) {
+                    if (!silent) showToast('Only owners and admins can save finance imports.');
+                    return false;
+                }
+                try {
+                    await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'finance', 'imports'), { list: newList, updatedAt: Date.now() });
+                    return true;
+                } catch (error) {
+                    console.error('Finance import save failed', error);
+                    if (!silent) showToast('Finance imports could not be saved.');
+                    return false;
+                }
             };
 
             const getImportedClientKey = (client = {}) => {
@@ -4341,9 +3828,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 ];
 
                 try {
-                    await Promise.all([
-                        importedClients.length ? saveClients(nextClients) : Promise.resolve(),
-                        importedFinance.length ? saveFinanceImports(nextFinanceImports) : Promise.resolve(),
+                    const saveResults = await Promise.all([
+                        importedClients.length ? saveClients(nextClients, { silent: true }) : Promise.resolve(true),
+                        importedFinance.length ? saveFinanceImports(nextFinanceImports, { silent: true }) : Promise.resolve(true),
                         (isFirebaseConfigured && user && workspaceOwnerId && importedBookings.length)
                             ? Promise.all(importedBookings.map((booking) => {
                                 const { id, ...bookingPayload } = booking;
@@ -4351,9 +3838,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', id),
                                     bookingPayload
                                 );
-                            }))
-                            : Promise.resolve()
+                            })).then(() => true)
+                            : Promise.resolve(true)
                     ]);
+                    if (saveResults.some(result => result === false)) {
+                        throw new Error('One or more CSV save operations failed.');
+                    }
                     const parts = [
                         importedClients.length ? `${importedClients.length} client${importedClients.length === 1 ? '' : 's'}` : '',
                         importedBookings.length ? `${importedBookings.length} booking${importedBookings.length === 1 ? '' : 's'}` : '',
@@ -4381,18 +3871,21 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setBookingsAndCache(prev => prev.filter(booking => !booking.importedViaCsv));
 
                 try {
-                    await Promise.all([
-                        saveClients(nextClients),
-                        saveFinanceImports(nextFinanceImports),
+                    const saveResults = await Promise.all([
+                        saveClients(nextClients, { silent: true }),
+                        saveFinanceImports(nextFinanceImports, { silent: true }),
                         (isFirebaseConfigured && user && workspaceOwnerId)
                             ? FirebaseSDK.getDocs(FirebaseSDK.query(
                                 FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'),
                                 FirebaseSDK.where('importedViaCsv', '==', true)
                             )).then(snapshot => Promise.all(snapshot.docs.map(docSnap => (
                                 FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', docSnap.id))
-                            ))))
-                            : Promise.resolve()
+                            )))).then(() => true)
+                            : Promise.resolve(true)
                     ]);
+                    if (saveResults.some(result => result === false)) {
+                        throw new Error('One or more CSV cleanup operations failed.');
+                    }
                     showToast('Deleted uploaded CSV data. Live records were left alone.');
                     return { clients: importedClientCount, bookings: importedBookingCount, financeRecords: importedFinanceCount };
                 } catch (error) {
@@ -4402,7 +3895,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
 
-            const upsertClientRecord = (clientId, updates) => {
+            const upsertClientRecord = async (clientId, updates) => {
                 const bookingProfile = clientDirectory.find(client => client.id === clientId);
                 const existingRecord = safeClientRecords.find(client => client.id === clientId);
                 const nextRecord = {
@@ -4418,16 +3911,17 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     createdAt: existingRecord?.createdAt || bookingProfile?.createdAt || Date.now(),
                     updatedAt: Date.now()
                 };
-                saveClients([nextRecord, ...safeClientRecords.filter(client => client.id !== clientId)]);
+                return saveClients([nextRecord, ...safeClientRecords.filter(client => client.id !== clientId)]);
             };
 
-            const toggleClientLabel = (client, label) => {
+            const toggleClientLabel = async (client, label) => {
                 if (!client) return;
                 const currentLabels = client.labels || [];
                 const nextLabels = currentLabels.includes(label)
                     ? currentLabels.filter(item => item !== label)
                     : [...currentLabels, label];
-                upsertClientRecord(client.id, { labels: nextLabels });
+                const saved = await upsertClientRecord(client.id, { labels: nextLabels });
+                if (saved) showToast('Client label saved');
             };
 
             const handleClientAvatarUpload = async (clientId, file) => {
@@ -4440,12 +3934,12 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     shape: 'circle'
                 }, async (avatarUrl) => {
                     if (previousAvatar && previousAvatar !== avatarUrl) await deleteStorageAsset(previousAvatar);
-                    upsertClientRecord(clientId, { avatar: avatarUrl });
-                    showToast("Client photo updated");
+                    const saved = await upsertClientRecord(clientId, { avatar: avatarUrl });
+                    if (saved) showToast("Client photo updated");
                 });
             };
 
-            const handleManualClientSubmit = (event) => {
+            const handleManualClientSubmit = async (event) => {
                 event.preventDefault();
                 const form = event.currentTarget;
                 const name = form.clientName.value.trim();
@@ -4461,11 +3955,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ? Array.from(new Set([...(existingClient?.labels || []), label]))
                     : (existingClient?.labels || []);
 
-                upsertClientRecord(id, { name, phone, email, birthday, labels });
-                setSelectedClientId(id);
-                setClientMobileView('profile');
-                form.reset();
-                showToast(existingClient ? "Client profile updated" : "Client added");
+                const saved = await upsertClientRecord(id, { name, phone, email, birthday, labels });
+                if (saved) {
+                    setSelectedClientId(id);
+                    setClientMobileView('profile');
+                    form.reset();
+                    showToast(existingClient ? "Client profile updated" : "Client added");
+                }
             };
 
             useEffect(() => {
@@ -5025,13 +4521,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     }
 
                     if (canManageWorkspace) {
-                        await publishSettings(settingsToSave, successMessage, { silent: true });
+                        const settingsSaved = await publishSettings(settingsToSave, successMessage, { silent: true });
+                        if (!settingsSaved) throw new Error('Workspace settings could not be saved.');
                     } else if (!isFirebaseConfigured) {
                         setSettings(settingsToSave);
                     }
 
                     if (canManageTeam) {
-                        await saveStaff(staffListToSave, staffList, { profile: profileToSave, displayName });
+                        const staffSaved = await saveStaff(staffListToSave, staffList, { profile: profileToSave, displayName, silent: true });
+                        if (!staffSaved) throw new Error('Team profile could not be saved.');
                     }
 
                     showToast(successMessage);
@@ -5267,8 +4765,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setActiveWorkspaceOwnerId('');
                 setWorkspaceAccess([]);
                 safeLocalRemove('build-a-booking-active-workspace');
-                clearEditorDraft('guest');
-                clearEditorDraftVersions('guest');
                 resetWorkspaceRuntimeState();
                 setGuestMode(true);
                 setClientGuestMode(false);
@@ -5395,8 +4891,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 setGuestMode(false);
                 setClientGuestMode(false);
                 safeLocalRemove(guestModeStorageKey);
-                clearEditorDraft('guest');
-                clearEditorDraftVersions('guest');
                 setWorkspaceAccess([]);
                 setActiveWorkspaceOwnerId('');
                 safeLocalRemove('build-a-booking-active-workspace');
@@ -6223,8 +5717,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                             connectedAt: Date.now()
                         });
                         if (canManageWorkspace) {
-                            await saveSettingsDraft({
-                                ...settings,
+                            await saveWorkspaceSettingsPatch({
                                 googleCalendar: {
                                     ...(settings.googleCalendar || {}),
                                     connectedEmail: result.user?.email || user.email || '',
@@ -6299,7 +5792,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                         mode: 'manual-sync'
                     };
                     if (canManageWorkspace) {
-                        await saveSettingsDraft({ ...settings, googleCalendar: nextCalendarSettings }, result.created
+                        await saveWorkspaceSettingsPatch({ googleCalendar: nextCalendarSettings }, result.created
                             ? `${result.created} booking${result.created === 1 ? '' : 's'} synced to Google Calendar.`
                             : 'Google Calendar is already up to date.'
                         );
@@ -6925,8 +6418,8 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             if (view === 'client') {
                 const clientPortalUser = user || (clientGuestMode ? {
                     uid: 'guest-client-preview',
-                    displayName: 'Mina Patel',
-                    email: 'mina.patel@jump-client.example',
+                    displayName: 'Guest Client',
+                    email: 'guest-client@example.com',
                     photoURL: ''
                 } : null);
 
@@ -8109,9 +7602,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             if (industryId) setThemeFilterValue('industry', industryId);
                                         }}
                                         onUpdateSettings={async (nextSettings, message) => {
+                                            const servicePatch = {
+                                                services: normalizeServiceList(nextSettings.services || []),
+                                                serviceIndustry: nextSettings.serviceIndustry || settings.serviceIndustry || ''
+                                            };
                                             markWorkspaceDirty();
-                                            setSettings(nextSettings);
-                                            await saveSettingsDraft(nextSettings, message || 'Services saved.');
+                                            setSettings(prev => mergeStateIfChanged(prev, { ...prev, ...servicePatch }));
+                                            return saveWorkspaceSettingsPatch(servicePatch, message || 'Services saved.');
                                         }}
                                         onImageUpload={requestImageCropUpload}
                                         onImageDelete={deleteStorageAsset}
@@ -8169,7 +7666,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={() => { saveClients(clientRecords); showToast("Client book saved"); }}
+                                                            onClick={async () => {
+                                                                const saved = await saveClients(clientRecords);
+                                                                if (saved) showToast("Client book saved");
+                                                            }}
                                                             className="client-directory-action is-primary"
                                                         >
                                                             <Check size={15}/> Save
@@ -8371,16 +7871,16 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                                                     <form
                                                         key={`client-details-${activeClient.id}`}
-                                                        onSubmit={(event) => {
+                                                        onSubmit={async (event) => {
                                                             event.preventDefault();
                                                             const formData = new FormData(event.currentTarget);
-                                                            upsertClientRecord(activeClient.id, {
+                                                            const saved = await upsertClientRecord(activeClient.id, {
                                                                 name: String(formData.get('name') || '').trim() || activeClient.name,
                                                                 phone: String(formData.get('phone') || '').trim(),
                                                                 email: String(formData.get('email') || '').trim(),
                                                                 birthday: String(formData.get('birthday') || '').trim()
                                                             });
-                                                            showToast('Client details saved');
+                                                            if (saved) showToast('Client details saved');
                                                         }}
                                                         className="client-file-details rounded-2xl border border-neutral-100 bg-neutral-50/80 p-3 md:p-4"
                                                     >
@@ -8437,7 +7937,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             disabled={isExampleClient}
                                                             className="w-full min-h-[190px] bg-neutral-50 border border-neutral-100 rounded-lg p-4 text-sm font-medium outline-none resize-none focus:bg-white focus:border-black transition-colors disabled:text-neutral-500"
                                                         />
-                                                        <button disabled={isExampleClient} onClick={() => { upsertClientRecord(activeClient.id, { notes: clientNoteDraft }); showToast("Client notes saved"); }} className="mt-4 w-full h-11 rounded-lg bg-black text-white flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                                        <button disabled={isExampleClient} onClick={async () => {
+                                                            const saved = await upsertClientRecord(activeClient.id, { notes: clientNoteDraft });
+                                                            if (saved) showToast("Client notes saved");
+                                                        }} className="mt-4 w-full h-11 rounded-lg bg-black text-white flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                                                             <Check size={15}/> {isExampleClient ? 'Example Only' : 'Save Notes'}
                                                         </button>
                                                     </section>
@@ -8553,7 +8056,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     </div>
                                     <div className="team-roster-actions">
                                         <span className="team-roster-active-count inline-flex w-fit text-[10px] font-bold uppercase tracking-widest text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-md">{displayStaffList.length} Active</span>
-                                        <button onClick={() => { saveStaff(staffList); showToast("Team setup saved"); }} className="team-save-inline-button">
+                                        <button onClick={async () => {
+                                            const saved = await saveStaff(staffList);
+                                            if (saved) showToast("Team setup saved");
+                                        }} className="team-save-inline-button">
                                             <Check size={14}/> Save Team
                                         </button>
                                     </div>
@@ -8605,9 +8111,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             const color = e.target.color.value;
                                             const role = e.target.role.value;
                                             if(name && email) {
-                                                await createStaffMember({ name, email, color, role });
-                                                e.target.reset();
-                                                setTeamPanelMode('roster');
+                                                const saved = await createStaffMember({ name, email, color, role });
+                                                if (saved) {
+                                                    e.target.reset();
+                                                    setTeamPanelMode('roster');
+                                                }
                                             }
                                         }} className="space-y-4">
                                             {!canManageTeam && isFirebaseConfigured && (
@@ -8660,7 +8168,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {selectedStaffFile.id !== 'owner' && canManageTeam && (
-                                                    <button onClick={() => { saveStaff(safeStaffList.filter(s => s.id !== selectedStaffFile.id)); setSelectedStaffFileId(null); setTeamPanelMode('roster'); }} className="h-10 px-4 rounded-lg border border-red-100 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                                                    <button onClick={async () => {
+                                                        const saved = await saveStaff(safeStaffList.filter(s => s.id !== selectedStaffFile.id));
+                                                        if (saved) {
+                                                            setSelectedStaffFileId(null);
+                                                            setTeamPanelMode('roster');
+                                                        }
+                                                    }} className="h-10 px-4 rounded-lg border border-red-100 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
                                                         <Trash2 size={14}/> Remove
                                                     </button>
                                                 )}
@@ -9152,51 +8666,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 <div className="editor-floating-launch-popover">
                                     <div className="editor-launch-popover-head">
                                         <div>
-                                            <span>{editorLaunchPanel === 'booking' ? 'Booking page' : 'Draft versions'}</span>
-                                            <strong>{editorLaunchPanel === 'booking' ? bookingPageRoute : `${editorDraftVersions.length} saved`}</strong>
+                                            <span>Booking page</span>
+                                            <strong>{bookingPageRoute}</strong>
                                         </div>
                                         <button type="button" onClick={() => setEditorLaunchPanel(null)} aria-label="Close editor panel">
                                             <X size={14} />
                                         </button>
                                     </div>
-                                    {editorLaunchPanel === 'booking' ? (
-                                        <div className="editor-launch-popover-body">
-                                            <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')} className="editor-link-pill" title={bookingPageUrl}>
-                                                <span>{bookingPageUrl}</span>
-                                                <Share2 size={13} />
-                                            </button>
-                                            <div className="editor-launch-actions">
-                                                <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}>Copy link</button>
-                                                <button type="button" onClick={openBookingPage}>Open page</button>
-                                            </div>
+                                    <div className="editor-launch-popover-body">
+                                        <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')} className="editor-link-pill" title={bookingPageUrl}>
+                                            <span>{bookingPageUrl}</span>
+                                            <Share2 size={13} />
+                                        </button>
+                                        <div className="editor-launch-actions">
+                                            <button type="button" onClick={() => copyToClipboard(bookingPageUrl, 'Booking page link')}>Copy link</button>
+                                            <button type="button" onClick={openBookingPage}>Open page</button>
                                         </div>
-                                    ) : (
-                                        <div className="editor-launch-popover-body">
-                                            <div className="editor-version-save-row">
-                                                <input
-                                                    value={editorDraftNameInput}
-                                                    onChange={(event) => setEditorDraftNameInput(event.target.value)}
-                                                    placeholder="Version name"
-                                                />
-                                                <button type="button" onClick={saveEditorVersion}>Save version</button>
-                                            </div>
-                                            <div className="editor-version-list">
-                                                {editorDraftVersions.length > 0 ? editorDraftVersions.slice(0, 4).map(version => (
-                                                    <article key={version.id} className="editor-version-row">
-                                                        <button type="button" onClick={() => { restoreEditorVersion(version); setEditorLaunchPanel(null); }} title="Restore this version">
-                                                            <strong>{version.name || 'Saved version'}</strong>
-                                                            <span>{formatEditorVersionTime(version.savedAt)}</span>
-                                                        </button>
-                                                        <button type="button" onClick={() => deleteEditorVersion(version.id)} aria-label={`Delete ${version.name || 'saved version'}`}>
-                                                            <Trash2 size={13} />
-                                                        </button>
-                                                    </article>
-                                                )) : (
-                                                    <p>No named versions yet. Save one before you experiment.</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
                             )}
                             <div className="editor-floating-launch-toolbar">
@@ -9204,18 +8690,9 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <Globe size={16} />
                                     <span className="editor-launch-action-label">Page</span>
                                 </button>
-                                <button type="button" onClick={() => setEditorLaunchPanel(panel => panel === 'drafts' ? null : 'drafts')} className={editorLaunchPanel === 'drafts' ? 'is-active' : ''} aria-label="Draft versions" title="Draft versions">
-                                    <History size={16} />
-                                    <span className="editor-launch-action-label">Versions</span>
-                                    {editorDraftVersions.length > 0 && <span className="editor-launch-count">{editorDraftVersions.length}</span>}
-                                </button>
-                                <button type="button" onClick={() => saveSettingsDraft(settings, "Editor draft saved.")} aria-label="Save draft" title="Save draft">
+                                <button type="button" onClick={saveSettings} className="is-primary" aria-label="Save booking page" title="Save booking page">
                                     <CheckCircle2 size={16} />
                                     <span className="editor-launch-action-label">Save</span>
-                                </button>
-                                <button type="button" onClick={saveSettings} className="is-primary" aria-label="Publish to web" title="Publish to web">
-                                    <ArrowRight size={16} />
-                                    <span className="editor-launch-action-label">Publish</span>
                                 </button>
                             </div>
                             </>
@@ -9554,9 +9031,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                 {bookingDesk.activeFilter === 'upcoming' ? 'Latest Upcoming' : `${bookingDesk.activeFilterLabel} Bookings`}
                                             </h2>
                                         <p className="booking-desk-subcopy text-sm text-neutral-500 mt-1">
-                                            {showBookingExample
-                                                ? '0 real records. Example shown for layout only.'
-                                                : `${bookingRows.length} shown / ${bookingDesk.period.rangeLabel}.`}
+                                            {`${bookingRows.length} shown / ${bookingDesk.period.rangeLabel}.`}
                                         </p>
                                     </div>
                                     <div className="booking-desk-head-actions">

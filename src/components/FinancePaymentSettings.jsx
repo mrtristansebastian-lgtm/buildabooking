@@ -163,53 +163,6 @@ const emptyDrafts = gatewayCards.reduce((acc, gateway) => {
   return acc;
 }, {});
 
-const guestDemoGatewaySettings = {
-  stripe: {
-    enabled: true,
-    mode: 'demo',
-    public: {}
-  },
-  payfast: {
-    enabled: true,
-    mode: 'demo',
-    public: {}
-  },
-  manual_eft: {
-    enabled: true,
-    mode: 'demo',
-    public: {
-      accountHolder: 'Jump Studios',
-      bankName: 'Demo Global Bank',
-      accountNumber: '000 555 2026',
-      branchCode: '000000',
-      accountType: 'Business Current',
-      instructions: 'Use your booking ID as the payment reference so the coaching team can match it to your session.'
-    }
-  },
-  cash: {
-    enabled: false,
-    mode: 'demo',
-    public: {
-      instructions: 'Cash is disabled for this online academy demo.'
-    }
-  },
-  yoco: {
-    enabled: true,
-    mode: 'demo',
-    public: {}
-  },
-  paystack: {
-    enabled: true,
-    mode: 'demo',
-    public: {}
-  },
-  ozow: {
-    enabled: true,
-    mode: 'demo',
-    public: {}
-  }
-};
-
 const startOfDay = (date) => {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
@@ -1551,9 +1504,7 @@ export const FinancePaymentSettings = ({
 
   const selectedGateway = gatewayById[selectedGatewayId] || gatewayCards[0];
   const selectedDraft = drafts[selectedGateway.id] || emptyDrafts[selectedGateway.id];
-  const effectiveSaved = useMemo(() => (
-    isGuestWorkspace ? { ...guestDemoGatewaySettings, ...saved } : saved
-  ), [isGuestWorkspace, saved]);
+  const effectiveSaved = useMemo(() => saved, [saved]);
   const selectedPublicConfig = effectiveSaved[selectedGateway.id] || {};
   const isManualGateway = manualGatewayIds.has(selectedGateway.id);
   const isCashGateway = selectedGateway.id === 'cash';
