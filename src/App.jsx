@@ -2,7 +2,7 @@ import { lazy, Suspense, startTransition, useEffect, useLayoutEffect, useMemo, u
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
-    AlignCenter, AlignLeft, AlignRight, ArrowRight, ArrowUpRight, Battery, Bell, BookOpen, BookOpenCheck, Briefcase, BriefcaseBusiness, Calendar, CalendarCheck, CalendarDays, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, DollarSign, Eye, FileText, Globe, GripVertical, HeartHandshake, HelpCircle, History, Home, Hourglass, ImagePlus, Images, Inbox, Info, Instagram, Layers, Layout, LayoutDashboard, Mail, MessageCircle, MessageSquare, MessagesSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Phone, Pipette, Plus, RefreshCw, Search, Settings2, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Tag, Trash2, Type, User, Users, UsersRound, Wifi, X, Zap
+    AlignCenter, AlignLeft, AlignRight, ArrowRight, ArrowUpRight, Battery, Bell, BookOpen, BookOpenCheck, Briefcase, BriefcaseBusiness, Calendar, CalendarCheck, CalendarDays, Camera, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, CreditCard, Crop, DollarSign, Eye, FileText, Globe, GripVertical, HeartHandshake, HelpCircle, History, Home, Hourglass, ImagePlus, Images, Inbox, Info, Instagram, Layers, Layout, LayoutDashboard, Mail, MessageCircle, MessageSquare, MessagesSquare, Monitor, MousePointerClick, Paintbrush, Palette, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, Phone, Pipette, Plus, RefreshCw, Search, Settings2, Share2, ShieldCheck, Signal, SlidersHorizontal, Sparkles, Star, Tag, Trash2, Type, User, Users, UsersRound, Wifi, X, Zap
 } from 'lucide-react';
 import { BuildABookingBrand, BuildABookingMark } from './components/BuildABookingBrand';
 import { EmailNotificationSettings } from './components/EmailNotificationSettings';
@@ -163,6 +163,9 @@ const buildCroppedImageFile = async (crop) => {
 
 const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
   const dragStateRef = useRef(null);
+  const cropUpdateFrameRef = useRef(0);
+  const pendingCropPositionRef = useRef(null);
+  const [cropDragging, setCropDragging] = useState(false);
 
   if (!crop) return null;
 
@@ -184,6 +187,7 @@ const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
       zoom: currentZoom
     };
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    setCropDragging(true);
     event.preventDefault();
   };
   const handleDragMove = (event) => {
@@ -193,13 +197,30 @@ const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
     const dragSensitivity = 100 / Math.max(dragState.zoom, 1);
     const nextPositionX = clampPercent(dragState.positionX - ((event.clientX - dragState.startX) / dragState.width) * dragSensitivity);
     const nextPositionY = clampPercent(dragState.positionY - ((event.clientY - dragState.startY) / dragState.height) * dragSensitivity);
-    onChange({ positionX: nextPositionX, positionY: nextPositionY });
+    pendingCropPositionRef.current = { positionX: nextPositionX, positionY: nextPositionY };
+    if (!cropUpdateFrameRef.current) {
+      cropUpdateFrameRef.current = requestAnimationFrame(() => {
+        cropUpdateFrameRef.current = 0;
+        if (pendingCropPositionRef.current) {
+          onChange(pendingCropPositionRef.current);
+        }
+      });
+    }
     event.preventDefault();
   };
   const handleDragEnd = (event) => {
     if (dragStateRef.current?.pointerId === event.pointerId) {
       dragStateRef.current = null;
     }
+    if (cropUpdateFrameRef.current) {
+      cancelAnimationFrame(cropUpdateFrameRef.current);
+      cropUpdateFrameRef.current = 0;
+    }
+    if (pendingCropPositionRef.current) {
+      onChange(pendingCropPositionRef.current);
+      pendingCropPositionRef.current = null;
+    }
+    setCropDragging(false);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
 
@@ -219,7 +240,7 @@ const ImageCropModal = ({ crop, saving, onChange, onClose, onSave }) => {
         <div className="image-crop-body">
           <div className="image-crop-preview">
             <div
-              className={`image-crop-frame ${crop.shape === 'circle' ? 'is-circle' : ''}`}
+              className={`image-crop-frame ${crop.shape === 'circle' ? 'is-circle' : ''} ${cropDragging ? 'is-dragging' : ''}`}
               style={{ aspectRatio: preset.ratio }}
               role="group"
               aria-label="Drag image to reposition crop"
@@ -374,10 +395,10 @@ const editorStyleDirections = [
     label: 'Native Precision',
     summary: 'The cleanest all-rounder: iOS-like controls, calm rhythm, and strong booking clarity.',
     settings: {
-      logoDisplay: { visible: true, alignment: 'center', size: 88, placement: 'title' },
-      bannerDisplay: { visible: true, height: 240, position: 'center', placement: 'hero', opacity: 100 },
-      serviceDisplayStyle: 'signature',
-      serviceDropdownEnabled: false,
+      logoDisplay: { visible: true, alignment: 'left', size: 104, placement: 'badge' },
+      bannerDisplay: { visible: true, height: 190, position: 'center', placement: 'top', opacity: 92 },
+      serviceDisplayStyle: 'compact',
+      serviceDropdownEnabled: true,
       serviceBorderStyle: 'solid',
       calendarDisplayStyle: 'studio',
       dateStyle: 'solid',
@@ -397,44 +418,14 @@ const editorStyleDirections = [
       socialDisplayStyle: 'icons',
       socialIconStyle: 'outline'
     },
-    sections: ['Services list', 'Native calendar', 'Pill slots', 'Accordion FAQ', 'Pill action', 'Mosaic venue', 'Icon socials']
-  },
-  {
-    id: 'editorial-luxe',
-    label: 'Editorial Luxe',
-    summary: 'More boutique and composed: larger visual moments, quieter help, and refined text-led links.',
-    settings: {
-      logoDisplay: { visible: true, alignment: 'left', size: 72, placement: 'top' },
-      bannerDisplay: { visible: true, height: 300, position: 'center', placement: 'footer', opacity: 96 },
-      serviceDisplayStyle: 'luxury',
-      serviceDropdownEnabled: false,
-      serviceBorderStyle: 'outline',
-      calendarDisplayStyle: 'editorial',
-      dateStyle: 'outline',
-      calendarShadow: true,
-      calendarGlow: false,
-      timeDisplayStyle: 'luxury',
-      timeSlotStyle: 'minimal',
-      availabilityStyle: 'minimal',
-      timeSlotShadow: false,
-      timeSlotGlow: false,
-      actionButtonStyle: 'solid',
-      buttonStyle: 'sharp',
-      faqDisplayStyle: 'split',
-      faqStyle: 'minimal',
-      venueGalleryStyle: 'editorial',
-      mapDisplayStyle: 'footer',
-      socialDisplayStyle: 'minimal',
-      socialIconStyle: 'minimal'
-    },
-    sections: ['Service editorial', 'Poster dates', 'Gallery slots', 'Split FAQ', 'Sharp action', 'Lead venue', 'Text socials']
+    sections: ['Dropdown services', 'Native calendar', 'Pill slots', 'Accordion FAQ', 'Pill action', 'Mosaic venue', 'Icon socials']
   },
   {
     id: 'command-flow',
     label: 'Command Flow',
     summary: 'Fast and operational: compact decisions, high signal states, and a stronger app-like footer system.',
     settings: {
-      logoDisplay: { visible: true, alignment: 'left', size: 78, placement: 'badge' },
+      logoDisplay: { visible: true, alignment: 'left', size: 104, placement: 'badge' },
       bannerDisplay: { visible: true, height: 190, position: 'center', placement: 'top', opacity: 92 },
       serviceDisplayStyle: 'compact',
       serviceDropdownEnabled: true,
@@ -458,66 +449,6 @@ const editorStyleDirections = [
       socialIconStyle: 'solid'
     },
     sections: ['Dropdown services', 'Compact calendar', 'Session blocks', 'Numbered FAQ', 'Fast action', 'Venue reel', 'Social dock']
-  },
-  {
-    id: 'studio-glass',
-    label: 'Studio Glass',
-    summary: 'Airy, luminous, and quietly technical: a glassy studio surface with soft depth and clear booking choices.',
-    settings: {
-      logoDisplay: { visible: true, alignment: 'center', size: 76, placement: 'top' },
-      bannerDisplay: { visible: true, height: 260, position: 'center', placement: 'hero', opacity: 88 },
-      serviceDisplayStyle: 'cards',
-      serviceDropdownEnabled: false,
-      serviceBorderStyle: 'solid',
-      calendarDisplayStyle: 'glow',
-      dateStyle: 'solid',
-      calendarShadow: true,
-      calendarGlow: true,
-      timeDisplayStyle: 'pill',
-      timeSlotStyle: 'solid',
-      availabilityStyle: 'solid',
-      timeSlotShadow: true,
-      timeSlotGlow: true,
-      actionButtonStyle: 'solid',
-      buttonStyle: 'pill',
-      faqDisplayStyle: 'cards',
-      faqStyle: 'solid',
-      venueGalleryStyle: 'mosaic',
-      mapDisplayStyle: 'card',
-      socialDisplayStyle: 'icons',
-      socialIconStyle: 'outline'
-    },
-    sections: ['Soft glass', 'Glow dates', 'Pill slots', 'Card FAQ', 'Hero image', 'Mosaic venue', 'Icon row']
-  },
-  {
-    id: 'venue-story',
-    label: 'Venue Story',
-    summary: 'Image-forward without becoming a website: venue media frames the booking path with calm confidence.',
-    settings: {
-      logoDisplay: { visible: true, alignment: 'center', size: 92, placement: 'title' },
-      bannerDisplay: { visible: true, height: 320, position: 'center', placement: 'hero', opacity: 100 },
-      serviceDisplayStyle: 'gallery',
-      serviceDropdownEnabled: false,
-      serviceBorderStyle: 'outline',
-      calendarDisplayStyle: 'studio',
-      dateStyle: 'solid',
-      calendarShadow: true,
-      calendarGlow: false,
-      timeDisplayStyle: 'blocks',
-      timeSlotStyle: 'solid',
-      availabilityStyle: 'solid',
-      timeSlotShadow: true,
-      timeSlotGlow: false,
-      actionButtonStyle: 'solid',
-      buttonStyle: 'pill',
-      faqDisplayStyle: 'accordion',
-      faqStyle: 'outline',
-      venueGalleryStyle: 'postcard',
-      mapDisplayStyle: 'card',
-      socialDisplayStyle: 'labels',
-      socialIconStyle: 'outline'
-    },
-    sections: ['Venue-first', 'Studio dates', 'Block slots', 'Accordion FAQ', 'Postcard venue', 'Map card', 'Label socials']
   }
 ];
 
@@ -913,7 +844,7 @@ const createDefaultSettings = () => ({
   themeTemplates: [],
   serviceIndustry: '',
   services: [],
-  logoDisplay: { visible: true, alignment: 'left', size: 96 },
+  logoDisplay: { visible: true, alignment: 'left', size: 96, placement: 'title' },
   bannerDisplay: { visible: true, height: 220, position: 'center', placement: 'hero', opacity: 100 },
   logo: '',
   bannerImage: '',
@@ -1617,7 +1548,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const editorStudioSoundEnabled = true;
             const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
             const [detectedBrandSignal, setDetectedBrandSignal] = useState(null);
-            const [paletteDetecting, setPaletteDetecting] = useState(false);
+            const [editorColourCategoryId, setEditorColourCategoryId] = useState('');
             const [device, setDevice] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches ? 'mobile' : 'desktop'
             )); 
@@ -2765,28 +2696,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
                 return () => { cancelled = true; };
             }, [settings.logo, settings.businessFooterImage, settings.bannerImage]);
-
-            const handleAutoDetectThemePalette = async () => {
-                const source = settings.logo || settings.bannerImage || settings.businessFooterImage || '';
-                if (!source) {
-                    showToast('Upload a logo first, then I can read the brand colour.');
-                    return;
-                }
-
-                setPaletteDetecting(true);
-                const detected = await analyzePaletteFromImageSource(source);
-                setPaletteDetecting(false);
-                const brandColor = normalizeHexColor(detected.brandColor || detected.accentColor || detected.dominantColor || detected.colors?.[0], '');
-
-                if (!brandColor) {
-                    showToast('I could not read enough brand colour from that image yet.');
-                    return;
-                }
-
-                setDetectedBrandSignal(detected);
-                applyBrandColorToEditor(brandColor, detected);
-                showToast(`${brandColor} extracted from your brand media.`);
-            };
 
             const isMobileEditorViewport = (container = containerRef.current) => {
                 const rect = container?.getBoundingClientRect();
@@ -3983,14 +3892,14 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 buttons: 'style',
                 calendar: 'style',
                 copy: 'introduction',
-                faq: 'style',
+                faq: 'form',
                 features: 'form',
                 identity: 'introduction',
                 logo: 'style',
                 services: 'style',
-                social: 'style',
+                social: 'form',
                 time: 'style',
-                venue: 'style',
+                venue: 'form',
                 visuals: 'style'
             };
             const roomTabMap = {
@@ -4070,6 +3979,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 }
             };
             const handleInspect = (tab) => {
+                if (tab === 'services') {
+                    navigateWorkspaceTab('services');
+                    return;
+                }
                 if (activeTab !== 'editor') navigateWorkspaceTab('editor');
                 setEditorCollapsed(false);
                 const inspectRoomMap = {
@@ -4080,11 +3993,11 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     services: 'style',
                     calendar: 'style',
                     time: 'style',
-                    faq: 'style',
+                    faq: 'form',
                     features: 'form',
                     form: 'form',
-                    social: 'style',
-                    venue: 'style',
+                    social: 'form',
+                    venue: 'form',
                     action: 'style',
                     buttons: 'style',
                     copy: 'introduction',
@@ -4176,22 +4089,6 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 markWorkspaceDirty();
                 setSettings(prev => ({ ...prev, [key]: value }));
             };
-            function applyBrandColorToEditor(color, signal = detectedBrandSignal) {
-                const brandColor = normalizeHexColor(color, '');
-                if (!brandColor) return;
-                markWorkspaceDirty();
-                setSettings(prev => ({
-                    ...prev,
-                    primaryColor: brandColor,
-                    accentColor: normalizeHexColor(signal?.accentColor, brandColor),
-                    buttonColor: brandColor,
-                    dateActiveBgColor: brandColor,
-                    slotActiveBgColor: brandColor,
-                    socialIconColor: brandColor,
-                    editorPaletteFlowColor: signal?.palette || prev.editorPaletteFlowColor,
-                    editorColorMix: signal?.palette ? [signal.palette] : prev.editorColorMix
-                }));
-            }
             const applyEditorColorPatch = (patch) => {
                 markWorkspaceDirty();
                 setSettings(prev => ({ ...prev, ...patch }));
@@ -4263,7 +4160,10 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 detectedBrandSignal?.brandColor,
                 detectedBrandSignal?.accentColor,
                 detectedBrandSignal?.dominantColor,
-                ...(detectedBrandSignal?.colors || [])
+                ...(detectedBrandSignal?.colors || []),
+                settings.primaryColor,
+                settings.buttonColor,
+                settings.headingColor
             ].map(color => normalizeHexColor(color, '')).filter(Boolean))).slice(0, 8);
             const editorColourFineTuneGroups = [
                 {
@@ -4324,6 +4224,13 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                     ]
                 }
             ];
+            const applyEditorControlColor = (control, color) => {
+                const hex = normalizeHexColor(color, '');
+                if (!control || !hex) return;
+                control.onApply(hex);
+                showToast(`${control.label} set to ${hex}`);
+            };
+            const activeEditorColourGroup = editorColourFineTuneGroups.find(group => group.id === editorColourCategoryId) || null;
             const applyFontStylePreset = (preset) => {
                 if (!preset) return;
                 markWorkspaceDirty();
@@ -5909,7 +5816,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 </div>
             );
 
-            const guestAuthQuickAccess = isGuestWorkspace && (
+            const guestAuthQuickAccess = isGuestWorkspace && activeTab !== 'editor' && (
                 <div className="guest-auth-quick-access" aria-label="Guest account actions">
                     <span>Guest workspace</span>
                     <button type="button" onClick={() => openOwnerAuth('signin')}>Sign In</button>
@@ -8382,7 +8289,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             {activeScene.id === 'social' && <div className="cinema-feature-preview">{[['Shown', settings.features?.socialLinks], ['Links', Object.values(settings.socials || {}).filter(Boolean).length], ['Footer', true], ['Look', settings.socialDisplayStyle || settings.socialIconStyle || 'icons']].map(([label, active]) => <span key={label} className={active ? 'is-on' : ''}>{label}</span>)}</div>}
                                                         </div>
 
-                                                        <div className="editor-cinema-control-panel">
+                                                        <div className={`editor-cinema-control-panel ${['colours', 'introduction'].includes(activeScene.id) ? 'editor-cinema-control-panel-flush' : ''}`}>
                                                             {activeScene.id === 'style' && (
                                                                 <StyleDirectionPicker
                                                                     value={settings.interfaceStyleDirection || 'native-precision'}
@@ -8390,91 +8297,125 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                 />
                                                             )}
 
-                                                            {activeScene.id === 'colours' && <>
-                                                                <div className="cinema-control-title"><span>Page colours</span><small>Manual colour control for the booking page. Nothing here auto-changes your contrast or rewrites a colour you picked.</small></div>
+                                                            {activeScene.id === 'colours' && (
                                                                 <div className="palette-flow-room color-system-room">
-                                                                    <div className="brand-color-console">
-                                                                        <div className="brand-color-console-main">
-                                                                            <span
-                                                                                className="brand-color-chip"
-                                                                                style={{ backgroundColor: normalizeHexColor((detectedBrandSignal?.brandColor || settings.primaryColor || '#050505').slice?.(0, 7), '#050505') }}
-                                                                            />
-                                                                            <div>
-                                                                                <b>Logo colour extractor</b>
-                                                                                <small>{detectedBrandSignal?.brandColor ? `${detectedBrandSignal.brandColor} detected from brand media` : 'Reads logo first, then banner and footer media.'}</small>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="brand-color-actions">
-                                                                            <button type="button" className="is-primary" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}>
-                                                                                <Pipette size={15} />
-                                                                                {paletteDetecting ? 'Reading logo' : 'Use brand colour'}
-                                                                            </button>
-                                                                            <button type="button" onClick={resetEditorColors}>
-                                                                                <RefreshCw size={15} />
-                                                                                Reset
-                                                                            </button>
-                                                                        </div>
-                                                                        {detectedBrandSwatches.length > 0 && (
-                                                                            <div className="brand-color-samples" aria-label="Extracted brand colour swatches">
-                                                                                {detectedBrandSwatches.map((color) => (
-                                                                                    <button
-                                                                                        key={color}
-                                                                                        type="button"
-                                                                                        onClick={() => applyBrandColorToEditor(color, detectedBrandSignal)}
-                                                                                        aria-label={`Apply extracted colour ${color}`}
-                                                                                        style={{ backgroundColor: color }}
-                                                                                    >
-                                                                                        <span>{color}</span>
-                                                                                    </button>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
-                                                                        <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>
-                                                                            <span>Native gradient</span>
-                                                                            <small>Build A Booking glow</small>
-                                                                        </button>
-                                                                        <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>
-                                                                            <span>Custom accents</span>
-                                                                            <small>Use your manual colours</small>
-                                                                        </button>
-                                                                    </div>
-
-                                                                    <div className="cinema-control-title is-compact"><span>Fine tune</span><small>Set each booking-page element directly. Pickers only edit the labelled element.</small></div>
-                                                                    <div className="cinema-color-directors is-dense">
-                                                                        {editorColourFineTuneGroups.map((group) => (
-                                                                            <section key={group.id} className="cinema-color-section">
-                                                                                <div className="cinema-color-section-title">
-                                                                                    <span>{group.title}</span>
+                                                                    {activeEditorColourGroup ? (
+                                                                        <section className="editor-color-category-detail editor-color-category-screen" style={{ '--editor-category-color': normalizeHexColor((activeEditorColourGroup.controls[0]?.value || '').slice(0, 7), activeEditorColourGroup.controls[0]?.fallback || '#050505') }}>
+                                                                            <div className="editor-color-category-detail-head">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="editor-color-back-button"
+                                                                                    onPointerDown={() => setEditorColourCategoryId('')}
+                                                                                    onClick={() => setEditorColourCategoryId('')}
+                                                                                    aria-label="Back to colour categories"
+                                                                                >
+                                                                                    <ChevronLeft size={15} />
+                                                                                    Back
+                                                                                </button>
+                                                                                <div>
+                                                                                    <span>{activeEditorColourGroup.title}</span>
+                                                                                    <small>Tune the exact elements in this category.</small>
                                                                                 </div>
-                                                                                <div className="cinema-color-section-grid">
-                                                                                    {group.controls.map((control) => {
-                                                                                        const displayColor = normalizeHexColor((control.value || '').slice(0, 7), control.fallback || '#050505');
-                                                                                        return (
-                                                                                            <div key={control.id} className="cinema-color-director">
-                                                                                                <div className="cinema-color-director-head">
-                                                                                                    <span className="cinema-color-orb" style={{ backgroundColor: displayColor }} />
-                                                                                                    <div>
-                                                                                                        <b>{control.label}</b>
-                                                                                                        <small>{control.note}</small>
-                                                                                                    </div>
-                                                                                                    <label className="cinema-color-edit">
-                                                                                                        <Pipette size={14} />
-                                                                                                        Edit
-                                                                                                        <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} aria-label={`Edit ${control.label.toLowerCase()} colour`} />
-                                                                                                    </label>
+                                                                            </div>
+                                                                            <div className="editor-color-category-controls">
+                                                                                {activeEditorColourGroup.controls.map((control) => {
+                                                                                    const displayColor = normalizeHexColor((control.value || '').slice(0, 7), control.fallback || '#050505');
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={control.id}
+                                                                                            className="editor-color-control-row"
+                                                                                            style={{ '--editor-row-color': displayColor }}
+                                                                                        >
+                                                                                            <span className="editor-color-drop-swatch" />
+                                                                                            <div className="editor-color-control-copy">
+                                                                                                <b>{control.label}</b>
+                                                                                                <small>{control.note}</small>
+                                                                                            </div>
+                                                                                            {detectedBrandSwatches.length > 0 && (
+                                                                                                <div className="editor-color-tile-options" aria-label={`${control.label} logo colour options`}>
+                                                                                                    {detectedBrandSwatches.slice(0, 4).map(color => {
+                                                                                                        const optionColor = normalizeHexColor(color, '');
+                                                                                                        return optionColor ? (
+                                                                                                            <button
+                                                                                                                key={`${control.id}-${optionColor}`}
+                                                                                                                type="button"
+                                                                                                                className={optionColor === displayColor ? 'is-active' : ''}
+                                                                                                                onClick={() => applyEditorControlColor(control, optionColor)}
+                                                                                                                style={{ backgroundColor: optionColor }}
+                                                                                                                aria-label={`Set ${control.label} to ${optionColor}`}
+                                                                                                            />
+                                                                                                        ) : null;
+                                                                                                    })}
+                                                                                                </div>
+                                                                                            )}
+                                                                                            <label className="editor-color-drop-plus" title={`Edit ${control.label} colour`} onClick={(event) => event.stopPropagation()}>
+                                                                                                <Pencil size={13} />
+                                                                                                <input
+                                                                                                    type="color"
+                                                                                                    value={displayColor}
+                                                                                                    onChange={(event) => applyEditorControlColor(control, event.target.value)}
+                                                                                                    aria-label={`Edit ${control.label.toLowerCase()} colour`}
+                                                                                                />
+                                                                                            </label>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </section>
+                                                                    ) : (
+                                                                        <>
+                                                                            <div className="editor-color-sync-note">
+                                                                                <span><Pipette size={14} /></span>
+                                                                                <p>Logo colours appear as small options after brand media is uploaded.</p>
+                                                                                <button type="button" onClick={resetEditorColors}>
+                                                                                    <RefreshCw size={14} />
+                                                                                    Reset colours
+                                                                                </button>
+                                                                            </div>
+                                                                            <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
+                                                                                <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>
+                                                                                    <span>Native gradient</span>
+                                                                                    <small>Build A Booking glow</small>
+                                                                                </button>
+                                                                                <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>
+                                                                                    <span>Custom accents</span>
+                                                                                    <small>Use manual colours</small>
+                                                                                </button>
+                                                                            </div>
+                                                                            <div className="cinema-control-title is-compact"><span>Element colour board</span><small>Choose a category to edit its colours.</small></div>
+                                                                            <div className="editor-color-category-board" aria-label="Booking page colour categories">
+                                                                                {editorColourFineTuneGroups.map((group) => {
+                                                                                    const previewColors = group.controls
+                                                                                        .map(control => normalizeHexColor((control.value || '').slice(0, 7), control.fallback || '#050505'))
+                                                                                        .filter(Boolean);
+                                                                                    const leadColor = previewColors[0] || '#050505';
+                                                                                    return (
+                                                                                        <button
+                                                                                            key={group.id}
+                                                                                            type="button"
+                                                                                            className="editor-color-category-tile"
+                                                                                            style={{ '--editor-category-color': leadColor }}
+                                                                                            onClick={() => setEditorColourCategoryId(group.id)}
+                                                                                        >
+                                                                                            <div className="editor-color-category-head">
+                                                                                                <div>
+                                                                                                    <span>{group.title}</span>
+                                                                                                    <small>{group.controls.length} colours</small>
+                                                                                                </div>
+                                                                                                <div className="editor-color-category-preview" aria-hidden="true">
+                                                                                                    {previewColors.slice(0, 4).map((color, index) => (
+                                                                                                        <i key={`${group.id}-${color}-${index}`} style={{ backgroundColor: color }} />
+                                                                                                    ))}
                                                                                                 </div>
                                                                                             </div>
-                                                                                        );
-                                                                                    })}
-                                                                                </div>
-                                                                            </section>
-                                                                        ))}
-                                                                    </div>
+                                                                                        </button>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </>
+                                                                    )}
                                                                 </div>
-                                                            </>}
+                                                            )}
 
                                                             {activeScene.id === 'typography' && <>
                                                                 <div className="cinema-control-title"><span>Font style</span><small>Apply a polished preset designed to keep the page balanced.</small></div>
@@ -8495,7 +8436,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                                 <span>Text above heading</span>
                                                                                 <input value={settings.tagline || ''} onChange={(event) => handleSettingChange('tagline', event.target.value)} placeholder="Private bookings / by appointment" />
                                                                             </label>
-                                                                            <label className="cinema-text-card">
+                                                                            <label className="cinema-text-card cinema-subtext-card">
                                                                                 <span>Subtext under heading</span>
                                                                                 <textarea value={settings.welcomeMessage || ''} onChange={(event) => handleSettingChange('welcomeMessage', event.target.value)} placeholder="Choose a time that works for you." />
                                                                             </label>
@@ -8834,7 +8775,15 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                 </div>
                                 <Suspense fallback={<LazySectionFallback label="Loading preview" />}>
                                     <AppErrorBoundary compact label="Live Preview" resetKey={previewKey}>
-                                        <BookingFlow key={previewKey} settings={editorPreviewSettings} isPreview={true} onInspect={handleInspect} onSettingChange={handleSettingChange} onComplete={handleBookingComplete} />
+                                        <BookingFlow
+                                            key={previewKey}
+                                            settings={editorPreviewSettings}
+                                            isPreview={true}
+                                            onInspect={handleInspect}
+                                            onSettingChange={handleSettingChange}
+                                            onMediaUpload={(key, file) => handleSettingImageUpload(key, file, 'brand')}
+                                            onComplete={handleBookingComplete}
+                                        />
                                     </AppErrorBoundary>
                                 </Suspense>
                                 </>
