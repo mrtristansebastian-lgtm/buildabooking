@@ -33,7 +33,7 @@ import {
 import { getLocalDateStr } from './utils/dates';
 import { buildBookingSlug } from './utils/slugs';
 import { formatServiceDuration, formatServicePrice, normalizeServiceList, summarizeService } from './utils/services';
-import { colorContrastRatio, hexToHsl, hexToRgb, hueBetween, mixHexColors, normalizeHexColor, readableTextFor, THEME_FILTER_GROUPS } from './utils/theme';
+import { normalizeHexColor } from './utils/theme';
 
 const OwnerManual = lazy(() => (
   import('./components/OwnerManual').then((module) => ({ default: module.OwnerManual }))
@@ -583,10 +583,6 @@ const defaultFaqItems = [
   { q: 'Can I join a waitlist if the day is full?', a: 'Yes. If waitlist is enabled, you can leave your details and the business can contact you when a slot opens.' }
 ];
 
-const themePaletteLabel = (paletteId) => (
-  THEME_FILTER_GROUPS.find(group => group.id === 'palette')?.filters.find(filter => filter.id === paletteId)?.name || 'brand'
-);
-
 const fontStylePresets = [
   {
     id: 'native',
@@ -712,8 +708,9 @@ const inferStyleFromBrandSignal = ({ palette, dominantHsl, neutralShare, darkSha
 };
 
 const analyzePaletteFromImageSource = (source) => new Promise((resolve) => {
+  const emptySignal = { palette: '', style: '', confidence: 0, colors: [], brandColor: '', accentColor: '', dominantColor: '' };
   if (!source || typeof window === 'undefined') {
-    resolve({ palette: '', style: '', confidence: 0, colors: [] });
+    resolve(emptySignal);
     return;
   }
 
@@ -722,14 +719,18 @@ const analyzePaletteFromImageSource = (source) => new Promise((resolve) => {
   image.onload = () => {
     try {
       const canvas = document.createElement('canvas');
-      const size = 96;
+      const size = 144;
       canvas.width = size;
       canvas.height = size;
       const context = canvas.getContext('2d', { willReadFrequently: true });
-      context.drawImage(image, 0, 0, size, size);
+      const scale = Math.min(size / Math.max(image.naturalWidth || image.width || 1, 1), size / Math.max(image.naturalHeight || image.height || 1, 1));
+      const drawWidth = Math.max(1, Math.round((image.naturalWidth || image.width || size) * scale));
+      const drawHeight = Math.max(1, Math.round((image.naturalHeight || image.height || size) * scale));
+      context.clearRect(0, 0, size, size);
+      context.drawImage(image, Math.round((size - drawWidth) / 2), Math.round((size - drawHeight) / 2), drawWidth, drawHeight);
       const pixels = context.getImageData(0, 0, size, size).data;
       const buckets = {};
-      const colorSamples = [];
+      const samples = new Map();
       let neutralScore = 0;
       let colorScore = 0;
       let darkScore = 0;
@@ -739,19 +740,38 @@ const analyzePaletteFromImageSource = (source) => new Promise((resolve) => {
       let maxLuma = 0;
       let sampled = 0;
 
+      const quantize = (value) => Math.max(0, Math.min(255, Math.round(value / 12) * 12));
+      const toHex = (red, green, blue) => `#${[red, green, blue].map(value => Math.round(value).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+
       for (let index = 0; index < pixels.length; index += 16) {
         const alpha = pixels[index + 3];
-        if (alpha < 160) continue;
+        if (alpha < 96) continue;
         const red = pixels[index];
         const green = pixels[index + 1];
         const blue = pixels[index + 2];
-        const luma = (red * 0.299) + (green * 0.587) + (blue * 0.114);
         const hsl = rgbToHsl(red, green, blue);
-        if (hsl.lightness < 4 || hsl.lightness > 98) continue;
+        const isPaperWhite = hsl.lightness > 96 && hsl.saturation < 18;
+        const luma = (red * 0.299) + (green * 0.587) + (blue * 0.114);
         const palette = paletteIdFromHsl(hsl);
-        const colorWeight = Math.max(1, hsl.saturation) * (palette === 'neutral' ? 0.18 : 1);
-        const contrastWeight = Math.abs(50 - hsl.lightness) / 50;
-        const weight = colorWeight * (1 + contrastWeight * 0.45);
+        const chroma = Math.max(0.02, hsl.saturation / 100);
+        const centerWeight = 0.72 + ((1 - Math.min(1, Math.abs(hsl.lightness - 52) / 52)) * 0.56);
+        const alphaWeight = alpha / 255;
+        const paletteWeight = palette === 'neutral'
+          ? (hsl.lightness < 28 ? 0.92 : 0.22)
+          : 1.16 + chroma;
+        const whiteWeight = isPaperWhite ? 0.025 : 1;
+        const weight = Math.max(0.001, alphaWeight * centerWeight * paletteWeight * whiteWeight);
+        const key = toHex(quantize(red), quantize(green), quantize(blue));
+        const current = samples.get(key) || { red: 0, green: 0, blue: 0, weight: 0, count: 0, palette, hsl, luma };
+        current.red += red * weight;
+        current.green += green * weight;
+        current.blue += blue * weight;
+        current.weight += weight;
+        current.count += 1;
+        current.palette = current.palette === 'neutral' && palette !== 'neutral' ? palette : current.palette;
+        current.hsl = current.weight > weight ? current.hsl : hsl;
+        current.luma = luma;
+        samples.set(key, current);
         buckets[palette] = (buckets[palette] || 0) + weight;
         sampled += 1;
         minLuma = Math.min(minLuma, luma);
@@ -761,26 +781,45 @@ const analyzePaletteFromImageSource = (source) => new Promise((resolve) => {
         if (hsl.lightness < 26) darkScore += weight;
         if (hsl.lightness > 76) lightScore += weight;
         if (hsl.saturation > 52 && hsl.lightness > 18 && hsl.lightness < 82) vividScore += weight;
-        if (palette !== 'neutral') {
-          colorSamples.push({
-            palette,
-            hsl,
-            weight,
-            hex: `#${[red, green, blue].map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()}`
-          });
-        }
       }
 
+      const rankedSamples = Array.from(samples.values())
+        .map(sample => {
+          const red = sample.red / Math.max(sample.weight, 0.001);
+          const green = sample.green / Math.max(sample.weight, 0.001);
+          const blue = sample.blue / Math.max(sample.weight, 0.001);
+          const hsl = rgbToHsl(red, green, blue);
+          return {
+            ...sample,
+            red,
+            green,
+            blue,
+            hsl,
+            palette: paletteIdFromHsl(hsl),
+            hex: toHex(red, green, blue)
+          };
+        })
+        .filter(sample => sample.count >= 2 || sample.weight > 0.5)
+        .sort((a, b) => b.weight - a.weight);
+
+      const usefulSamples = rankedSamples.filter(sample => !(sample.hsl.lightness > 94 && sample.hsl.saturation < 18));
+      const colorSamples = usefulSamples.filter(sample => sample.palette !== 'neutral');
+      const darkNeutralSample = usefulSamples.find(sample => sample.palette === 'neutral' && sample.hsl.lightness < 42);
+      const dominantSample = usefulSamples[0] || rankedSamples[0];
+      const accentSample = colorSamples[0] || darkNeutralSample || dominantSample;
       const sortedBuckets = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
-      const [winner, winnerScore = 0] = sortedBuckets[0] || [];
+      const [bucketWinner, winnerScore = 0] = sortedBuckets[0] || [];
+      const colorWinner = Object.entries(buckets)
+        .filter(([palette]) => palette !== 'neutral')
+        .sort((a, b) => b[1] - a[1])[0];
       const totalScore = Object.values(buckets).reduce((sum, score) => sum + score, 0) || 1;
-      const dominantSample = colorSamples.sort((a, b) => b.weight - a.weight)[0];
-      const palette = winner || (sampled ? 'neutral' : '');
+      const palette = colorWinner && colorWinner[1] > neutralScore * 0.22 ? colorWinner[0] : (bucketWinner || (sampled ? 'neutral' : ''));
+      const brandColor = normalizeHexColor(accentSample?.hex, '');
       const signal = {
         palette,
         style: palette ? inferStyleFromBrandSignal({
           palette,
-          dominantHsl: dominantSample?.hsl,
+          dominantHsl: accentSample?.hsl || dominantSample?.hsl,
           neutralShare: neutralScore / totalScore,
           darkShare: darkScore / totalScore,
           lightShare: lightScore / totalScore,
@@ -788,16 +827,20 @@ const analyzePaletteFromImageSource = (source) => new Promise((resolve) => {
           contrastRange: maxLuma - minLuma
         }) : '',
         confidence: Math.min(1, winnerScore / totalScore),
-        colors: colorSamples.slice(0, 4).map(sample => sample.hex),
+        colors: usefulSamples.slice(0, 8).map(sample => sample.hex),
+        brandColor,
+        accentColor: normalizeHexColor((colorSamples[0] || accentSample)?.hex, brandColor),
+        dominantColor: normalizeHexColor(dominantSample?.hex, brandColor),
+        neutralColor: normalizeHexColor((darkNeutralSample || usefulSamples.find(sample => sample.palette === 'neutral'))?.hex, ''),
         neutralShare: neutralScore / totalScore,
         contrastRange: maxLuma - minLuma
       };
       resolve(signal);
     } catch (error) {
-      resolve({ palette: '', style: '', confidence: 0, colors: [] });
+      resolve(emptySignal);
     }
   };
-  image.onerror = () => resolve({ palette: '', style: '', confidence: 0, colors: [] });
+  image.onerror = () => resolve(emptySignal);
   image.src = source;
 });
 
@@ -1730,9 +1773,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const editorStudioSoundEnabled = true;
             const [themeFilters, setThemeFilters] = useState({ palette: '', industry: '', style: 'all-styles' });
             const themeTemplateName = '';
-            const [detectedThemePalette, setDetectedThemePalette] = useState('');
-            const [detectedThemeStyle, setDetectedThemeStyle] = useState('');
-            const customThemeColor = '#755CFF';
+            const [detectedBrandSignal, setDetectedBrandSignal] = useState(null);
             const [paletteDetecting, setPaletteDetecting] = useState(false);
             const [device, setDevice] = useState(() => (
                 typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches ? 'mobile' : 'desktop'
@@ -3105,40 +3146,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             const collectsClientNotes = Boolean(settings.features?.collectClientNotes);
             const emailUpdatesEnabled = settings.features?.emailUpdates !== false;
             const isMobileEditorRuntime = isMobileRuntime || isCompactEditorViewport;
-            const themeGenerationInputs = useMemo(() => ({
-                industry: themeFilters.industry || '',
-                palette: themeFilters.palette || 'all',
-                style: themeFilters.style || 'all-styles',
-                detectedPalette: detectedThemePalette,
-                detectedStyle: detectedThemeStyle
-            }), [themeFilters.industry, themeFilters.palette, themeFilters.style, detectedThemePalette, detectedThemeStyle]);
-
-            const paletteThemeFilterGroup = useMemo(() => (
-                THEME_FILTER_GROUPS.find(group => group.id === 'palette') || THEME_FILTER_GROUPS[0]
-            ), []);
-            const paletteFilterOptions = useMemo(() => (
-                paletteThemeFilterGroup.filters.filter(filter => !['dark', 'earth'].includes(filter.id))
-            ), [paletteThemeFilterGroup]);
-            const paletteFlowOptions = useMemo(() => (
-                paletteFilterOptions.filter(filter => !['all'].includes(filter.id))
-            ), [paletteFilterOptions]);
-            const selectedPaletteFilter = paletteThemeFilterGroup.filters.find(filter => filter.id === themeGenerationInputs.palette) || paletteThemeFilterGroup.filters[0];
-            const selectedPaletteName = themeGenerationInputs.palette === 'custom' ? 'Custom' : selectedPaletteFilter.name;
-            const selectedPalettePhrase = themeGenerationInputs.palette === 'custom'
-                ? 'your custom color'
-                : selectedPaletteFilter.id === 'all'
-                    ? 'a full color range'
-                    : `${selectedPaletteFilter.name.toLowerCase()} colors`;
-            const activePaletteFlowId = paletteFlowOptions.some(option => option.id === settings.editorPaletteFlowColor)
-                ? settings.editorPaletteFlowColor
-                : paletteFlowOptions.some(option => option.id === themeGenerationInputs.palette)
-                    ? themeGenerationInputs.palette
-                    : 'blue';
-            const activePaletteFlow = paletteFlowOptions.find(option => option.id === activePaletteFlowId) || paletteFlowOptions[0];
-            const activePaletteDepthValue = typeof settings.editorColorDepths === 'object' && settings.editorColorDepths !== null
-                ? Number(settings.editorColorDepths[activePaletteFlowId] ?? settings.editorColorDepth ?? 50)
-                : Number(settings.editorColorDepth ?? 50);
-            const activePaletteShade = Math.max(1, Math.min(10, Math.round((activePaletteDepthValue || 50) / 10) || 5));
+            const currentServiceIndustry = themeFilters.industry || settings.serviceIndustry;
             const shouldMountEditorPreview = activeTab === 'editor';
             const editorPreviewSettings = useMemo(() => (
                 activeTab === 'editor' ? withEditorSampleMedia(settings) : settings
@@ -3148,26 +3156,23 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 startTransition(() => {
                     setThemeFilters(prev => {
                         if (prev[groupId] === filterId) return prev;
-                        if (groupId === 'industry') return { ...prev, industry: filterId, palette: prev.palette || 'all', style: 'all-styles' };
                         return { ...prev, [groupId]: filterId };
                     });
                 });
             };
 
             useEffect(() => {
-                const source = settings.logo || settings.businessFooterImage || settings.bannerImage || '';
+                const source = settings.logo || settings.bannerImage || settings.businessFooterImage || '';
                 let cancelled = false;
 
                 if (!source) {
-                    setDetectedThemePalette('');
-                    setDetectedThemeStyle('');
+                    setDetectedBrandSignal(null);
                     return () => { cancelled = true; };
                 }
 
                 analyzePaletteFromImageSource(source).then((signal) => {
                     if (!cancelled) {
-                        setDetectedThemePalette(signal.palette || '');
-                        setDetectedThemeStyle(signal.style || '');
+                        setDetectedBrandSignal(signal.brandColor ? signal : null);
                     }
                 });
 
@@ -3175,28 +3180,25 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
             }, [settings.logo, settings.businessFooterImage, settings.bannerImage]);
 
             const handleAutoDetectThemePalette = async () => {
-                const source = settings.logo || settings.businessFooterImage || settings.bannerImage || '';
+                const source = settings.logo || settings.bannerImage || settings.businessFooterImage || '';
                 if (!source) {
-                    showToast('Upload a logo or banner first, then I can read the palette.');
+                    showToast('Upload a logo first, then I can read the brand colour.');
                     return;
                 }
 
                 setPaletteDetecting(true);
                 const detected = await analyzePaletteFromImageSource(source);
                 setPaletteDetecting(false);
+                const brandColor = normalizeHexColor(detected.brandColor || detected.accentColor || detected.dominantColor || detected.colors?.[0], '');
 
-                if (!detected.palette) {
-                    showToast('I could not read enough color from that image yet.');
+                if (!brandColor) {
+                    showToast('I could not read enough brand colour from that image yet.');
                     return;
                 }
 
-                setDetectedThemePalette(detected.palette);
-                setDetectedThemeStyle(detected.style || '');
-                setThemeFilters(prev => ({
-                    ...prev,
-                    palette: detected.palette
-                }));
-                showToast(`${themePaletteLabel(detected.palette)} palette detected from your brand media.`);
+                setDetectedBrandSignal(detected);
+                applyBrandColorToEditor(brandColor, detected);
+                showToast(`${brandColor} extracted from your brand media.`);
             };
 
             const isMobileEditorViewport = (container = containerRef.current) => {
@@ -4474,7 +4476,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
 
             const editorRoomScenes = [
                 { id: 'introduction', number: '01', icon: MessageSquare, title: 'Introduction' },
-                { id: 'colours', number: '02', icon: Pipette, title: 'Colour Direction' },
+                { id: 'colours', number: '02', icon: Pipette, title: 'Page Colours' },
                 { id: 'typography', number: '03', icon: Type, title: 'Typography' },
                 { id: 'style', number: '04', icon: Sparkles, title: 'Style System' },
                 { id: 'form', number: '05', icon: FileText, title: 'Client Form' }
@@ -4678,6 +4680,61 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 markWorkspaceDirty();
                 setSettings(prev => ({ ...prev, [key]: value }));
             };
+            function applyBrandColorToEditor(color, signal = detectedBrandSignal) {
+                const brandColor = normalizeHexColor(color, '');
+                if (!brandColor) return;
+                markWorkspaceDirty();
+                setSettings(prev => ({
+                    ...prev,
+                    primaryColor: brandColor,
+                    accentColor: normalizeHexColor(signal?.accentColor, brandColor),
+                    buttonColor: brandColor,
+                    dateActiveBgColor: brandColor,
+                    slotActiveBgColor: brandColor,
+                    socialIconColor: brandColor,
+                    editorPaletteFlowColor: signal?.palette || prev.editorPaletteFlowColor,
+                    editorColorMix: signal?.palette ? [signal.palette] : prev.editorColorMix
+                }));
+            }
+            const applyEditorColorPatch = (patch) => {
+                markWorkspaceDirty();
+                setSettings(prev => ({ ...prev, ...patch }));
+            };
+            const resetEditorColors = () => {
+                const defaults = createDefaultSettings();
+                markWorkspaceDirty();
+                setSettings(prev => ({
+                    ...prev,
+                    primaryColor: defaults.primaryColor,
+                    accentColor: '',
+                    backgroundColor: defaults.backgroundColor,
+                    headingColor: defaults.headingColor,
+                    bodyColor: defaults.bodyColor,
+                    slotBgColor: defaults.slotBgColor,
+                    slotTextColor: defaults.slotTextColor,
+                    slotActiveBgColor: defaults.dateActiveBgColor,
+                    slotActiveTextColor: defaults.dateActiveTextColor,
+                    dateBgColor: defaults.dateBgColor,
+                    dateTextColor: defaults.dateTextColor,
+                    dateActiveBgColor: defaults.dateActiveBgColor,
+                    dateActiveTextColor: defaults.dateActiveTextColor,
+                    buttonColor: defaults.primaryColor,
+                    buttonTextColor: defaults.buttonTextColor,
+                    faqBgColor: defaults.faqBgColor,
+                    faqBorderColor: defaults.faqBorderColor,
+                    faqTextColor: defaults.faqTextColor,
+                    faqAnswerColor: defaults.faqAnswerColor,
+                    socialIconBgColor: defaults.socialIconBgColor,
+                    socialIconColor: defaults.socialIconColor,
+                    socialIconTextColor: defaults.socialIconTextColor,
+                    nativeAccent: defaults.nativeAccent,
+                    editorPaletteFlowColor: defaults.editorPaletteFlowColor,
+                    editorColorDepth: defaults.editorColorDepth,
+                    editorColorDepths: {},
+                    editorColorMix: defaults.editorColorMix
+                }));
+                showToast('Colours reset to the clean default set.');
+            };
             const resetEditorPreviewScroll = () => {
                 requestAnimationFrame(() => {
                     const scroller = editorPreviewScrollRef.current;
@@ -4706,164 +4763,71 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                 resetEditorPreviewScroll();
                 showToast(`${direction.label} style applied`);
             };
-            const getEditorColorDepth = (paletteId, depthInput = settings.editorColorDepths || settings.editorColorDepth || 50) => {
-                if (typeof depthInput === 'object' && depthInput !== null) {
-                    return Number(depthInput[paletteId] ?? settings.editorColorDepths?.[paletteId] ?? settings.editorColorDepth ?? 50);
+            const detectedBrandSwatches = Array.from(new Set([
+                detectedBrandSignal?.brandColor,
+                detectedBrandSignal?.accentColor,
+                detectedBrandSignal?.dominantColor,
+                ...(detectedBrandSignal?.colors || [])
+            ].map(color => normalizeHexColor(color, '')).filter(Boolean))).slice(0, 8);
+            const editorColourFineTuneGroups = [
+                {
+                    id: 'base',
+                    title: 'Base',
+                    controls: [
+                        { id: 'background', label: 'Background', note: 'Main booking page surface.', value: settings.backgroundColor, fallback: '#ffffff', onApply: (color) => applyEditorColorPatch({ backgroundColor: color }) },
+                        { id: 'heading', label: 'Heading text', note: 'Business name and section titles.', value: settings.headingColor, fallback: '#050505', onApply: (color) => applyEditorColorPatch({ headingColor: color }) },
+                        { id: 'body', label: 'Body text', note: 'Descriptions, labels, and helper copy.', value: settings.bodyColor, fallback: '#666666', onApply: (color) => applyEditorColorPatch({ bodyColor: color }) },
+                        { id: 'primary', label: 'Brand accent', note: 'Global accent used by selected states.', value: settings.primaryColor, fallback: '#050505', onApply: (color) => applyEditorColorPatch({ primaryColor: color, accentColor: color }) }
+                    ]
+                },
+                {
+                    id: 'action',
+                    title: 'Action',
+                    controls: [
+                        { id: 'button-fill', label: 'Button fill', note: 'Confirm booking button background.', value: settings.buttonColor || settings.primaryColor, fallback: '#050505', onApply: (color) => applyEditorColorPatch({ buttonColor: color, primaryColor: color }) },
+                        { id: 'button-text', label: 'Button text', note: 'Confirm booking button label.', value: settings.buttonTextColor, fallback: '#ffffff', onApply: (color) => applyEditorColorPatch({ buttonTextColor: color }) }
+                    ]
+                },
+                {
+                    id: 'calendar',
+                    title: 'Calendar',
+                    controls: [
+                        { id: 'date-active-bg', label: 'Active day', note: 'Selected date background.', value: settings.dateActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyEditorColorPatch({ dateActiveBgColor: color }) },
+                        { id: 'date-active-text', label: 'Active day text', note: 'Selected date label.', value: settings.dateActiveTextColor, fallback: '#ffffff', onApply: (color) => applyEditorColorPatch({ dateActiveTextColor: color }) },
+                        { id: 'date-bg', label: 'Day tile', note: 'Unselected date background.', value: settings.dateBgColor === 'transparent' ? '' : settings.dateBgColor, fallback: '#f8fafc', onApply: (color) => applyEditorColorPatch({ dateBgColor: color }) },
+                        { id: 'date-text', label: 'Day tile text', note: 'Unselected date label.', value: settings.dateTextColor, fallback: '#64748b', onApply: (color) => applyEditorColorPatch({ dateTextColor: color }) }
+                    ]
+                },
+                {
+                    id: 'time',
+                    title: 'Time',
+                    controls: [
+                        { id: 'slot-bg', label: 'Slot fill', note: 'Available time background.', value: settings.slotBgColor, fallback: '#f8fafc', onApply: (color) => applyEditorColorPatch({ slotBgColor: color }) },
+                        { id: 'slot-text', label: 'Slot text', note: 'Available time label.', value: settings.slotTextColor, fallback: '#050505', onApply: (color) => applyEditorColorPatch({ slotTextColor: color }) },
+                        { id: 'slot-active-bg', label: 'Selected slot', note: 'Chosen time background.', value: settings.slotActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyEditorColorPatch({ slotActiveBgColor: color }) },
+                        { id: 'slot-active-text', label: 'Selected text', note: 'Chosen time label.', value: settings.slotActiveTextColor, fallback: '#ffffff', onApply: (color) => applyEditorColorPatch({ slotActiveTextColor: color }) }
+                    ]
+                },
+                {
+                    id: 'faq',
+                    title: 'FAQ',
+                    controls: [
+                        { id: 'faq-bg', label: 'FAQ surface', note: 'Question area background.', value: settings.faqBgColor === 'transparent' ? '' : settings.faqBgColor, fallback: '#ffffff', onApply: (color) => applyEditorColorPatch({ faqBgColor: color }) },
+                        { id: 'faq-border', label: 'FAQ line', note: 'Accordion and card border.', value: settings.faqBorderColor, fallback: '#000000', onApply: (color) => applyEditorColorPatch({ faqBorderColor: color }) },
+                        { id: 'faq-question', label: 'Question text', note: 'FAQ question copy.', value: settings.faqTextColor || settings.headingColor, fallback: '#050505', onApply: (color) => applyEditorColorPatch({ faqTextColor: color }) },
+                        { id: 'faq-answer', label: 'Answer text', note: 'FAQ answer copy.', value: settings.faqAnswerColor || settings.bodyColor, fallback: '#666666', onApply: (color) => applyEditorColorPatch({ faqAnswerColor: color }) }
+                    ]
+                },
+                {
+                    id: 'social',
+                    title: 'Social footer',
+                    controls: [
+                        { id: 'social-bg', label: 'Icon fill', note: 'Social icon background.', value: settings.socialIconBgColor === 'transparent' ? '' : settings.socialIconBgColor, fallback: '#ffffff', onApply: (color) => applyEditorColorPatch({ socialIconBgColor: color }) },
+                        { id: 'social-icon', label: 'Icon mark', note: 'Social icon symbol.', value: settings.socialIconColor || settings.primaryColor, fallback: '#050505', onApply: (color) => applyEditorColorPatch({ socialIconColor: color }) },
+                        { id: 'social-text', label: 'Icon label', note: 'Social footer text.', value: settings.socialIconTextColor || settings.bodyColor, fallback: '#666666', onApply: (color) => applyEditorColorPatch({ socialIconTextColor: color }) }
+                    ]
                 }
-                return Number(depthInput ?? settings.editorColorDepths?.[paletteId] ?? settings.editorColorDepth ?? 50);
-            };
-            const tuneColorByDepth = (color, depth = 50) => {
-                const normalized = normalizeHexColor(color, '');
-                if (!normalized) return '';
-                const safeDepth = Math.max(0, Math.min(100, Number(depth) || 50));
-                const { h, s } = hexToHsl(normalized);
-                const spectrumColor = (stops) => {
-                    const safeStops = stops.map(stop => normalizeHexColor(stop, '')).filter(Boolean);
-                    if (!safeStops.length) return normalized;
-                    if (safeStops.length === 1) return safeStops[0];
-                    const position = Math.max(0, Math.min(1, (safeDepth - 10) / 90)) * (safeStops.length - 1);
-                    const index = Math.min(safeStops.length - 2, Math.floor(position));
-                    const amount = position - index;
-                    return mixHexColors(safeStops[index], safeStops[index + 1], amount);
-                };
-                if (s > 18 && hueBetween(h, 345, 15)) {
-                    return spectrumColor(['#F6C5B8', '#F2A093', '#EA746B', '#DD4A48', '#C91F37', '#B51235', '#A51234', '#C5123E', '#E11445', '#FF174F']);
-                }
-                if (s > 18 && hueBetween(h, 255, 295)) {
-                    return spectrumColor(['#F3D5FF', '#E9B8FF', '#D989FF', '#C85CF5', '#B83BEA', '#A72AD8', '#9422C5', '#B21EC7', '#CE28D9', '#E879F9']);
-                }
-                const electricColor = (input, intensity = 1) => {
-                    const { r, g, b } = hexToRgb(input, '#050505');
-                    const max = Math.max(r, g, b);
-                    const min = Math.min(r, g, b);
-                    if (max - min < 18) return mixHexColors(input, '#050505', 0.68 + (0.24 * intensity));
-                    const channel = (value) => {
-                        const isLead = value === max;
-                        const leadValue = 230 + Math.round(25 * intensity);
-                        const mutedValue = Math.round(value * (1 - (0.54 * intensity)));
-                        return Math.max(0, Math.min(255, isLead ? leadValue : mutedValue));
-                    };
-                    return `#${[channel(r), channel(g), channel(b)].map(value => value.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
-                };
-                if (safeDepth <= 50) {
-                    const amount = Math.min(0.82, (50 - safeDepth) / 50 * 0.82);
-                    return mixHexColors(normalized, '#ffffff', amount);
-                }
-                if (s > 18 && hueBetween(h, 38, 65)) {
-                    if (safeDepth <= 76) {
-                        const goldAmount = Math.min(0.72, (safeDepth - 50) / 26 * 0.72);
-                        return mixHexColors(normalized, '#B8C400', goldAmount);
-                    }
-                    const neonAmount = Math.min(1, (safeDepth - 76) / 24);
-                    return mixHexColors('#C7C300', '#F4FF00', neonAmount);
-                }
-                if (s > 18 && hueBetween(h, 15, 38)) {
-                    if (safeDepth <= 76) {
-                        const mandarinAmount = Math.min(0.66, (safeDepth - 50) / 26 * 0.66);
-                        return mixHexColors(normalized, '#FF8A00', mandarinAmount);
-                    }
-                    const neonAmount = Math.min(1, (safeDepth - 76) / 24);
-                    return mixHexColors('#FF8A00', '#FF6A00', neonAmount);
-                }
-                if (safeDepth <= 76) {
-                    const amount = Math.min(0.62, (safeDepth - 50) / 26 * 0.62);
-                    return mixHexColors(normalized, '#050505', amount);
-                }
-                const neonAmount = Math.min(1, (safeDepth - 76) / 24);
-                const deepBase = mixHexColors(normalized, '#050505', 0.5);
-                return mixHexColors(deepBase, electricColor(normalized, neonAmount), 0.42 + (0.58 * neonAmount));
-            };
-                const activePaletteSampleBase = activePaletteFlow?.swatches?.[1] || activePaletteFlow?.swatches?.[0] || settings.primaryColor || '#050505';
-                const activePaletteShadeColor = normalizeHexColor(tuneColorByDepth(activePaletteSampleBase, activePaletteShade * 10), settings.backgroundColor || '#050505');
-                const activePaletteShadeText = readableTextFor(activePaletteShadeColor);
-            const getPaletteReadableTone = (backgroundColor, textColor, minContrast = 4.5) => {
-                const background = normalizeHexColor(backgroundColor, '#050505');
-                const target = normalizeHexColor(textColor, readableTextFor(background));
-                let fallback = target;
-                for (let amount = 0.68; amount <= 1.001; amount += 0.04) {
-                    const candidate = mixHexColors(background, target, amount);
-                    fallback = candidate;
-                    if (colorContrastRatio(candidate, background) >= minContrast) return candidate;
-                }
-                return fallback;
-            };
-            const applyColorDirection = (paletteId, selectedIds = settings.editorColorMix || [], depthInput = settings.editorColorDepths || settings.editorColorDepth || 50) => {
-                const paletteLookup = new Map(paletteFilterOptions.map(option => [option.id, option]));
-                const ids = selectedIds.length ? selectedIds : [paletteId];
-                const swatches = ids.flatMap(id => (
-                    id === 'custom'
-                        ? [tuneColorByDepth(customThemeColor, getEditorColorDepth(id, depthInput))]
-                        : (paletteLookup.get(id)?.swatches || []).map(color => tuneColorByDepth(color, getEditorColorDepth(id, depthInput)))
-                )).filter(Boolean).map(color => normalizeHexColor(color, '')).filter(Boolean);
-                const firstPalette = ids[0] === 'custom'
-                    ? [tuneColorByDepth(customThemeColor, getEditorColorDepth(ids[0], depthInput))]
-                    : (paletteLookup.get(ids[0])?.swatches || swatches).map(color => tuneColorByDepth(color, getEditorColorDepth(ids[0], depthInput)));
-                const lastPalette = ids[ids.length - 1] === 'custom'
-                    ? [tuneColorByDepth(customThemeColor, getEditorColorDepth(ids[ids.length - 1], depthInput))]
-                    : (paletteLookup.get(ids[ids.length - 1])?.swatches || swatches).map(color => tuneColorByDepth(color, getEditorColorDepth(ids[ids.length - 1], depthInput)));
-                const firstSwatches = firstPalette.map(color => normalizeHexColor(color, '')).filter(Boolean);
-                const lastSwatches = lastPalette.map(color => normalizeHexColor(color, '')).filter(Boolean);
-                const richPrimary = firstSwatches[1] || firstSwatches[2] || firstSwatches[0] || swatches[1] || customThemeColor || settings.primaryColor || '#050505';
-                const softSecondary = lastSwatches[0] || swatches[0] || '#bae6fd';
-                const richAccent = lastSwatches[2] || lastSwatches[1] || swatches[2] || richPrimary;
-                const primary = normalizeHexColor(richPrimary, '#050505');
-                const secondary = normalizeHexColor(softSecondary, '#bae6fd');
-                const accent = normalizeHexColor(richAccent, primary);
-                const pageText = readableTextFor(primary);
-                const textIsLight = pageText === '#FFFFFF';
-                const paletteBody = getPaletteReadableTone(primary, pageText, textIsLight ? 4.7 : 4.5);
-                const paletteAction = pageText;
-                const cardAlpha = textIsLight ? '14' : '10';
-                const borderAlpha = textIsLight ? '45' : '32';
-                const actionText = readableTextFor(paletteAction);
-                markWorkspaceDirty();
-                setSettings(prev => ({
-                    ...prev,
-                    primaryColor: primary,
-                    accentColor: accent,
-                    backgroundColor: primary,
-                    headingColor: pageText,
-                    bodyColor: paletteBody,
-                    dateActiveBgColor: paletteAction,
-                    dateActiveTextColor: actionText,
-                    dateBgColor: `${pageText}${cardAlpha}`,
-                    dateTextColor: paletteBody,
-                    slotBgColor: `${pageText}${cardAlpha}`,
-                    slotTextColor: paletteBody,
-                    slotActiveBgColor: paletteAction,
-                    slotActiveTextColor: actionText,
-                    buttonColor: paletteAction,
-                    buttonTextColor: actionText,
-                    faqBgColor: `${pageText}${cardAlpha}`,
-                    faqBorderColor: `${pageText}${borderAlpha}`,
-                    faqTextColor: pageText,
-                    faqAnswerColor: paletteBody,
-                    socialIconBgColor: `${pageText}${cardAlpha}`,
-                    socialIconColor: paletteAction,
-                    socialIconTextColor: actionText
-                }));
-            };
-            const applyPaletteFlowColor = (paletteId = activePaletteFlowId, shade = activePaletteShade) => {
-                const safePaletteId = paletteFlowOptions.some(option => option.id === paletteId) ? paletteId : activePaletteFlowId;
-                const safeShade = Math.max(1, Math.min(10, Number(shade) || 5));
-                const depth = safeShade * 10;
-                const nextDepths = {
-                    ...(settings.editorColorDepths || {}),
-                    [safePaletteId]: depth
-                };
-                setThemeFilterValue('palette', safePaletteId);
-                applyColorDirection(safePaletteId, [safePaletteId], nextDepths);
-                setSettings(prev => ({
-                    ...prev,
-                    editorPaletteFlowColor: safePaletteId,
-                    editorColorMix: [safePaletteId],
-                    editorColorDepth: depth,
-                    editorColorDepths: {
-                        ...(prev.editorColorDepths || {}),
-                        [safePaletteId]: depth
-                    }
-                }));
-            };
+            ];
             const applyFontStylePreset = (preset) => {
                 if (!preset) return;
                 markWorkspaceDirty();
@@ -8138,7 +8102,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                     <ServicesStudio
                                         settings={settings}
                                         staffList={displayStaffList}
-                                        currentIndustry={themeGenerationInputs.industry || settings.serviceIndustry}
+                                        currentIndustry={currentServiceIndustry}
                                         canManageWorkspace={canManageWorkspace}
                                         onChooseIndustry={(industryId) => {
                                             handleSettingChange('serviceIndustry', industryId);
@@ -8762,7 +8726,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             ...scene,
                                             title: {
                                                 introduction: 'Introduction',
-                                                colours: 'Colour direction',
+                                                colours: 'Page colours',
                                                 typography: 'Typography',
                                                 style: 'Style system',
                                                 calendar: 'Calendar style',
@@ -8775,7 +8739,7 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                             }[scene.id],
                                             prompt: {
                                                 introduction: 'Name the page and write the first words clients see. Type here or directly on the mockup.',
-                                                colours: 'Build a live color direction from one color, many colors, or your uploaded brand media.',
+                                                colours: 'Extract a real brand colour, then manually tune each booking-page element.',
                                                 typography: 'Choose a polished font system for headings, paragraphs, labels, and buttons.',
                                                 style: 'Choose one curated visual system for services, calendar, time slots, FAQ, action buttons, venue, maps, and social links.',
                                                 calendar: 'Customize the calendar only: date cards, active states, color, shadow, and glow.',
@@ -8824,15 +8788,22 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                         <div className="editor-cinema-live-card">
                                                             {activeScene.id === 'colours' && (
                                                                 <div className="cinema-theme-preview">
-                                                                    <span>{selectedPaletteName || 'Color direction'}</span>
-                                                                    <h4>{`${selectedPalettePhrase || 'Colour direction'} for your booking page.`}</h4>
-                                                                    <p>Pick the background, heading, and button colours clients notice first, or extract a palette from your uploaded logo and banner.</p>
-                                                                    <div>{paletteFilterOptions.slice(0, 4).map(palette => <button key={palette.id} type="button" onClick={() => {
-                                                                        const nextMix = [palette.id];
-                                                                        handleSettingChange('editorColorMix', nextMix);
-                                                                        setThemeFilterValue('palette', palette.id);
-                                                                        applyColorDirection(palette.id, nextMix, settings.editorColorDepth || 45);
-                                                                    }}>{palette.swatches.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}<small>{palette.name}</small></button>)}</div>
+                                                                    <span>Manual colour system</span>
+                                                                    <h4>Use exact brand colours, then tune every surface by hand.</h4>
+                                                                    <p>No automatic contrast pass changes your chosen colours. Reset returns the clean default set, and brand extraction reads the real logo colour.</p>
+                                                                    <div>
+                                                                        {[
+                                                                            ['Background', settings.backgroundColor || '#ffffff'],
+                                                                            ['Heading', settings.headingColor || '#050505'],
+                                                                            ['Action', settings.buttonColor || settings.primaryColor || '#050505'],
+                                                                            ['Brand', detectedBrandSignal?.brandColor || settings.primaryColor || '#050505']
+                                                                        ].map(([label, color]) => (
+                                                                            <button key={label} type="button" aria-label={label}>
+                                                                                <i style={{ backgroundColor: normalizeHexColor(color?.slice?.(0, 7), '#050505') }} />
+                                                                                <small>{label}</small>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
                                                             )}
 
@@ -8906,86 +8877,46 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                             )}
 
                                                             {activeScene.id === 'colours' && <>
-                                                                <div className="cinema-control-title"><span>Page theme</span><small>Choose a colour family, then set its strength.</small></div>
-                                                                <div
-                                                                    className="palette-flow-room"
-                                                                    style={{
-                                                                        '--palette-selected': activePaletteShadeColor,
-                                                                        '--palette-selected-text': activePaletteShadeText
-                                                                    }}
-                                                                >
-                                                                    <div className="palette-spectrum-grid" aria-label="Colour spectrum">
-                                                                        {paletteFlowOptions.map((palette) => {
-                                                                            const isActive = activePaletteFlowId === palette.id;
-                                                                            const mainSwatch = palette.swatches[1] || palette.swatches[0] || '#050505';
-                                                                            const swatchColors = palette.swatches.slice(0, 3);
-                                                                            return (
-                                                                                <button
-                                                                                    key={palette.id}
-                                                                                    type="button"
-                                                                                    onClick={() => applyPaletteFlowColor(palette.id, activePaletteShade)}
-                                                                                    className={`palette-spectrum-card ${isActive ? 'is-active' : ''}`}
-                                                                                    aria-pressed={isActive}
-                                                                                    style={{
-                                                                                        '--palette-a': palette.swatches[0] || mainSwatch,
-                                                                                        '--palette-b': mainSwatch,
-                                                                                        '--palette-c': palette.swatches[2] || mainSwatch
-                                                                                    }}
-                                                                                >
-                                                                                    <span className="palette-spectrum-icon" aria-hidden="true">
-                                                                                        {swatchColors.map((color) => <b key={color} style={{ backgroundColor: color }} />)}
-                                                                                    </span>
-                                                                                    <span className="palette-spectrum-copy">
-                                                                                        <strong>{palette.name}</strong>
-                                                                                        <small>{palette.hint}</small>
-                                                                                    </span>
-                                                                                    <span className="palette-spectrum-state" aria-hidden="true">
-                                                                                        {isActive && <Check size={12} strokeWidth={3} />}
-                                                                                    </span>
-                                                                                </button>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                    <div
-                                                                        className="palette-shade-panel"
-                                                                        style={{
-                                                                            '--palette-selected': activePaletteShadeColor,
-                                                                            '--palette-selected-text': activePaletteShadeText
-                                                                        }}
-                                                                    >
-                                                                        <div className="palette-shade-head">
-                                                                            <span>Spectrum</span>
-                                                                            <small>{activePaletteFlow?.name || 'Palette'} {activePaletteShade}</small>
+                                                                <div className="cinema-control-title"><span>Page colours</span><small>Manual colour control for the booking page. Nothing here auto-changes your contrast or rewrites a colour you picked.</small></div>
+                                                                <div className="palette-flow-room color-system-room">
+                                                                    <div className="brand-color-console">
+                                                                        <div className="brand-color-console-main">
+                                                                            <span
+                                                                                className="brand-color-chip"
+                                                                                style={{ backgroundColor: normalizeHexColor((detectedBrandSignal?.brandColor || settings.primaryColor || '#050505').slice?.(0, 7), '#050505') }}
+                                                                            />
+                                                                            <div>
+                                                                                <b>Logo colour extractor</b>
+                                                                                <small>{detectedBrandSignal?.brandColor ? `${detectedBrandSignal.brandColor} detected from brand media` : 'Reads logo first, then banner and footer media.'}</small>
+                                                                            </div>
                                                                         </div>
-                                                                        <div className="palette-shade-grid" aria-label={`${activePaletteFlow?.name || 'Palette'} spectrum`}>
-                                                                            {Array.from({ length: 10 }, (_, index) => {
-                                                                                const shade = index + 1;
-                                                                                const depth = shade * 10;
-                                                                                const palette = activePaletteFlow || paletteFlowOptions[0];
-                                                                                const sampleBase = palette?.swatches?.[1] || palette?.swatches?.[0] || '#050505';
-                                                                                const shadeColor = tuneColorByDepth(sampleBase, depth);
-                                                                                const isActive = activePaletteShade === shade;
-                                                                                return (
+                                                                        <div className="brand-color-actions">
+                                                                            <button type="button" className="is-primary" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}>
+                                                                                <Pipette size={15} />
+                                                                                {paletteDetecting ? 'Reading logo' : 'Use brand colour'}
+                                                                            </button>
+                                                                            <button type="button" onClick={resetEditorColors}>
+                                                                                <RefreshCw size={15} />
+                                                                                Reset
+                                                                            </button>
+                                                                        </div>
+                                                                        {detectedBrandSwatches.length > 0 && (
+                                                                            <div className="brand-color-samples" aria-label="Extracted brand colour swatches">
+                                                                                {detectedBrandSwatches.map((color) => (
                                                                                     <button
-                                                                                        key={shade}
+                                                                                        key={color}
                                                                                         type="button"
-                                                                                        onClick={() => applyPaletteFlowColor(activePaletteFlowId, shade)}
-                                                                                        className={isActive ? 'is-active' : ''}
-                                                                                        aria-pressed={isActive}
-                                                                                        aria-label={`${activePaletteFlow?.name || 'Palette'} spectrum ${shade}`}
-                                                                                        style={{ backgroundColor: shadeColor, color: readableTextFor(shadeColor) }}
+                                                                                        onClick={() => applyBrandColorToEditor(color, detectedBrandSignal)}
+                                                                                        aria-label={`Apply extracted colour ${color}`}
+                                                                                        style={{ backgroundColor: color }}
                                                                                     >
-                                                                                        <span>{String(shade).padStart(2, '0')}</span>
+                                                                                        <span>{color}</span>
                                                                                     </button>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                        <div className="palette-shade-labels" aria-hidden="true">
-                                                                            <span>Light</span>
-                                                                            <span>Deep</span>
-                                                                            <span>Neon</span>
-                                                                        </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
+
                                                                     <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
                                                                         <button type="button" onClick={() => handleSettingChange('nativeAccent', true)} className={settings.nativeAccent ? 'is-active' : ''}>
                                                                             <span>Native gradient</span>
@@ -8993,72 +8924,41 @@ const signInWithNativeGoogle = async (authInstance, options = {}) => {
                                                                         </button>
                                                                         <button type="button" onClick={() => handleSettingChange('nativeAccent', false)} className={!settings.nativeAccent ? 'is-active' : ''}>
                                                                             <span>Custom accents</span>
-                                                                            <small>Follow palette</small>
+                                                                            <small>Use your manual colours</small>
                                                                         </button>
                                                                     </div>
-                                                                    <div className="cinema-control-title is-compact"><span>Fine tune</span><small>Optional section edits after the full-page theme is set.</small></div>
-                                                                    <div className="cinema-color-directors">
-                                                                            {[
-                                                                                {
-                                                                                    id: 'background',
-                                                                                    label: 'Background',
-                                                                                    note: 'Main page surface.',
-                                                                                    value: settings.backgroundColor || '#ffffff',
-                                                                                    onApply: (color) => handleSettingChange('backgroundColor', color)
-                                                                                },
-                                                                                {
-                                                                                    id: 'headings',
-                                                                                    label: 'Headings',
-                                                                                    note: 'Business name and section titles.',
-                                                                                    value: settings.headingColor || '#050505',
-                                                                                    onApply: (color) => {
-                                                                                        handleSettingChange('headingColor', color);
-                                                                                        handleSettingChange('dateActiveTextColor', readableTextFor(settings.dateActiveBgColor || color));
-                                                                                    }
-                                                                                },
-                                                                                {
-                                                                                    id: 'body',
-                                                                                    label: 'Body text',
-                                                                                    note: 'Paragraphs, labels, and helper copy.',
-                                                                                    value: settings.bodyColor || '#616672',
-                                                                                    onApply: (color) => handleSettingChange('bodyColor', color)
-                                                                                },
-                                                                                {
-                                                                                    id: 'buttons',
-                                                                                    label: 'Buttons',
-                                                                                    note: 'Primary actions and selected controls.',
-                                                                                    value: settings.buttonColor || settings.primaryColor || '#050505',
-                                                                                    onApply: (color) => {
-                                                                                        handleSettingChange('buttonColor', color);
-                                                                                        handleSettingChange('primaryColor', color);
-                                                                                        handleSettingChange('buttonTextColor', readableTextFor(color));
-                                                                                        if (!settings.nativeAccent) {
-                                                                                            handleSettingChange('dateActiveBgColor', `${color}22`);
-                                                                                            handleSettingChange('slotActiveBgColor', `${color}22`);
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            ].map((control) => {
-                                                                                const displayColor = normalizeHexColor(control.value?.slice?.(0, 7), control.value || '#050505');
-                                                                                return (
-                                                                                    <div key={control.id} className="cinema-color-director">
-                                                                                        <div className="cinema-color-director-head">
-                                                                                            <span className="cinema-color-orb" style={{ backgroundColor: displayColor }} />
-                                                                                            <div>
-                                                                                                <b>{control.label}</b>
-                                                                                                <small>{control.note}</small>
+
+                                                                    <div className="cinema-control-title is-compact"><span>Fine tune</span><small>Set each booking-page element directly. Pickers only edit the labelled element.</small></div>
+                                                                    <div className="cinema-color-directors is-dense">
+                                                                        {editorColourFineTuneGroups.map((group) => (
+                                                                            <section key={group.id} className="cinema-color-section">
+                                                                                <div className="cinema-color-section-title">
+                                                                                    <span>{group.title}</span>
+                                                                                </div>
+                                                                                <div className="cinema-color-section-grid">
+                                                                                    {group.controls.map((control) => {
+                                                                                        const displayColor = normalizeHexColor((control.value || '').slice(0, 7), control.fallback || '#050505');
+                                                                                        return (
+                                                                                            <div key={control.id} className="cinema-color-director">
+                                                                                                <div className="cinema-color-director-head">
+                                                                                                    <span className="cinema-color-orb" style={{ backgroundColor: displayColor }} />
+                                                                                                    <div>
+                                                                                                        <b>{control.label}</b>
+                                                                                                        <small>{control.note}</small>
+                                                                                                    </div>
+                                                                                                    <label className="cinema-color-edit">
+                                                                                                        <Pipette size={14} />
+                                                                                                        Edit
+                                                                                                        <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} aria-label={`Edit ${control.label.toLowerCase()} colour`} />
+                                                                                                    </label>
+                                                                                                </div>
                                                                                             </div>
-                                                                                            <label className="cinema-color-edit">
-                                                                                                <Pipette size={14} />
-                                                                                                Edit
-                                                                                                <input type="color" value={displayColor} onChange={(event) => control.onApply(event.target.value)} aria-label={`Edit ${control.label.toLowerCase()} colour`} />
-                                                                                            </label>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </section>
+                                                                        ))}
                                                                     </div>
-                                                                    <button type="button" onClick={handleAutoDetectThemePalette} disabled={paletteDetecting}><Pipette size={15}/>{paletteDetecting ? 'Reading brand' : 'Read logo colors'}</button>
                                                                 </div>
                                                             </>}
 
