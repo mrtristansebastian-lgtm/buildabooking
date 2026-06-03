@@ -1,0 +1,52 @@
+        @media (max-width: 960px) {
+            .native-feature-book {
+                grid-template-columns: 1fr;
+            }
+
+            .native-feature-book-cover,
+            .native-feature-book-pages {
+                min-height: auto;
+            }
+
+            .native-feature-book-pages {
+                height: min(31rem, 82vh);
+            }
+
+            .native-feature-page {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .native-feature-book-cover {
+                gap: 2rem;
+            }
+
+            .native-feature-book-pages::before {
+                display: none;
+            }
+
+            .native-feature-page ul {
+                grid-column: 1;
+                grid-row: auto;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .native-feature-book-section {
+                padding-top: 3.75rem;
+                padding-bottom: 4rem;
+            }
+
+            .native-feature-book-cover,
+            .native-feature-page {
+                padding: 1.25rem;
+            }
+
+            .native-feature-page h3 {
+                font-size: clamp(2.2rem, 17vw, 4rem);
+            }
+
+            .native-feature-page li {
+                font-size: 0.9rem;
+            }
+        }

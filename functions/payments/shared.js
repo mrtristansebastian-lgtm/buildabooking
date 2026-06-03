@@ -26,6 +26,31 @@ const allowedCredentialFields = Object.freeze({
   cash: ['instructions']
 });
 
+const requiredCredentialFields = Object.freeze({
+  stripe: ['secretKey', 'webhookSecret'],
+  payfast: ['merchantId', 'merchantKey'],
+  peach: ['entityId', 'accessToken', 'webhookSecret'],
+  yoco: ['secretKey', 'webhookSecret'],
+  ozow: ['siteCode', 'privateKey'],
+  paystack: ['secretKey'],
+  manual_eft: ['accountHolder', 'bankName', 'accountNumber'],
+  cash: []
+});
+
+const credentialFieldLabels = Object.freeze({
+  accountHolder: 'account holder',
+  accountNumber: 'account number',
+  accessToken: 'access token',
+  bankName: 'bank name',
+  entityId: 'entity ID',
+  merchantId: 'merchant ID',
+  merchantKey: 'merchant key',
+  privateKey: 'private key',
+  secretKey: 'secret key',
+  siteCode: 'site code',
+  webhookSecret: 'webhook secret'
+});
+
 const cleanString = (value, max = 500) => String(value || '').trim().slice(0, max);
 
 const normalizeGatewayType = (value) => {
@@ -58,7 +83,7 @@ const maskSecret = (value) => {
   const next = cleanString(value, 500);
   if (!next) return '';
   const tail = next.slice(-4);
-  return `•••• ${tail}`;
+  return `**** ${tail}`;
 };
 
 const cleanCredentials = (gatewayType, credentials = {}) => {
@@ -69,6 +94,10 @@ const cleanCredentials = (gatewayType, credentials = {}) => {
     return acc;
   }, {});
 };
+
+const getMissingRequiredCredentialFields = (gatewayType, credentials = {}) => (
+  (requiredCredentialFields[gatewayType] || []).filter((field) => !cleanString(credentials[field], 2000))
+);
 
 const publicGatewayDoc = (credentials = {}) => ({
   credentialSummary: Object.entries(credentials).reduce((acc, [key, value]) => {
@@ -252,9 +281,11 @@ module.exports = {
   centsToDecimal,
   cleanCredentials,
   cleanString,
+  credentialFieldLabels,
   gatewayDisplayNames,
   getFunctionBaseUrl,
   getGatewayConfig,
+  getMissingRequiredCredentialFields,
   maskSecret,
   normalizeCurrency,
   normalizeGatewayType,
@@ -262,6 +293,7 @@ module.exports = {
   publicGatewayDoc,
   requireAppId,
   requireBusinessId,
+  requiredCredentialFields,
   updateSuccessfulPayment,
   webhookUrl
 };

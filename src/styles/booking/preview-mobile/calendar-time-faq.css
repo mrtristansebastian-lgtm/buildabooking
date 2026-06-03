@@ -1,0 +1,66 @@
+        .editor-preview-frame.is-mobile-preview .booking-calendar-look {
+            gap: 0.55rem !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-look > button {
+            min-width: 4.75rem !important;
+            width: 4.75rem !important;
+            min-height: 5.55rem !important;
+            height: 5.55rem !important;
+            border-radius: 1rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-editorial > button {
+            min-width: 5.6rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-compact {
+            grid-template-columns: repeat(7, minmax(3.7rem, 1fr)) !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-compact > button {
+            min-width: 3.7rem !important;
+            width: 3.7rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-time-look {
+            gap: 0.55rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-time-pill,
+        .editor-preview-frame.is-mobile-preview .booking-time-luxury {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-time-compact {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-time-look > button {
+            min-width: 0;
+            min-height: 3rem;
+            padding: 0.78rem 0.52rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-time-look > button span {
+            font-size: 0.95rem !important;
+            line-height: 1 !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-faq-cards .space-y-3,
+        .editor-preview-frame.is-mobile-preview .booking-faq-split .space-y-3 {
+            grid-template-columns: 1fr !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-faq-section button {
+            min-width: 0;
+            padding: 0.92rem !important;
+            border-radius: 1rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-faq-section button span {
+            min-width: 0;
+            line-height: 1.22;
+        }

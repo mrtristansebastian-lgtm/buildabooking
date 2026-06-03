@@ -1,0 +1,327 @@
+        @media (max-width: 720px) {
+            .booking-flow-public > div {
+                padding: 1.35rem !important;
+            }
+
+            .booking-flow-public header {
+                margin-bottom: 2rem !important;
+            }
+
+            .booking-flow-public header h1 {
+                font-size: clamp(2.35rem, 13vw, 3.85rem) !important;
+                line-height: 0.9 !important;
+            }
+
+            .booking-flow-public .booking-page-hero.logo-placement-title .booking-hero-title-lockup {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .booking-flow-public .booking-page-hero.logo-placement-badge .booking-hero-title-lockup {
+                width: 100%;
+                max-width: 100%;
+                align-items: flex-start;
+                gap: 0.72rem;
+            }
+
+            .booking-flow-public .booking-hero-logo-badge,
+            .booking-flow-public .booking-preview-media-drop.is-logo.booking-hero-logo-badge {
+                width: min(var(--booking-logo-size, 104px), 5.2rem) !important;
+                height: min(var(--booking-logo-size, 104px), 5.2rem) !important;
+                max-width: 5.2rem !important;
+                max-height: 5.2rem !important;
+            }
+
+            .booking-flow-public .booking-hero-title {
+                overflow-wrap: normal !important;
+                word-break: normal !important;
+            }
+
+            .booking-flow-public .booking-page-hero,
+            .booking-flow-public .booking-page-hero.has-banner {
+                grid-template-columns: 1fr;
+                gap: 1.15rem;
+                margin-bottom: 3rem !important;
+            }
+
+            .booking-flow-public .booking-page-hero.has-banner .booking-hero-copy,
+            .booking-flow-public .booking-hero-media {
+                grid-column: 1;
+                grid-row: auto;
+            }
+
+            .booking-flow-public .booking-page-hero.logo-placement-top .booking-hero-copy,
+            .booking-flow-public .booking-page-hero.logo-placement-badge .booking-hero-copy {
+                padding-top: 0.85rem;
+            }
+
+            .booking-flow-public .booking-hero-media {
+                height: min(var(--hero-media-height, 220px), 14rem);
+                min-height: 10rem;
+            }
+
+            .booking-flow-public header p {
+                font-size: clamp(0.95rem, 4.5vw, 1.15rem) !important;
+            }
+
+            .booking-flow-public [data-preview-section] h4 {
+                font-size: clamp(1.2rem, 6vw, 1.55rem) !important;
+                line-height: 1.08 !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-compact):not(.booking-services-gallery) {
+                grid-template-columns: 1fr !important;
+            }
+
+            .booking-flow-public .booking-services-gallery {
+                grid-template-columns: 1fr !important;
+                gap: 0.7rem !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) > button {
+                padding: 0.92rem !important;
+                transform: none !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) > button > div {
+                flex-direction: column;
+                gap: 0.78rem;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) > button.is-text-only-service > div {
+                gap: 0 !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) .booking-service-image {
+                width: 3.25rem !important;
+                height: 3.25rem !important;
+                border-radius: 1rem !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) h5 {
+                font-size: 0.98rem !important;
+                line-height: 1.12 !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) p {
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                font-size: 0.76rem !important;
+                line-height: 1.34 !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) .mt-4 {
+                margin-top: 0.72rem !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) .booking-service-facts {
+                margin-top: 0.72rem !important;
+                gap: 0.34rem !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) .rounded-full {
+                padding: 0.28rem 0.48rem !important;
+                font-size: 0.44rem !important;
+                line-height: 1 !important;
+                letter-spacing: 0.08em !important;
+            }
+
+            .booking-flow-public .booking-services-grid:not(.booking-services-menu):not(.booking-services-compact) .booking-service-fact {
+                min-height: 1.72rem !important;
+                padding: 0.34rem 0.5rem !important;
+                font-size: 0.58rem !important;
+                line-height: 1 !important;
+                letter-spacing: 0 !important;
+            }
+
+            .booking-flow-public .booking-services-gallery .booking-service-image,
+            .booking-flow-public .booking-services-luxury .booking-service-image {
+                width: 100% !important;
+                height: 6.6rem !important;
+                min-height: 6.6rem !important;
+            }
+
+            .booking-flow-public .booking-services-gallery > button.is-text-only-service h5 {
+                margin-top: 2.15rem;
+            }
+
+            .booking-flow-public .booking-services-signature {
+                grid-template-columns: 1fr !important;
+                gap: 0.52rem !important;
+            }
+
+            .booking-flow-public .booking-services-signature > button {
+                min-height: 5rem;
+                padding: 0.82rem !important;
+            }
+
+            .booking-flow-public .booking-services-signature .booking-service-shell {
+                flex-direction: row !important;
+                gap: 0.72rem !important;
+            }
+
+            .booking-flow-public .booking-services-signature .booking-service-copy {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-flow-public .booking-services-signature .booking-service-title-line,
+            .booking-flow-public .booking-services-signature .booking-service-copy p,
+            .booking-flow-public .booking-services-signature .booking-service-facts {
+                grid-column: 1;
+            }
+
+            .booking-flow-public .booking-services-signature .booking-service-copy p {
+                -webkit-line-clamp: 2;
+            }
+
+            .booking-flow-public .booking-services-signature .booking-service-facts {
+                grid-row: auto;
+                justify-content: flex-start;
+                margin-top: 0.52rem !important;
+            }
+
+            .booking-flow-public .booking-services-menu > button > div > div:last-child {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-flow-public .booking-services-menu > button .mt-4 {
+                grid-column: auto;
+                grid-row: auto;
+                justify-content: flex-start;
+                margin-top: 0.55rem !important;
+            }
+
+            .booking-flow-public .booking-services-menu .booking-service-facts {
+                grid-column: auto;
+                grid-row: auto;
+                justify-content: flex-start;
+                margin-top: 0.55rem !important;
+                flex-wrap: wrap;
+            }
+
+            .booking-flow-public .booking-service-dropdown-trigger {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 0.72rem;
+                min-height: 3.45rem;
+                padding: 0.68rem 0.72rem 0.68rem 0.86rem;
+            }
+
+            .booking-flow-public .booking-service-dropdown-meta {
+                justify-content: flex-end;
+                flex-wrap: nowrap;
+            }
+
+            .booking-flow-public .booking-service-dropdown-trigger-command,
+            .booking-flow-public .booking-service-dropdown-trigger-dock {
+                min-height: 3.45rem;
+            }
+
+            .booking-flow-public .booking-service-dropdown-trigger-dock {
+                width: 100%;
+                justify-self: stretch;
+            }
+
+            .booking-flow-public .booking-service-dropdown-row {
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 0.58rem;
+                min-height: 2.92rem;
+                padding: 0.52rem 0.58rem;
+                border-radius: 0.7rem;
+            }
+
+            .booking-flow-public .booking-service-dropdown-row.is-text-only-service {
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+
+            .booking-flow-public .booking-service-dropdown-row-image {
+                grid-row: 1 / span 2;
+            }
+
+            .booking-flow-public .booking-service-dropdown-row-check {
+                display: none;
+            }
+
+            .booking-flow-public .booking-service-dropdown-row-meta {
+                grid-column: auto;
+                justify-content: flex-end;
+                max-width: 100%;
+                gap: 0.3rem;
+                margin-top: 0;
+                font-size: 0.58rem;
+                justify-self: end;
+            }
+
+            .booking-flow-public .booking-service-dropdown-row.is-text-only-service .booking-service-dropdown-row-meta {
+                grid-column: auto;
+            }
+
+            .booking-flow-public .booking-calendar-look {
+                gap: 0.55rem !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .booking-flow-public .booking-calendar-look > button {
+                min-width: 4.75rem !important;
+                width: 4.75rem !important;
+                min-height: 5.55rem !important;
+                height: 5.55rem !important;
+                border-radius: 1rem !important;
+            }
+
+            .booking-flow-public .booking-time-look {
+                gap: 0.55rem !important;
+            }
+
+            .booking-flow-public .booking-time-pill,
+            .booking-flow-public .booking-time-luxury {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .booking-flow-public .booking-time-compact {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+
+            .booking-flow-public .booking-time-look > button {
+                min-width: 0;
+                min-height: 3rem;
+                padding: 0.78rem 0.52rem !important;
+            }
+
+            .booking-faq-cards .space-y-3,
+            .booking-faq-split .space-y-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-time-blocks {
+                grid-template-columns: 1fr !important;
+            }
+
+            .booking-venue-gallery-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .booking-venue-photo {
+                min-height: 6.5rem;
+                border-radius: 1rem;
+            }
+
+            .booking-flow-public-shell {
+                width: 100%;
+            }
+
+            .booking-venue-gallery-header,
+            .booking-venue-gallery-header-right {
+                text-align: left;
+            }
+
+        .booking-venue-gallery-count {
+            display: none;
+        }
+    }
+

@@ -1,0 +1,134 @@
+import { ArrowRight, Images, MapPin, Plus } from 'lucide-react';
+import { getFontFamily } from '../../../data/fonts';
+
+export const BookingVenueGallery = ({
+    headingLetterSpacing,
+    inspectClass,
+    isPreview,
+    mapDisplayStyle,
+    onInspect,
+    pageAlignment,
+    previewInspectEnabled,
+    settings,
+    subtextLetterSpacing,
+    venueGalleryStyle,
+    venueMapHref,
+    venuePhotos
+}) => {
+    if (venuePhotos.length === 0 && !(venueMapHref && mapDisplayStyle !== 'none') && !isPreview) return null;
+
+    return (
+        <section
+            className={`booking-venue-gallery booking-venue-${venueGalleryStyle} mt-8 ${inspectClass}`}
+            data-preview-section="venue-gallery"
+            onClick={() => previewInspectEnabled && onInspect('venue')}
+            style={{
+                borderColor: `${settings.headingColor || '#000000'}18`,
+                backgroundColor: `${settings.headingColor || '#000000'}04`
+            }}
+        >
+            <div className={`booking-venue-gallery-header booking-venue-gallery-header-${pageAlignment}`}>
+                <div className="booking-venue-gallery-copy">
+                    <span className="booking-venue-gallery-kicker" style={{ color: settings.bodyColor }}>
+                        <Images size={13} /> Venue gallery
+                    </span>
+                    <h4
+                        className="booking-venue-gallery-title"
+                        style={{
+                            color: settings.headingColor,
+                            fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily),
+                            ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {})
+                        }}
+                    >
+                        {settings.venueTitle || 'Inside the space'}
+                    </h4>
+                    <p
+                        className="booking-venue-gallery-intro"
+                        style={{
+                            color: settings.bodyColor,
+                            fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily),
+                            ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {})
+                        }}
+                    >
+                        {settings.venueIntro || 'See the place before you book.'}
+                    </p>
+                </div>
+                {venuePhotos.length > 0 && (
+                    <span className="booking-venue-gallery-count" style={{ color: settings.headingColor }}>
+                        {venuePhotos.length} {venuePhotos.length === 1 ? 'photo' : 'photos'}
+                    </span>
+                )}
+            </div>
+            {venuePhotos.length === 0 && isPreview ? (
+                <div className="booking-venue-gallery-grid booking-venue-preview-empty">
+                    {[0, 1, 2, 3].map((item) => (
+                        <figure
+                            key={item}
+                            className={`booking-venue-photo is-preview-empty ${item === 0 ? 'is-featured' : ''}`}
+                            style={{
+                                color: settings.bodyColor,
+                                backgroundColor: `${settings.headingColor || '#000000'}06`
+                            }}
+                        >
+                            <Images size={item === 0 ? 20 : 15} />
+                            {item === 0 && (
+                                <figcaption style={{ color: settings.headingColor, backgroundColor: `${settings.backgroundColor || '#ffffff'}E8` }}>
+                                    Venue image
+                                </figcaption>
+                            )}
+                        </figure>
+                    ))}
+                </div>
+            ) : venuePhotos.length > 0 && (
+                <div className={`booking-venue-gallery-grid ${venuePhotos.length === 1 ? 'is-single' : ''}`}>
+                    {venuePhotos.map((photo, index) => (
+                        <figure key={`${photo}-${index}`} className={`booking-venue-photo ${index === 0 ? 'is-featured' : ''}`}>
+                            <img src={photo} alt={`Venue view ${index + 1}`} loading="lazy" />
+                            {index === 0 && (
+                                <figcaption style={{ color: settings.headingColor, backgroundColor: `${settings.backgroundColor || '#ffffff'}E8` }}>
+                                    Step inside
+                                </figcaption>
+                            )}
+                        </figure>
+                    ))}
+                </div>
+            )}
+            {venueMapHref && mapDisplayStyle !== 'none' && (
+                <a
+                    href={venueMapHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`booking-map-link booking-map-${mapDisplayStyle}`}
+                    onClick={(event) => {
+                        if (isPreview) event.preventDefault();
+                    }}
+                    style={{
+                        color: settings.headingColor,
+                        borderColor: `${settings.headingColor || '#000000'}18`,
+                        backgroundColor: `${settings.headingColor || '#000000'}06`
+                    }}
+                >
+                    <span><MapPin size={15} /> Open directions</span>
+                    <ArrowRight size={14} />
+                </a>
+            )}
+            {!venueMapHref && isPreview && mapDisplayStyle !== 'none' && (
+                <button
+                    type="button"
+                    className={`booking-map-link booking-map-${mapDisplayStyle} booking-preview-map-blank`}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                    }}
+                    style={{
+                        color: settings.headingColor,
+                        borderColor: `${settings.headingColor || '#000000'}18`,
+                        backgroundColor: `${settings.headingColor || '#000000'}06`
+                    }}
+                >
+                    <span><MapPin size={15} /> Add your location here</span>
+                    <Plus size={14} />
+                </button>
+            )}
+        </section>
+    );
+};

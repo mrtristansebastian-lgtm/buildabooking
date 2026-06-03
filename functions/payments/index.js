@@ -1,14 +1,17 @@
 const admin = require('firebase-admin');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { PAYMENT_SETTINGS_ENCRYPTION_KEY, encryptJson } = require('./crypto');
+const { PAYMENT_SETTINGS_ENCRYPTION_KEY, decryptJson, encryptJson } = require('./crypto');
 const { createGatewayPayment } = require('./gatewayFactory');
 const {
   assertSafeCents,
   assertWorkspaceAdmin,
   cleanCredentials,
   cleanString,
+  credentialFieldLabels,
   getFunctionBaseUrl,
   getGatewayConfig,
+  getMissingRequiredCredentialFields,
+  gatewayDisplayNames,
   normalizeCurrency,
   normalizeGatewayType,
   pathRefs,
@@ -35,6 +38,22 @@ const savePaymentGatewaySettings = onCall({
 
     const credentials = cleanCredentials(gatewayType, request.data?.credentials || {});
     const refs = pathRefs(appId, businessId, gatewayType);
+    if (enabled) {
+      const existingSecretSnap = await refs.secretGatewayRef.get();
+      const existingCredentials = decryptJson(existingSecretSnap.data()?.encryptedCredentials || {});
+      const mergedCredentials = { ...existingCredentials, ...credentials };
+      const missingRequiredFields = getMissingRequiredCredentialFields(gatewayType, mergedCredentials);
+      if (missingRequiredFields.length) {
+        const labels = missingRequiredFields
+          .map((field) => credentialFieldLabels[field] || field)
+          .join(', ');
+        throw new HttpsError(
+          'failed-precondition',
+          `${gatewayDisplayNames[gatewayType] || gatewayType} needs ${labels} before it can be enabled.`
+        );
+      }
+    }
+
     const batch = admin.firestore().batch();
 
     if (Object.keys(credentials).length) {

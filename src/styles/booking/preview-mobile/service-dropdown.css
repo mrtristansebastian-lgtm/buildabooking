@@ -1,0 +1,65 @@
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-trigger {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.72rem;
+            min-height: 3.45rem;
+            padding: 0.68rem 0.72rem 0.68rem 0.86rem;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-meta {
+            justify-content: flex-end;
+            flex-wrap: nowrap;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-trigger-command,
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-trigger-dock {
+            min-height: 3.45rem;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-trigger-dock {
+            width: 100%;
+            justify-self: stretch;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-copy strong,
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row-copy strong {
+            font-size: 0.86rem;
+            line-height: 1.14;
+            letter-spacing: 0;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row {
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.58rem;
+            min-height: 2.92rem;
+            padding: 0.52rem 0.58rem;
+            border-radius: 0.7rem;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row.is-text-only-service {
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row-image {
+            grid-row: 1 / span 2;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row-check {
+            display: none;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row-meta {
+            grid-column: auto;
+            justify-content: flex-end;
+            max-width: 100%;
+            gap: 0.3rem;
+            margin-top: 0;
+            font-size: 0.58rem;
+            justify-self: end;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-service-dropdown-row.is-text-only-service .booking-service-dropdown-row-meta {
+            grid-column: auto;
+        }

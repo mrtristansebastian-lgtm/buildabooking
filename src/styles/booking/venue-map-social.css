@@ -1,0 +1,342 @@
+        .booking-faq-cards .space-y-3,
+        .booking-faq-split .space-y-3 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem;
+        }
+
+        .booking-faq-numbered button::before {
+            content: "Q";
+            display: inline-flex;
+            width: 1.55rem;
+            height: 1.55rem;
+            margin-right: 0.6rem;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.07);
+            font-size: 0.62rem;
+            font-weight: 950;
+        }
+
+        .booking-faq-minimal button {
+            border-left: 0 !important;
+            border-right: 0 !important;
+            border-top: 0 !important;
+        }
+
+        .booking-venue-gallery {
+            border: 1px solid;
+            border-radius: 1.6rem;
+            padding: clamp(1rem, 2vw, 1.4rem);
+            overflow: hidden;
+        }
+
+        .booking-venue-gallery-intro {
+            margin-top: 0.45rem;
+            max-width: 36rem;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            opacity: 0.62;
+        }
+
+        .booking-venue-gallery-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .booking-venue-gallery-header-center {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .booking-venue-gallery-header-right {
+            text-align: right;
+        }
+
+        .booking-venue-gallery-copy {
+            max-width: 40rem;
+        }
+
+        .booking-venue-gallery-kicker,
+        .booking-venue-gallery-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.62rem;
+            font-weight: 900;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            opacity: 0.62;
+        }
+
+        .booking-venue-gallery-title {
+            margin-top: 0.55rem;
+            font-size: clamp(1.45rem, 2vw, 2rem);
+            font-weight: 900;
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+        }
+
+        .booking-venue-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.7rem;
+        }
+
+        .booking-venue-editorial .booking-venue-gallery-grid {
+            grid-template-columns: 1.5fr repeat(2, 0.8fr);
+        }
+
+        .booking-venue-filmstrip .booking-venue-gallery-grid {
+            display: flex;
+            overflow-x: auto;
+            padding-bottom: 0.2rem;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+        }
+
+        .booking-venue-filmstrip .booking-venue-gallery-grid::-webkit-scrollbar {
+            display: none;
+        }
+
+        .booking-venue-filmstrip .booking-venue-photo {
+            flex: 0 0 min(78%, 18rem);
+            scroll-snap-align: start;
+        }
+
+        .booking-venue-postcard .booking-venue-photo {
+            border-radius: 0.55rem;
+            transform: rotate(-0.35deg);
+            box-shadow: 0 24px 48px -36px rgba(15, 23, 42, 0.48);
+        }
+
+        .booking-venue-postcard .booking-venue-photo:nth-child(even) {
+            transform: rotate(0.35deg);
+        }
+
+        .booking-venue-minimal {
+            border-style: dashed;
+            border-radius: 1rem;
+        }
+
+        .booking-venue-minimal .booking-venue-photo {
+            border-radius: 0.8rem;
+            box-shadow: none;
+        }
+
+        .booking-venue-gallery-grid.is-single {
+            grid-template-columns: 1fr;
+        }
+
+        .booking-venue-photo {
+            position: relative;
+            min-height: 8rem;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 1.2rem;
+            background: #f4f4f5;
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+        }
+
+        .booking-venue-photo.is-featured {
+            grid-column: span 2;
+            grid-row: span 2;
+            aspect-ratio: auto;
+        }
+
+        .booking-venue-gallery-grid.is-single .booking-venue-photo.is-featured {
+            grid-column: auto;
+            grid-row: auto;
+            aspect-ratio: 16 / 9;
+        }
+
+        .booking-venue-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 700ms ease;
+        }
+
+        .booking-venue-photo:hover img {
+            transform: scale(1.045);
+        }
+
+        .booking-venue-photo figcaption {
+            position: absolute;
+            left: 0.7rem;
+            bottom: 0.7rem;
+            border-radius: 999px;
+            padding: 0.45rem 0.7rem;
+            font-size: 0.58rem;
+            font-weight: 900;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+        }
+
+        .booking-service-option.is-preview-empty,
+        .booking-service-dropdown-row.is-preview-empty,
+        .booking-faq-section button.is-preview-empty,
+        .booking-time-look > button.is-preview-empty,
+        .booking-social-links a.is-preview-empty,
+        .booking-venue-photo.is-preview-empty {
+            cursor: default;
+        }
+
+        .booking-services-preview-empty > button:not(.is-selected),
+        .booking-service-dropdown-row.is-preview-empty:not(.is-active),
+        .booking-faq-preview-empty button:not(:first-child),
+        .booking-time-preview-empty > button:not(:first-child),
+        .booking-social-preview-empty a:not(:first-child) {
+            opacity: 0.58 !important;
+        }
+
+        .booking-venue-photo.is-preview-empty {
+            display: grid;
+            place-items: center;
+            color: rgba(17, 24, 39, 0.28);
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.72), transparent 45%),
+                linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(226, 232, 240, 0.72));
+        }
+
+        .booking-venue-photo.is-preview-empty::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(135deg, transparent 0 44%, rgba(15, 23, 42, 0.055) 44% 45%, transparent 45%),
+                linear-gradient(45deg, transparent 0 58%, rgba(15, 23, 42, 0.045) 58% 59%, transparent 59%);
+        }
+
+        .booking-map-link {
+            margin-top: 0.85rem;
+            min-height: 3rem;
+            border: 1px solid;
+            border-radius: 999px;
+            padding: 0.8rem 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.66rem;
+            font-weight: 950;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .booking-map-link span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .booking-map-card {
+            border-radius: 1.2rem;
+            padding: 1rem;
+        }
+
+        .booking-map-footer {
+            border-radius: 0;
+            border-left: 0 !important;
+            border-right: 0 !important;
+            background: transparent !important;
+        }
+
+        .booking-map-dock {
+            width: max-content;
+            min-width: 3rem;
+            border-radius: 1rem;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .booking-social-links.booking-social-labels a {
+            min-width: 8rem;
+        }
+
+        .booking-social-links.booking-social-dock {
+            width: max-content;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0.38rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .booking-social-links.booking-social-dock a {
+            padding-left: 0.85rem;
+            padding-right: 0.85rem;
+        }
+
+        .booking-social-links.booking-social-minimal a {
+            min-width: auto;
+            height: auto;
+            padding: 0.25rem 0;
+            border-radius: 0 !important;
+            border-top: 0 !important;
+            border-left: 0 !important;
+            border-right: 0 !important;
+            background: transparent !important;
+        }
+
+        .booking-social-links.booking-social-solid a {
+            box-shadow: 0 16px 38px -28px rgba(15, 23, 42, 0.52);
+        }
+
+        .booking-preview-map-blank:hover {
+            transform: translateY(-1px);
+            border-color: rgba(0, 0, 0, 0.24) !important;
+        }
+
+        .booking-preview-map-blank {
+            appearance: none;
+            width: 100%;
+        }
+
+        .booking-style-native-precision .booking-page-hero {
+            gap: clamp(1rem, 2.4vw, 1.9rem);
+        }
+
+        .booking-style-native-precision .booking-services-signature > button,
+        .booking-style-native-precision .booking-time-pill > button,
+        .booking-style-native-precision .booking-venue-gallery {
+            border-radius: 1.2rem !important;
+        }
+
+        .booking-style-native-precision .booking-calendar-studio > button {
+            border-radius: 1.15rem !important;
+        }
+
+        .booking-style-command-flow .booking-flow-public-shell {
+            width: min(100%, 1040px);
+        }
+
+        .booking-style-command-flow .booking-page-hero {
+            margin-bottom: clamp(2rem, 5vw, 3.4rem) !important;
+        }
+
+        .booking-style-command-flow .booking-services-dropdown {
+            max-width: 42rem;
+        }
+
+        .booking-style-command-flow .booking-calendar-compact {
+            gap: 0.55rem !important;
+        }
+
+        .booking-style-command-flow .booking-time-blocks {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .booking-style-command-flow .booking-social-dock {
+            box-shadow: 0 22px 56px -42px rgba(15, 23, 42, 0.55);
+        }
+

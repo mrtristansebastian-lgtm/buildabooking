@@ -1,0 +1,251 @@
+import { useEffect, useMemo, useState } from 'react';
+import { getLocalDateStr } from '../../../utils/dates';
+import {
+  addDaysToDate,
+  dateFromKey,
+  formatSlotEditorValue,
+  getNextOpenTime,
+  getStaffInitials,
+  parseSlotValue,
+  sortSlotValues,
+  timeValueToMinutes
+} from '../utils/businessCalendarUtils';
+import {
+  buildCalendars,
+  buildDefaultSlots,
+  buildDefaultSlotSettings,
+  buildStaffMembers,
+  getCalendarDayConfig,
+  getSelectedBookings,
+  groupBookingsByTime,
+} from '../utils/scheduleWorkspaceModel';
+
+export const useScheduleWorkspace = ({
+  activeStaffId = 'owner',
+  bookings = [],
+  onSettingsDirty,
+  setSettings,
+  settings,
+  showToast,
+  staffList = [],
+  workspaceRole = 'owner'
+}) => {
+  const todayStr = getLocalDateStr(new Date());
+  const initialCalendarId = workspaceRole === 'staff' ? (activeStaffId || 'owner') : 'workspace';
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedCalendarId, setSelectedCalendarId] = useState(initialCalendarId);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [slotEditor, setSlotEditor] = useState(null);
+
+  const staffMembers = useMemo(() => buildStaffMembers({ activeStaffId, staffList, workspaceRole }), [activeStaffId, staffList, workspaceRole]);
+  const calendars = useMemo(() => buildCalendars(staffMembers), [staffMembers]);
+  const selectedCalendar = calendars.find(calendar => calendar.id === selectedCalendarId) || calendars[0];
+  const isWorkspaceCalendar = selectedCalendarId === 'workspace';
+  const canEditSelectedCalendar = workspaceRole !== 'staff' || selectedCalendarId === activeStaffId;
+
+  useEffect(() => {
+    if (workspaceRole === 'staff' && activeStaffId) setSelectedCalendarId(activeStaffId);
+  }, [activeStaffId, workspaceRole]);
+
+  useEffect(() => {
+    if (!calendars.some(calendar => calendar.id === selectedCalendarId)) {
+      setSelectedCalendarId(workspaceRole === 'staff' ? (activeStaffId || 'workspace') : 'workspace');
+    }
+  }, [activeStaffId, calendars, selectedCalendarId, workspaceRole]);
+
+  const guardCalendarEdit = (calendarId = selectedCalendarId) => {
+    const canEdit = workspaceRole !== 'staff' || calendarId === activeStaffId;
+    if (!canEdit) {
+      showToast?.(calendarId === 'workspace'
+        ? 'Business overview is view only for staff. Switch to your own calendar to edit availability.'
+        : 'You can view teammate calendars, but only edit your own availability.');
+      return false;
+    }
+    return true;
+  };
+
+  const updateDateConfigForCalendar = (calendarId, dateStr, nextConfig) => {
+    if (!guardCalendarEdit(calendarId)) return false;
+    onSettingsDirty?.();
+    setSettings(prev => {
+      if (calendarId === 'workspace') return { ...prev, schedule: { ...(prev.schedule || {}), [dateStr]: nextConfig } };
+      const previousCalendar = prev.staffCalendars?.[calendarId] || {};
+      return {
+        ...prev,
+        staffCalendars: {
+          ...(prev.staffCalendars || {}),
+          [calendarId]: {
+            ...previousCalendar,
+            staffId: calendarId,
+            schedule: { ...(previousCalendar.schedule || {}), [dateStr]: nextConfig },
+            updatedAt: Date.now()
+          }
+        }
+      };
+    });
+    return true;
+  };
+
+  const updateDefaultTimesForCalendar = (calendarId, nextTimes) => {
+    if (!guardCalendarEdit(calendarId)) return;
+    onSettingsDirty?.();
+    const sortedTimes = sortSlotValues(nextTimes);
+    setSettings(prev => {
+      if (calendarId === 'workspace') return { ...prev, availableTimes: sortedTimes };
+      const previousCalendar = prev.staffCalendars?.[calendarId] || {};
+      return {
+        ...prev,
+        staffCalendars: {
+          ...(prev.staffCalendars || {}),
+          [calendarId]: { ...previousCalendar, staffId: calendarId, availableTimes: sortedTimes, updatedAt: Date.now() }
+        }
+      };
+    });
+  };
+
+  const defaultSlotSettings = buildDefaultSlotSettings(settings, selectedCalendarId);
+  const generatedSlots = buildDefaultSlots(defaultSlotSettings);
+  const defaultSlots = sortSlotValues(defaultSlotSettings.defaultTimes?.length ? defaultSlotSettings.defaultTimes : generatedSlots);
+  const agendaCalendarId = selectedCalendarId;
+  const dayConfig = getCalendarDayConfig(settings, agendaCalendarId, selectedDate);
+  const selectedDateObj = dateFromKey(selectedDate);
+  const selectedDayTitle = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const selectedBookings = useMemo(() => getSelectedBookings({
+    agendaCalendarId,
+    bookings,
+    currentMonth,
+    selectedDate,
+    todayStr
+  }), [agendaCalendarId, bookings, currentMonth, selectedDate, todayStr]);
+
+  const bookingsByTime = useMemo(() => groupBookingsByTime(selectedBookings), [selectedBookings]);
+  const googleSyncableBookings = useMemo(() => (bookings || []).filter(booking => (
+    !booking.isExample &&
+    booking.status === 'confirmed' &&
+    booking.dateKey &&
+    booking.time &&
+    booking.time !== 'Waitlist' &&
+    !booking.googleCalendarEventId &&
+    (selectedCalendarId === 'workspace' || booking.staffId === selectedCalendarId)
+  )), [bookings, selectedCalendarId]);
+
+  const reservedSlotCount = selectedBookings.filter(booking => booking.time && booking.time !== 'Waitlist').length;
+  const openSlotCount = dayConfig.available ? Math.max(0, (dayConfig.times?.length || 0) - reservedSlotCount) : 0;
+
+  const actions = {
+    applyDefaultSlotsToDate: (dateStr = selectedDate, calendarId = selectedCalendarId) => {
+      const targetConfig = getCalendarDayConfig(settings, calendarId, dateStr);
+      updateDateConfigForCalendar(calendarId, dateStr, { ...targetConfig, available: true, times: defaultSlots });
+      showToast?.('Default slots applied.');
+    },
+    applyDefaultSlotsForScope: (scope = 'day') => {
+      const anchor = dateFromKey(selectedDate);
+      const dates = scope === 'month'
+        ? Array.from({ length: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate() }, (_, index) => getLocalDateStr(new Date(anchor.getFullYear(), anchor.getMonth(), index + 1)))
+        : scope === 'week'
+          ? Array.from({ length: 7 }, (_, index) => getLocalDateStr(addDaysToDate(anchor, index - ((anchor.getDay() + 6) % 7))))
+          : [selectedDate];
+      dates.forEach(dateStr => {
+        const targetConfig = getCalendarDayConfig(settings, selectedCalendarId, dateStr);
+        updateDateConfigForCalendar(selectedCalendarId, dateStr, { ...targetConfig, available: true, times: defaultSlots });
+      });
+      showToast?.(`Default slots applied to ${scope === 'day' ? 'the selected day' : `this ${scope}`}.`);
+    },
+    addDefaultSlot: (slot) => {
+      const nextSlot = String(slot || '').trim();
+      if (!nextSlot) return;
+      updateDefaultTimesForCalendar(selectedCalendarId, [...defaultSlots, nextSlot]);
+    },
+    deleteDefaultSlot: (slot) => updateDefaultTimesForCalendar(selectedCalendarId, defaultSlots.filter(time => time !== slot)),
+    updateDefaultSlot: (oldSlot, nextSlot) => {
+      const normalizedSlot = String(nextSlot || '').trim();
+      if (!normalizedSlot) return;
+      updateDefaultTimesForCalendar(selectedCalendarId, defaultSlots.map(time => time === oldSlot ? normalizedSlot : time));
+    },
+    deleteSlotFromEditor: () => {
+      if (!slotEditor?.dateStr || !slotEditor?.calendarId || !guardCalendarEdit(slotEditor.calendarId)) return;
+      if (!slotEditor.originalTime) return setSlotEditor(null);
+      const targetConfig = getCalendarDayConfig(settings, slotEditor.calendarId, slotEditor.dateStr);
+      updateDateConfigForCalendar(slotEditor.calendarId, slotEditor.dateStr, {
+        ...targetConfig,
+        times: targetConfig.times.filter(time => time !== slotEditor.originalTime)
+      });
+      setSlotEditor(null);
+    },
+    moveDateWindow: (direction) => {
+      const nextDate = addDaysToDate(dateFromKey(selectedDate), direction);
+      setSelectedDate(getLocalDateStr(nextDate));
+      setCurrentMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+    },
+    saveGeneratedDefaultSlots: () => {
+      updateDefaultTimesForCalendar(selectedCalendarId, defaultSlots);
+      showToast?.('Default slots saved.');
+    },
+    saveSlotEditor: () => {
+      if (!slotEditor?.dateStr || !slotEditor?.calendarId || !guardCalendarEdit(slotEditor.calendarId)) return;
+      const slotValue = formatSlotEditorValue(slotEditor);
+      if (!slotValue) return showToast?.('Add a time before saving this slot.');
+      if (slotEditor.mode === 'range' && (!slotEditor.end || timeValueToMinutes(slotEditor.end) <= timeValueToMinutes(slotEditor.start))) {
+        return showToast?.('End time must be later than the start time.');
+      }
+      const targetConfig = getCalendarDayConfig(settings, slotEditor.calendarId, slotEditor.dateStr);
+      if (targetConfig.times.includes(slotValue) && slotValue !== slotEditor.originalTime) return showToast?.('That time already exists for this day.');
+      const nextTimes = slotEditor.originalTime
+        ? targetConfig.times.map(time => time === slotEditor.originalTime ? slotValue : time)
+        : [...targetConfig.times, slotValue];
+      updateDateConfigForCalendar(slotEditor.calendarId, slotEditor.dateStr, { ...targetConfig, available: true, times: sortSlotValues(nextTimes) });
+      setSlotEditor(null);
+    },
+    selectCalendar: (calendarId) => {
+      setSelectedCalendarId(calendarId);
+    },
+    selectDate: (dateStr) => {
+      setSelectedDate(dateStr);
+      const date = dateFromKey(dateStr);
+      setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    },
+    startAddingSlot: () => {
+      if (!guardCalendarEdit(agendaCalendarId)) return;
+      setSlotEditor({ originalTime: null, dateStr: selectedDate, calendarId: agendaCalendarId, mode: 'single', start: getNextOpenTime(dayConfig.times), end: '' });
+    },
+    startEditingSlot: (time) => {
+      if (!time || !guardCalendarEdit(agendaCalendarId)) return;
+      setSlotEditor({ originalTime: time, dateStr: selectedDate, calendarId: agendaCalendarId, ...parseSlotValue(time) });
+    },
+    toggleDateAvailability: () => updateDateConfigForCalendar(agendaCalendarId, selectedDate, { ...dayConfig, available: !dayConfig.available }),
+    toggleWaitlist: () => {
+      onSettingsDirty?.();
+      setSettings(prev => ({ ...prev, features: { ...(prev.features || {}), waitlist: prev.features?.waitlist === false } }));
+    }
+  };
+
+  return {
+    actions,
+    agendaCalendarId,
+    bookingsByTime,
+    calendars,
+    canEditSelectedCalendar,
+    dayConfig,
+    defaultSlots,
+    generatedSlots,
+    getStaffInitials,
+    googleSyncableBookings,
+    isPastDay: selectedDate < todayStr,
+    isToday: selectedDate === todayStr,
+    isWorkspaceCalendar,
+    openSlotCount,
+    selectedBookings,
+    selectedCalendar,
+    selectedCalendarId,
+    selectedDate,
+    selectedDayTitle,
+    setSettingsModalOpen,
+    setSlotEditor,
+    settingsModalOpen,
+    slotEditor,
+    todayStr,
+    waitlistEnabled: settings.features?.waitlist !== false,
+  };
+};

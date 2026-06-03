@@ -111,7 +111,7 @@ const manualSections = [
       'Use Support Inbox when the client needs a message thread.'
     ],
     tips: [
-      'If email collection is disabled in Editor Features, email updates for that client are disabled too.',
+      'If email collection is disabled in the Client Form room, email updates for that client are disabled too.',
       'If mobile number collection is disabled, phone-based workflows cannot use that field.'
     ]
   },
@@ -183,59 +183,58 @@ const manualSections = [
     label: 'Editor',
     kicker: 'Public page engine',
     title: 'Shape the booking page clients trust.',
-    summary: 'Editor controls the public booking page: identity, themes, visuals, features, copy, saved looks, and publishing.',
+    summary: 'Editor controls the public booking page: introduction, colours, typography, style, client form, saved looks, and publishing.',
     icon: Palette,
     target: { tab: 'editor' },
     highlights: [
-      'Industry comes first so the theme engine feels custom to the business.',
+      'Introduction sets the first client impression before deeper styling.',
       'Mobile browser uses a lighter starter mode for stability.',
-      'PC and app experiences keep the full theme engine available.'
+      'PC and app experiences keep the full editor available.'
     ],
     groups: [
       {
-        title: 'Identity',
-        target: { tab: 'editor', editorTab: 'identity' },
+        title: 'Introduction',
+        target: { tab: 'editor', editorTab: 'introduction' },
         items: [
           'Upload logo and banner that sync with the business profile.',
           'Show, hide, position, and size the booking page logo.',
           'Edit business name, tagline, welcome text, and booking link.',
-          'Keep page identity clean before tuning themes, visuals, and copy.'
+          'Keep the first impression clean before tuning colours and style.'
         ]
       },
       {
-        title: 'Themes',
-        target: { tab: 'editor', editorTab: 'themes' },
+        title: 'Page Colours',
+        target: { tab: 'editor', editorTab: 'colours' },
         items: [
-          'Choose industry first, then refine by palette direction.',
-          'Save a chosen look as a reusable template.',
-          'Use the Build A Booking Native theme when the owner wants the platform brand style.',
-          'Use logo color reading to pull brand colors into the theme direction.'
+          'Tune base, action, calendar, time, FAQ, and social footer colour categories.',
+          'Use quiet logo colour options when a logo has been uploaded.',
+          'Keep colour choices manual so user-selected colours stay exactly as chosen.'
         ]
       },
       {
-        title: 'Visuals',
-        target: { tab: 'editor', editorTab: 'visuals' },
+        title: 'Typography',
+        target: { tab: 'editor', editorTab: 'typography' },
         items: [
-          'Tune calendar style, time slot style, action button style, FAQ style, and social link styling.',
-          'Control typography, font personality, and spacing so headings and subtext feel intentional.',
-          'Use visuals after choosing a theme to polish the final page.'
+          'Control font personality and spacing so headings and subtext feel intentional.',
+          'Use typography after the introduction copy is clear.'
         ]
       },
       {
-        title: 'Features',
-        target: { tab: 'editor', editorTab: 'features' },
+        title: 'Style System',
+        target: { tab: 'editor', editorTab: 'style' },
+        items: [
+          'Choose between Native Precision and Command Flow.',
+          'Tune the full journey treatment without changing the locked booking order.',
+          'Use style after colours and typography to polish the final page.'
+        ]
+      },
+      {
+        title: 'Client Form',
+        target: { tab: 'editor', editorTab: 'form' },
         items: [
           'Choose which client fields are required, including email, phone, and notes.',
           'Enable or disable email update opt-in on the booking form.',
           'Turn FAQ, socials, waitlist, first available, and other client-facing tools on or off.'
-        ]
-      },
-      {
-        title: 'Copy',
-        target: { tab: 'editor', editorTab: 'copy' },
-        items: [
-          'Edit section labels, button copy, confirmation wording, and client-facing microcopy.',
-          'Keep copy short, useful, and aligned with the business personality.'
         ]
       }
     ],
@@ -245,9 +244,9 @@ const manualSections = [
       { name: 'Save Template', meaning: 'Stores a polished look that can be reused for launches, seasons, or alternate pages.' }
     ],
     workflow: [
-      'Choose industry and theme direction.',
-      'Set identity and media.',
-      'Polish visuals and typography.',
+      'Set introduction copy and media.',
+      'Choose colours and typography.',
+      'Polish the style system.',
       'Enable only the client-facing features the business truly needs.',
       'Publish after previewing both PC and mobile.'
     ],
@@ -415,9 +414,9 @@ const manualSections = [
     label: 'Email Updates',
     kicker: 'Client messages',
     title: 'Keep email updates intentional.',
-    summary: 'Email settings now live in Editor Features so owners decide what clients can opt into directly beside the booking form controls.',
+    summary: 'Email settings now live in the Client Form room so owners decide what clients can opt into directly beside the booking form controls.',
     icon: Mail,
-    target: { tab: 'editor', editorTab: 'features' },
+    target: { tab: 'editor', editorTab: 'form' },
     highlights: [
       'Email opt-in appears on the booking page only when enabled.',
       'Email collection must be enabled for email updates to work.',

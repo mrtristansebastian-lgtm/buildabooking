@@ -1,0 +1,83 @@
+        .booking-services-compact > button {
+            min-height: 3.65rem;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            border-radius: 0.82rem !important;
+            padding: 0.72rem 0.9rem !important;
+            background: rgba(255,255,255,0.82) !important;
+            border-color: rgba(15, 23, 42, 0.075) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.88),
+                0 18px 44px -42px rgba(15,23,42,0.48) !important;
+        }
+
+        .booking-services-compact {
+            grid-template-columns: 1fr !important;
+            gap: 0.55rem !important;
+        }
+
+        .booking-services-compact > button::before {
+            content: none;
+        }
+
+        .booking-services-compact > button.is-selected {
+            transform: none !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.96),
+                0 20px 52px -44px var(--native-accent-glow, rgba(15,23,42,0.48)) !important;
+        }
+
+        .booking-services-compact .booking-service-image {
+            display: none !important;
+        }
+
+        .booking-services-compact > button p {
+            display: none;
+        }
+
+        .booking-services-compact > button .mt-4 {
+            margin-top: 0 !important;
+            justify-content: flex-end;
+        }
+
+        .booking-services-compact > button .rounded-full:not(:last-child) {
+            display: none;
+        }
+
+        .booking-services-compact > button .rounded-full:last-child {
+            min-width: 3.1rem;
+            justify-content: center;
+        }
+
+        .booking-services-compact .booking-service-shell,
+        .booking-services-compact .booking-service-copy {
+            display: contents !important;
+        }
+
+        .booking-services-compact .booking-service-title-line {
+            grid-column: 1;
+            align-items: center;
+        }
+
+        .booking-services-compact .booking-service-eyebrow,
+        .booking-services-compact .booking-service-selected-mark,
+        .booking-services-compact > button p {
+            display: none !important;
+        }
+
+        .booking-services-compact .booking-service-facts {
+            grid-column: 2;
+            justify-content: flex-end;
+            margin-top: 0 !important;
+            flex-wrap: nowrap;
+        }
+
+        .booking-services-compact .booking-service-fact {
+            min-height: 1.7rem;
+            padding: 0.32rem 0.56rem;
+            font-size: 0.6rem;
+        }
+
+        .booking-services-compact .booking-service-fact.is-price {
+            min-width: 3.1rem;
+        }

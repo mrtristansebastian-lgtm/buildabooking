@@ -7,16 +7,16 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('/src/data/themes')) return 'theme-engine';
-          if (id.includes('/src/data/fonts')) return 'font-engine';
-          if (id.includes('/src/components/OnboardingShowroom')) return 'onboarding-tour';
-          if (id.includes('/src/components/BusinessCalendar')) return 'schedule-workspace';
-          if (id.includes('/src/components/BookingFlow')) return 'booking-page';
-          if (id.includes('node_modules/firebase')) return 'firebase';
-          if (id.includes('node_modules/lucide-react')) return 'icons';
-          if (id.includes('node_modules/@emailjs')) return 'email';
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react';
-          if (id.includes('node_modules')) return 'vendor';
+          const normalizedId = id.replace(/\\/g, '/');
+          if (normalizedId.includes('/src/data/fonts')) return 'font-engine';
+          if (normalizedId.includes('/src/components/OnboardingShowroom')) return 'onboarding-tour';
+          if (normalizedId.includes('/src/components/BusinessCalendar')) return 'schedule-workspace';
+          if (normalizedId.includes('/src/components/BookingFlow')) return 'booking-page';
+          if (normalizedId.includes('node_modules/firebase')) return 'firebase';
+          if (normalizedId.includes('node_modules/lucide-react')) return 'icons';
+          if (normalizedId.includes('node_modules/@emailjs')) return 'email';
+          if (normalizedId.includes('node_modules/react') || normalizedId.includes('node_modules/react-dom')) return 'react';
+          if (normalizedId.includes('node_modules')) return 'vendor';
         }
       }
     }

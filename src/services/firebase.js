@@ -1,11 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import { Capacitor } from '@capacitor/core';
 import { browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword, deleteUser, getAuth, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, initializeAuth, onAuthStateChanged, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, getDoc, getDocs, getFirestore, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
-export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, deleteObject, deleteUser, doc, enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, httpsCallable, increment, indexedDBLocalPersistence, limit, onAuthStateChanged, onSnapshot, orderBy, query, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, startAfter, updateDoc, uploadBytes, where };
+export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, deleteObject, deleteUser, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, httpsCallable, increment, indexedDBLocalPersistence, limit, onAuthStateChanged, onSnapshot, orderBy, query, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, startAfter, updateDoc, uploadBytes, where };
 
 const runtimeFirebaseConfig = globalThis.__firebase_config;
 const runtimeAppId = globalThis.__app_id;
@@ -20,7 +20,7 @@ let authInstance = null;
 let dbInstance = null;
 let storageInstance = null;
 let functionsInstance = null;
-let firestorePersistenceReady = Promise.resolve(false);
+const firestorePersistenceReady = Promise.resolve(false);
 
 if (firebaseConfigStr !== '{}') {
   try {
@@ -37,18 +37,6 @@ if (firebaseConfigStr !== '{}') {
       authInstance = getAuth(firebaseApp);
     }
     dbInstance = getFirestore(firebaseApp);
-    firestorePersistenceReady = enableMultiTabIndexedDbPersistence(dbInstance)
-      .catch((multiTabError) => {
-        if (multiTabError?.code !== 'failed-precondition') throw multiTabError;
-        return enableIndexedDbPersistence(dbInstance);
-      })
-      .then(() => true)
-      .catch((error) => {
-        if (!['failed-precondition', 'unimplemented'].includes(error?.code)) {
-          console.warn('Firestore offline persistence could not be enabled.', error);
-        }
-        return false;
-      });
     storageInstance = getStorage(firebaseApp);
     functionsInstance = getFunctions(firebaseApp);
   } catch (error) {

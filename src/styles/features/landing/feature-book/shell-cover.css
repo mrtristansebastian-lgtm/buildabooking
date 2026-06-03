@@ -1,0 +1,158 @@
+        .native-feature-book-section {
+            position: relative;
+            overflow: clip;
+            background:
+                linear-gradient(180deg, #ffffff 0%, #fbfcff 38%, #ffffff 100%);
+        }
+
+        .native-feature-book-section::before {
+            content: "";
+            position: absolute;
+            inset: 6rem 0 auto;
+            height: 1px;
+            background-image: var(--native-accent-gradient);
+            background-size: 420% 420%;
+            background-position: var(--native-accent-x) 50%;
+            opacity: 0.42;
+        }
+
+        .native-feature-book {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(17rem, 0.46fr) minmax(0, 0.54fr);
+            gap: 0;
+            align-items: stretch;
+            max-width: 980px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 0.65rem;
+            background: #ffffff;
+            box-shadow: 0 34px 100px -76px rgba(15, 23, 42, 0.62);
+            overflow: hidden;
+        }
+
+        .native-feature-book-cover {
+            position: relative;
+            min-height: min(30rem, calc(100vh - 8rem));
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-radius: 0;
+            border: 0;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.88)) padding-box,
+                var(--native-accent-gradient) border-box;
+            background-size: auto, 420% 420%;
+            background-position: 0 0, var(--native-accent-x) 50%;
+            box-shadow: none;
+            padding: clamp(1.35rem, 2.5vw, 2.15rem);
+            overflow: hidden;
+        }
+
+        .native-feature-book-cover::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(115deg, rgba(57,255,20,0.08), transparent 34%),
+                linear-gradient(295deg, rgba(20,167,255,0.1), transparent 35%);
+            pointer-events: none;
+        }
+
+        .native-feature-book-cover > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .native-feature-book-cover p,
+        .native-feature-page > p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.66rem;
+            font-weight: 900;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .native-feature-page > p {
+            grid-column: 1;
+        }
+
+        .native-feature-book-cover h2 {
+            margin: 1rem 0;
+            color: #050505;
+            font-size: clamp(2rem, 4.1vw, 3.9rem);
+            font-weight: 900;
+            letter-spacing: -0.06em;
+            line-height: 0.9;
+            text-wrap: balance;
+        }
+
+        .native-feature-book-cover span {
+            display: block;
+            color: #64748b;
+            font-size: clamp(0.95rem, 1.25vw, 1.05rem);
+            font-weight: 700;
+            line-height: 1.45;
+            max-width: 28rem;
+        }
+
+        .native-feature-book-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            width: fit-content;
+            padding: 0.36rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+
+        .native-feature-book-cover .native-feature-book-controls button {
+            width: 2.4rem;
+            height: 2.4rem;
+            min-height: 0;
+            padding: 0;
+            border-radius: 999px;
+            background: #050505;
+            box-shadow: none;
+        }
+
+        .native-feature-book-cover .native-feature-book-controls button:disabled {
+            opacity: 0.28;
+            cursor: default;
+        }
+
+        .native-feature-book-controls span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3.1rem;
+            max-width: none;
+            color: #050505;
+            font-size: 0.7rem;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: 0.12em;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .native-feature-book-cover button,
+        .native-feature-page-finale button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            width: fit-content;
+            min-height: 3rem;
+            border-radius: 999px;
+            background: #050505;
+            color: #ffffff;
+            padding: 0 1.2rem;
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            box-shadow: 0 20px 42px -30px rgba(15, 23, 42, 0.62);
+        }

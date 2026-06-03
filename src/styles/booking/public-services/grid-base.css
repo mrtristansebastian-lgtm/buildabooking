@@ -1,0 +1,117 @@
+        /* Designer-grade public booking display variations. */
+        .booking-services-grid > button {
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+            box-sizing: border-box;
+            transform-origin: center;
+            transition:
+                transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                opacity 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                background 180ms ease;
+        }
+
+        .booking-services-grid > button.is-selected {
+            opacity: 1 !important;
+        }
+
+        .booking-services-grid > button h5 {
+            letter-spacing: -0.01em;
+        }
+
+        .booking-services-grid > button > div {
+            min-width: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .booking-services-grid .booking-service-image {
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+        }
+
+        .booking-services-grid .booking-service-image img {
+            display: block;
+        }
+
+        .booking-services-grid > button.is-text-only-service > div {
+            gap: 0 !important;
+        }
+
+        .booking-services-grid > button.is-text-only-service h5 {
+            max-width: 18rem;
+        }
+
+        .booking-services-grid > button .rounded-full {
+            border: 1px solid rgba(15, 23, 42, 0.04);
+            backdrop-filter: blur(10px);
+        }
+
+        .booking-service-title-line {
+            min-width: 0;
+        }
+
+        .booking-service-eyebrow,
+        .booking-service-dropdown-eyebrow {
+            display: block;
+            margin-bottom: 0.34rem;
+            font-size: 0.55rem;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            opacity: 0.54;
+        }
+
+        .booking-service-selected-mark {
+            width: 1.68rem;
+            height: 1.68rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
+        }
+
+        .booking-service-facts {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 1rem;
+        }
+
+        .booking-service-fact {
+            min-height: 1.92rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 999px;
+            padding: 0.42rem 0.68rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.32rem;
+            font-size: 0.66rem;
+            line-height: 1;
+            font-weight: 850;
+            letter-spacing: 0;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            font-variant-numeric: tabular-nums;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.84);
+        }
+
+        .booking-service-fact.is-price {
+            min-width: 3.35rem;
+            font-weight: 950;
+        }
+
+        .booking-service-fact svg,
+        .booking-service-dropdown-meta svg,
+        .booking-service-dropdown-row-meta svg {
+            flex: 0 0 auto;
+        }

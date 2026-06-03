@@ -1,45 +1,36 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Banknote, Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flame, Globe, Images, Instagram, Landmark, Mail, MapPin, Plus, ReceiptText } from 'lucide-react';
+import { Globe, Images, Instagram, MapPin, Plus } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import { getLocalDateStr } from '../utils/dates';
-import { formatServiceDuration, formatServicePrice, normalizeServiceList } from '../utils/services';
+import { normalizeServiceList } from '../utils/services';
+import { BookingActionSection } from '../features/booking-flow/components/BookingActionSection';
+import { BookingDateSection } from '../features/booking-flow/components/BookingDateSection';
+import { BookingDetailsForm } from '../features/booking-flow/components/BookingDetailsForm';
+import { BookingFaqSection } from '../features/booking-flow/components/BookingFaqSection';
+import { BookingPageLoader } from '../features/booking-flow/components/BookingPageLoader';
+import { BookingServicesSection } from '../features/booking-flow/components/BookingServicesSection';
+import { BookingSocialLinks } from '../features/booking-flow/components/BookingSocialLinks';
+import { BookingSuccessState } from '../features/booking-flow/components/BookingSuccessState';
+import { BookingTimeSection } from '../features/booking-flow/components/BookingTimeSection';
+import { BookingVenueGallery } from '../features/booking-flow/components/BookingVenueGallery';
+import {
+    bookingStyleDirections,
+    createPreviewSocialLinks,
+    previewServiceSamples,
+    previewTimeSlots
+} from '../features/booking-flow/config/bookingFlowConfig';
+import {
+    clampNumber,
+    getAlign,
+    getBlockMargins,
+    getDisplayLook,
+    getOptionalLetterSpacing,
+    getVisualStyle,
+    normalizeHandle,
+    normalizeWebsite
+} from '../features/booking-flow/utils/bookingFlowUtils';
 
-const alignments = ['left', 'center', 'right'];
-const visualStyles = ['minimal', 'outline', 'solid'];
-const displayLooks = {
-    calendar: ['studio', 'classic', 'editorial', 'compact', 'glow'],
-    time: ['pill', 'blocks', 'minimal', 'luxury', 'compact'],
-    faq: ['accordion', 'cards', 'minimal', 'numbered', 'split'],
-    venue: ['mosaic', 'editorial', 'filmstrip', 'postcard', 'minimal'],
-    maps: ['button', 'card', 'footer', 'dock', 'none'],
-    social: ['icons', 'labels', 'dock', 'minimal', 'solid']
-};
-const bookingStyleDirections = ['native-precision', 'command-flow'];
-const clampNumber = (value, min, max, fallback) => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return fallback;
-    return Math.min(max, Math.max(min, parsed));
-};
-
-const getOptionalLetterSpacing = (value, min, max) => {
-    if (value === '' || value === null || value === undefined) return undefined;
-    return `${clampNumber(value, min, max, 0)}px`;
-};
-
-const getAlign = (value) => alignments.includes(value) ? value : 'left';
-const getVisualStyle = (value, fallback = 'minimal') => visualStyles.includes(value) ? value : fallback;
-const getDisplayLook = (group, value, fallback) => displayLooks[group]?.includes(value) ? value : fallback;
-const getBlockMargins = (align) => ({
-    marginLeft: align === 'left' ? 0 : 'auto',
-    marginRight: align === 'right' ? 0 : 'auto'
-});
-
-const normalizeHandle = (value = '') => value.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-const normalizeWebsite = (value = '') => {
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-};
+const previewSocialLinks = createPreviewSocialLinks({ Instagram, Globe });
 
 // --- PUBLIC BOOKING ENGINE (WITH NEW EXTENSIONS & SPECIFIC FONTS) ---
 export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onInspect, onInstallApp, onSettingChange, onMediaUpload }) => {
@@ -83,21 +74,48 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 }
                 return arr;
             }, [settings.schedule]);
+            const previewCalendarDates = useMemo(() => {
+                const arr = [];
+                let d = new Date();
+                d.setHours(0,0,0,0);
+                while (arr.length < 14) {
+                    arr.push({
+                        full: d.toDateString(),
+                        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                        dayNum: d.getDate(),
+                        month: d.toLocaleDateString('en-US', { month: 'long' }),
+                        year: d.getFullYear(),
+                        localDateStr: getLocalDateStr(d),
+                        isPreviewPlaceholder: true
+                    });
+                    d.setDate(d.getDate() + 1);
+                }
+                return arr;
+            }, []);
+            const displayDates = useMemo(() => (
+                dates.length > 0 ? dates : (isPreview ? previewCalendarDates : [])
+            ), [dates, isPreview, previewCalendarDates]);
 
             useEffect(() => {
                 setSelectedDateIdx(0);
                 setSelectedTime(null);
-            }, [dates]);
+            }, [displayDates]);
 
-            const activeDate = dates[selectedDateIdx] || dates[0];
+            const activeDate = displayDates[selectedDateIdx] || displayDates[0];
             
             const availableTimesForActiveDate = useMemo(() => {
                 if (!activeDate) return [];
                 const dayConfig = settings.schedule?.[activeDate.localDateStr];
-                return dayConfig && dayConfig.times ? dayConfig.times : settings.availableTimes;
+                return dayConfig && Array.isArray(dayConfig.times)
+                    ? dayConfig.times
+                    : (Array.isArray(settings.availableTimes) ? settings.availableTimes : []);
             }, [activeDate, settings.schedule, settings.availableTimes]);
 
-            const isWaitlistMode = availableTimesForActiveDate.length === 0 && settings.features?.waitlist;
+            const isPreviewTimePlaceholder = Boolean(isPreview && availableTimesForActiveDate.length === 0);
+            const displayTimesForActiveDate = availableTimesForActiveDate.length > 0
+                ? availableTimesForActiveDate
+                : (isPreview ? previewTimeSlots : []);
+            const isWaitlistMode = !isPreviewTimePlaceholder && availableTimesForActiveDate.length === 0 && settings.features?.waitlist;
             const collectClientName = settings.features?.collectClientName !== false;
             const collectClientPhone = settings.features?.collectClientPhone !== false;
             const collectClientEmail = settings.features?.collectClientEmail !== false;
@@ -451,412 +469,19 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 }
             };
 
-            const getDateSlotStyle = (isActive) => {
-                const radius = settings.buttonStyle === 'pill' ? '32px' : '12px';
-                const activeColor = settings.primaryColor || '#000000';
-                const baseTextColor = settings.dateTextColor || '#666666';
-                const activeTextColor = settings.dateActiveTextColor || activeColor;
-                const activeBg = settings.dateActiveBgColor && settings.dateActiveBgColor !== 'transparent' ? settings.dateActiveBgColor : `${activeColor}18`;
-                const baseBg = settings.dateBgColor && settings.dateBgColor !== 'transparent' ? settings.dateBgColor : 'transparent';
-                const fontFamily = getFontFamily(settings.dateFontFamily || settings.fontFamily);
-                const activeShadow = settings.calendarShadow === false
-                    ? 'none'
-                    : settings.calendarGlow
-                        ? `0 0 0 2px ${activeColor}55, 0 18px 44px -18px ${activeColor}`
-                        : `0 16px 34px -22px ${activeColor}`;
-
-                if (dateStyle === 'solid') {
-                    return {
-                        backgroundColor: isActive ? activeBg : (baseBg === 'transparent' ? `${settings.headingColor || '#000000'}08` : baseBg),
-                        color: isActive ? activeTextColor : baseTextColor,
-                        borderRadius: radius,
-                        border: '1px solid transparent',
-                        boxShadow: isActive ? activeShadow : 'none',
-                        fontFamily
-                    };
-                }
-                if (dateStyle === 'outline') {
-                    return {
-                        backgroundColor: isActive ? `${activeColor}0D` : 'transparent',
-                        color: isActive ? activeColor : baseTextColor,
-                        borderRadius: radius,
-                        border: `1px solid ${isActive ? activeColor : `${baseTextColor}24`}`,
-                        boxShadow: isActive ? activeShadow : 'none',
-                        fontFamily
-                    };
-                }
-                return {
-                    backgroundColor: 'transparent',
-                    color: isActive ? activeColor : baseTextColor,
-                    borderRadius: '0px',
-                    border: '1px solid transparent',
-                    fontFamily
-                };
-            };
-
-            const getTimeSlotStyle = (isActive) => {
-                const isSolid = timeSlotStyle === 'solid';
-                const isOutline = timeSlotStyle === 'outline';
-                const radius = settings.buttonStyle === 'pill' ? '9999px' : '12px';
-                const activeColor = settings.primaryColor;
-                const baseTextColor = settings.slotTextColor || '#000000';
-                const fontF = getFontFamily(settings.slotFontFamily || settings.fontFamily);
-                const activeBg = settings.slotActiveBgColor || activeColor;
-                const activeText = settings.slotActiveTextColor || '#000000';
-                const activeShadow = settings.timeSlotShadow === false
-                    ? 'none'
-                    : settings.timeSlotGlow
-                        ? `0 0 0 2px ${activeColor}55, 0 14px 38px -18px ${activeColor}`
-                        : `0 10px 30px -10px ${activeColor}80`;
-
-                if (isSolid) {
-                    return { backgroundColor: isActive ? activeBg : (settings.slotBgColor || '#f5f5f5'), color: isActive ? activeText : baseTextColor, borderRadius: radius, border: '1px solid transparent', boxShadow: isActive ? activeShadow : 'none', fontFamily: fontF };
-                }
-                if (isOutline) {
-                    return { backgroundColor: isActive ? `${activeBg}22` : 'transparent', color: isActive ? activeColor : baseTextColor, borderRadius: radius, border: `1px solid ${isActive ? activeColor : baseTextColor + '20'}`, boxShadow: isActive ? activeShadow : 'none', fontFamily: fontF };
-                }
-                return { backgroundColor: 'transparent', color: isActive ? activeColor : baseTextColor, border: '1px solid transparent', borderRadius: '0px', fontFamily: fontF };
-            };
-
-            const getActionButtonStyle = () => {
-                const radius = settings.buttonStyle === 'pill' ? '9999px' : '8px';
-                const accent = settings.primaryColor || '#000000';
-                const textColor = settings.buttonTextColor || '#000000';
-                const fontFamily = getFontFamily(settings.buttonFontFamily || settings.fontFamily);
-                if (actionButtonStyle === 'outline') {
-                    return { backgroundColor: 'transparent', color: accent, border: `1px solid ${accent}`, borderRadius: radius, fontFamily };
-                }
-                if (actionButtonStyle === 'minimal') {
-                    return { backgroundColor: 'transparent', color: settings.headingColor || accent, border: '1px solid transparent', borderBottom: `2px solid ${accent}`, borderRadius: '0px', boxShadow: 'none', fontFamily };
-                }
-                return { backgroundColor: accent, color: textColor, border: '1px solid transparent', borderRadius: radius, fontFamily };
-            };
-
-            const getFaqItemStyle = () => {
-                const bg = settings.faqBgColor || 'transparent';
-                const borderColor = settings.faqBorderColor || `${settings.headingColor || '#000000'}18`;
-                if (faqStyle === 'solid') return { backgroundColor: bg === 'transparent' ? `${settings.headingColor || '#000000'}08` : bg, border: '1px solid transparent', borderRadius: '16px', padding: '18px' };
-                if (faqStyle === 'outline') return { backgroundColor: 'transparent', border: `1px solid ${borderColor}`, borderRadius: '16px', padding: '18px' };
-                return { backgroundColor: 'transparent', borderBottom: `1px solid ${borderColor}`, borderRadius: '0px', paddingBottom: '16px' };
-            };
-
-            const getSocialLinkStyle = () => {
-                const accent = settings.socialIconColor || settings.primaryColor || settings.headingColor || '#000000';
-                const bg = settings.socialIconBgColor || 'transparent';
-                if (socialIconStyle === 'solid') return { backgroundColor: bg === 'transparent' ? accent : bg, color: settings.socialIconTextColor || settings.buttonTextColor || '#000000', border: '1px solid transparent' };
-                if (socialIconStyle === 'outline') return { backgroundColor: 'transparent', color: accent, border: `1px solid ${accent}55` };
-                return { backgroundColor: 'transparent', color: accent, border: '1px solid transparent' };
-            };
-
-            const getServiceCardStyle = (isActive) => {
-                const accent = settings.primaryColor || '#000000';
-                const heading = settings.headingColor || '#000000';
-                const inactiveBg = `${heading}05`;
-                const activeBg = nativeAccent ? (settings.slotBgColor || '#FFFFFF') : `${accent}12`;
-                const activeBorder = nativeAccent ? accent : `${accent}CC`;
-                if (serviceBorderStyle === 'minimal') {
-                    return {
-                        borderColor: isActive ? activeBorder : 'transparent',
-                        backgroundColor: isActive ? activeBg : 'transparent',
-                        borderBottomColor: isActive ? activeBorder : `${heading}18`
-                    };
-                }
-                if (serviceBorderStyle === 'outline') {
-                    return {
-                        borderColor: isActive ? activeBorder : `${heading}18`,
-                        backgroundColor: isActive ? activeBg : 'transparent'
-                    };
-                }
-                return {
-                    borderColor: isActive ? activeBorder : `${heading}12`,
-                    backgroundColor: isActive ? activeBg : inactiveBg
-                };
-            };
-
             const servicesForDisplay = selectedServiceCategory !== 'All'
                 ? activeServices.filter(service => service.category?.trim() === selectedServiceCategory)
                 : activeServices;
-            const previewPlaceholderStyle = {
-                borderColor: `${settings.headingColor || '#000000'}14`,
-                backgroundColor: `${settings.headingColor || '#000000'}05`,
-                color: settings.headingColor
-            };
-
-            const renderPreviewPlaceholder = ({ target, title, copy, icon: Icon = Plus, children, className = '' }) => {
-                if (!isPreview) return null;
-                return (
-                    <button
-                        type="button"
-                        className={`booking-preview-placeholder ${className}`}
-                        style={previewPlaceholderStyle}
-                        onClick={(event) => {
-                            event.stopPropagation();
-                        }}
-                    >
-                        <span className="booking-preview-placeholder-action" style={{ borderColor: `${settings.headingColor || '#000000'}18`, backgroundColor: settings.backgroundColor || '#ffffff' }}>
-                            <Icon size={14} />
-                            <span>{title}</span>
-                        </span>
-                        <span className="booking-preview-placeholder-copy" style={{ color: settings.bodyColor }}>{copy}</span>
-                        {children}
-                    </button>
-                );
-            };
-
-            const renderServiceButton = (service) => {
-                const isActive = selectedService?.id === service.id;
-                const price = formatServicePrice(service);
-                const duration = formatServiceDuration(service.duration);
-                const hasFacts = Boolean(price || duration);
-                const hasServiceImage = Boolean(service.imageUrls?.[0]);
-                return (
-                    <button
-                        key={service.id}
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedServiceId(service.id);
-                        }}
-                        className={`booking-service-option appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all booking-service-border-${serviceBorderStyle} ${hasServiceImage ? 'has-service-image' : 'is-text-only-service'} ${isActive ? `is-selected scale-[1.01] shadow-xl ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
-                        style={getServiceCardStyle(isActive)}
-                    >
-                        <div className="booking-service-shell flex items-start gap-4">
-                            {hasServiceImage && (
-                                <div className="booking-service-image w-14 h-14 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ backgroundColor: isActive ? (settings.primaryColor || '#000') : `${settings.headingColor || '#000'}0D`, color: isActive ? (settings.buttonTextColor || '#000') : settings.headingColor }}>
-                                    <img src={service.imageUrls[0]} alt="" className="w-full h-full object-cover" />
-                                </div>
-                            )}
-                            <div className="booking-service-copy min-w-0 flex-1">
-                                <div className="booking-service-title-line flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        {service.category && <span className="booking-service-eyebrow" style={{ color: settings.bodyColor }}>{service.category}</span>}
-                                        <h5 className="text-base md:text-lg font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</h5>
-                                    </div>
-                                    {isActive && (
-                                        <span className="booking-service-selected-mark" style={{ color: settings.primaryColor, borderColor: `${settings.primaryColor || '#000'}40`, backgroundColor: `${settings.primaryColor || '#000'}0F` }}>
-                                            <Check size={14} />
-                                        </span>
-                                    )}
-                                </div>
-                                {service.description && <p className="text-xs md:text-sm mt-2 leading-relaxed opacity-65" style={{ color: settings.bodyColor }}>{service.description}</p>}
-                                {hasFacts && (
-                                    <div className="booking-service-facts" aria-label="Service price and duration">
-                                        {duration && <span className="booking-service-fact" style={{ backgroundColor: `${settings.headingColor || '#000'}08`, borderColor: `${settings.headingColor || '#000'}10`, color: settings.bodyColor }}><Clock size={12} />{duration}</span>}
-                                        {price && <span className="booking-service-fact is-price" style={{ backgroundColor: `${settings.primaryColor || '#000'}12`, borderColor: `${settings.primaryColor || '#000'}1F`, color: settings.headingColor }}>{price}</span>}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </button>
-                );
-            };
-
-            const renderServiceGrid = () => (
-                <div className={`booking-services-wrap booking-services-wrap-${serviceDisplayStyle}`} onClick={() => previewInspectEnabled && onInspect('services')}>
-                    {serviceCategories.length > 1 && (
-                        <div className="booking-service-category-rail" aria-label="Service categories">
-                            {serviceCategories.map(category => {
-                                const isActive = selectedServiceCategory === category;
-                                return (
-                                    <button
-                                        key={category}
-                                        type="button"
-                                        aria-pressed={isActive}
-                                        className={isActive ? nativeAccentBorderClass : ''}
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            setSelectedServiceCategory(category);
-                                        }}
-                                        style={{
-                                            color: isActive ? settings.headingColor : settings.bodyColor,
-                                            borderColor: isActive ? settings.primaryColor : `${settings.headingColor || '#000'}14`,
-                                            backgroundColor: isActive ? (nativeAccent ? '#fff' : `${settings.primaryColor || '#000'}12`) : `${settings.headingColor || '#000'}05`
-                                        }}
-                                    >
-                                        {category}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-                    <div className={`booking-services-grid booking-services-${serviceDisplayStyle} grid grid-cols-1 md:grid-cols-2 gap-3`}>
-                    {servicesForDisplay.map(service => renderServiceButton(service))}
-                    </div>
-                </div>
-            );
-
-            const renderServiceDropdownMenu = () => (
-                <div className="booking-service-dropdown-menu">
-                    {activeServices.map(service => {
-                        const isActive = selectedService?.id === service.id;
-                        const price = formatServicePrice(service);
-                        const hasServiceImage = Boolean(service.imageUrls?.[0]);
-                        const hasPrice = Boolean(price);
-                        return (
-                            <button
-                                key={service.id}
-                                type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    setSelectedServiceId(service.id);
-                                    setServicesDropdownOpen(false);
-                                }}
-                                className={`booking-service-dropdown-row ${hasServiceImage ? 'has-service-image' : 'is-text-only-service'} ${isActive ? 'is-active' : ''}`}
-                                style={{
-                                    color: settings.headingColor,
-                                    borderColor: isActive ? `${settings.headingColor || settings.primaryColor || '#000'}2B` : `${settings.headingColor || '#000'}10`,
-                                    backgroundColor: isActive ? `${settings.headingColor || settings.primaryColor || '#000'}04` : 'transparent',
-                                    fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily)
-                                }}
-                            >
-                                {hasServiceImage && <span className="booking-service-dropdown-row-image"><img src={service.imageUrls[0]} alt="" /></span>}
-                                <span className="booking-service-dropdown-row-copy">
-                                    <strong style={{ fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</strong>
-                                </span>
-                                {hasPrice && <span className="booking-service-dropdown-row-meta" style={{ color: settings.bodyColor }}>
-                                    {price && <b style={{ color: settings.headingColor }}>{price}</b>}
-                                </span>}
-                                <span className="booking-service-dropdown-row-check" style={{ borderColor: isActive ? settings.primaryColor : `${settings.headingColor || '#000'}14`, color: isActive ? settings.primaryColor : 'transparent' }}>
-                                    <Check size={12} />
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-            );
-
-            const renderServiceSection = () => {
-                if (activeServices.length === 0 && !isPreview) return null;
-
-                return (
-                    <section data-preview-section="services" className="pt-2" style={{ order: 1 }}>
-                        <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('services')}>
-                            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>01 // Choose Service</h3>
-                            <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                                What would you like to book?
-                            </h4>
-                        </div>
-                        {activeServices.length === 0 ? (
-                            renderPreviewPlaceholder({
-                                target: 'services',
-                                title: 'Add your services here',
-                                copy: 'Show the client what they can book before the calendar begins.',
-                                icon: Plus,
-                                className: 'booking-preview-placeholder-services',
-                                children: (
-                                    <span className="booking-preview-service-skeletons" aria-hidden="true">
-                                        {[0, 1].map((item) => (
-                                            <span key={item} className="booking-preview-service-skeleton">
-                                                <span className="booking-preview-image-skeleton" />
-                                                <span className="booking-preview-lines">
-                                                    <span />
-                                                    <span />
-                                                    <span />
-                                                </span>
-                                            </span>
-                                        ))}
-                                    </span>
-                                )
-                            })
-                        ) : serviceDropdownEnabled ? (
-                            <div className={`booking-services-dropdown ${servicesDropdownOpen ? 'is-open' : ''}`} onClick={() => previewInspectEnabled && onInspect('services')}>
-                                <button
-                                    type="button"
-                                    className={`booking-service-dropdown-trigger booking-service-dropdown-trigger-${serviceDropdownStyle} booking-service-dropdown-border-${serviceBorderStyle} ${nativeAccentBorderClass}`}
-                                    aria-expanded={servicesDropdownOpen}
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        setServicesDropdownOpen(open => !open);
-                                    }}
-                                    style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}
-                                >
-                                    <span className="booking-service-dropdown-copy">
-                                        <strong>{selectedService?.name || 'Choose a service'}</strong>
-                                    </span>
-                                    <span className="booking-service-dropdown-meta">
-                                        {selectedService && formatServicePrice(selectedService) && <span className="booking-service-dropdown-trigger-fact is-price">{formatServicePrice(selectedService)}</span>}
-                                        <ChevronDown size={16} className="booking-service-dropdown-chevron" />
-                                    </span>
-                                </button>
-                                <div className="booking-service-dropdown-panel">
-                                    {renderServiceDropdownMenu()}
-                                </div>
-                            </div>
-                        ) : (
-                            renderServiceGrid()
-                        )}
-                    </section>
-                );
-            };
-
-            const renderSocialLinks = () => {
-                if (socialLinks.length === 0) {
-                    return renderPreviewPlaceholder({
-                        target: 'social',
-                        title: 'Add your socials here',
-                        copy: 'Show the contact links clients expect after booking.',
-                        icon: Globe,
-                        className: 'booking-preview-placeholder-social mt-8',
-                        children: (
-                            <span className="booking-preview-social-skeletons" aria-hidden="true">
-                                {[0, 1, 2].map((item) => <span key={item} />)}
-                            </span>
-                        )
-                    });
-                }
-                return (
-                    <div className={`booking-social-links booking-social-${socialDisplayStyle} booking-social-placement-footer mt-8 flex flex-wrap items-center justify-center gap-3 ${inspectClass}`} data-preview-section="social" onClick={() => previewInspectEnabled && onInspect('social')}>
-                        {socialLinks.map(link => {
-                            const IconCmp = link.icon;
-                            return (
-                                <a
-                                    key={link.key}
-                                    href={link.href}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-4 text-[10px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
-                                    style={getSocialLinkStyle()}
-                                    aria-label={link.label}
-                                >
-                                    <IconCmp size={14} />
-                                    <span>{link.label}</span>
-                                </a>
-                            );
-                        })}
-                    </div>
-                );
-            };
+            const serviceCardsForDisplay = servicesForDisplay.length > 0
+                ? servicesForDisplay
+                : (isPreview ? previewServiceSamples : []);
+            const serviceDropdownOptions = activeServices.length > 0
+                ? activeServices
+                : (isPreview ? previewServiceSamples : []);
+            const selectedServiceForDisplay = selectedService || serviceDropdownOptions[0] || null;
 
             if (isInitialLoading) {
-                const loadingMotionClass = isPreview ? '' : 'transition-opacity duration-1000';
-                return (
-                    <div className={`booking-page-loader absolute inset-0 z-50 flex items-center justify-center ${loadingMotionClass}`} style={{ backgroundColor: settings.backgroundColor || '#ffffff' }}>
-                        <div className="text-center">
-                            <div className="brand-loader-orbit mx-auto mb-6">
-                                {settings.logo ? (
-                                    <img
-                                        src={settings.logo}
-                                        alt={`${settings.brandName || 'Business'} logo`}
-                                        className="booking-client-loader-logo"
-                                    />
-                                ) : (
-                                    <span
-                                        className="booking-client-loader-fallback"
-                                        style={{
-                                            color: settings.headingColor || '#050505',
-                                            fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily)
-                                        }}
-                                    >
-                                        {settings.brandName?.charAt(0) || 'B'}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.35em]" style={{ color: `${settings.bodyColor || '#71717a'}66` }}>
-                                Loading booking page
-                            </p>
-                        </div>
-                    </div>
-                );
+                return <BookingPageLoader isPreview={isPreview} settings={settings} />;
             }
 
             if (!activeDate) return <div className="h-full w-full flex items-center justify-center font-bold text-xl opacity-20">No Availability</div>;
@@ -958,543 +583,198 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                     </header>
 
                     <div className="flex flex-col gap-16 flex-1">
-                        {renderServiceSection()}
+                        <BookingServicesSection
+                            activeServices={activeServices}
+                            headingLetterSpacing={headingLetterSpacing}
+                            inspectClass={inspectClass}
+                            isPreview={isPreview}
+                            nativeAccent={nativeAccent}
+                            nativeAccentBorderClass={nativeAccentBorderClass}
+                            onInspect={onInspect}
+                            pageItems={pageItems}
+                            pageTextClass={pageTextClass}
+                            previewInspectEnabled={previewInspectEnabled}
+                            selectedService={selectedService}
+                            selectedServiceCategory={selectedServiceCategory}
+                            selectedServiceForDisplay={selectedServiceForDisplay}
+                            serviceBorderStyle={serviceBorderStyle}
+                            serviceCardsForDisplay={serviceCardsForDisplay}
+                            serviceCategories={serviceCategories}
+                            serviceDisplayStyle={serviceDisplayStyle}
+                            serviceDropdownEnabled={serviceDropdownEnabled}
+                            serviceDropdownOptions={serviceDropdownOptions}
+                            serviceDropdownOpen={servicesDropdownOpen}
+                            serviceDropdownStyle={serviceDropdownStyle}
+                            setSelectedServiceCategory={setSelectedServiceCategory}
+                            setSelectedServiceId={setSelectedServiceId}
+                            setServicesDropdownOpen={setServicesDropdownOpen}
+                            settings={settings}
+                        />
                         
-                        {/* DATE SLIDER */}
-                        <section data-preview-section="calendar" style={{ order: showServiceStep ? 2 : 1 }}>
-                        <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('calendar')}>
-                            <div className={`flex flex-col ${pageItems} ${pageTextClass}`}>
-                                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{dateStepNumber} // {settings.dateLabel || "Which day?"}</h3>
-                                <div className="flex flex-wrap items-center gap-4" style={{ justifyContent: pageJustify }}>
-                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                                        {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
-                                    </h4>
-                                    {settings.features?.firstAvailable && (
-                                        <button onClick={handleFirstAvailable} className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest rounded-full transition-all ${nativeAccentButtonClass}`} style={{ backgroundColor: settings.primaryColor, color: settings.buttonTextColor || '#000', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>First Available</button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex gap-2" style={{ justifyContent: pageJustify }}>
-                                <button className="appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-20 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}><ChevronLeft size={14} /></button>
-                                <button className="appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-20 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}><ChevronRight size={14} /></button>
-                            </div>
-                        </div>
-                        
-                        <div className="relative w-full overflow-hidden h-[130px] md:h-[150px]">
-                            <div className={`booking-calendar-look booking-calendar-${calendarDisplayStyle} flex gap-3 md:gap-4 overflow-x-auto h-[180px] md:h-[200px] pt-4 px-2 snap-x ${isPreview ? 'cursor-pointer' : ''} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`} onClick={() => previewInspectEnabled && onInspect('calendar')}>
-                                {dates.map((d, i) => {
-                                const isActive = selectedDateIdx === i;
-                                const nativeDateClass = nativeAccent && isActive
-                                    ? (dateStyle === 'solid' && calendarNativeFillLooks.has(calendarDisplayStyle) ? nativeAccentButtonClass : nativeAccentBorderClass)
-                                    : '';
-                                return (
-                                    <button key={i} aria-pressed={isActive} onClick={() => setSelectedDateIdx(i)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'} ${nativeDateClass}`} style={getDateSlotStyle(isActive)}>
-                                        <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] transition-all`}>{d.dayName}</span>
-                                        <span className={`text-3xl md:text-4xl font-bold tracking-tighter transition-all`}>{d.dayNum}</span>
-                                        {dateStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 w-10 h-[2px] rounded-full ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
-                                    </button>
-                                );
-                                })}
-                            </div>
-                        </div>
-                        </section>
+                        <BookingDateSection
+                            activeDate={activeDate}
+                            calendarDisplayStyle={calendarDisplayStyle}
+                            calendarNativeFillLooks={calendarNativeFillLooks}
+                            dateStepNumber={dateStepNumber}
+                            dateStyle={dateStyle}
+                            displayDates={displayDates}
+                            handleFirstAvailable={handleFirstAvailable}
+                            headingLetterSpacing={headingLetterSpacing}
+                            inspectClass={inspectClass}
+                            isPreview={isPreview}
+                            nativeAccent={nativeAccent}
+                            nativeAccentBorderClass={nativeAccentBorderClass}
+                            nativeAccentButtonClass={nativeAccentButtonClass}
+                            nativeAccentFillClass={nativeAccentFillClass}
+                            onInspect={onInspect}
+                            onSettingChange={onSettingChange}
+                            pageAlignment={pageAlignment}
+                            pageItems={pageItems}
+                            pageJustify={pageJustify}
+                            pageTextClass={pageTextClass}
+                            previewInspectEnabled={previewInspectEnabled}
+                            selectedDateIdx={selectedDateIdx}
+                            setSelectedDateIdx={setSelectedDateIdx}
+                            settings={settings}
+                            showServiceStep={showServiceStep}
+                        />
 
-                        {/* TIME GRID OR WAITLIST */}
-                        <section data-preview-section="time" style={{ order: showServiceStep ? 3 : 2 }}>
-                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="time" onClick={() => previewInspectEnabled && onInspect('time')}>
-                            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('timeLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{timeStepNumber} // {settings.timeLabel || "Select Time"}</h3>
-                            <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                                {isWaitlistMode ? 'Day Full - Join Waitlist' : 'Available Slots'}
-                            </h4>
-                        </div>
-                        
-                        {availableTimesForActiveDate.length === 0 ? (
-                            isWaitlistMode ? (
-                                <div className={`p-8 border border-dashed rounded-lg text-center ${nativeAccentBorderClass}`} style={{ borderColor: settings.primaryColor }}>
-                                    <Bell size={24} className="mx-auto mb-4" style={{ color: settings.primaryColor }} />
-                                    <p className="text-sm font-bold mb-2" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>Standby List Active</p>
-                                    <p className="text-xs opacity-60">Enter your details below. We'll notify you instantly if a slot opens.</p>
-                                </div>
-                            ) : (
-                                <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-20">Fully Booked</div>
-                            )
-                        ) : (
-                            <div className={`booking-time-look booking-time-${timeDisplayStyle} grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => previewInspectEnabled && onInspect('time')}>
-                                {availableTimesForActiveDate.map((t) => {
-                                const isActive = selectedTime === t;
-                                const nativeTimeClass = nativeAccent && isActive
-                                    ? (timeSlotStyle === 'solid' ? nativeAccentButtonClass : nativeAccentBorderClass)
-                                    : '';
-                                return (
-                                    <button key={t} onClick={() => setSelectedTime(t)} className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''} ${nativeTimeClass}`} style={getTimeSlotStyle(isActive)}>
-                                        <div className="flex items-center justify-center relative w-full">
-                                            <span className={`text-lg md:text-xl font-bold tracking-tighter transition-all duration-500 ${isActive && timeSlotStyle === 'minimal' ? '-translate-y-1 scale-110' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{t}</span>
-                                            {timeSlotStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
-                                        </div>
-                                    </button>
-                                );
-                                })}
-                            </div>
-                        )}
-                        </section>
+                        <BookingTimeSection
+                            displayTimesForActiveDate={displayTimesForActiveDate}
+                            headingLetterSpacing={headingLetterSpacing}
+                            inspectClass={inspectClass}
+                            isPreview={isPreview}
+                            isPreviewTimePlaceholder={isPreviewTimePlaceholder}
+                            isWaitlistMode={isWaitlistMode}
+                            nativeAccent={nativeAccent}
+                            nativeAccentBorderClass={nativeAccentBorderClass}
+                            nativeAccentButtonClass={nativeAccentButtonClass}
+                            nativeAccentFillClass={nativeAccentFillClass}
+                            onInspect={onInspect}
+                            onSettingChange={onSettingChange}
+                            pageItems={pageItems}
+                            pageTextClass={pageTextClass}
+                            previewInspectEnabled={previewInspectEnabled}
+                            selectedTime={selectedTime}
+                            setSelectedTime={setSelectedTime}
+                            settings={settings}
+                            showServiceStep={showServiceStep}
+                            timeDisplayStyle={timeDisplayStyle}
+                            timeSlotStyle={timeSlotStyle}
+                            timeStepNumber={timeStepNumber}
+                        />
 
-                        {(faqItems.length > 0 || isPreview) && (
-                            <section
-                                className={`booking-faq-section booking-faq-${faqDisplayStyle} pt-2 ${inspectClass}`}
-                                data-preview-section="faq"
-                                onClick={() => previewInspectEnabled && onInspect('faq')}
-                                style={{ order: showServiceStep ? 4 : 3 }}
-                            >
-                                <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1`}>
-                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>{faqStepNumber} // Good to know</h3>
-                                    <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                                        Questions before booking
-                                    </h4>
-                                </div>
-                                {faqItems.length === 0 ? (
-                                    renderPreviewPlaceholder({
-                                        target: 'faq',
-                                        title: 'Add your FAQ here',
-                                        copy: 'Add booking policies, prep notes, parking details, or cancellation guidance.',
-                                        icon: Plus,
-                                        className: 'booking-preview-placeholder-faq',
-                                        children: (
-                                            <span className="booking-preview-faq-skeletons" aria-hidden="true">
-                                                {[0, 1, 2].map((item) => (
-                                                    <span key={item}>
-                                                        <span />
-                                                        <ChevronDown size={14} />
-                                                    </span>
-                                                ))}
-                                            </span>
-                                        )
-                                    })
-                                ) : (
-                                    <div className="space-y-3">
-                                        {faqItems.map((faq, i) => (
-                                        <button
-                                            key={`${faq.q}-${i}`}
-                                            type="button"
-                                            className="w-full text-left transition-all"
-                                            style={getFaqItemStyle()}
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                setOpenFaq(openFaq === i ? null : i);
-                                            }}
-                                        >
-                                            <span className="flex justify-between items-center gap-4">
-                                                <span className="font-bold text-sm" style={{ color: settings.faqTextColor || settings.headingColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
-                                                {openFaq === i ? <ChevronUp size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} />}
-                                            </span>
-                                            {openFaq === i && <span className="block mt-3 text-sm opacity-85 leading-relaxed" style={{ color: settings.faqAnswerColor || settings.bodyColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.bodyFontFamily || settings.fontFamily) }}>{faq.a}</span>}
-                                        </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-                        )}
+                        <BookingFaqSection
+                            faqDisplayStyle={faqDisplayStyle}
+                            faqItems={faqItems}
+                            faqStepNumber={faqStepNumber}
+                            faqStyle={faqStyle}
+                            headingLetterSpacing={headingLetterSpacing}
+                            inspectClass={inspectClass}
+                            isPreview={isPreview}
+                            onInspect={onInspect}
+                            openFaq={openFaq}
+                            pageItems={pageItems}
+                            pageTextClass={pageTextClass}
+                            previewInspectEnabled={previewInspectEnabled}
+                            setOpenFaq={setOpenFaq}
+                            settings={settings}
+                            showServiceStep={showServiceStep}
+                        />
 
-                        {/* DETAILS FORM */}
-                        <section className="pt-10" style={{ order: showServiceStep ? 5 : 4 }}>
-                            <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} data-preview-section="form" onClick={() => previewInspectEnabled && onInspect('form')}>
-                                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('detailsHeading', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{detailsStepNumber} // {settings.detailsHeading || "Your Details"}</h3>
-                                <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                                    {isWaitlistMode ? 'Join Standby' : (settings.detailsSubHeading || "Secure Your Slot")}
-                                </h4>
-                            </div>
-                            
-                            <div className="space-y-10 px-1">
-                                {collectClientName && (
-                                <div className="group relative">
-                                    <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Full Name</label>
-                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
-                                    <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
-                                </div>
-                                )}
-                                {collectClientPhone && (
-                                <div className="group relative">
-                                    <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Mobile Number</label>
-                                    <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
-                                    <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
-                                </div>
-                                )}
-                                {collectClientEmail && (
-                                <div className="group relative">
-                                    <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity" style={{ color: settings.headingColor }}>Email Address</label>
-                                    <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
-                                    <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
-                                </div>
-                                )}
-                                {collectClientNotes && (
-                                <div className="group relative">
-                                    <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity flex justify-between" style={{ color: settings.headingColor }}>Booking Note <span className="opacity-50 lowercase tracking-normal font-normal">Optional</span></label>
-                                    <textarea value={formData.note} onChange={(e) => setFormData({...formData, note: e.target.value})} rows={3} className="w-full bg-transparent text-xl md:text-2xl font-bold outline-none tracking-tight transition-all pb-2 resize-none" style={{ color: settings.headingColor }} />
-                                    <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
-                                </div>
-                                )}
-                                {settings.features?.birthday && (
-                                <div className="group relative">
-                                    <label className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 mb-3 block group-focus-within:opacity-100 transition-opacity flex justify-between" style={{ color: settings.headingColor }}>Birthday <span className="opacity-50 lowercase tracking-normal font-normal">Optional</span></label>
-                                    <input type="text" value={formData.birthday} onChange={(e) => setFormData({...formData, birthday: e.target.value})} className="w-full bg-transparent text-2xl md:text-3xl font-bold outline-none tracking-tighter transition-all pb-2" style={{ color: settings.headingColor }} />
-                                    <div className="w-full h-[1px] mt-2 group-focus-within:h-[2px] transition-all" style={{ backgroundColor: (settings.headingColor || '#000') + '20' }} />
-                                </div>
-                                )}
-                            </div>
-                        </section>
+                        <BookingDetailsForm
+                            collectClientEmail={collectClientEmail}
+                            collectClientName={collectClientName}
+                            collectClientNotes={collectClientNotes}
+                            collectClientPhone={collectClientPhone}
+                            detailsStepNumber={detailsStepNumber}
+                            formData={formData}
+                            headingLetterSpacing={headingLetterSpacing}
+                            inspectClass={inspectClass}
+                            isPreview={isPreview}
+                            isWaitlistMode={isWaitlistMode}
+                            onInspect={onInspect}
+                            onSettingChange={onSettingChange}
+                            pageItems={pageItems}
+                            pageTextClass={pageTextClass}
+                            previewInspectEnabled={previewInspectEnabled}
+                            setFormData={setFormData}
+                            settings={settings}
+                            showServiceStep={showServiceStep}
+                        />
 
                         <div className="pt-16 pb-12 mt-auto text-center" data-preview-section="action" style={{ order: showServiceStep ? 6 : 5 }}>
-                            {emailOptInEnabled && (
-                                <label
-                                    className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all ${inspectClass}`}
-                                    style={{
-                                        borderColor: `${settings.headingColor || '#000000'}18`,
-                                        backgroundColor: `${settings.headingColor || '#000000'}08`
-                                    }}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={Boolean(formData.emailOptIn)}
-                                        onChange={(event) => setFormData({ ...formData, emailOptIn: event.target.checked })}
-                                        className="sr-only"
-                                    />
-                                    <span
-                                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all ${formData.emailOptIn ? nativeAccentFillClass : ''}`}
-                                        style={{
-                                            backgroundColor: formData.emailOptIn ? (settings.primaryColor || '#39FF14') : 'transparent',
-                                            borderColor: formData.emailOptIn ? (settings.primaryColor || '#39FF14') : `${settings.headingColor || '#000000'}35`,
-                                            color: settings.buttonTextColor || '#000000'
-                                        }}
-                                    >
-                                        {formData.emailOptIn && <Check size={14} strokeWidth={4} />}
-                                    </span>
-                                    <span className="min-w-0">
-                                        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>
-                                            <Mail size={13} /> Email updates
-                                        </span>
-                                        <span className="mt-1 block text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
-                                            Send booking confirmations, schedule changes, and helpful updates to the email entered above.
-                                        </span>
-                                    </span>
-                                </label>
-                            )}
-                            {manualPaymentOptions.length > 0 && (
-                                <div
-                                    className="mb-5 rounded-2xl border px-4 py-4 text-left"
-                                    style={{
-                                        borderColor: `${settings.headingColor || '#000000'}14`,
-                                        backgroundColor: `${settings.headingColor || '#000000'}05`
-                                    }}
-                                >
-                                    <div className="mb-3 flex items-center justify-between gap-3">
-                                        <span className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>
-                                            <ReceiptText size={14} /> Payment option
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedManualPayment('')}
-                                            className="text-[9px] font-bold uppercase tracking-widest opacity-45 hover:opacity-100"
-                                            style={{ color: settings.headingColor }}
-                                        >
-                                            Pay later
-                                        </button>
-                                    </div>
-                                    <div className="grid gap-2 sm:grid-cols-2">
-                                        {manualPaymentOptions.map((option) => {
-                                            const isSelected = selectedManualPayment === option.id;
-                                            const Icon = option.id === 'cash' ? Banknote : Landmark;
-                                            return (
-                                                <button
-                                                    key={option.id}
-                                                    type="button"
-                                                    onClick={() => setSelectedManualPayment(isSelected ? '' : option.id)}
-                                                    className={`rounded-xl border p-3 text-left transition-all ${isSelected ? nativeAccentBorderClass : ''}`}
-                                                    style={{
-                                                        borderColor: isSelected ? (settings.primaryColor || settings.headingColor || '#000000') : `${settings.headingColor || '#000000'}16`,
-                                                        backgroundColor: isSelected ? `${settings.primaryColor || settings.headingColor || '#000000'}12` : `${settings.backgroundColor || '#ffffff'}AA`
-                                                    }}
-                                                >
-                                                    <span className="flex items-center gap-2">
-                                                        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${isSelected ? nativeAccentFillClass : ''}`} style={{ backgroundColor: isSelected ? (settings.primaryColor || '#000000') : `${settings.headingColor || '#000000'}08`, color: isSelected ? (settings.buttonTextColor || '#000000') : settings.headingColor }}>
-                                                            <Icon size={15} />
-                                                        </span>
-                                                        <span>
-                                                            <span className="block text-xs font-black" style={{ color: settings.headingColor }}>{option.name}</span>
-                                                            <span className="block text-[10px] font-bold uppercase tracking-widest opacity-45" style={{ color: settings.bodyColor }}>{option.id === 'manual_eft' ? 'Bank transfer' : 'Pay at venue'}</span>
-                                                        </span>
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    {selectedManualPaymentOption && (
-                                        <div className="mt-3 rounded-xl border p-3 text-xs leading-relaxed" style={{ borderColor: `${settings.headingColor || '#000000'}12`, color: settings.bodyColor }}>
-                                            {selectedManualPaymentOption.id === 'manual_eft' ? (
-                                                <>
-                                                    <p className="font-bold" style={{ color: settings.headingColor }}>Use your booking ID as payment reference after submitting.</p>
-                                                    {selectedManualPaymentOption.credentialSummary?.bankName && <p className="mt-1">Bank: {selectedManualPaymentOption.credentialSummary.bankName}</p>}
-                                                    {selectedManualPaymentOption.credentialSummary?.accountHolder && <p>Account holder: {selectedManualPaymentOption.credentialSummary.accountHolder}</p>}
-                                                    {selectedManualPaymentOption.credentialSummary?.accountNumber && <p>Account: {selectedManualPaymentOption.credentialSummary.accountNumber}</p>}
-                                                    {selectedManualPaymentOption.credentialSummary?.branchCode && <p>Branch: {selectedManualPaymentOption.credentialSummary.branchCode}</p>}
-                                                </>
-                                            ) : (
-                                                <p>Pay in cash when the business confirms your booking. They can mark the booking paid once received.</p>
-                                            )}
-                                            {selectedManualPaymentOption.instructions && <p className="mt-2 opacity-70">{selectedManualPaymentOption.instructions}</p>}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            <div
-                                className="mb-5 rounded-2xl border px-4 py-3.5 md:py-4 text-left"
-                                style={{
-                                    borderColor: `${settings.headingColor || '#000000'}12`,
-                                    backgroundColor: `${settings.headingColor || '#000000'}05`
-                                }}
-                            >
-                                <p className="text-[10px] font-extrabold uppercase tracking-[0.28em] mb-2" style={{ color: settings.headingColor }}>
-                                    What happens next
-                                </p>
-                                <p className="text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
-                                    Send the request and the business will review it. After that, Build A Booking keeps your updates, reschedule requests, and messages with this business in one simple place.
-                                </p>
-                            </div>
-                            <div
-                                className="mb-5 rounded-2xl border px-4 py-4 text-left"
-                                style={{
-                                    borderColor: `${settings.primaryColor || settings.headingColor || '#000000'}22`,
-                                    backgroundColor: `${settings.primaryColor || settings.headingColor || '#000000'}0A`
-                                }}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <span
-                                        className={`mt-0.5 flex h-8 w-8 md:h-9 md:w-9 shrink-0 items-center justify-center rounded-xl ${nativeAccentFillClass}`}
-                                        style={{ backgroundColor: settings.primaryColor || settings.headingColor || '#000000', color: settings.buttonTextColor || '#000000' }}
-                                    >
-                                        <Bell size={15} />
-                                    </span>
-                                    <span className="min-w-0">
-                                        <span className="block text-[10px] font-extrabold uppercase tracking-[0.26em]" style={{ color: settings.headingColor }}>Your Booking Companion</span>
-                                        <span className="mt-1 block text-xs leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
-                                            Add the app or open the client portal to track your booking, get updates, ask for changes, and chat with the place you booked with.
-                                        </span>
-                                    </span>
-                                </div>
-                                {!isPreview && (
-                                    <div className="mt-4 grid grid-cols-2 gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => { window.location.href = `${window.location.origin}/#/client`; }}
-                                            className="h-10 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5"
-                                            style={{ borderColor: `${settings.headingColor || '#000000'}20`, color: settings.headingColor, backgroundColor: settings.backgroundColor || '#ffffff' }}
-                                        >
-                                            Client Portal
-                                        </button>
-                                        {onInstallApp && (
-                                            <button
-                                                type="button"
-                                                onClick={onInstallApp}
-                                                className={`h-10 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all hover:-translate-y-0.5 ${nativeAccentButtonClass}`}
-                                                style={{ backgroundColor: settings.primaryColor || settings.headingColor || '#000000', color: settings.buttonTextColor || '#000000' }}
-                                            >
-                                                Add App
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            {submitError && (
-                                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>
-                            )}
-                            <button onClick={handleAction} disabled={(isSubmitting || !canSubmitBooking) && !isPreview} className={`group relative appearance-none outline-none focus:outline-none w-full py-6 md:py-8 text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] transition-all duration-700 flex items-center justify-center gap-4 overflow-hidden ${(isSubmitting || !canSubmitBooking) && !isPreview ? 'opacity-20 grayscale cursor-not-allowed' : actionButtonStyle === 'minimal' ? 'hover:opacity-70 active:scale-95' : 'hover:-translate-y-1 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] active:translate-y-0 active:scale-95'} ${nativeAccentButtonClass} ${inspectClass}`} style={getActionButtonStyle()}>
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out"></div>
-                                <span className="relative z-10">{isSubmitting ? 'Sending Request' : isWaitlistMode ? "Join Waitlist" : (settings.confirmButtonText || "Confirm Booking")}</span>
-                                <ArrowRight size={20} className="relative z-10 transition-transform duration-500 group-hover:translate-x-3" />
-                            </button>
-                            {settings.features?.socialProof && (
-                                <p className="mt-6 text-[10px] font-bold uppercase tracking-widest opacity-40" style={{ color: settings.bodyColor }}><Flame size={12} className="inline mr-1 -mt-0.5"/> 4 People secured slots this week</p>
-                            )}
-                            {(venuePhotos.length > 0 || (venueMapHref && mapDisplayStyle !== 'none') || isPreview) && (
-                                <section
-                                    className={`booking-venue-gallery booking-venue-${venueGalleryStyle} mt-8 ${inspectClass}`}
-                                    data-preview-section="venue-gallery"
-                                    onClick={() => previewInspectEnabled && onInspect('venue')}
-                                    style={{
-                                        borderColor: `${settings.headingColor || '#000000'}18`,
-                                        backgroundColor: `${settings.headingColor || '#000000'}04`
-                                    }}
-                                >
-                                    <div className={`booking-venue-gallery-header booking-venue-gallery-header-${pageAlignment}`}>
-                                        <div className="booking-venue-gallery-copy">
-                                            <span className="booking-venue-gallery-kicker" style={{ color: settings.bodyColor }}>
-                                                <Images size={13} /> Venue gallery
-                                            </span>
-                                            <h4
-                                                className="booking-venue-gallery-title"
-                                                style={{
-                                                    color: settings.headingColor,
-                                                    fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily),
-                                                    ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {})
-                                                }}
-                                            >
-                                                {settings.venueTitle || 'Inside the space'}
-                                            </h4>
-                                            <p
-                                                className="booking-venue-gallery-intro"
-                                                style={{
-                                                    color: settings.bodyColor,
-                                                    fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily),
-                                                    ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {})
-                                                }}
-                                            >
-                                                {settings.venueIntro || 'See the place before you book.'}
-                                            </p>
-                                        </div>
-                                        {venuePhotos.length > 0 && (
-                                            <span className="booking-venue-gallery-count" style={{ color: settings.headingColor }}>
-                                                {venuePhotos.length} {venuePhotos.length === 1 ? 'photo' : 'photos'}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {venuePhotos.length === 0 && isPreview ? (
-                                        <button
-                                            type="button"
-                                            className="booking-preview-venue-blank"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                            }}
-                                            style={{ color: settings.headingColor }}
-                                        >
-                                            <span className="booking-preview-venue-grid" aria-hidden="true">
-                                                {[0, 1, 2, 3].map((item) => (
-                                                    <span key={item} className={item === 0 ? 'is-featured' : ''}>
-                                                        <Images size={item === 0 ? 20 : 15} />
-                                                    </span>
-                                                ))}
-                                            </span>
-                                            <span className="booking-preview-placeholder-action" style={{ borderColor: `${settings.headingColor || '#000000'}18`, backgroundColor: settings.backgroundColor || '#ffffff' }}>
-                                                <Plus size={14} />
-                                                <span>Add your venue photos here</span>
-                                            </span>
-                                        </button>
-                                    ) : venuePhotos.length > 0 && (
-                                        <div className={`booking-venue-gallery-grid ${venuePhotos.length === 1 ? 'is-single' : ''}`}>
-                                            {venuePhotos.map((photo, index) => (
-                                                <figure key={`${photo}-${index}`} className={`booking-venue-photo ${index === 0 ? 'is-featured' : ''}`}>
-                                                    <img src={photo} alt={`Venue view ${index + 1}`} loading="lazy" />
-                                                    {index === 0 && (
-                                                        <figcaption style={{ color: settings.headingColor, backgroundColor: `${settings.backgroundColor || '#ffffff'}E8` }}>
-                                                            Step inside
-                                                        </figcaption>
-                                                    )}
-                                                </figure>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {venueMapHref && mapDisplayStyle !== 'none' && (
-                                        <a
-                                            href={venueMapHref}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className={`booking-map-link booking-map-${mapDisplayStyle}`}
-                                            onClick={(event) => {
-                                                if (isPreview) event.preventDefault();
-                                            }}
-                                            style={{
-                                                color: settings.headingColor,
-                                                borderColor: `${settings.headingColor || '#000000'}18`,
-                                                backgroundColor: `${settings.headingColor || '#000000'}06`
-                                            }}
-                                        >
-                                            <span><MapPin size={15} /> Open directions</span>
-                                            <ArrowRight size={14} />
-                                        </a>
-                                    )}
-                                    {!venueMapHref && isPreview && mapDisplayStyle !== 'none' && (
-                                        <button
-                                            type="button"
-                                            className={`booking-map-link booking-map-${mapDisplayStyle} booking-preview-map-blank`}
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                            }}
-                                            style={{
-                                                color: settings.headingColor,
-                                                borderColor: `${settings.headingColor || '#000000'}18`,
-                                                backgroundColor: `${settings.headingColor || '#000000'}06`
-                                            }}
-                                        >
-                                            <span><MapPin size={15} /> Add your location here</span>
-                                            <Plus size={14} />
-                                        </button>
-                                    )}
-                                </section>
-                            )}
-                            {renderSocialLinks()}
+                            <BookingActionSection
+                                actionButtonStyle={actionButtonStyle}
+                                canSubmitBooking={canSubmitBooking}
+                                emailOptInEnabled={emailOptInEnabled}
+                                formData={formData}
+                                handleAction={handleAction}
+                                inspectClass={inspectClass}
+                                isPreview={isPreview}
+                                isSubmitting={isSubmitting}
+                                isWaitlistMode={isWaitlistMode}
+                                manualPaymentOptions={manualPaymentOptions}
+                                nativeAccentBorderClass={nativeAccentBorderClass}
+                                nativeAccentButtonClass={nativeAccentButtonClass}
+                                nativeAccentFillClass={nativeAccentFillClass}
+                                onInstallApp={onInstallApp}
+                                selectedManualPayment={selectedManualPayment}
+                                selectedManualPaymentOption={selectedManualPaymentOption}
+                                setFormData={setFormData}
+                                setSelectedManualPayment={setSelectedManualPayment}
+                                settings={settings}
+                                submitError={submitError}
+                            />
+                            <BookingVenueGallery
+                                headingLetterSpacing={headingLetterSpacing}
+                                inspectClass={inspectClass}
+                                isPreview={isPreview}
+                                mapDisplayStyle={mapDisplayStyle}
+                                onInspect={onInspect}
+                                pageAlignment={pageAlignment}
+                                previewInspectEnabled={previewInspectEnabled}
+                                settings={settings}
+                                subtextLetterSpacing={subtextLetterSpacing}
+                                venueGalleryStyle={venueGalleryStyle}
+                                venueMapHref={venueMapHref}
+                                venuePhotos={venuePhotos}
+                            />
+                            <BookingSocialLinks
+                                inspectClass={inspectClass}
+                                isPreview={isPreview}
+                                onInspect={onInspect}
+                                previewInspectEnabled={previewInspectEnabled}
+                                previewSocialLinks={previewSocialLinks}
+                                settings={settings}
+                                socialDisplayStyle={socialDisplayStyle}
+                                socialIconStyle={socialIconStyle}
+                                socialLinks={socialLinks}
+                            />
                         </div>
                     </div>
                     </div>
                 )}
 
                 {step === 2 && (
-                    <div className={`h-full flex flex-col items-start justify-center text-left ${previewSuccessMotionClass} p-8 md:p-16 relative z-10`}>
-                    <div className={`flex items-center gap-8 mb-20 ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('buttons')}>
-                        <div className="w-20 h-20 rounded-lg flex items-center justify-center shadow-2xl rotate-12" style={{ backgroundColor: settings.headingColor }}>
-                        {isWaitlistMode ? <Bell size={32} strokeWidth={3} style={{ color: settings.primaryColor }} /> : <Check size={40} strokeWidth={4} style={{ color: settings.primaryColor }} />}
-                        </div>
-                        <div><p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40" style={{ color: settings.bodyColor }}>Booking Status</p><p className="text-lg font-bold uppercase tracking-[0.2em]" style={{ color: settings.headingColor }}>{isWaitlistMode ? 'Standby' : 'Confirmed'}</p></div>
-                    </div>
-                    <h2 className={`text-7xl md:text-[8rem] font-bold mb-10 tracking-tighter leading-[0.8] ${inspectClass}`} style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }} onClick={() => previewInspectEnabled && onInspect('introduction')}>
-                        {isWaitlistMode ? "On The List." : (settings.successHeading || "Confirmed!")}
-                    </h2>
-                    <p className="opacity-60 text-xl font-light mb-24 max-w-sm leading-relaxed" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
-                        {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. We will text you if a slot opens.` : `Access confirmed for ${selectedTime} on ${activeDate.dayNum} ${activeDate.month}.`}
-                    </p>
-                    {selectedManualPaymentOption && (
-                        <div className="mb-10 w-full max-w-lg rounded-3xl border p-5" style={{ borderColor: `${settings.primaryColor || settings.headingColor || '#000000'}24`, backgroundColor: `${settings.primaryColor || settings.headingColor || '#000000'}08` }}>
-                            <p className="text-[10px] font-extrabold uppercase tracking-[0.28em]" style={{ color: settings.headingColor }}>Payment reference</p>
-                            <p className="mt-2 text-2xl font-black tracking-tight" style={{ color: settings.headingColor }}>{submittedBooking?.paymentReference || submittedBooking?.bookingId || 'Use your booking ID'}</p>
-                            <p className="mt-2 text-sm leading-relaxed opacity-60" style={{ color: settings.bodyColor }}>
-                                {selectedManualPaymentOption.id === 'manual_eft'
-                                    ? 'Use this reference for your EFT so the business can match and mark the booking paid.'
-                                    : 'The business can mark the booking paid after receiving cash.'}
-                            </p>
-                        </div>
-                    )}
-                    <div className="mb-12 grid w-full max-w-lg grid-cols-1 gap-3 md:grid-cols-3">
-                        {[
-                            ['Saved', 'Your request is in the system.'],
-                            ['Reviewed', 'The team can confirm or follow up.'],
-                            ['App', 'Use Build A Booking to manage updates, reschedules, and chat.']
-                        ].map(([title, copy]) => (
-                            <div key={title} className="rounded-2xl border p-4" style={{ borderColor: `${settings.headingColor || '#000000'}12`, backgroundColor: `${settings.headingColor || '#000000'}05` }}>
-                                <p className="text-[10px] font-extrabold uppercase tracking-[0.25em]" style={{ color: settings.headingColor }}>{title}</p>
-                                <p className="mt-2 text-xs leading-relaxed opacity-55" style={{ color: settings.bodyColor }}>{copy}</p>
-                            </div>
-                        ))}
-                    </div>
-                    {(formData.email || onInstallApp) && !isPreview && (
-                        <div className="mb-8 flex flex-col sm:flex-row gap-3">
-                            {formData.email && (
-                                <button
-                                    onClick={() => { window.location.href = `${window.location.origin}/#/client`; }}
-                                    className="appearance-none outline-none focus:outline-none px-7 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] border transition-all hover:-translate-y-0.5"
-                                    style={{ borderColor: settings.headingColor + '22', color: settings.headingColor, backgroundColor: settings.headingColor + '05' }}
-                                >
-                                    Open Client Portal
-                                </button>
-                            )}
-                            {onInstallApp && (
-                                <button
-                                    onClick={onInstallApp}
-                                    className="appearance-none outline-none focus:outline-none px-7 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all hover:-translate-y-0.5"
-                                    style={{ color: settings.buttonTextColor || '#000000', backgroundColor: settings.primaryColor || settings.headingColor || '#000000' }}
-                                >
-                                    Add Mobile App
-                                </button>
-                            )}
-                        </div>
-                    )}
-                    <button onClick={() => setStep(1)} className="appearance-none outline-none focus:outline-none text-[10px] font-bold uppercase tracking-[0.6em] opacity-40 hover:opacity-100 transition-all border-b pb-4" style={{ color: settings.bodyColor, borderColor: settings.bodyColor + '40' }}>New Request</button>
-                    </div>
+                    <BookingSuccessState
+                        activeDate={activeDate}
+                        formData={formData}
+                        headingLetterSpacing={headingLetterSpacing}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        isWaitlistMode={isWaitlistMode}
+                        onInspect={onInspect}
+                        onInstallApp={onInstallApp}
+                        previewInspectEnabled={previewInspectEnabled}
+                        previewSuccessMotionClass={previewSuccessMotionClass}
+                        selectedManualPaymentOption={selectedManualPaymentOption}
+                        selectedTime={selectedTime}
+                        setStep={setStep}
+                        settings={settings}
+                        submittedBooking={submittedBooking}
+                        subtextLetterSpacing={subtextLetterSpacing}
+                    />
                 )}
                 </div>
             );

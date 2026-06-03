@@ -1,0 +1,253 @@
+import * as FirebaseSDK from '../../../services/firebase';
+import { appId, db, functions, isFirebaseConfigured } from '../../../services/firebase';
+import { makeOwnerNotification, NOTIFICATION_TYPES } from '../../../services/notifications';
+import {
+  buildPublicBookingIdempotencyKey,
+  createBookingRecordFromFlow,
+  createManualBookingRecordFromChat,
+  createManualBookingRecordFromForm
+} from '../utils/bookingActionHelpers';
+
+export function createBookingSubmissionActions({
+  createOwnerNotification,
+  publicSlug,
+  publicWorkspace,
+  setBookingFilter,
+  setBookingsAndCache,
+  setManualBookingOpen,
+  setManualBookingServiceId,
+  settings,
+  showToast,
+  user,
+  workspaceOwnerId,
+  workspaceServices
+}) {
+  const handleBookingComplete = async (formData, date, time, status, dateKey) => {
+    const bookingRecord = createBookingRecordFromFlow({
+      formData,
+      date,
+      dateKey,
+      status,
+      time,
+      extra: {
+        timestamp: Date.now(),
+        noShowHistory: false
+      }
+    });
+
+    if (!isFirebaseConfigured || !user) {
+      setBookingsAndCache(prev => [{ id: `local-${Date.now()}`, ...bookingRecord }, ...prev]);
+      return true;
+    }
+    try {
+      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
+        ...bookingRecord
+      });
+      await createOwnerNotification(makeOwnerNotification({
+        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+        title: `New booking request from ${bookingRecord.clientName}`,
+        body: `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from Bookings.`,
+        ownerId: workspaceOwnerId,
+        booking: { ...bookingRecord, id: bookingRef.id },
+        bookingId: bookingRef.id,
+        tab: 'bookings',
+        priority: 'high'
+      }));
+      return true;
+    } catch (err) {
+      console.error(err);
+      showToast('Booking could not be saved.');
+      return false;
+    }
+  };
+
+  const handleManualBookingSubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const bookingRecord = createManualBookingRecordFromForm({
+      formData,
+      settings,
+      workspaceServices
+    });
+
+    if (!bookingRecord.clientName || !bookingRecord.dateKey || !bookingRecord.time) {
+      showToast('Add a client name, date, and time first.');
+      return;
+    }
+
+    if (!isFirebaseConfigured || !user) {
+      setBookingsAndCache(prev => [{ id: `manual-${bookingRecord.timestamp}`, ...bookingRecord }, ...prev]);
+      setManualBookingOpen(false);
+      setBookingFilter('upcoming');
+      form.reset();
+      setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
+      showToast('Manual booking added.');
+      return;
+    }
+
+    try {
+      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
+      await createOwnerNotification(makeOwnerNotification({
+        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+        title: `Manual booking added for ${bookingRecord.clientName}`,
+        body: `${bookingRecord.serviceName} / ${bookingRecord.date} at ${bookingRecord.time}.`,
+        ownerId: workspaceOwnerId,
+        booking: { ...bookingRecord, id: bookingRef.id },
+        bookingId: bookingRef.id,
+        tab: 'bookings',
+        priority: 'normal'
+      }));
+      setManualBookingOpen(false);
+      setBookingFilter('upcoming');
+      form.reset();
+      setManualBookingServiceId(workspaceServices[0]?.id || 'custom');
+      showToast('Manual booking added.');
+    } catch (error) {
+      console.error(error);
+      showToast('Manual booking could not be saved.');
+    }
+  };
+
+  const createManualBookingFromChat = async (payload = {}) => {
+    const bookingRecord = createManualBookingRecordFromChat({
+      payload,
+      settings,
+      workspaceServices
+    });
+
+    if (!bookingRecord.clientName || !bookingRecord.dateKey || !bookingRecord.time) {
+      showToast('Add a client name, date, and time first.');
+      return false;
+    }
+
+    if (!isFirebaseConfigured || !user) {
+      setBookingsAndCache(prev => [{ id: `manual-chat-${bookingRecord.timestamp}`, ...bookingRecord }, ...prev]);
+      setBookingFilter('upcoming');
+      showToast('Booking added from chat.');
+      return true;
+    }
+
+    try {
+      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
+      await createOwnerNotification(makeOwnerNotification({
+        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+        title: `Chat booking added for ${bookingRecord.clientName}`,
+        body: `${bookingRecord.serviceName} / ${bookingRecord.date} at ${bookingRecord.time}.`,
+        ownerId: workspaceOwnerId,
+        booking: { ...bookingRecord, id: bookingRef.id },
+        bookingId: bookingRef.id,
+        tab: 'bookings',
+        priority: 'normal'
+      }));
+      setBookingFilter('upcoming');
+      showToast('Booking added from chat.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Chat booking could not be saved.');
+      return false;
+    }
+  };
+
+  const handlePublicBookingComplete = async (formData, date, time, status, dateKey) => {
+    if (!publicWorkspace?.ownerId) {
+      showToast('Booking page is missing an owner.');
+      return false;
+    }
+    const bookingRecord = createBookingRecordFromFlow({
+      formData,
+      date,
+      dateKey,
+      status,
+      time,
+      extra: {
+        ownerId: publicWorkspace.ownerId,
+        source: 'public-booking-page',
+        workspaceSlug: publicSlug,
+        workspaceName: publicWorkspace.workspaceName || publicWorkspace.brandName || '',
+        timestamp: Date.now(),
+        createdAt: FirebaseSDK.serverTimestamp()
+      }
+    });
+    const idempotencyKey = buildPublicBookingIdempotencyKey({
+      workspaceSlug: publicSlug,
+      formData,
+      dateKey: bookingRecord.dateKey,
+      date: bookingRecord.date,
+      time: bookingRecord.time,
+      serviceId: bookingRecord.serviceId
+    });
+
+    try {
+      if (functions && FirebaseSDK.httpsCallable) {
+        try {
+          const createPublicBookingRequest = FirebaseSDK.httpsCallable(functions, 'createPublicBookingRequest');
+          const result = await createPublicBookingRequest({
+            appId,
+            workspaceSlug: publicSlug,
+            idempotencyKey,
+            booking: {
+              clientName: bookingRecord.clientName,
+              clientPhone: bookingRecord.clientPhone,
+              clientEmail: bookingRecord.clientEmail,
+              clientEmailOptIn: bookingRecord.clientEmailOptIn,
+              clientBirthday: bookingRecord.clientBirthday,
+              clientNote: bookingRecord.clientNote,
+              serviceId: bookingRecord.serviceId,
+              serviceName: bookingRecord.serviceName,
+              serviceDescription: bookingRecord.serviceDescription,
+              servicePrice: bookingRecord.servicePrice,
+              servicePriceType: bookingRecord.servicePriceType,
+              serviceDuration: bookingRecord.serviceDuration,
+              serviceCategory: bookingRecord.serviceCategory,
+              paymentMethod: bookingRecord.paymentMethod,
+              paymentGateway: bookingRecord.paymentGateway,
+              paymentProviderName: bookingRecord.paymentProviderName,
+              paymentStatus: bookingRecord.paymentStatus,
+              date: bookingRecord.date,
+              dateKey: bookingRecord.dateKey,
+              time: bookingRecord.time,
+              status: bookingRecord.status,
+              notificationChannels: bookingRecord.notificationChannels
+            }
+          });
+          return result?.data || true;
+        } catch (functionError) {
+          const fallbackCodes = new Set(['functions/not-found', 'functions/unavailable']);
+          if (!fallbackCodes.has(functionError?.code)) {
+            console.error(functionError);
+            if (functionError?.code === 'functions/already-exists') {
+              showToast('That time was just requested. Pick another slot.');
+            } else {
+              showToast(functionError?.message || 'Booking could not be submitted.');
+            }
+            return false;
+          }
+          console.warn('Falling back to direct public booking write until Functions are deployed.', functionError);
+        }
+      }
+      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'bookings'), bookingRecord);
+      const paymentReference = bookingRecord.paymentMethod ? bookingRef.id : '';
+      if (paymentReference) {
+        await FirebaseSDK.updateDoc(bookingRef, { paymentReference });
+      }
+      await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug, 'bookingSubmissions'), {
+        ...bookingRecord,
+        paymentReference
+      });
+      return { ok: true, bookingId: bookingRef.id, paymentReference, reused: false };
+    } catch (error) {
+      console.error(error);
+      showToast('Booking could not be submitted.');
+      return false;
+    }
+  };
+
+  return {
+    createManualBookingFromChat,
+    handleBookingComplete,
+    handleManualBookingSubmit,
+    handlePublicBookingComplete
+  };
+}
