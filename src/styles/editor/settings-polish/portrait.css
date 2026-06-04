@@ -36,7 +36,7 @@
             }
 
             .editor-fullscreen-workspace.mobile-editor-portrait-runtime:not(.mobile-editor-room-open) .mobile-editor-preview {
-                padding-top: calc(0.8rem + env(safe-area-inset-top)) !important;
+                padding-top: calc(4rem + env(safe-area-inset-top)) !important;
                 padding-bottom: calc(3.7rem + env(safe-area-inset-bottom)) !important;
             }
 
@@ -56,12 +56,26 @@
                 box-shadow: 0 24px 70px -42px rgba(15, 23, 42, 0.42) !important;
             }
 
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime .editor-preview-mount-shell {
+                width: min(23.15rem, calc(100vw - 2.2rem)) !important;
+                height: min(38.25rem, calc(100dvh - 12.9rem)) !important;
+                min-height: 29rem !important;
+                transform: none !important;
+                transform-origin: center center !important;
+            }
+
             .editor-fullscreen-workspace.mobile-editor-portrait-runtime .editor-preview-frame.is-desktop-preview {
                 width: min(22rem, calc(100vw - 3rem)) !important;
                 height: min(28rem, calc(100dvh - 18rem)) !important;
                 min-height: 22rem !important;
                 border-radius: 1.25rem !important;
                 border-width: 8px !important;
+            }
+
+            .editor-fullscreen-workspace.mobile-editor-portrait-runtime.editor-preview-device-desktop .editor-preview-mount-shell {
+                width: min(22rem, calc(100vw - 3rem)) !important;
+                height: min(28rem, calc(100dvh - 18rem)) !important;
+                min-height: 22rem !important;
             }
 
             .editor-fullscreen-workspace.mobile-editor-portrait-runtime .mobile-editor-preview-toolbar {
@@ -79,7 +93,7 @@
             }
 
             .editor-fullscreen-workspace.mobile-editor-portrait-runtime .mobile-editor-device-option {
-                min-height: 2.18rem !important;
+                min-height: 2.45rem !important;
                 padding: 0 1rem !important;
                 letter-spacing: 0.1em !important;
             }

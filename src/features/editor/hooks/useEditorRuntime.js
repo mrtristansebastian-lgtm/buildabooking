@@ -61,6 +61,7 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
       portraitQuery.addListener(updateMobileRuntime);
     }
     window.addEventListener('orientationchange', updateMobileRuntime);
+    window.addEventListener('resize', updateMobileRuntime);
     return () => {
       if (mobileQuery.removeEventListener) {
         mobileQuery.removeEventListener('change', updateMobileRuntime);
@@ -70,6 +71,7 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
         portraitQuery.removeListener(updateMobileRuntime);
       }
       window.removeEventListener('orientationchange', updateMobileRuntime);
+      window.removeEventListener('resize', updateMobileRuntime);
     };
   }, []);
 

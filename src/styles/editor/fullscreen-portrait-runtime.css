@@ -1,4 +1,8 @@
         @media (max-width: 767px) and (orientation: portrait) {
+            .editor-fullscreen-workspace.editor-preview-device-mobile .mobile-editor-preview {
+                padding-top: calc(3.35rem + env(safe-area-inset-top)) !important;
+            }
+
             .editor-fullscreen-workspace.mobile-editor-portrait-runtime.mobile-editor-room-open .mobile-editor-preview {
                 justify-content: flex-start !important;
                 padding-top: calc(4.35rem + env(safe-area-inset-top)) !important;

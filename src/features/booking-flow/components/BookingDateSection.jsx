@@ -39,7 +39,7 @@ export const BookingDateSection = ({
                         {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
                     </h4>
                     {settings.features?.firstAvailable && (
-                        <button onClick={handleFirstAvailable} className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest rounded-full transition-all ${nativeAccentButtonClass}`} style={{ backgroundColor: settings.primaryColor, color: settings.buttonTextColor || '#000', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>First Available</button>
+                        <button type="button" onClick={handleFirstAvailable} className={`min-h-8 px-3.5 py-1.5 text-[8px] font-bold uppercase tracking-widest rounded-full transition-all ${nativeAccentButtonClass}`} style={{ backgroundColor: settings.primaryColor, color: settings.buttonTextColor || '#000', fontFamily: getFontFamily(settings.buttonFontFamily || settings.fontFamily) }}>First Available</button>
                     )}
                 </div>
             </div>

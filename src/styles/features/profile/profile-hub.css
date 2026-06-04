@@ -97,7 +97,7 @@
             grid-area: quick !important;
             display: grid !important;
             grid-template-columns: minmax(0, 1fr) !important;
-            gap: 0.2rem !important;
+            gap: 0.28rem !important;
             padding-right: 0 !important;
             overflow: visible !important;
             align-self: start !important;
@@ -106,9 +106,9 @@
         .profile-command-quick button,
         .profile-command-quick span {
             width: 100% !important;
-            min-height: 1.24rem !important;
+            min-height: 2rem !important;
             border-radius: 0.52rem !important;
-            padding: 0 0.28rem 0 0 !important;
+            padding: 0 0.34rem 0 0 !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: flex-start !important;
@@ -157,7 +157,7 @@
         @media (max-width: 767px) {
 
             .profile-command-card {
-                min-height: 7rem !important;
+                min-height: 8.1rem !important;
                 grid-template-columns: 2.55rem minmax(0, 1fr) 1.85rem !important;
                 padding: 0.72rem !important;
             }

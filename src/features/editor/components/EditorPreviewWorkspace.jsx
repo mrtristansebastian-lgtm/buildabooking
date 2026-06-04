@@ -82,32 +82,38 @@ export const EditorPreviewWorkspace = ({
       }
     });
   };
+  const previewScale = Math.min(
+    Number.isFinite(scale) ? scale : editorPreviewFrame.maxScale,
+    editorPreviewFrame.maxScale
+  );
 
   return (
   <div ref={containerRef} className="mobile-editor-preview flex-1 bg-[#F5F5F7] flex flex-col items-center justify-center relative overflow-hidden p-6 md:p-8">
-    <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 flex flex-col items-center gap-2 md:gap-3 z-50">
-      <div className="mobile-editor-device-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
-        <button onClick={() => handleEditorDeviceChange('desktop')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
-        <button onClick={() => handleEditorDeviceChange('mobile')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'mobile' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>Mobile</button>
-      </div>
-      <div className="mobile-editor-device-switcher flex max-w-[92vw] bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm overflow-x-auto no-scrollbar">
-        {previewSteps.map((step) => (
-          <button
-            key={step.id}
-            type="button"
-            onClick={() => handlePreviewStepChange(step.id)}
-            className={`mobile-editor-device-option px-4 md:px-5 py-2 rounded-full text-[8px] font-bold uppercase tracking-[0.28em] transition-all duration-500 whitespace-nowrap ${previewStep === step.id ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}
-          >
-            {step.label}
+    <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 z-50">
+      <div className="editor-preview-control-row">
+        <div className="mobile-editor-device-switcher editor-preview-device-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
+          <button onClick={() => handleEditorDeviceChange('desktop')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'desktop' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>PC</button>
+          <button onClick={() => handleEditorDeviceChange('mobile')} className={`mobile-editor-device-option px-8 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-[0.4em] transition-all duration-700 ${device === 'mobile' ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}>Mobile</button>
+        </div>
+        <div className="mobile-editor-device-switcher editor-preview-step-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm overflow-x-auto no-scrollbar">
+          {previewSteps.map((step) => (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => handlePreviewStepChange(step.id)}
+              className={`mobile-editor-device-option px-4 md:px-5 py-2 rounded-full text-[8px] font-bold uppercase tracking-[0.28em] transition-all duration-500 whitespace-nowrap ${previewStep === step.id ? 'bg-black text-white shadow-lg' : 'text-neutral-400 hover:text-black'}`}
+            >
+              {step.label}
+            </button>
+          ))}
+        </div>
+        <div className="mobile-editor-toolbar-actions hidden md:flex items-center gap-2">
+          <button onClick={handleAddToHomeScreen} className="mobile-editor-install-action hidden h-11 px-4 rounded-full bg-black text-white shadow-lg border border-black transition-all items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-widest">
+            <Share2 size={15} />
+            Home Screen
           </button>
-        ))}
-      </div>
-      <div className="mobile-editor-toolbar-actions absolute left-[calc(100%+1rem)] top-1/2 -translate-y-1/2 hidden md:flex items-center gap-2">
-        <button onClick={handleAddToHomeScreen} className="mobile-editor-install-action hidden h-11 px-4 rounded-full bg-black text-white shadow-lg border border-black transition-all items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-widest">
-          <Share2 size={15} />
-          Home Screen
-        </button>
-        <button type="button" aria-label="Refresh booking preview" onClick={() => setPreviewKey(prev => prev + 1)} className="mobile-editor-refresh-action p-3 rounded-full bg-white text-neutral-400 hover:text-black shadow-lg border border-white/80 transition-all hidden md:block"><RefreshCw size={16} /></button>
+          <button type="button" aria-label="Refresh booking preview" onClick={() => setPreviewKey(prev => prev + 1)} className="mobile-editor-refresh-action p-3 rounded-full bg-white text-neutral-400 hover:text-black shadow-lg border border-white/80 transition-all hidden md:block"><RefreshCw size={16} /></button>
+        </div>
       </div>
     </div>
 
@@ -178,7 +184,7 @@ export const EditorPreviewWorkspace = ({
         style={{
           width: `${editorPreviewFrame.width}px`,
           height: `${editorPreviewFrame.height}px`,
-          transform: `scale(${scale})`,
+          transform: `scale(${previewScale})`,
           transformOrigin: isCompactEditorViewport ? 'top center' : 'center center'
         }}
         className="editor-preview-mount-shell"

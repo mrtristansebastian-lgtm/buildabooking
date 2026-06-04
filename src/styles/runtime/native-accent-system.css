@@ -15,10 +15,10 @@
             --native-accent-easing: ease-in-out;
             --native-beam-duration: 12s;
             --native-accent-x: 0%;
-            --app-control-bg: #fbfcfd;
-            --app-control-bg-focus: #ffffff;
-            --app-control-border: rgba(15, 23, 42, 0.075);
-            --app-control-border-focus: rgba(5, 5, 5, 0.24);
+            --app-control-bg: transparent;
+            --app-control-bg-focus: transparent;
+            --app-control-border: rgba(15, 23, 42, 0.16);
+            --app-control-border-focus: transparent;
             --app-control-text: #050505;
             --app-control-placeholder: #9aa3b2;
             --app-control-icon: #7d8594;
@@ -28,12 +28,28 @@
 
         .native-ui :where(
             input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
-            textarea,
-            select
+            textarea
         ):not(.booking-desk-native-select) {
+            border-color: transparent !important;
+            border-radius: 0 !important;
+            background-color: transparent !important;
+            background-image: linear-gradient(90deg, var(--app-control-border), var(--app-control-border)) !important;
+            background-repeat: no-repeat !important;
+            background-position: left bottom !important;
+            background-size: 100% 1px !important;
+            color: var(--app-control-text) !important;
+            font-size: 0.84rem !important;
+            font-weight: 520 !important;
+            letter-spacing: 0 !important;
+            box-shadow: none !important;
+            outline: none !important;
+            transition: background-size 160ms ease, box-shadow 160ms ease !important;
+        }
+
+        .native-ui :where(select):not(.booking-desk-native-select) {
             border-radius: 0.72rem !important;
             border-color: var(--app-control-border) !important;
-            background-color: var(--app-control-bg) !important;
+            background-color: #fff !important;
             color: var(--app-control-text) !important;
             font-size: 0.84rem !important;
             font-weight: 520 !important;
@@ -56,9 +72,18 @@
 
         .native-ui :where(
             input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
-            textarea,
-            select
+            textarea
         ):not(.booking-desk-native-select):focus {
+            border-color: transparent !important;
+            background-color: transparent !important;
+            background-image: var(--native-booking-accent-gradient) !important;
+            background-repeat: no-repeat !important;
+            background-position: left bottom !important;
+            background-size: 420% 2px !important;
+            box-shadow: 0 10px 24px -26px var(--native-accent-glow) !important;
+        }
+
+        .native-ui :where(select):not(.booking-desk-native-select):focus {
             border-color: var(--app-control-border-focus) !important;
             background-color: var(--app-control-bg-focus) !important;
             box-shadow: var(--app-control-focus-ring), var(--app-control-shadow) !important;
