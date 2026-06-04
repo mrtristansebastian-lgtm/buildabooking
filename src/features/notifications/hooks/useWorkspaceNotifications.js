@@ -201,14 +201,33 @@ export function useWorkspaceNotifications({
     }
     const threadsQuery = FirebaseSDK.query(
       FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads'),
-      FirebaseSDK.where('ownerId', '==', workspaceOwnerId)
+      FirebaseSDK.where('ownerId', '==', workspaceOwnerId),
+      FirebaseSDK.orderBy('updatedAtMs', 'desc'),
+      FirebaseSDK.limit(40)
     );
     const unsubscribe = FirebaseSDK.onSnapshot(threadsQuery, (snap) => {
+      if (snap.empty) {
+        FirebaseSDK.getDocs(FirebaseSDK.query(
+          FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads'),
+          FirebaseSDK.where('ownerId', '==', workspaceOwnerId),
+          FirebaseSDK.limit(40)
+        )).then((fallbackSnap) => {
+          const fallbackThreads = fallbackSnap.docs
+            .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+            .sort((a, b) => (
+              dateValueToMs(b.updatedAtMs || b.lastMessageAt || b.updatedAt || b.createdAt) -
+              dateValueToMs(a.updatedAtMs || a.lastMessageAt || a.updatedAt || a.createdAt)
+            ))
+            .slice(0, 40);
+          setWorkspaceClientThreads(fallbackThreads);
+        }).catch(handleSyncError('Workspace client thread fallback'));
+        return;
+      }
       const nextThreads = snap.docs
         .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
         .sort((a, b) => (
-          dateValueToMs(b.lastMessageAt || b.updatedAt || b.createdAt) -
-          dateValueToMs(a.lastMessageAt || a.updatedAt || a.createdAt)
+          dateValueToMs(b.updatedAtMs || b.lastMessageAt || b.updatedAt || b.createdAt) -
+          dateValueToMs(a.updatedAtMs || a.lastMessageAt || a.updatedAt || a.createdAt)
         ))
         .slice(0, 40);
       setWorkspaceClientThreads(nextThreads);

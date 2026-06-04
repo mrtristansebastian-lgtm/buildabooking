@@ -22,9 +22,20 @@ const {
 const webhooks = require('./webhooks');
 
 const serverTimestamp = () => admin.firestore.FieldValue.serverTimestamp();
+const cappedMaxInstances = (value, fallback) => Math.min(
+  20,
+  Math.max(1, Number(value || fallback))
+);
+const paymentCallableOptions = {
+  region: 'us-central1',
+  timeoutSeconds: 30,
+  memory: '512MiB',
+  concurrency: 20,
+  maxInstances: cappedMaxInstances(process.env.BUILD_A_BOOKING_PAYMENT_MAX_INSTANCES, 1)
+};
 
 const savePaymentGatewaySettings = onCall({
-  region: 'us-central1',
+  ...paymentCallableOptions,
   secrets: [PAYMENT_SETTINGS_ENCRYPTION_KEY]
 }, async (request) => {
   try {
@@ -88,7 +99,7 @@ const savePaymentGatewaySettings = onCall({
 });
 
 const initiatePayment = onCall({
-  region: 'us-central1',
+  ...paymentCallableOptions,
   secrets: [PAYMENT_SETTINGS_ENCRYPTION_KEY]
 }, async (request) => {
   try {
@@ -144,6 +155,8 @@ const initiatePayment = onCall({
       status: 'initiated',
       mode: publicConfig.mode || 'test',
       createdBy: request.auth?.uid || 'public-booking-page',
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -175,6 +188,7 @@ const initiatePayment = onCall({
       checkoutUrl: checkout.checkoutUrl,
       providerReference: checkout.providerReference || '',
       rawProviderResponse: checkout.rawProviderResponse || {},
+      updatedAtMs: Date.now(),
       updatedAt: serverTimestamp()
     }, { merge: true });
 
@@ -193,7 +207,7 @@ const initiatePayment = onCall({
 });
 
 const markManualBookingPaid = onCall({
-  region: 'us-central1'
+  ...paymentCallableOptions
 }, async (request) => {
   try {
     const appId = requireAppId(request.data?.appId);
@@ -239,6 +253,7 @@ const markManualBookingPaid = onCall({
         amountPaidInCents: finalAmount,
         currency,
         paidAt: serverTimestamp(),
+        updatedAtMs: Date.now(),
         updatedAt: serverTimestamp()
       }, { merge: true });
 

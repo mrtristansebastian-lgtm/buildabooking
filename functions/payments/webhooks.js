@@ -49,6 +49,7 @@ const sendDenied = (res, message = 'Invalid signature') => res.status(401).json(
 const wrapWebhook = (gatewayType, handler) => onRequest({
   region: 'us-central1',
   cors: false,
+  maxInstances: 1,
   secrets: [PAYMENT_SETTINGS_ENCRYPTION_KEY]
 }, async (req, res) => {
   if (req.method !== 'POST') {

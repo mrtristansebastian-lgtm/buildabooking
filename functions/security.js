@@ -44,6 +44,9 @@ const RATE_LIMITS = Object.freeze({
   }
 });
 
+const MAX_PUBLIC_BOOKING_PAYLOAD_BYTES = 12_000;
+const MAX_AVAILABILITY_PAYLOAD_BYTES = 4_000;
+
 const cleanString = (value, max = 240) => (
   String(value ?? '')
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
@@ -110,6 +113,13 @@ const getRequestIdentity = (request = {}) => {
     'unknown-client';
 };
 
+const assertPayloadSize = (payload = {}, maxBytes, label) => {
+  const size = Buffer.byteLength(JSON.stringify(payload || {}), 'utf8');
+  if (size > maxBytes) {
+    throw new HttpsError('invalid-argument', `${label} is too large.`);
+  }
+};
+
 const hashRateLimitIdentity = ({ appId, identity }) => (
   crypto
     .createHash('sha256')
@@ -118,13 +128,16 @@ const hashRateLimitIdentity = ({ appId, identity }) => (
     .slice(0, 40)
 );
 
-const assertRateLimit = async ({ db, appId, workspaceSlug, action, request }) => {
+const assertRateLimit = async ({ db, appId, workspaceSlug, action, request, subject = '' }) => {
   const config = RATE_LIMITS[action];
   if (!config) throw new HttpsError('internal', 'Rate limit is not configured.');
 
   const nowMs = Date.now();
   const bucket = Math.floor(nowMs / config.windowMs);
-  const identityHash = hashRateLimitIdentity({ appId, identity: getRequestIdentity(request) });
+  const identityHash = hashRateLimitIdentity({
+    appId,
+    identity: [getRequestIdentity(request), cleanString(subject, 180).toLowerCase()].filter(Boolean).join('|')
+  });
   const rateLimitRef = db
     .collection('artifacts').doc(appId)
     .collection('securityRateLimits')
@@ -145,12 +158,14 @@ const assertRateLimit = async ({ db, appId, workspaceSlug, action, request }) =>
       limit: config.limit,
       windowMs: config.windowMs,
       expiresAtMs: nowMs + config.windowMs,
+      expiresAt: new Date(nowMs + config.windowMs),
       updatedAtMs: nowMs
     }, { merge: true });
   });
 };
 
 const validateAvailabilityLookupPayload = (data = {}) => {
+  assertPayloadSize(data, MAX_AVAILABILITY_PAYLOAD_BYTES, 'Availability request');
   const appId = requireString(data.appId, 'App ID', 120);
   const workspaceSlug = requireString(data.workspaceSlug, 'Workspace slug', 120).toLowerCase();
   const dateKey = assertPattern(requireString(data.dateKey, 'Date', 32), /^\d{4}-\d{2}-\d{2}$/, 'Date');
@@ -170,6 +185,7 @@ const validateAvailabilityLookupPayload = (data = {}) => {
 };
 
 const validatePublicBookingPayload = (incoming = {}) => {
+  assertPayloadSize(incoming, MAX_PUBLIC_BOOKING_PAYLOAD_BYTES, 'Booking request');
   rejectUnknownFields(incoming, PUBLIC_BOOKING_FIELDS, 'Booking');
   const allowedStatuses = new Set(['pending', 'confirmed', 'waitlist']);
   const status = allowedStatuses.has(cleanString(incoming.status, 40)) ? cleanString(incoming.status, 40) : 'pending';

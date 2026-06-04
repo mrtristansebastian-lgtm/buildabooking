@@ -55,14 +55,34 @@ export function usePublicBookingWorkspace({
       setPublicLoading(false);
     }, 12000);
     FirebaseSDK.getDoc(workspaceRef)
-      .then((docSnap) => {
+      .then(async (docSnap) => {
         if (cancelled) return;
         if (!docSnap.exists()) {
           setPublicError('This booking page is not published yet.');
           setPublicWorkspace(null);
           return;
         }
-        setPublicWorkspace(docSnap.data());
+        const workspace = docSnap.data() || {};
+        const [servicesSnap, staffSnap] = await Promise.all([
+          FirebaseSDK.getDocs(FirebaseSDK.query(
+            FirebaseSDK.collection(workspaceRef, 'services'),
+            FirebaseSDK.orderBy('sortOrder', 'asc'),
+            FirebaseSDK.limit(300)
+          )).catch(() => null),
+          FirebaseSDK.getDocs(FirebaseSDK.query(
+            FirebaseSDK.collection(workspaceRef, 'staff'),
+            FirebaseSDK.orderBy('sortOrder', 'asc'),
+            FirebaseSDK.limit(200)
+          )).catch(() => null)
+        ]);
+        if (cancelled) return;
+        const publicServices = servicesSnap?.docs?.map(serviceDoc => ({ id: serviceDoc.id, ...serviceDoc.data() })) || [];
+        const publicStaff = staffSnap?.docs?.map(staffDoc => ({ id: staffDoc.id, ...staffDoc.data() })) || [];
+        setPublicWorkspace({
+          ...workspace,
+          ...(publicServices.length ? { services: publicServices } : {}),
+          ...(publicStaff.length ? { publicStaff } : {})
+        });
       })
       .catch((error) => {
         if (cancelled) return;

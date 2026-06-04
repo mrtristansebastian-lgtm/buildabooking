@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "health": "node scripts/health-check.mjs",
+    "scale:check": "node scripts/scale-readiness-check.mjs",
     "check": "npm run build && node scripts/health-check.mjs",
     "smoke": "npm run check && node scripts/smoke-check.mjs",
     "mobile:assets": "capacitor-assets generate --android --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#000000' --logoSplashScale 0.18",

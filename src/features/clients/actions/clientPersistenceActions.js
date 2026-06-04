@@ -1,5 +1,6 @@
 import * as FirebaseSDK from '../../../services/firebase';
 import { appId, db, isFirebaseConfigured } from '../../../services/firebase';
+import { syncListCollection } from '../../workspace/utils/scaleCollections';
 
 export function createClientPersistenceActions({
   buildClientKey,
@@ -24,7 +25,15 @@ export function createClientPersistenceActions({
       return false;
     }
     try {
-      await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients'), { list: newList, updatedAt: Date.now() });
+      await Promise.all([
+        FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients'), { list: newList, updatedAt: Date.now() }),
+        syncListCollection({
+          ownerId: workspaceOwnerId,
+          collectionName: 'clients',
+          list: newList,
+          idForRecord: record => record.id
+        })
+      ]);
       return true;
     } catch (error) {
       console.error('Client save failed', error);

@@ -93,7 +93,7 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     [...fallbackThreads, ...threads].forEach(thread => {
       if (thread?.id) byId.set(thread.id, { ...(byId.get(thread.id) || {}), ...thread });
     });
-    return Array.from(byId.values()).sort((a, b) => timestampValue(b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAt || a.lastMessageAt));
+    return Array.from(byId.values()).sort((a, b) => timestampValue(b.updatedAtMs || b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAtMs || a.updatedAt || a.lastMessageAt));
   }, [fallbackThreads, threads]);
   const threadSource = mergedThreads;
 
@@ -114,13 +114,19 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     setLoading(true);
     setBookingsReady(false);
     setThreadsReady(false);
-    const bookingsRef = FirebaseSDK.collection(db, 'artifacts', appId, 'clientAccess', emailKey, 'bookings');
+    const bookingsQuery = FirebaseSDK.query(
+      FirebaseSDK.collection(db, 'artifacts', appId, 'clientAccess', emailKey, 'bookings'),
+      FirebaseSDK.orderBy('timestamp', 'desc'),
+      FirebaseSDK.limit(120)
+    );
     const threadsQuery = FirebaseSDK.query(
       FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads'),
-      FirebaseSDK.where('clientEmail', '==', emailKey)
+      FirebaseSDK.where('clientEmail', '==', emailKey),
+      FirebaseSDK.orderBy('updatedAtMs', 'desc'),
+      FirebaseSDK.limit(40)
     );
 
-    const unsubBookings = FirebaseSDK.onSnapshot(bookingsRef, (snap) => {
+    const unsubBookings = FirebaseSDK.onSnapshot(bookingsQuery, (snap) => {
       const next = snap.docs
         .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
         .sort((a, b) => timestampValue(b.timestamp || b.createdAt) - timestampValue(a.timestamp || a.createdAt));
@@ -134,9 +140,27 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
     });
 
     const unsubThreads = FirebaseSDK.onSnapshot(threadsQuery, (snap) => {
+      if (snap.empty) {
+        FirebaseSDK.getDocs(FirebaseSDK.query(
+          FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads'),
+          FirebaseSDK.where('clientEmail', '==', emailKey),
+          FirebaseSDK.limit(40)
+        )).then((fallbackSnap) => {
+          const fallbackThreads = fallbackSnap.docs
+            .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+            .sort((a, b) => timestampValue(b.updatedAtMs || b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAtMs || a.updatedAt || a.lastMessageAt));
+          setThreads(fallbackThreads);
+          setActiveThreadId(current => (current && fallbackThreads.some(thread => thread.id === current)) ? current : (fallbackThreads[0]?.id || ''));
+          setThreadsReady(true);
+        }).catch((error) => {
+          console.error('Client threads fallback sync failed', error);
+          setThreadsReady(true);
+        });
+        return;
+      }
       const next = snap.docs
         .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-        .sort((a, b) => timestampValue(b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAt || a.lastMessageAt));
+        .sort((a, b) => timestampValue(b.updatedAtMs || b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAtMs || a.updatedAt || a.lastMessageAt));
       setThreads(next);
       setActiveThreadId(current => (current && next.some(thread => thread.id === current)) ? current : (next[0]?.id || ''));
       setThreadsReady(true);
@@ -303,7 +327,7 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
       if (Number(activeThread.clientUnread || 0) > 0) {
         FirebaseSDK.updateDoc(
           FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id),
-          { clientUnread: 0, clientLastSeenAt: FirebaseSDK.serverTimestamp() }
+          { clientUnread: 0, clientLastSeenAt: FirebaseSDK.serverTimestamp(), clientLastSeenMs: Date.now() }
         ).catch(() => {});
       }
     }, (error) => console.error('Client messages sync failed', error));
@@ -360,7 +384,9 @@ export function ClientPortal({ appId, db, user, isGuestPreview = false, onSignOu
       const threadUpdates = {
         lastMessage: cleanText,
         lastMessageAt: FirebaseSDK.serverTimestamp(),
+        lastMessageAtMs: Date.now(),
         updatedAt: FirebaseSDK.serverTimestamp(),
+        updatedAtMs: Date.now(),
         ownerUnread: FirebaseSDK.increment(1),
         clientUnread: 0
       };

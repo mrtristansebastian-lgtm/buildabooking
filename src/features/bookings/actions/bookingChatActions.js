@@ -63,6 +63,7 @@ export function createBookingChatActions({
             status: 'open',
             lastMessage: `Booking chat opened for ${booking.date || 'this booking'} at ${booking.time || 'the requested time'}.`,
             lastMessageAt: FirebaseSDK.serverTimestamp(),
+            lastMessageAtMs: Date.now(),
             ownerUnread: 0,
             clientUnread: 0,
             rescheduleStatus: '',
@@ -70,7 +71,9 @@ export function createBookingChatActions({
             staffName: assignedStaff?.name || '',
             staffPhotoURL: assignedStaff?.photoURL || '',
             createdAt: FirebaseSDK.serverTimestamp(),
-            updatedAt: FirebaseSDK.serverTimestamp()
+            createdAtMs: Date.now(),
+            updatedAt: FirebaseSDK.serverTimestamp(),
+            updatedAtMs: Date.now()
           }, { merge: true });
           await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads', threadId, 'messages'), {
             text: `Support thread opened for ${booking.date || 'this booking'} at ${booking.time || 'the requested time'}. The team can reply, reschedule, or send updates here.`,
@@ -85,7 +88,8 @@ export function createBookingChatActions({
         if (clientPhotoURL && !threadSnap.data()?.clientPhotoURL) {
           await FirebaseSDK.setDoc(threadRef, {
             clientPhotoURL,
-            updatedAt: FirebaseSDK.serverTimestamp()
+            updatedAt: FirebaseSDK.serverTimestamp(),
+            updatedAtMs: Date.now()
           }, { merge: true });
         }
         if (!booking.threadId) {

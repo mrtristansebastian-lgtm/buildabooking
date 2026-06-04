@@ -246,6 +246,7 @@ const updateSuccessfulPayment = async ({
         status: 'paid',
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
         providerReference: providerReference || '',
+        updatedAtMs: Date.now(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
     }
@@ -259,6 +260,7 @@ const updateSuccessfulPayment = async ({
         providerReference: providerReference || '',
         amountPaidInCents: finalAmount,
         currency: finalCurrency,
+        updatedAtMs: Date.now(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
     }

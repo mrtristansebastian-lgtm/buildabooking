@@ -2,11 +2,11 @@ import { initializeApp } from 'firebase/app';
 import { Capacitor } from '@capacitor/core';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword, deleteUser, getAuth, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, initializeAuth, onAuthStateChanged, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
-export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, deleteObject, deleteUser, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, httpsCallable, increment, indexedDBLocalPersistence, limit, onAuthStateChanged, onSnapshot, orderBy, query, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, startAfter, updateDoc, uploadBytes, where };
+export { addDoc, browserLocalPersistence, browserSessionPersistence, collection, createUserWithEmailAndPassword, deleteDoc, deleteObject, deleteUser, doc, getDoc, getDocs, getDownloadURL, getRedirectResult, GoogleAuthProvider, httpsCallable, increment, indexedDBLocalPersistence, limit, onAuthStateChanged, onSnapshot, orderBy, query, ref, serverTimestamp, setDoc, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, startAfter, updateDoc, uploadBytes, where, writeBatch };
 
 const runtimeFirebaseConfig = globalThis.__firebase_config;
 const runtimeAppId = globalThis.__app_id;

@@ -91,6 +91,35 @@ service cloud.firestore {
         : canAdmin(appId, userId);
     }
 
+    match /artifacts/{appId}/users/{userId}/clients/{clientId} {
+      allow read, create, update, delete: if canStaff(appId, userId);
+    }
+
+    match /artifacts/{appId}/users/{userId}/staff/{staffId} {
+      allow read: if canStaff(appId, userId);
+      allow create, update, delete: if canAdmin(appId, userId);
+    }
+
+    match /artifacts/{appId}/users/{userId}/services/{serviceId} {
+      allow read: if canStaff(appId, userId);
+      allow create, update, delete: if canAdmin(appId, userId);
+    }
+
+    match /artifacts/{appId}/users/{userId}/calendarDefaults/{calendarId} {
+      allow read: if canStaff(appId, userId);
+      allow create, update, delete: if canAdmin(appId, userId);
+    }
+
+    match /artifacts/{appId}/users/{userId}/calendarDays/{calendarDayId} {
+      allow read: if canStaff(appId, userId);
+      allow create, update, delete: if canAdmin(appId, userId);
+    }
+
+    match /artifacts/{appId}/users/{userId}/availabilityDays/{dateKey}/{document=**} {
+      allow read: if canStaff(appId, userId);
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/users/{userId}/bookings/{bookingId} {
       allow read, update, delete: if canStaff(appId, userId);
       allow create: if canStaff(appId, userId);
@@ -151,6 +180,10 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /artifacts/{appId}/users/{userId}/financeImports/{importId} {
+      allow read, create, update, delete: if canPaymentAdmin(appId, userId);
+    }
+
     match /artifacts/{appId}/users/{userId}/notifications/{notificationId} {
       allow read, update, delete: if canStaff(appId, userId);
       allow create: if canStaff(appId, userId) ||
@@ -199,7 +232,10 @@ service cloud.firestore {
       allow delete: if canAdmin(appId, resource.data.ownerId);
 
       match /messages/{messageId} {
-        allow read, create: if canAccessThread(appId, threadId);
+        allow read: if canAccessThread(appId, threadId);
+        allow create: if canAccessThread(appId, threadId) &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 3000;
         allow update, delete: if false;
       }
     }
@@ -220,6 +256,20 @@ service cloud.firestore {
       match /slotLocks/{lockId} {
         allow read, write: if false;
       }
+
+      match /services/{serviceId} {
+        allow read: if true;
+        allow create, update, delete: if signedIn() &&
+          get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)).data.ownerId is string &&
+          canAdmin(appId, get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)).data.ownerId);
+      }
+
+      match /staff/{staffId} {
+        allow read: if true;
+        allow create, update, delete: if signedIn() &&
+          get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)).data.ownerId is string &&
+          canAdmin(appId, get(/databases/$(database)/documents/artifacts/$(appId)/public/data/workspaces/$(slug)).data.ownerId);
+      }
     }
 
     match /artifacts/{appId}/notificationJobs/{jobId} {
@@ -227,6 +277,14 @@ service cloud.firestore {
         resource.data.ownerId is string &&
         canStaff(appId, resource.data.ownerId);
       allow create, update, delete: if false;
+    }
+
+    match /artifacts/{appId}/securityRateLimits/{rateLimitId} {
+      allow read, write: if false;
+    }
+
+    match /artifacts/{appId}/reminderQueue/{jobId} {
+      allow read, write: if false;
     }
 
     match /artifacts/{appId}/billing/{ownerId}/{document=**} {

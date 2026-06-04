@@ -5,6 +5,10 @@ import {
   mergeStateIfChanged,
   stripLegacyEditorFields
 } from '../utils/workspaceState';
+import {
+  syncPublicWorkspaceCollections,
+  syncWorkspaceScaleCollections
+} from '../utils/scaleCollections';
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
 
@@ -64,6 +68,11 @@ export function createWorkspacePersistenceActions({
         setSettings(prev => ({ ...prev, slug: publicSlug }));
       }
       await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'settings'), settingsToPublish);
+      await syncWorkspaceScaleCollections({
+        ownerId: workspaceOwnerId,
+        settings: settingsToPublish,
+        staffList: displayStaffList
+      });
       const { accountProfiles, ...publicSettingsToPublish } = settingsToPublish;
       await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug), {
         ...publicSettingsToPublish,
@@ -71,6 +80,11 @@ export function createWorkspacePersistenceActions({
         ownerId: workspaceOwnerId,
         ownerEmail: user?.email || '',
         workspaceName: publicSettingsToPublish.brandName || 'Build A Booking Workspace'
+      });
+      await syncPublicWorkspaceCollections({
+        publicSlug,
+        settings: publicSettingsToPublish,
+        staffList: displayStaffList
       });
       if (!silent) showToast(successMessage);
       return true;

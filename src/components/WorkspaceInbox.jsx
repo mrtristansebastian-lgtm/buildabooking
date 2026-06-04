@@ -93,12 +93,32 @@ export function WorkspaceInbox({
     setThreadsReady(false);
     const threadsQuery = FirebaseSDK.query(
       FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads'),
-      FirebaseSDK.where('ownerId', '==', workspaceOwnerId)
+      FirebaseSDK.where('ownerId', '==', workspaceOwnerId),
+      FirebaseSDK.orderBy('updatedAtMs', 'desc'),
+      FirebaseSDK.limit(40)
     );
     const unsub = FirebaseSDK.onSnapshot(threadsQuery, (snap) => {
+      if (snap.empty) {
+        FirebaseSDK.getDocs(FirebaseSDK.query(
+          FirebaseSDK.collection(db, 'artifacts', appId, 'clientThreads'),
+          FirebaseSDK.where('ownerId', '==', workspaceOwnerId),
+          FirebaseSDK.limit(40)
+        )).then((fallbackSnap) => {
+          const fallbackThreads = fallbackSnap.docs
+            .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+            .sort((a, b) => timestampValue(b.updatedAtMs || b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAtMs || a.updatedAt || a.lastMessageAt));
+          setThreads(fallbackThreads);
+          setActiveThreadId(current => (current && fallbackThreads.some(thread => thread.id === current)) ? current : (fallbackThreads[0]?.id || ''));
+          setThreadsReady(true);
+        }).catch((error) => {
+          console.error('Workspace inbox fallback sync failed', error);
+          setThreadsReady(true);
+        });
+        return;
+      }
       const next = snap.docs
         .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-        .sort((a, b) => timestampValue(b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAt || a.lastMessageAt));
+        .sort((a, b) => timestampValue(b.updatedAtMs || b.updatedAt || b.lastMessageAt) - timestampValue(a.updatedAtMs || a.updatedAt || a.lastMessageAt));
       setThreads(next);
       setActiveThreadId(current => (current && next.some(thread => thread.id === current)) ? current : (next[0]?.id || ''));
       setThreadsReady(true);
@@ -322,7 +342,9 @@ export function WorkspaceInbox({
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
         lastMessage: cleanText,
         lastMessageAt: FirebaseSDK.serverTimestamp(),
+        lastMessageAtMs: Date.now(),
         updatedAt: FirebaseSDK.serverTimestamp(),
+        updatedAtMs: Date.now(),
         clientUnread: FirebaseSDK.increment(1),
         ownerUnread: 0
       });
@@ -358,7 +380,8 @@ export function WorkspaceInbox({
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
         bookingStatus: 'confirmed',
         rescheduleStatus: '',
-        updatedAt: FirebaseSDK.serverTimestamp()
+        updatedAt: FirebaseSDK.serverTimestamp(),
+        updatedAtMs: Date.now()
       }).catch(() => {});
       await sendMessage(`Confirmed: ${linkedBooking.date} at ${linkedBooking.time}.`);
     }
@@ -413,7 +436,8 @@ export function WorkspaceInbox({
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
         rescheduleStatus: actionDialog?.requestMode === 'counter' ? 'countered' : 'offered',
         proposedReschedule: proposal,
-        updatedAt: FirebaseSDK.serverTimestamp()
+        updatedAt: FirebaseSDK.serverTimestamp(),
+        updatedAtMs: Date.now()
       }).catch(() => {});
     }
     await sendMessage(message, {
@@ -444,7 +468,8 @@ export function WorkspaceInbox({
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
         rescheduleStatus: 'accepted',
         proposedReschedule: nextProposal,
-        updatedAt: FirebaseSDK.serverTimestamp()
+        updatedAt: FirebaseSDK.serverTimestamp(),
+        updatedAtMs: Date.now()
       }).catch(() => {});
     }
     await sendMessage(`Accepted reschedule: ${formatProposalLabel(proposal)}. Your booking has been updated.`, {
@@ -464,7 +489,8 @@ export function WorkspaceInbox({
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', activeThread.id), {
         rescheduleStatus: 'declined',
         proposedReschedule: nextProposal,
-        updatedAt: FirebaseSDK.serverTimestamp()
+        updatedAt: FirebaseSDK.serverTimestamp(),
+        updatedAtMs: Date.now()
       }).catch(() => {});
     }
     await sendMessage(`Declined reschedule: ${formatProposalLabel(proposal)}. Send another option here if you want to keep looking.`, {

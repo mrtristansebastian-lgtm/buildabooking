@@ -1,5 +1,6 @@
 import * as FirebaseSDK from '../../../services/firebase';
 import { appId, db, isFirebaseConfigured } from '../../../services/firebase';
+import { syncListCollection } from '../../workspace/utils/scaleCollections';
 
 export function createFinanceImportActions({
   canManageWorkspace,
@@ -17,7 +18,15 @@ export function createFinanceImportActions({
       return false;
     }
     try {
-      await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'finance', 'imports'), { list: newList, updatedAt: Date.now() });
+      await Promise.all([
+        FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'finance', 'imports'), { list: newList, updatedAt: Date.now() }),
+        syncListCollection({
+          ownerId: workspaceOwnerId,
+          collectionName: 'financeImports',
+          list: newList,
+          idForRecord: record => record.id
+        })
+      ]);
       return true;
     } catch (error) {
       console.error('Finance import save failed', error);
