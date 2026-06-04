@@ -204,7 +204,7 @@ export function useAuthActions({
       showToast('Signed in with Google');
     } catch (error) {
       console.error(error);
-      if (['auth/popup-blocked', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported', 'auth/operation-not-supported-in-this-environment'].includes(error?.code)) {
+      if (['auth/popup-blocked', 'auth/cancelled-popup-request', 'auth/web-storage-unsupported', 'auth/operation-not-supported-in-this-environment', 'auth/internal-error'].includes(error?.code)) {
         try {
           await startGoogleRedirect(getAuthReturnRouteForPersona(authPersona));
           return;

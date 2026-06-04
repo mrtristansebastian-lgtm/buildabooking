@@ -106,7 +106,7 @@ export const AuthDialog = ({
           <input type="email" value={form.email} onChange={(event) => onFormChange({ email: event.target.value })} required placeholder="Email address" autoComplete="email" className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
           <input type="password" value={form.password} onChange={(event) => onFormChange({ password: event.target.value })} required minLength={6} placeholder="Password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} className="w-full h-12 bg-neutral-50 border border-neutral-100 rounded-lg px-5 text-sm font-bold outline-none focus:bg-white focus:border-black transition-colors" />
         </div>
-        {error && <p className="mt-4 text-xs font-bold text-red-500 leading-relaxed">{error}</p>}
+        {error && <p role="alert" className="mt-4 text-xs font-bold text-red-500 leading-relaxed">{error}</p>}
         <button type="submit" disabled={busy} className="mt-5 w-full h-12 rounded-lg bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-wait">
           {busy ? 'Please Wait' : personaCopy.submit}
         </button>
