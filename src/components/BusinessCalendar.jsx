@@ -83,9 +83,10 @@ export const BusinessCalendar = ({
         onChangeApplyScope={setApplyScope}
         onClose={() => schedule.setSettingsModalOpen(false)}
         onDeleteSlot={schedule.actions.deleteDefaultSlot}
+        onEditSlot={schedule.actions.startEditingDefaultSlot}
         onSaveDefaults={schedule.actions.saveGeneratedDefaultSlots}
         onToggleWaitlist={schedule.actions.toggleWaitlist}
-        onUpdateSlot={schedule.actions.updateDefaultSlot}
+        selectedDate={schedule.selectedDate}
         selectedCalendarName={schedule.selectedCalendar?.name || 'Business Overview'}
         waitlistEnabled={schedule.waitlistEnabled}
       />

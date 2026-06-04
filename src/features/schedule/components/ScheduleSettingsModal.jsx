@@ -10,41 +10,36 @@ export const ScheduleSettingsModal = ({
   onChangeApplyScope,
   onClose,
   onDeleteSlot,
+  onEditSlot,
   onSaveDefaults,
   onToggleWaitlist,
-  onUpdateSlot,
+  selectedDate,
   selectedCalendarName,
   waitlistEnabled
 }) => {
-  const [editingSlot, setEditingSlot] = useState('');
-  const [editingValue, setEditingValue] = useState('');
+  const [customRange, setCustomRange] = useState({ startDate: '', endDate: '' });
   const [newSlot, setNewSlot] = useState('');
 
   useEffect(() => {
     if (!isOpen) {
-      setEditingSlot('');
-      setEditingValue('');
+      setCustomRange({ startDate: '', endDate: '' });
       setNewSlot('');
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const startEditing = (slot) => {
-    setEditingSlot(slot);
-    setEditingValue(slot);
-  };
-
-  const saveEditing = () => {
-    onUpdateSlot(editingSlot, editingValue);
-    setEditingSlot('');
-    setEditingValue('');
-  };
-
   const addSlot = () => {
     onAddSlot(newSlot);
     setNewSlot('');
   };
+
+  const rangePayload = applyScope === 'custom'
+    ? {
+      startDate: customRange.startDate || selectedDate,
+      endDate: customRange.endDate || customRange.startDate || selectedDate
+    }
+    : {};
 
   return (
     <div className="schedule-settings-backdrop">
@@ -70,28 +65,13 @@ export const ScheduleSettingsModal = ({
           <div className="schedule-slot-bubble-grid" aria-label="Default slots">
             {defaultSlots.map(slot => (
               <div key={slot} className="schedule-slot-bubble">
-                {editingSlot === slot ? (
-                  <>
-                    <input
-                      value={editingValue}
-                      onChange={event => setEditingValue(event.target.value)}
-                      aria-label={`Edit ${slot}`}
-                    />
-                    <button type="button" onClick={saveEditing} aria-label={`Save ${slot}`}>
-                      <Check size={14} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span>{slot}</span>
-                    <button type="button" onClick={() => startEditing(slot)} aria-label={`Edit ${slot}`}>
-                      <Pencil size={13} />
-                    </button>
-                    <button type="button" onClick={() => onDeleteSlot(slot)} aria-label={`Delete ${slot}`}>
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
+                <span>{slot}</span>
+                <button type="button" onClick={() => onEditSlot?.(slot)} aria-label={`Edit ${slot}`}>
+                  <Pencil size={13} />
+                </button>
+                <button type="button" onClick={() => onDeleteSlot(slot)} aria-label={`Delete ${slot}`}>
+                  <Trash2 size={13} />
+                </button>
               </div>
             ))}
           </div>
@@ -116,8 +96,30 @@ export const ScheduleSettingsModal = ({
               <option value="day">Selected day</option>
               <option value="week">This week</option>
               <option value="month">This month</option>
+              <option value="always">Always</option>
+              <option value="custom">Custom period</option>
             </select>
           </label>
+          {applyScope === 'custom' && (
+            <div className="schedule-custom-range">
+              <label>
+                <span>From</span>
+                <input
+                  type="date"
+                  value={customRange.startDate || selectedDate || ''}
+                  onChange={event => setCustomRange(prev => ({ ...prev, startDate: event.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Until</span>
+                <input
+                  type="date"
+                  value={customRange.endDate || customRange.startDate || selectedDate || ''}
+                  onChange={event => setCustomRange(prev => ({ ...prev, endDate: event.target.value }))}
+                />
+              </label>
+            </div>
+          )}
           <button type="button" className={`schedule-check-row ${waitlistEnabled ? 'is-active' : ''}`} onClick={onToggleWaitlist}>
             <span>{waitlistEnabled && <Check size={13} />}</span>
             Waitlist
@@ -129,7 +131,7 @@ export const ScheduleSettingsModal = ({
             <Save size={15} />
             Save slots
           </button>
-          <button type="button" onClick={() => onApplyDefaults(applyScope)}>
+          <button type="button" onClick={() => onApplyDefaults(applyScope, rangePayload)}>
             <CalendarCheck size={15} />
             Apply defaults
           </button>

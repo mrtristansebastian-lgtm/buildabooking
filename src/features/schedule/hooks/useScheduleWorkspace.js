@@ -4,6 +4,7 @@ import {
   addDaysToDate,
   dateFromKey,
   formatSlotEditorValue,
+  getDateRange,
   getNextOpenTime,
   getStaffInitials,
   parseSlotValue,
@@ -140,18 +141,62 @@ export const useScheduleWorkspace = ({
       updateDateConfigForCalendar(calendarId, dateStr, { ...targetConfig, available: true, times: defaultSlots });
       showToast?.('Default slots applied.');
     },
-    applyDefaultSlotsForScope: (scope = 'day') => {
+    applyDefaultSlotsForScope: (scope = 'day', range = {}) => {
       const anchor = dateFromKey(selectedDate);
-      const dates = scope === 'month'
-        ? Array.from({ length: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate() }, (_, index) => getLocalDateStr(new Date(anchor.getFullYear(), anchor.getMonth(), index + 1)))
-        : scope === 'week'
-          ? Array.from({ length: 7 }, (_, index) => getLocalDateStr(addDaysToDate(anchor, index - ((anchor.getDay() + 6) % 7))))
-          : [selectedDate];
-      dates.forEach(dateStr => {
-        const targetConfig = getCalendarDayConfig(settings, selectedCalendarId, dateStr);
-        updateDateConfigForCalendar(selectedCalendarId, dateStr, { ...targetConfig, available: true, times: defaultSlots });
+      let dates = [selectedDate];
+
+      if (scope === 'month') {
+        dates = Array.from({ length: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate() }, (_, index) => getLocalDateStr(new Date(anchor.getFullYear(), anchor.getMonth(), index + 1)));
+      } else if (scope === 'week') {
+        dates = Array.from({ length: 7 }, (_, index) => getLocalDateStr(addDaysToDate(anchor, index - ((anchor.getDay() + 6) % 7))));
+      } else if (scope === 'always') {
+        dates = Array.from({ length: 365 }, (_, index) => getLocalDateStr(addDaysToDate(anchor, index)));
+      } else if (scope === 'custom') {
+        const startDate = dateFromKey(range.startDate || selectedDate);
+        const endDate = dateFromKey(range.endDate || range.startDate || selectedDate);
+        if (endDate < startDate) return showToast?.('Custom period end date must be after the start date.');
+        dates = getDateRange(startDate, endDate);
+      }
+
+      if (!guardCalendarEdit(selectedCalendarId)) return;
+      onSettingsDirty?.();
+      setSettings(prev => {
+        if (selectedCalendarId === 'workspace') {
+          const nextSchedule = { ...(prev.schedule || {}) };
+          dates.forEach(dateStr => {
+            const targetConfig = getCalendarDayConfig(prev, selectedCalendarId, dateStr);
+            nextSchedule[dateStr] = { ...targetConfig, available: true, times: defaultSlots };
+          });
+          return { ...prev, schedule: nextSchedule };
+        }
+
+        const previousCalendar = prev.staffCalendars?.[selectedCalendarId] || {};
+        const nextSchedule = { ...(previousCalendar.schedule || {}) };
+        dates.forEach(dateStr => {
+          const targetConfig = getCalendarDayConfig(prev, selectedCalendarId, dateStr);
+          nextSchedule[dateStr] = { ...targetConfig, available: true, times: defaultSlots };
+        });
+        return {
+          ...prev,
+          staffCalendars: {
+            ...(prev.staffCalendars || {}),
+            [selectedCalendarId]: {
+              ...previousCalendar,
+              staffId: selectedCalendarId,
+              schedule: nextSchedule,
+              updatedAt: Date.now()
+            }
+          }
+        };
       });
-      showToast?.(`Default slots applied to ${scope === 'day' ? 'the selected day' : `this ${scope}`}.`);
+      const scopeLabel = scope === 'day'
+        ? 'the selected day'
+        : scope === 'always'
+          ? 'the next year'
+          : scope === 'custom'
+            ? 'the custom period'
+            : `this ${scope}`;
+      showToast?.(`Default slots applied to ${scopeLabel}.`);
     },
     addDefaultSlot: (slot) => {
       const nextSlot = String(slot || '').trim();
@@ -165,6 +210,11 @@ export const useScheduleWorkspace = ({
       updateDefaultTimesForCalendar(selectedCalendarId, defaultSlots.map(time => time === oldSlot ? normalizedSlot : time));
     },
     deleteSlotFromEditor: () => {
+      if (slotEditor?.isDefaultSlot) {
+        if (!guardCalendarEdit(selectedCalendarId)) return;
+        if (slotEditor.originalTime) updateDefaultTimesForCalendar(selectedCalendarId, defaultSlots.filter(time => time !== slotEditor.originalTime));
+        return setSlotEditor(null);
+      }
       if (!slotEditor?.dateStr || !slotEditor?.calendarId || !guardCalendarEdit(slotEditor.calendarId)) return;
       if (!slotEditor.originalTime) return setSlotEditor(null);
       const targetConfig = getCalendarDayConfig(settings, slotEditor.calendarId, slotEditor.dateStr);
@@ -184,6 +234,20 @@ export const useScheduleWorkspace = ({
       showToast?.('Default slots saved.');
     },
     saveSlotEditor: () => {
+      if (slotEditor?.isDefaultSlot) {
+        if (!guardCalendarEdit(selectedCalendarId)) return;
+        const slotValue = formatSlotEditorValue(slotEditor);
+        if (!slotValue) return showToast?.('Add a time before saving this slot.');
+        if (slotEditor.mode === 'range' && (!slotEditor.end || timeValueToMinutes(slotEditor.end) <= timeValueToMinutes(slotEditor.start))) {
+          return showToast?.('End time must be later than the start time.');
+        }
+        if (defaultSlots.includes(slotValue) && slotValue !== slotEditor.originalTime) return showToast?.('That default slot already exists.');
+        const nextTimes = slotEditor.originalTime
+          ? defaultSlots.map(time => time === slotEditor.originalTime ? slotValue : time)
+          : [...defaultSlots, slotValue];
+        updateDefaultTimesForCalendar(selectedCalendarId, nextTimes);
+        return setSlotEditor(null);
+      }
       if (!slotEditor?.dateStr || !slotEditor?.calendarId || !guardCalendarEdit(slotEditor.calendarId)) return;
       const slotValue = formatSlotEditorValue(slotEditor);
       if (!slotValue) return showToast?.('Add a time before saving this slot.');
@@ -213,6 +277,16 @@ export const useScheduleWorkspace = ({
     startEditingSlot: (time) => {
       if (!time || !guardCalendarEdit(agendaCalendarId)) return;
       setSlotEditor({ originalTime: time, dateStr: selectedDate, calendarId: agendaCalendarId, ...parseSlotValue(time) });
+    },
+    startEditingDefaultSlot: (time) => {
+      if (!time || !guardCalendarEdit(selectedCalendarId)) return;
+      setSlotEditor({
+        originalTime: time,
+        isDefaultSlot: true,
+        calendarId: selectedCalendarId,
+        label: 'Default slots',
+        ...parseSlotValue(time)
+      });
     },
     toggleDateAvailability: () => updateDateConfigForCalendar(agendaCalendarId, selectedDate, { ...dayConfig, available: !dayConfig.available }),
     toggleWaitlist: () => {

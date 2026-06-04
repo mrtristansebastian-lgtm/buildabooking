@@ -13,7 +13,7 @@ export const ScheduleSlotEditorModal = ({
   const updateEditor = (nextFields) => setSlotEditor(current => current ? { ...current, ...nextFields } : current);
   const targetDateLabel = slotEditor.dateStr
     ? new Date(`${slotEditor.dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    : 'Selected day';
+    : (slotEditor.label || 'Selected day');
   const durationOptions = [
     { label: '30m', minutes: 30 },
     { label: '1h', minutes: 60 },
@@ -82,7 +82,7 @@ export const ScheduleSlotEditorModal = ({
         <div className="schedule-slot-modal-body">
           <header className="schedule-slot-modal-head">
             <div>
-              <p>{slotEditor.originalTime ? 'Edit Slot' : 'New Slot'}</p>
+              <p>{slotEditor.isDefaultSlot ? 'Edit Default' : slotEditor.originalTime ? 'Edit Slot' : 'New Slot'}</p>
               <h2>Slot time</h2>
               <div className="schedule-slot-meta">
                 <span>{targetDateLabel}</span>
