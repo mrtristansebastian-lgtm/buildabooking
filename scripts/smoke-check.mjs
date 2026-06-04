@@ -16,7 +16,7 @@ const read = (relativePath) => {
 
 const appRouteHost = read('src/components/AppRouteHost.jsx');
 const bookingFlow = read('src/components/BookingFlow.jsx');
-const bookingActionSection = read('src/features/booking-flow/components/BookingActionSection.jsx');
+const bookingCheckoutStep = read('src/features/booking-flow/components/BookingCheckoutStep.jsx');
 const bookingSubmissionActions = read('src/features/bookings/actions/bookingSubmissionActions.js');
 const dashboardOverlays = read('src/features/dashboard/components/DashboardOverlays.jsx');
 const firebaseService = read('src/services/firebase.js');
@@ -34,7 +34,7 @@ expect(publicBookingWorkspace.includes('publicReloadKey'), 'Public booking pages
 expect(appRouteHost.includes('legalPages') && legalConfig.includes('privacy'), 'Landing page should expose trust/legal/support surfaces.');
 expect(dashboardOverlays.includes('setConfirmDialog') && dashboardOverlays.includes('ConfirmActionDialog'), 'Destructive actions should use branded confirmation UI.');
 expect(
-  bookingFlow.includes('What happens next') || bookingActionSection.includes('What happens next'),
+  bookingFlow.includes('What happens next') || bookingCheckoutStep.includes('business reviews your request'),
   'Booking page should explain the post-submit flow.'
 );
 expect(firebaseService.includes('getFunctions') && firebaseService.includes('httpsCallable'), 'Firebase Functions should be available to the app.');

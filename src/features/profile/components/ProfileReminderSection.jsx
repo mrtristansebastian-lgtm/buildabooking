@@ -26,7 +26,7 @@ export const ProfileReminderSection = ({ onSettingChange, settings }) => {
   };
 
   return (
-    <section className="rounded-lg border border-neutral-100 bg-white p-5 md:p-6">
+    <section className="rounded-lg bg-neutral-50/80 p-5 md:p-6">
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-neutral-100 bg-neutral-50 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-neutral-400">

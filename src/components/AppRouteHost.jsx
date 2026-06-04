@@ -56,6 +56,7 @@ export function AppRouteHost({
         error={publicBooking.error}
         loading={publicBooking.loading || route.loading}
         manualPaymentOptions={publicBooking.manualPaymentOptions}
+        paymentOptions={publicBooking.paymentOptions}
         onComplete={publicBooking.onComplete}
         onHome={() => { window.location.href = window.location.origin; }}
         onInstallApp={publicBooking.onInstallApp}

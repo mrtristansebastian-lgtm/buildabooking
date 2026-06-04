@@ -46,19 +46,22 @@ export const BookingFaqSection = ({
                         <button
                             key={`${faq.q}-${index}`}
                             type="button"
-                            className={`w-full text-left transition-all ${isPreviewEmpty ? 'is-preview-empty' : ''}`}
+                            className={`booking-faq-item w-full text-left transition-all ${isPreviewEmpty ? 'is-preview-empty' : ''}`}
                             style={getFaqItemStyle({ settings, faqStyle })}
+                            aria-expanded={isOpen}
                             onClick={(event) => {
                                 event.stopPropagation();
                                 if (isPreviewEmpty) return;
                                 setOpenFaq(openFaq === index ? null : index);
                             }}
                         >
-                            <span className="flex justify-between items-center gap-4">
-                                <span className="font-bold text-sm" style={{ color: settings.faqTextColor || settings.headingColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
-                                {isOpen ? <ChevronUp size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} />}
+                            <span className="booking-faq-row">
+                                <span className="booking-faq-question" style={{ color: settings.faqTextColor || settings.headingColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.headingFontFamily || settings.fontFamily) }}>{faq.q}</span>
+                                <span className="booking-faq-icon" aria-hidden="true">
+                                    {isOpen ? <ChevronUp size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} /> : <ChevronDown size={16} style={{ color: settings.faqAnswerColor || settings.bodyColor }} />}
+                                </span>
                             </span>
-                            {isOpen && <span className="block mt-3 text-sm opacity-85 leading-relaxed" style={{ color: settings.faqAnswerColor || settings.bodyColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.bodyFontFamily || settings.fontFamily) }}>{faq.a}</span>}
+                            {isOpen && <span className="booking-faq-answer" style={{ color: settings.faqAnswerColor || settings.bodyColor, fontFamily: getFontFamily(settings.faqFontFamily || settings.bodyFontFamily || settings.fontFamily) }}>{faq.a}</span>}
                         </button>
                     );
                 })}

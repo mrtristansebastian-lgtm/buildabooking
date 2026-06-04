@@ -14,6 +14,7 @@ export function usePublicBookingWorkspace({
 }) {
   const [publicWorkspace, setPublicWorkspace] = useState(null);
   const [publicManualPaymentOptions, setPublicManualPaymentOptions] = useState([]);
+  const [publicPaymentOptions, setPublicPaymentOptions] = useState([]);
   const [publicLoading, setPublicLoading] = useState(false);
   const [publicError, setPublicError] = useState('');
   const [publicReloadKey, setPublicReloadKey] = useState(0);
@@ -105,31 +106,42 @@ export function usePublicBookingWorkspace({
     let cancelled = false;
     if (!publicSlug || !isFirebaseConfigured || !publicWorkspace?.ownerId) {
       setPublicManualPaymentOptions([]);
+      setPublicPaymentOptions([]);
       return () => { cancelled = true; };
     }
 
-    const gatewayIds = ['manual_eft', 'cash'];
+    const gatewayIds = ['stripe', 'payfast', 'yoco', 'ozow', 'paystack', 'manual_eft', 'cash'];
     Promise.all(gatewayIds.map(async (gatewayId) => {
       const snap = await FirebaseSDK.getDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'payment_settings', gatewayId));
       if (!snap.exists()) return null;
       const data = snap.data() || {};
       if (data.enabled !== true) return null;
+      const manual = gatewayId === 'manual_eft' || gatewayId === 'cash';
+      if (!manual && data.configured !== true) return null;
       return {
         id: gatewayId,
         gatewayType: gatewayId,
-        name: data.providerName || (gatewayId === 'manual_eft' ? 'Manual EFT' : 'Cash'),
+        name: gatewayId === 'cash' ? 'Pay on site' : (data.providerName || (gatewayId === 'manual_eft' ? 'Manual EFT' : gatewayId)),
         enabled: true,
+        configured: data.configured !== false,
         mode: data.mode || 'live',
         credentialSummary: data.credentialSummary || {},
         instructions: data.credentialSummary?.instructions || ''
       };
     }))
       .then((options) => {
-        if (!cancelled) setPublicManualPaymentOptions(options.filter(Boolean));
+        if (!cancelled) {
+          const enabledOptions = options.filter(Boolean);
+          setPublicPaymentOptions(enabledOptions);
+          setPublicManualPaymentOptions(enabledOptions.filter(option => ['manual_eft', 'cash'].includes(option.id)));
+        }
       })
       .catch((error) => {
-        console.error('Could not load manual payment options', error);
-        if (!cancelled) setPublicManualPaymentOptions([]);
+        console.error('Could not load payment options', error);
+        if (!cancelled) {
+          setPublicManualPaymentOptions([]);
+          setPublicPaymentOptions([]);
+        }
       });
 
     return () => { cancelled = true; };
@@ -139,6 +151,7 @@ export function usePublicBookingWorkspace({
     publicError,
     publicLoading,
     publicManualPaymentOptions,
+    publicPaymentOptions,
     publicWorkspace,
     reloadPublicWorkspace,
     setPublicError,

@@ -17,16 +17,16 @@
 
         .editor-preview-frame.is-mobile-preview .booking-services-grid h5,
         .booking-flow-public .booking-services-grid h5,
-        .editor-preview-frame.is-mobile-preview .booking-faq-section button span,
-        .booking-flow-public .booking-faq-section button span {
+        .editor-preview-frame.is-mobile-preview .booking-faq-section .booking-faq-question,
+        .booking-flow-public .booking-faq-section .booking-faq-question {
             overflow-wrap: anywhere;
             hyphens: auto;
         }
 
         .editor-preview-frame.is-mobile-preview .booking-services-grid p,
         .booking-flow-public .booking-services-grid p,
-        .editor-preview-frame.is-mobile-preview .booking-faq-section button > span:last-child,
-        .booking-flow-public .booking-faq-section button > span:last-child {
+        .editor-preview-frame.is-mobile-preview .booking-faq-section .booking-faq-answer,
+        .booking-flow-public .booking-faq-section .booking-faq-answer {
             overflow-wrap: anywhere;
         }
 

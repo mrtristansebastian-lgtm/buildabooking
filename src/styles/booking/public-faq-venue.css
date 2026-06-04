@@ -1,4 +1,51 @@
-        .booking-faq-accordion button {
+        .booking-faq-section .booking-faq-item {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            text-align: left;
+            overflow: hidden;
+        }
+
+        .booking-faq-section .booking-faq-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 1.9rem;
+            align-items: center;
+            gap: 0.9rem;
+            min-height: 3.25rem;
+        }
+
+        .booking-faq-section .booking-faq-question {
+            display: block;
+            min-width: 0;
+            font-size: 0.94rem;
+            font-weight: 850;
+            line-height: 1.28;
+            overflow-wrap: anywhere;
+        }
+
+        .booking-faq-section .booking-faq-icon {
+            display: inline-flex;
+            width: 1.9rem;
+            height: 1.9rem;
+            align-items: center;
+            justify-content: center;
+            justify-self: end;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.045);
+            flex: 0 0 auto;
+        }
+
+        .booking-faq-section .booking-faq-answer {
+            display: block;
+            margin-top: 0.2rem;
+            max-width: calc(100% - 2.8rem);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            opacity: 0.82;
+            overflow-wrap: anywhere;
+        }
+
+        .booking-faq-accordion .booking-faq-item {
             border-radius: 1rem !important;
         }
 
@@ -8,20 +55,48 @@
             gap: 0.8rem;
         }
 
-        .booking-faq-cards button {
+        .booking-faq-cards .booking-faq-item {
             min-height: 5.6rem;
-            align-items: flex-start !important;
             border-radius: 1.2rem !important;
             box-shadow: 0 18px 46px -38px rgba(15, 23, 42, 0.42);
         }
 
-        .booking-faq-numbered button::before {
+        .booking-faq-minimal .booking-faq-item {
+            padding: 0 !important;
+            border-left: 0 !important;
+            border-right: 0 !important;
+            border-top: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+        }
+
+        .booking-faq-minimal .booking-faq-row {
+            min-height: 3.5rem;
+        }
+
+        .booking-faq-minimal .booking-faq-icon {
+            background: transparent;
+        }
+
+        .booking-faq-minimal .booking-faq-answer {
+            margin-top: -0.15rem;
+            padding: 0 2.8rem 1rem 0;
+        }
+
+        .booking-faq-numbered .booking-faq-item {
+            position: relative;
+            padding-left: 3.4rem !important;
+        }
+
+        .booking-faq-numbered .booking-faq-item::before {
             content: counter(faq-item, decimal-leading-zero);
             counter-increment: faq-item;
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
             display: inline-flex;
             width: 1.75rem;
             height: 1.75rem;
-            margin-right: 0.7rem;
             align-items: center;
             justify-content: center;
             border-radius: 999px;
@@ -40,9 +115,8 @@
             gap: 0.8rem;
         }
 
-        .booking-faq-split button {
-            display: grid !important;
-            grid-template-columns: minmax(0, 0.78fr) auto;
+        .booking-faq-split .booking-faq-item {
+            display: block !important;
             border-radius: 0.2rem !important;
             background: transparent !important;
         }

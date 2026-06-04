@@ -14,6 +14,7 @@ const isInitialPortraitMobile = () => (
 export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) {
   const [studioModal, setStudioModal] = useState(null);
   const [device, setDevice] = useState(() => (isInitialMobileDevice() ? 'mobile' : 'desktop'));
+  const [previewStep, setPreviewStep] = useState('select');
   const [previewKey, setPreviewKey] = useState(0);
   const [scale, setScale] = useState(1);
   const [collapsed, setCollapsed] = useState(false);
@@ -389,6 +390,7 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
     openRoom,
     playMobileNavSound,
     previewKey,
+    previewStep,
     previewScrollRef,
     resetPreviewScroll,
     roomNavOffset,
@@ -396,6 +398,7 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
     setCollapsed,
     setMobileNavCollapsed,
     setPreviewKey,
+    setPreviewStep,
     setRoomNavOffset,
     setStudioModal,
     shouldMountPreview,

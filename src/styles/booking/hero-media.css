@@ -79,6 +79,19 @@
             margin-top: 0.45rem;
         }
 
+        .booking-footer-media {
+            grid-column: auto;
+            grid-row: auto;
+            width: 100%;
+            max-width: 100%;
+            margin: clamp(1.4rem, 4vw, 2.4rem) auto 0;
+            text-align: left;
+        }
+
+        .booking-preview-media-drop.booking-footer-media {
+            width: 100%;
+        }
+
         .booking-hero-media::after {
             content: "";
             position: absolute;

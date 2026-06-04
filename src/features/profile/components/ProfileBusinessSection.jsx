@@ -1,4 +1,5 @@
 import { ProfileBusinessFaqSection } from './ProfileBusinessFaqSection';
+import { ProfileBusinessIdentitySection } from './ProfileBusinessIdentitySection';
 import { ProfileBusinessMediaSection } from './ProfileBusinessMediaSection';
 import { ProfileBusinessSocialSection } from './ProfileBusinessSocialSection';
 import { ProfileReminderSection } from './ProfileReminderSection';
@@ -22,15 +23,21 @@ export const ProfileBusinessSection = ({
   settings,
   venuePhotos
 }) => (
-  <div data-tour="profile-business-info" className={`profile-section profile-section-business ${activeProfileSection === 'business' ? 'block' : 'hidden'} bg-white p-5 sm:p-6 md:p-10 rounded-lg border border-neutral-100 shadow-[0_25px_80px_-65px_rgba(0,0,0,0.75)]`}>
-    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+  <div data-tour="profile-business-info" className={`profile-section profile-section-business ${activeProfileSection === 'business' ? 'block' : 'hidden'} bg-white p-5 sm:p-6 md:p-8 rounded-lg`}>
+    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.45em] text-neutral-300 mb-3">Business Profile</p>
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-black">Brand Details</h3>
+        <p className="text-[10px] font-bold uppercase text-neutral-300 mb-3">Business profile</p>
+        <h3 className="text-2xl md:text-3xl font-black text-black">Business details</h3>
       </div>
-      <p className="text-sm text-neutral-400 max-w-md">These details sync into the booking page, client touchpoints, and the editor defaults.</p>
+      <p className="text-sm text-neutral-500 max-w-md">Set up the public booking identity, media, client trust copy, and links in one clean flow.</p>
     </div>
-    <div className="space-y-10">
+    <div className="space-y-5">
+      <ProfileBusinessIdentitySection
+        onImageRemove={onImageRemove}
+        onImageUpload={onImageUpload}
+        onSettingChange={onSettingChange}
+        settings={settings}
+      />
       <ProfileBusinessMediaSection
         onImageCrop={onImageCrop}
         onImageRemove={onImageRemove}
@@ -41,17 +48,25 @@ export const ProfileBusinessSection = ({
         settings={settings}
         venuePhotos={venuePhotos}
       />
-      <ProfileBusinessFaqSection
-        onAddFaqItem={onAddFaqItem}
-        onRemoveFaqItem={onRemoveFaqItem}
-        onToggleFaqFeature={onToggleFaqFeature}
-        onUpdateFaqItem={onUpdateFaqItem}
-        settings={settings}
-      />
-      <ProfileReminderSection
-        onSettingChange={onSettingChange}
-        settings={settings}
-      />
+      <section className="rounded-lg bg-white">
+        <div className="mb-4">
+          <p className="text-[10px] font-bold uppercase text-neutral-400">Client trust</p>
+          <h4 className="mt-1 text-xl font-black text-black">Helpful answers and reminders</h4>
+        </div>
+        <div className="space-y-4">
+          <ProfileBusinessFaqSection
+            onAddFaqItem={onAddFaqItem}
+            onRemoveFaqItem={onRemoveFaqItem}
+            onToggleFaqFeature={onToggleFaqFeature}
+            onUpdateFaqItem={onUpdateFaqItem}
+            settings={settings}
+          />
+          <ProfileReminderSection
+            onSettingChange={onSettingChange}
+            settings={settings}
+          />
+        </div>
+      </section>
       <ProfileBusinessSocialSection
         onCopyReferral={onCopyReferral}
         onSaveProfile={onSaveProfile}

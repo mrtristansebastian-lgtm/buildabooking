@@ -185,6 +185,7 @@ export function useAppRouteHostConfig({
       error: publicBooking.publicError,
       loading: publicBooking.publicLoading,
       manualPaymentOptions: publicBooking.publicManualPaymentOptions,
+      paymentOptions: publicBooking.publicPaymentOptions,
       onComplete: actionRuntime.booking.handlePublicBookingComplete,
       onInstallApp: app.handleAddToHomeScreen,
       onRetry: publicBooking.reloadPublicWorkspace,

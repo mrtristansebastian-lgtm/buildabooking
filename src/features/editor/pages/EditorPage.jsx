@@ -143,10 +143,12 @@ export function EditorPage({
         moveEditorRoomNavDrag={preview.moveRoomNavDrag}
         openEditorRoom={actions.openRoom}
         previewKey={preview.key}
+        previewStep={preview.previewStep}
         scale={preview.scale}
         setEditorRoomNavOffset={preview.setRoomNavOffset}
         setMobileNavCollapsed={editor.setMobileNavCollapsed}
         setPreviewKey={preview.setKey}
+        setPreviewStep={preview.setPreviewStep}
         shouldMountEditorPreview={preview.shouldMount}
         showPortraitDesktopEditorPrompt={preview.showPortraitDesktopPrompt}
         startEditorRoomNavDrag={preview.startRoomNavDrag}

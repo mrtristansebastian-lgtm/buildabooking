@@ -5,12 +5,11 @@
             gap: 0.8rem;
         }
 
-        .booking-faq-numbered button::before {
+        .booking-faq-numbered .booking-faq-item::before {
             content: "Q";
             display: inline-flex;
             width: 1.55rem;
             height: 1.55rem;
-            margin-right: 0.6rem;
             align-items: center;
             justify-content: center;
             border-radius: 999px;
@@ -19,7 +18,7 @@
             font-weight: 950;
         }
 
-        .booking-faq-minimal button {
+        .booking-faq-minimal .booking-faq-item {
             border-left: 0 !important;
             border-right: 0 !important;
             border-top: 0 !important;
@@ -181,7 +180,7 @@
 
         .booking-service-option.is-preview-empty,
         .booking-service-dropdown-row.is-preview-empty,
-        .booking-faq-section button.is-preview-empty,
+        .booking-faq-section .booking-faq-item.is-preview-empty,
         .booking-time-look > button.is-preview-empty,
         .booking-social-links a.is-preview-empty,
         .booking-venue-photo.is-preview-empty {
@@ -190,7 +189,7 @@
 
         .booking-services-preview-empty > button:not(.is-selected),
         .booking-service-dropdown-row.is-preview-empty:not(.is-active),
-        .booking-faq-preview-empty button:not(:first-child),
+        .booking-faq-preview-empty .booking-faq-item:not(:first-child),
         .booking-time-preview-empty > button:not(:first-child),
         .booking-social-preview-empty a:not(:first-child) {
             opacity: 0.58 !important;

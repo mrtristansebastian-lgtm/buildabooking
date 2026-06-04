@@ -85,7 +85,8 @@ export const createDefaultSettings = () => ({
   businessFooterImage: '',
   venuePhotos: [],
   address: '',
-  socials: { instagram: '', tiktok: '', facebook: '', website: '' }
+  socials: { instagram: '', tiktok: '', facebook: '', website: '' },
+  socialPlatforms: { instagram: true, tiktok: true, facebook: true, website: true }
 });
 
 export const createGuestDemoWorkspace = () => ({

@@ -5,17 +5,25 @@ import * as FirebaseSDK from '../services/firebase';
 import { appId, functions } from '../services/firebase';
 import { getLocalDateStr } from '../utils/dates';
 import { normalizeServiceList } from '../utils/services';
-import { BookingActionSection } from '../features/booking-flow/components/BookingActionSection';
+import { BookingCartStep } from '../features/booking-flow/components/BookingCartStep';
+import { BookingCheckoutStep } from '../features/booking-flow/components/BookingCheckoutStep';
+import { BookingPaymentStep } from '../features/booking-flow/components/BookingPaymentStep';
 import { BookingDateSection } from '../features/booking-flow/components/BookingDateSection';
 import { BookingDetailsForm } from '../features/booking-flow/components/BookingDetailsForm';
 import { BookingFaqSection } from '../features/booking-flow/components/BookingFaqSection';
 import { BookingPageLoader } from '../features/booking-flow/components/BookingPageLoader';
+import { BookingSelectionStep } from '../features/booking-flow/components/BookingSelectionStep';
 import { BookingServiceStaffSection } from '../features/booking-flow/components/BookingServiceStaffSection';
 import { BookingServicesSection } from '../features/booking-flow/components/BookingServicesSection';
 import { BookingSocialLinks } from '../features/booking-flow/components/BookingSocialLinks';
 import { BookingSuccessState } from '../features/booking-flow/components/BookingSuccessState';
 import { BookingTimeSection } from '../features/booking-flow/components/BookingTimeSection';
 import { BookingVenueGallery } from '../features/booking-flow/components/BookingVenueGallery';
+import {
+    getPaymentOptionsForCheckout,
+    isHostedPaymentOption,
+    parseCheckoutAmountToCents
+} from '../features/booking-flow/utils/checkoutUtils';
 import {
     bookingStyleDirections,
     createPreviewSocialLinks,
@@ -36,8 +44,8 @@ import {
 const previewSocialLinks = createPreviewSocialLinks({ Instagram, Globe });
 
 // --- PUBLIC BOOKING ENGINE (WITH NEW EXTENSIONS & SPECIFIC FONTS) ---
-export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onInspect, onInstallApp, onSettingChange, onMediaUpload }) => {
-            const [step, setStep] = useState(1);
+export const BookingFlow = memo(({ settings, onComplete, isPreview = false, previewStep = 'select', onInspect, onInstallApp, onSettingChange, onMediaUpload }) => {
+            const [step, setStep] = useState(() => (isPreview ? previewStep : 'select'));
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
             const [selectedServiceId, setSelectedServiceId] = useState('');
@@ -47,10 +55,32 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', emailOptIn: false });
             const [selectedManualPayment, setSelectedManualPayment] = useState('');
             const [submittedBooking, setSubmittedBooking] = useState(null);
+            const [paymentCheckout, setPaymentCheckout] = useState({ checkoutUrl: '', error: '', isStarting: false });
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [submitError, setSubmitError] = useState('');
             const [isInitialLoading, setIsInitialLoading] = useState(() => Boolean(settings.features?.loadingScreen));
             const [openFaq, setOpenFaq] = useState(null);
+
+            useEffect(() => {
+                if (!isPreview) return;
+                if (['select', 'cart', 'details', 'payment', 'success'].includes(previewStep)) {
+                    setStep(previewStep);
+                }
+            }, [isPreview, previewStep]);
+
+            useEffect(() => {
+                if (typeof window === 'undefined') return;
+                const query = window.location.hash.split('?')[1] || '';
+                const params = new URLSearchParams(query);
+                const bookingId = params.get('booking');
+                const paymentStatus = params.get('paymentStatus');
+                if (!bookingId || !paymentStatus) return;
+                setSubmittedBooking({
+                    bookingId,
+                    paymentStatus
+                });
+                setStep('success');
+            }, []);
 
             useEffect(() => {
                 if (settings.features?.loadingScreen) {
@@ -143,6 +173,10 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 ? (serviceAvailability.loading ? [] : (serviceAvailability.times || []))
                 : (availableTimesForActiveDate.length > 0 ? availableTimesForActiveDate : (isPreview ? previewTimeSlots : []));
             const isWaitlistMode = !serviceAvailability.loading && !isPreviewTimePlaceholder && displayTimesForActiveDate.length === 0 && settings.features?.waitlist;
+            useEffect(() => {
+                if (!isPreview || previewStep === 'select' || selectedTime || !displayTimesForActiveDate.length) return;
+                setSelectedTime(displayTimesForActiveDate[0]);
+            }, [displayTimesForActiveDate, isPreview, previewStep, selectedTime]);
             const publicStaffOptions = useMemo(() => {
                 if (!selectedService?.id) return [];
                 const staff = Array.isArray(settings.publicStaff) && settings.publicStaff.length
@@ -172,18 +206,17 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const dateStepNumber = showServiceStep ? (showStaffSelection ? '03' : '02') : '01';
             const timeStepNumber = showServiceStep ? (showStaffSelection ? '04' : '03') : '02';
             const faqStepNumber = showServiceStep ? (showStaffSelection ? '05' : '04') : '03';
-            const detailsStepNumber = showServiceStep ? (showStaffSelection ? '06' : '05') : '04';
             const dateSectionOrder = showServiceStep ? (showStaffSelection ? 3 : 2) : 1;
             const timeSectionOrder = showServiceStep ? (showStaffSelection ? 4 : 3) : 2;
             const faqSectionOrder = showServiceStep ? (showStaffSelection ? 5 : 4) : 3;
-            const detailsSectionOrder = showServiceStep ? (showStaffSelection ? 6 : 5) : 4;
-            const actionSectionOrder = detailsSectionOrder + 1;
+            const selectionActionOrder = faqSectionOrder + 1;
             const detailsReady = Boolean(
                 (!collectClientName || formData.name) &&
                 (!collectClientPhone || formData.phone) &&
                 (!collectClientEmail || formData.email)
             );
-            const canSubmitBooking = Boolean((selectedTime || isWaitlistMode) && detailsReady && serviceReady && staffReady && !serviceAvailability.loading);
+            const canContinueToCart = Boolean((selectedTime || isWaitlistMode) && serviceReady && staffReady && !serviceAvailability.loading);
+            const canSubmitBooking = Boolean(canContinueToCart && detailsReady);
 
             useEffect(() => {
                 if (!activeServices.length) {
@@ -384,26 +417,29 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const faqItems = (settings.features?.faqEnabled && Array.isArray(settings.features?.faqs))
                 ? settings.features.faqs.filter(faq => faq?.q?.trim() && faq?.a?.trim())
                 : [];
+            const socialPlatformIsVisible = (platformKey) => (
+                !settings.socialPlatforms || settings.socialPlatforms[platformKey] !== false
+            );
             const socialLinks = settings.features?.socialLinks ? [
-                settings.socials?.instagram && {
+                settings.socials?.instagram && socialPlatformIsVisible('instagram') && {
                     key: 'instagram',
                     label: 'Instagram',
                     href: `https://instagram.com/${normalizeHandle(settings.socials.instagram).replace(/^instagram\.com\//i, '')}`,
                     icon: Instagram
                 },
-                settings.socials?.tiktok && {
+                settings.socials?.tiktok && socialPlatformIsVisible('tiktok') && {
                     key: 'tiktok',
                     label: 'TikTok',
                     href: `https://www.tiktok.com/@${normalizeHandle(settings.socials.tiktok).replace(/^tiktok\.com\/@?/i, '')}`,
                     icon: Globe
                 },
-                settings.socials?.facebook && {
+                settings.socials?.facebook && socialPlatformIsVisible('facebook') && {
                     key: 'facebook',
                     label: 'Facebook',
                     href: `https://facebook.com/${normalizeHandle(settings.socials.facebook).replace(/^(facebook|fb)\.com\//i, '')}`,
                     icon: Globe
                 },
-                settings.socials?.website && {
+                settings.socials?.website && socialPlatformIsVisible('website') && {
                     key: 'website',
                     label: 'Website',
                     href: normalizeWebsite(settings.socials.website),
@@ -417,12 +453,19 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const venueMapHref = venueLocation
                 ? (/^https?:\/\//i.test(venueLocation) ? venueLocation : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueLocation)}`)
                 : '';
-            const manualPaymentOptions = useMemo(() => (
-                Array.isArray(settings.manualPaymentOptions)
-                    ? settings.manualPaymentOptions.filter(option => option?.enabled !== false)
-                    : []
-            ), [settings.manualPaymentOptions]);
-            const selectedManualPaymentOption = manualPaymentOptions.find(option => option.id === selectedManualPayment) || null;
+            const amountInCents = useMemo(() => (
+                parseCheckoutAmountToCents(selectedService?.price, selectedService?.priceType)
+            ), [selectedService?.price, selectedService?.priceType]);
+            const paymentOptions = useMemo(() => {
+                const options = Array.isArray(settings.paymentOptions) && settings.paymentOptions.length
+                    ? settings.paymentOptions
+                    : (Array.isArray(settings.manualPaymentOptions) ? settings.manualPaymentOptions : []);
+                return getPaymentOptionsForCheckout({ options, amountInCents });
+            }, [amountInCents, settings.manualPaymentOptions, settings.paymentOptions]);
+            const selectedManualPaymentOption = paymentOptions.find(option => option.id === selectedManualPayment) || null;
+            const selectedHostedPaymentOption = selectedManualPaymentOption && isHostedPaymentOption(selectedManualPaymentOption)
+                ? selectedManualPaymentOption
+                : null;
             const bannerDisplay = useMemo(() => {
                 const display = nativePrecisionHeroLayout?.bannerDisplay
                     ? { ...(settings.bannerDisplay || {}), ...nativePrecisionHeroLayout.bannerDisplay }
@@ -441,13 +484,12 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const hasHeroLogo = Boolean(settings.logo && logoDisplay.visible);
             const topBannerImage = settings.bannerImage || '';
             const businessFooterImage = settings.businessFooterImage || '';
-            const getHeroMediaSource = (placement = bannerDisplay.placement) => (
-                placement === 'footer' ? businessFooterImage : topBannerImage
-            );
+            const getHeroMediaSource = () => topBannerImage;
             const hasHeroBanner = Boolean(getHeroMediaSource() && bannerDisplay.visible);
             const canPreviewUploadMedia = Boolean(isPreview && onMediaUpload);
             const shouldRenderHeroLogo = Boolean(logoDisplay.visible && (hasHeroLogo || canPreviewUploadMedia));
-            const shouldRenderHeroBanner = Boolean(bannerDisplay.visible && (hasHeroBanner || canPreviewUploadMedia));
+            const shouldRenderHeroBanner = Boolean(bannerDisplay.visible && bannerDisplay.placement !== 'footer' && (hasHeroBanner || canPreviewUploadMedia));
+            const shouldRenderFooterMedia = Boolean(businessFooterImage || canPreviewUploadMedia);
             const handlePreviewMediaUpload = (key, event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';
@@ -509,8 +551,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 icon: Images,
                 className: extraClass
             });
-            const renderHeroMedia = (extraClass = '', placement = bannerDisplay.placement) => {
-                const mediaSource = getHeroMediaSource(placement);
+            const renderHeroMedia = (extraClass = '') => {
+                const mediaSource = getHeroMediaSource();
                 return mediaSource && bannerDisplay.visible ? (
                 <figure
                     className={`booking-hero-media ${extraClass} ${inspectClass}`}
@@ -521,23 +563,97 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         src={mediaSource}
                         className="booking-hero-banner-image"
                         style={{ objectPosition: bannerDisplay.objectPosition, opacity: bannerDisplay.opacity / 100 }}
-                        alt={placement === 'footer' ? 'Business footer visual' : 'Business hero visual'}
+                        alt="Business hero visual"
                     />
                 </figure>
                 ) : renderPreviewMediaPlaceholder({
-                    key: placement === 'footer' ? 'businessFooterImage' : 'bannerImage',
-                    label: placement === 'footer' ? 'Add footer image' : 'Add header banner',
+                    key: 'bannerImage',
+                    label: 'Add header banner',
                     icon: Images,
-                    className: `booking-hero-media ${extraClass}`,
-                    placement
+                    className: `booking-hero-media ${extraClass}`
+                });
+            };
+            const renderFooterMedia = () => {
+                if (!shouldRenderFooterMedia) return null;
+                return businessFooterImage ? (
+                    <figure
+                        className={`booking-hero-media booking-footer-media ${inspectClass}`}
+                        style={{ '--hero-media-height': `${bannerDisplay.height}px` }}
+                        onClick={() => previewInspectEnabled && onInspect('banner')}
+                    >
+                        <img
+                            src={businessFooterImage}
+                            className="booking-hero-banner-image"
+                            style={{ objectPosition: bannerDisplay.objectPosition, opacity: bannerDisplay.opacity / 100 }}
+                            alt="Business footer visual"
+                            loading="lazy"
+                        />
+                    </figure>
+                ) : renderPreviewMediaPlaceholder({
+                    key: 'businessFooterImage',
+                    label: 'Add footer image',
+                    icon: Images,
+                    className: 'booking-hero-media booking-footer-media',
+                    placement: 'footer'
                 });
             };
 
             useEffect(() => {
-                if (selectedManualPayment && !manualPaymentOptions.some(option => option.id === selectedManualPayment)) {
+                if (selectedManualPayment && !paymentOptions.some(option => option.id === selectedManualPayment)) {
                     setSelectedManualPayment('');
                 }
-            }, [manualPaymentOptions, selectedManualPayment]);
+            }, [paymentOptions, selectedManualPayment]);
+
+            const buildPaymentReturnUrl = (status) => {
+                if (typeof window === 'undefined') return '';
+                const route = window.location.hash.split('?')[0] || `#/book/${settings.slug || ''}`;
+                return `${window.location.origin}${window.location.pathname}${window.location.search}${route}?booking=${encodeURIComponent(submittedBooking?.bookingId || '')}&paymentStatus=${status}`;
+            };
+
+            const handleStartHostedPayment = async () => {
+                if (!selectedHostedPaymentOption || !submittedBooking?.bookingId) {
+                    setStep('success');
+                    return;
+                }
+                if (paymentCheckout.checkoutUrl) {
+                    window.location.href = paymentCheckout.checkoutUrl;
+                    return;
+                }
+                if (!functions || !FirebaseSDK.httpsCallable) {
+                    setPaymentCheckout({ checkoutUrl: '', isStarting: false, error: 'Secure payment is not available yet.' });
+                    return;
+                }
+                setPaymentCheckout({ checkoutUrl: '', error: '', isStarting: true });
+                try {
+                    const initiatePayment = FirebaseSDK.httpsCallable(functions, 'initiatePayment');
+                    const result = await initiatePayment({
+                        appId,
+                        businessId: settings.ownerId,
+                        gatewayType: selectedHostedPaymentOption.gatewayType || selectedHostedPaymentOption.id,
+                        amountInCents,
+                        currency: settings.currency || 'ZAR',
+                        bookingId: submittedBooking.bookingId,
+                        description: selectedService?.name || 'Build A Booking payment',
+                        customerEmail: formData.email || '',
+                        customerName: formData.name || 'Client',
+                        successUrl: buildPaymentReturnUrl('success'),
+                        cancelUrl: buildPaymentReturnUrl('cancelled')
+                    });
+                    const checkoutUrl = result?.data?.checkoutUrl || '';
+                    if (!checkoutUrl) {
+                        throw new Error('Payment provider did not return a checkout link.');
+                    }
+                    setPaymentCheckout({ checkoutUrl, error: '', isStarting: false });
+                    window.location.href = checkoutUrl;
+                } catch (error) {
+                    console.error(error);
+                    setPaymentCheckout({
+                        checkoutUrl: '',
+                        isStarting: false,
+                        error: error?.message || 'Payment could not be started. You can retry or finish later.'
+                    });
+                }
+            };
 
             const handleAction = async () => {
                 if (isPreview) {
@@ -545,7 +661,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                         bookingId: 'Preview',
                         paymentReference: 'Preview'
                     });
-                    setStep(2);
+                    setStep(selectedHostedPaymentOption ? 'payment' : 'success');
                     return;
                 }
                 if (canSubmitBooking) {
@@ -584,7 +700,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             return;
                         }
                         setSubmittedBooking(completed && typeof completed === 'object' ? completed : null);
-                        setStep(2);
+                        setPaymentCheckout({ checkoutUrl: '', error: '', isStarting: false });
+                        setStep(selectedHostedPaymentOption ? 'payment' : 'success');
                     } catch (error) {
                         console.error(error);
                         setSubmitError('Booking could not be sent. Please try again.');
@@ -604,6 +721,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                 ? activeServices
                 : (isPreview ? previewServiceSamples : []);
             const selectedServiceForDisplay = selectedService || serviceDropdownOptions[0] || null;
+            const selectedServiceForSummary = selectedService || (isPreview ? selectedServiceForDisplay : null);
 
             if (isInitialLoading) {
                 return <BookingPageLoader isPreview={isPreview} settings={settings} />;
@@ -611,298 +729,348 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
 
             if (!activeDate) return <div className="h-full w-full flex items-center justify-center font-bold text-xl opacity-20">No Availability</div>;
 
-            return (
-                <div className={`w-full h-full flex flex-col ${previewMotionClass} select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''} ${styleDirectionClass} ${isPreview ? 'booking-flow-preview' : 'booking-flow-public'}`} style={dynamicStyles}>
-                {step === 1 && (
-                    <div className={`${previewStepMotionClass} min-h-full flex flex-col p-6 md:p-12 relative z-10 ${isPreview ? 'booking-flow-preview-shell' : 'booking-flow-public-shell'}`}>
-                    
-                    {/* BRAND HEADER */}
-                    <header className={`booking-page-hero booking-hero-${pageAlignment} ${shouldRenderHeroBanner && bannerDisplay.placement === 'hero' ? 'has-banner' : ''} ${shouldRenderHeroLogo ? 'has-logo' : ''} logo-placement-${logoDisplay.placement} banner-placement-${bannerDisplay.placement} mb-10 flex-shrink-0`} data-preview-section="introduction">
-                        {shouldRenderHeroBanner && bannerDisplay.placement === 'top' && renderHeroMedia('booking-hero-media-top')}
-                        <div
-                            className={`booking-hero-kicker flex items-center gap-4 ${inspectClass}`}
-                            style={{ justifyContent: pageJustify }}
-                            onClick={() => previewInspectEnabled && onInspect('calendar')}
+            const selectedStaffForSummary = selectedAvailabilityStaff || null;
+            const heroContent = (
+                <header className={`booking-page-hero booking-hero-${pageAlignment} ${shouldRenderHeroBanner && bannerDisplay.placement === 'hero' ? 'has-banner' : ''} ${shouldRenderHeroLogo ? 'has-logo' : ''} logo-placement-${logoDisplay.placement} banner-placement-${bannerDisplay.placement} mb-10 flex-shrink-0`} data-preview-section="introduction">
+                    {shouldRenderHeroBanner && bannerDisplay.placement === 'top' && renderHeroMedia('booking-hero-media-top')}
+                    <div
+                        className={`booking-hero-kicker flex items-center gap-4 ${inspectClass}`}
+                        style={{ justifyContent: pageJustify }}
+                        onClick={() => previewInspectEnabled && onInspect('calendar')}
+                    >
+                        <div className={`booking-hero-kicker-rule ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
+                        <span
+                            className="font-bold uppercase opacity-40"
+                            style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
                         >
-                            <div className={`booking-hero-kicker-rule ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
-                            <span
-                                className="font-bold uppercase opacity-40"
-                                style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
-                            >
-                                {settings.tagline}
-                            </span>
-                        </div>
+                            {settings.tagline}
+                        </span>
+                    </div>
 
-                        {shouldRenderHeroBanner && bannerDisplay.placement === 'hero' && renderHeroMedia()}
+                    {shouldRenderHeroBanner && bannerDisplay.placement === 'hero' && renderHeroMedia()}
 
-                        <div className="booking-hero-copy" style={{ alignItems: pageAlignment === 'left' ? 'flex-start' : pageAlignment === 'right' ? 'flex-end' : 'center' }}>
-                            {shouldRenderHeroLogo && logoDisplay.placement === 'top' && renderHeroLogo('booking-hero-logo-top')}
-                            <div className="booking-hero-title-lockup" style={{ justifyContent: pageJustify }}>
-                                {shouldRenderHeroLogo && logoDisplay.placement === 'title' && renderHeroLogo()}
-                                <h1
-                                    className={`booking-hero-title font-bold tracking-tighter leading-[0.85] max-w-full ${inspectClass}`}
-                                    style={{
-                                        color: settings.headingColor,
-                                        fontFamily: getFontFamily(brandText.font),
-                                        fontSize: `${brandText.size}px`,
-                                        ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}),
-                                        textAlign: pageAlignment,
-                                        overflowWrap: 'anywhere',
-                                        ...getBlockMargins(pageAlignment)
-                                    }}
-                                    onClick={() => previewInspectEnabled && onInspect('introduction')}
-                                    contentEditable={previewInspectEnabled}
-                                    suppressContentEditableWarning
-                                    onBlur={(event) => isPreview && onSettingChange?.('brandName', event.currentTarget.textContent.trim())}
-                                >
-                                {settings.brandName}
-                            </h1>
-                                {shouldRenderHeroLogo && logoDisplay.placement === 'badge' && renderHeroLogo('booking-hero-logo-badge')}
-                            </div>
-                            <p
-                                className={`booking-hero-subtitle opacity-60 font-light leading-relaxed max-w-3xl ${inspectClass}`}
+                    <div className="booking-hero-copy" style={{ alignItems: pageAlignment === 'left' ? 'flex-start' : pageAlignment === 'right' ? 'flex-end' : 'center' }}>
+                        {shouldRenderHeroLogo && logoDisplay.placement === 'top' && renderHeroLogo('booking-hero-logo-top')}
+                        <div className="booking-hero-title-lockup" style={{ justifyContent: pageJustify }}>
+                            {shouldRenderHeroLogo && logoDisplay.placement === 'title' && renderHeroLogo()}
+                            <h1
+                                className={`booking-hero-title font-bold tracking-tighter leading-[0.85] max-w-full ${inspectClass}`}
                                 style={{
-                                    color: settings.bodyColor,
-                                    fontFamily: getFontFamily(welcomeText.font),
-                                    fontSize: `${welcomeText.size}px`,
-                                    ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}),
+                                    color: settings.headingColor,
+                                    fontFamily: getFontFamily(brandText.font),
+                                    fontSize: `${brandText.size}px`,
+                                    ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}),
                                     textAlign: pageAlignment,
+                                    overflowWrap: 'anywhere',
                                     ...getBlockMargins(pageAlignment)
                                 }}
                                 onClick={() => previewInspectEnabled && onInspect('introduction')}
                                 contentEditable={previewInspectEnabled}
                                 suppressContentEditableWarning
-                                onBlur={(event) => isPreview && onSettingChange?.('welcomeMessage', event.currentTarget.textContent.trim())}
+                                onBlur={(event) => isPreview && onSettingChange?.('brandName', event.currentTarget.textContent.trim())}
                             >
-                                {settings.welcomeMessage}
-                            </p>
-
-                            {(settings.address || settings.features?.location) && (
-                                <div
-                                    className="booking-hero-actions"
-                                    style={{ justifyContent: pageJustify }}
-                                >
-                                    {settings.address && (
-                                        <span className="booking-hero-chip" style={{ color: settings.headingColor }}>
-                                            <MapPin size={12} /> {settings.address}
-                                        </span>
-                                    )}
-                                    {settings.features?.location && venueMapHref && (
-                                        <a
-                                            href={venueMapHref}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className={`booking-hero-chip booking-hero-chip-action transition-all hover:opacity-80 ${nativeAccent ? 'booking-gradient-chip' : ''}`}
-                                            style={{ color: settings.primaryColor }}
-                                            onClick={(event) => {
-                                                if (isPreview) event.preventDefault();
-                                            }}
-                                        >
-                                            <MapPin size={12} /> Get Directions
-                                        </a>
-                                    )}
-                                </div>
-                            )}
+                                {settings.brandName}
+                            </h1>
+                            {shouldRenderHeroLogo && logoDisplay.placement === 'badge' && renderHeroLogo('booking-hero-logo-badge')}
                         </div>
-                        {shouldRenderHeroBanner && bannerDisplay.placement === 'footer' && renderHeroMedia('booking-hero-media-footer')}
-                    </header>
+                        <p
+                            className={`booking-hero-subtitle opacity-60 font-light leading-relaxed max-w-3xl ${inspectClass}`}
+                            style={{
+                                color: settings.bodyColor,
+                                fontFamily: getFontFamily(welcomeText.font),
+                                fontSize: `${welcomeText.size}px`,
+                                ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}),
+                                textAlign: pageAlignment,
+                                ...getBlockMargins(pageAlignment)
+                            }}
+                            onClick={() => previewInspectEnabled && onInspect('introduction')}
+                            contentEditable={previewInspectEnabled}
+                            suppressContentEditableWarning
+                            onBlur={(event) => isPreview && onSettingChange?.('welcomeMessage', event.currentTarget.textContent.trim())}
+                        >
+                            {settings.welcomeMessage}
+                        </p>
 
-                    <div className="flex flex-col gap-16 flex-1">
-                        <BookingServicesSection
-                            activeServices={activeServices}
-                            headingLetterSpacing={headingLetterSpacing}
-                            inspectClass={inspectClass}
-                            isPreview={isPreview}
-                            nativeAccent={nativeAccent}
-                            nativeAccentBorderClass={nativeAccentBorderClass}
-                            onInspect={onInspect}
-                            pageItems={pageItems}
-                            pageTextClass={pageTextClass}
-                            previewInspectEnabled={previewInspectEnabled}
-                            selectedService={selectedService}
-                            selectedServiceCategory={selectedServiceCategory}
-                            selectedServiceForDisplay={selectedServiceForDisplay}
-                            serviceBorderStyle={serviceBorderStyle}
-                            serviceCardsForDisplay={serviceCardsForDisplay}
-                            serviceCategories={serviceCategories}
-                            serviceDisplayStyle={serviceDisplayStyle}
-                            serviceDropdownEnabled={serviceDropdownEnabled}
-                            serviceDropdownOptions={serviceDropdownOptions}
-                            serviceDropdownOpen={servicesDropdownOpen}
-                            serviceDropdownStyle={serviceDropdownStyle}
-                            setSelectedServiceCategory={setSelectedServiceCategory}
-                            setSelectedServiceId={setSelectedServiceId}
-                            setServicesDropdownOpen={setServicesDropdownOpen}
-                            settings={settings}
-                        />
-
-                        {showStaffSelection && (
-                            <BookingServiceStaffSection
-                                headingLetterSpacing={headingLetterSpacing}
-                                pageItems={pageItems}
-                                pageTextClass={pageTextClass}
-                                sectionOrder={2}
-                                selectedService={selectedService}
-                                selectedStaffId={selectedStaffId}
-                                setSelectedStaffId={setSelectedStaffId}
-                                settings={settings}
-                                staffOptions={serviceStaffOptions}
-                                staffStepNumber={staffStepNumber}
-                            />
+                        {(settings.address || settings.features?.location) && (
+                            <div className="booking-hero-actions" style={{ justifyContent: pageJustify }}>
+                                {settings.address && (
+                                    <span className="booking-hero-chip" style={{ color: settings.headingColor }}>
+                                        <MapPin size={12} /> {settings.address}
+                                    </span>
+                                )}
+                                {settings.features?.location && venueMapHref && (
+                                    <a
+                                        href={venueMapHref}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className={`booking-hero-chip booking-hero-chip-action transition-all hover:opacity-80 ${nativeAccent ? 'booking-gradient-chip' : ''}`}
+                                        style={{ color: settings.primaryColor }}
+                                        onClick={(event) => {
+                                            if (isPreview) event.preventDefault();
+                                        }}
+                                    >
+                                        <MapPin size={12} /> Get Directions
+                                    </a>
+                                )}
+                            </div>
                         )}
-                        
-                        <BookingDateSection
-                            activeDate={activeDate}
-                            calendarDisplayStyle={calendarDisplayStyle}
-                            calendarNativeFillLooks={calendarNativeFillLooks}
-                            dateStepNumber={dateStepNumber}
-                            dateStyle={dateStyle}
-                            displayDates={displayDates}
-                            handleFirstAvailable={handleFirstAvailable}
-                            headingLetterSpacing={headingLetterSpacing}
-                            inspectClass={inspectClass}
-                            isPreview={isPreview}
-                            nativeAccent={nativeAccent}
-                            nativeAccentBorderClass={nativeAccentBorderClass}
-                            nativeAccentButtonClass={nativeAccentButtonClass}
-                            nativeAccentFillClass={nativeAccentFillClass}
-                            onInspect={onInspect}
-                            onSettingChange={onSettingChange}
-                            pageAlignment={pageAlignment}
-                            pageItems={pageItems}
-                            pageJustify={pageJustify}
-                            pageTextClass={pageTextClass}
-                            previewInspectEnabled={previewInspectEnabled}
-                            selectedDateIdx={selectedDateIdx}
-                            sectionOrder={dateSectionOrder}
-                            setSelectedDateIdx={setSelectedDateIdx}
-                            settings={settings}
-                            showServiceStep={showServiceStep}
-                        />
-
-                        <BookingTimeSection
-                            displayTimesForActiveDate={displayTimesForActiveDate}
-                            headingLetterSpacing={headingLetterSpacing}
-                            inspectClass={inspectClass}
-                            isPreview={isPreview}
-                            isPreviewTimePlaceholder={isPreviewTimePlaceholder}
-                            isLoadingAvailability={serviceAvailability.loading}
-                            isWaitlistMode={isWaitlistMode}
-                            nativeAccent={nativeAccent}
-                            nativeAccentBorderClass={nativeAccentBorderClass}
-                            nativeAccentButtonClass={nativeAccentButtonClass}
-                            nativeAccentFillClass={nativeAccentFillClass}
-                            onInspect={onInspect}
-                            onSettingChange={onSettingChange}
-                            pageItems={pageItems}
-                            pageTextClass={pageTextClass}
-                            previewInspectEnabled={previewInspectEnabled}
-                            selectedTime={selectedTime}
-                            sectionOrder={timeSectionOrder}
-                            setSelectedTime={setSelectedTime}
-                            settings={settings}
-                            showServiceStep={showServiceStep}
-                            timeDisplayStyle={timeDisplayStyle}
-                            timeSlotStyle={timeSlotStyle}
-                            timeStepNumber={timeStepNumber}
-                            unavailableReason={serviceAvailability.unavailableReason}
-                        />
-
-                        <BookingFaqSection
-                            faqDisplayStyle={faqDisplayStyle}
-                            faqItems={faqItems}
-                            faqStepNumber={faqStepNumber}
-                            faqStyle={faqStyle}
-                            headingLetterSpacing={headingLetterSpacing}
-                            inspectClass={inspectClass}
-                            isPreview={isPreview}
-                            onInspect={onInspect}
-                            openFaq={openFaq}
-                            pageItems={pageItems}
-                            pageTextClass={pageTextClass}
-                            previewInspectEnabled={previewInspectEnabled}
-                            sectionOrder={faqSectionOrder}
-                            setOpenFaq={setOpenFaq}
-                            settings={settings}
-                            showServiceStep={showServiceStep}
-                        />
-
-                        <BookingDetailsForm
-                            collectClientEmail={collectClientEmail}
-                            collectClientName={collectClientName}
-                            collectClientNotes={collectClientNotes}
-                            collectClientPhone={collectClientPhone}
-                            detailsStepNumber={detailsStepNumber}
-                            formData={formData}
-                            headingLetterSpacing={headingLetterSpacing}
-                            inspectClass={inspectClass}
-                            isPreview={isPreview}
-                            isWaitlistMode={isWaitlistMode}
-                            onInspect={onInspect}
-                            onSettingChange={onSettingChange}
-                            pageItems={pageItems}
-                            pageTextClass={pageTextClass}
-                            previewInspectEnabled={previewInspectEnabled}
-                            sectionOrder={detailsSectionOrder}
-                            setFormData={setFormData}
-                            settings={settings}
-                            showServiceStep={showServiceStep}
-                        />
-
-                        <div className="pt-16 pb-12 mt-auto text-center" data-preview-section="action" style={{ order: actionSectionOrder }}>
-                            <BookingActionSection
-                                actionButtonStyle={actionButtonStyle}
-                                canSubmitBooking={canSubmitBooking}
-                                emailOptInEnabled={emailOptInEnabled}
-                                formData={formData}
-                                handleAction={handleAction}
-                                inspectClass={inspectClass}
-                                isPreview={isPreview}
-                                isSubmitting={isSubmitting}
-                                isWaitlistMode={isWaitlistMode}
-                                manualPaymentOptions={manualPaymentOptions}
-                                nativeAccentBorderClass={nativeAccentBorderClass}
-                                nativeAccentButtonClass={nativeAccentButtonClass}
-                                nativeAccentFillClass={nativeAccentFillClass}
-                                onInstallApp={onInstallApp}
-                                selectedManualPayment={selectedManualPayment}
-                                selectedManualPaymentOption={selectedManualPaymentOption}
-                                setFormData={setFormData}
-                                setSelectedManualPayment={setSelectedManualPayment}
-                                settings={settings}
-                                submitError={submitError}
-                            />
-                            <BookingVenueGallery
-                                headingLetterSpacing={headingLetterSpacing}
-                                inspectClass={inspectClass}
-                                isPreview={isPreview}
-                                mapDisplayStyle={mapDisplayStyle}
-                                onInspect={onInspect}
-                                pageAlignment={pageAlignment}
-                                previewInspectEnabled={previewInspectEnabled}
-                                settings={settings}
-                                subtextLetterSpacing={subtextLetterSpacing}
-                                venueGalleryStyle={venueGalleryStyle}
-                                venueMapHref={venueMapHref}
-                                venuePhotos={venuePhotos}
-                            />
-                            <BookingSocialLinks
-                                inspectClass={inspectClass}
-                                isPreview={isPreview}
-                                onInspect={onInspect}
-                                previewInspectEnabled={previewInspectEnabled}
-                                previewSocialLinks={previewSocialLinks}
-                                settings={settings}
-                                socialDisplayStyle={socialDisplayStyle}
-                                socialIconStyle={socialIconStyle}
-                                socialLinks={socialLinks}
-                            />
-                        </div>
                     </div>
-                    </div>
+                </header>
+            );
+
+            const selectionSections = (
+                <>
+                    <BookingServicesSection
+                        activeServices={activeServices}
+                        headingLetterSpacing={headingLetterSpacing}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        nativeAccent={nativeAccent}
+                        nativeAccentBorderClass={nativeAccentBorderClass}
+                        onInspect={onInspect}
+                        pageItems={pageItems}
+                        pageTextClass={pageTextClass}
+                        previewInspectEnabled={previewInspectEnabled}
+                        selectedService={selectedService}
+                        selectedServiceCategory={selectedServiceCategory}
+                        selectedServiceForDisplay={selectedServiceForDisplay}
+                        serviceBorderStyle={serviceBorderStyle}
+                        serviceCardsForDisplay={serviceCardsForDisplay}
+                        serviceCategories={serviceCategories}
+                        serviceDisplayStyle={serviceDisplayStyle}
+                        serviceDropdownEnabled={serviceDropdownEnabled}
+                        serviceDropdownOptions={serviceDropdownOptions}
+                        serviceDropdownOpen={servicesDropdownOpen}
+                        serviceDropdownStyle={serviceDropdownStyle}
+                        setSelectedServiceCategory={setSelectedServiceCategory}
+                        setSelectedServiceId={setSelectedServiceId}
+                        setServicesDropdownOpen={setServicesDropdownOpen}
+                        settings={settings}
+                    />
+
+                    {showStaffSelection && (
+                        <BookingServiceStaffSection
+                            headingLetterSpacing={headingLetterSpacing}
+                            pageItems={pageItems}
+                            pageTextClass={pageTextClass}
+                            sectionOrder={2}
+                            selectedService={selectedService}
+                            selectedStaffId={selectedStaffId}
+                            setSelectedStaffId={setSelectedStaffId}
+                            settings={settings}
+                            staffOptions={serviceStaffOptions}
+                            staffStepNumber={staffStepNumber}
+                        />
+                    )}
+
+                    <BookingDateSection
+                        activeDate={activeDate}
+                        calendarDisplayStyle={calendarDisplayStyle}
+                        calendarNativeFillLooks={calendarNativeFillLooks}
+                        dateStepNumber={dateStepNumber}
+                        dateStyle={dateStyle}
+                        displayDates={displayDates}
+                        handleFirstAvailable={handleFirstAvailable}
+                        headingLetterSpacing={headingLetterSpacing}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        nativeAccent={nativeAccent}
+                        nativeAccentBorderClass={nativeAccentBorderClass}
+                        nativeAccentButtonClass={nativeAccentButtonClass}
+                        nativeAccentFillClass={nativeAccentFillClass}
+                        onInspect={onInspect}
+                        onSettingChange={onSettingChange}
+                        pageAlignment={pageAlignment}
+                        pageItems={pageItems}
+                        pageJustify={pageJustify}
+                        pageTextClass={pageTextClass}
+                        previewInspectEnabled={previewInspectEnabled}
+                        selectedDateIdx={selectedDateIdx}
+                        sectionOrder={dateSectionOrder}
+                        setSelectedDateIdx={setSelectedDateIdx}
+                        settings={settings}
+                        showServiceStep={showServiceStep}
+                    />
+
+                    <BookingTimeSection
+                        displayTimesForActiveDate={displayTimesForActiveDate}
+                        headingLetterSpacing={headingLetterSpacing}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        isPreviewTimePlaceholder={isPreviewTimePlaceholder}
+                        isLoadingAvailability={serviceAvailability.loading}
+                        isWaitlistMode={isWaitlistMode}
+                        nativeAccent={nativeAccent}
+                        nativeAccentBorderClass={nativeAccentBorderClass}
+                        nativeAccentButtonClass={nativeAccentButtonClass}
+                        nativeAccentFillClass={nativeAccentFillClass}
+                        onInspect={onInspect}
+                        onSettingChange={onSettingChange}
+                        pageItems={pageItems}
+                        pageTextClass={pageTextClass}
+                        previewInspectEnabled={previewInspectEnabled}
+                        selectedTime={selectedTime}
+                        sectionOrder={timeSectionOrder}
+                        setSelectedTime={setSelectedTime}
+                        settings={settings}
+                        showServiceStep={showServiceStep}
+                        timeDisplayStyle={timeDisplayStyle}
+                        timeSlotStyle={timeSlotStyle}
+                        timeStepNumber={timeStepNumber}
+                        unavailableReason={serviceAvailability.unavailableReason}
+                    />
+
+                    <BookingFaqSection
+                        faqDisplayStyle={faqDisplayStyle}
+                        faqItems={faqItems}
+                        faqStepNumber={faqStepNumber}
+                        faqStyle={faqStyle}
+                        headingLetterSpacing={headingLetterSpacing}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        onInspect={onInspect}
+                        openFaq={openFaq}
+                        pageItems={pageItems}
+                        pageTextClass={pageTextClass}
+                        previewInspectEnabled={previewInspectEnabled}
+                        sectionOrder={faqSectionOrder}
+                        setOpenFaq={setOpenFaq}
+                        settings={settings}
+                        showServiceStep={showServiceStep}
+                    />
+                </>
+            );
+
+            const detailsForm = (
+                <BookingDetailsForm
+                    collectClientEmail={collectClientEmail}
+                    collectClientName={collectClientName}
+                    collectClientNotes={collectClientNotes}
+                    collectClientPhone={collectClientPhone}
+                    detailsStepNumber="01"
+                    formData={formData}
+                    headingLetterSpacing={headingLetterSpacing}
+                    inspectClass={inspectClass}
+                    isPreview={isPreview}
+                    isWaitlistMode={isWaitlistMode}
+                    onInspect={onInspect}
+                    onSettingChange={onSettingChange}
+                    pageItems="items-start"
+                    pageTextClass="text-left"
+                    previewInspectEnabled={previewInspectEnabled}
+                    sectionOrder={1}
+                    setFormData={setFormData}
+                    settings={settings}
+                    showServiceStep={false}
+                    layout="checkout"
+                />
+            );
+
+            const footerContent = (
+                <div className="pt-10 text-center" data-preview-section="action">
+                    <BookingVenueGallery
+                        headingLetterSpacing={headingLetterSpacing}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        mapDisplayStyle={mapDisplayStyle}
+                        onInspect={onInspect}
+                        pageAlignment={pageAlignment}
+                        previewInspectEnabled={previewInspectEnabled}
+                        settings={settings}
+                        subtextLetterSpacing={subtextLetterSpacing}
+                        venueGalleryStyle={venueGalleryStyle}
+                        venueMapHref={venueMapHref}
+                        venuePhotos={venuePhotos}
+                    />
+                    {renderFooterMedia()}
+                    <BookingSocialLinks
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        onInspect={onInspect}
+                        previewInspectEnabled={previewInspectEnabled}
+                        previewSocialLinks={previewSocialLinks}
+                        settings={settings}
+                        socialDisplayStyle={socialDisplayStyle}
+                        socialIconStyle={socialIconStyle}
+                        socialLinks={socialLinks}
+                    />
+                </div>
+            );
+
+            return (
+                <div className={`w-full h-full max-w-full overflow-x-hidden flex flex-col ${previewMotionClass} select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''} ${styleDirectionClass} ${isPreview ? 'booking-flow-preview' : 'booking-flow-public'}`} style={{ ...dynamicStyles, overscrollBehaviorX: 'none' }}>
+                {step === 'select' && (
+                    <BookingSelectionStep
+                        actionButtonStyle={actionButtonStyle}
+                        actionOrder={selectionActionOrder}
+                        canContinue={canContinueToCart}
+                        ctaLabel="Add booking to cart"
+                        footerContent={footerContent}
+                        heroContent={heroContent}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        nativeAccentButtonClass={nativeAccentButtonClass}
+                        onContinue={() => setStep('cart')}
+                        previewStepMotionClass={previewStepMotionClass}
+                        settings={settings}
+                    >
+                        {selectionSections}
+                    </BookingSelectionStep>
                 )}
 
-                {step === 2 && (
+                {step === 'cart' && (
+                    <BookingCartStep
+                        actionButtonStyle={actionButtonStyle}
+                        activeDate={activeDate}
+                        isPreview={isPreview}
+                        isWaitlistMode={isWaitlistMode}
+                        nativeAccentButtonClass={nativeAccentButtonClass}
+                        onBack={() => setStep('select')}
+                        onContinue={() => setStep('details')}
+                        previewStepMotionClass={previewStepMotionClass}
+                        selectedService={selectedServiceForSummary}
+                        selectedStaff={selectedStaffForSummary}
+                        selectedTime={selectedTime}
+                        settings={settings}
+                    />
+                )}
+
+                {step === 'details' && (
+                    <BookingCheckoutStep
+                        actionButtonStyle={actionButtonStyle}
+                        canSubmitBooking={canSubmitBooking}
+                        detailsForm={detailsForm}
+                        emailOptInEnabled={emailOptInEnabled}
+                        formData={formData}
+                        handleAction={handleAction}
+                        inspectClass={inspectClass}
+                        isPreview={isPreview}
+                        isSubmitting={isSubmitting}
+                        isWaitlistMode={isWaitlistMode}
+                        nativeAccentButtonClass={nativeAccentButtonClass}
+                        nativeAccentFillClass={nativeAccentFillClass}
+                        onBack={() => setStep('cart')}
+                        paymentOptions={paymentOptions}
+                        selectedPaymentOptionId={selectedManualPayment}
+                        setFormData={setFormData}
+                        setSelectedPaymentOptionId={setSelectedManualPayment}
+                        settings={settings}
+                        submitError={submitError}
+                    />
+                )}
+
+                {step === 'payment' && (
+                    <BookingPaymentStep
+                        checkoutUrl={paymentCheckout.checkoutUrl}
+                        error={paymentCheckout.error}
+                        isStarting={paymentCheckout.isStarting}
+                        onBackToSuccess={() => setStep('success')}
+                        onStartPayment={handleStartHostedPayment}
+                        selectedPaymentOption={selectedHostedPaymentOption}
+                    />
+                )}
+
+                {step === 'success' && (
                     <BookingSuccessState
                         activeDate={activeDate}
                         formData={formData}

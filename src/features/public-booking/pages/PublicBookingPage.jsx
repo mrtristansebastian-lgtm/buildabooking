@@ -12,6 +12,7 @@ export function PublicBookingPage({
   error,
   loading,
   manualPaymentOptions,
+  paymentOptions,
   onComplete,
   onHome,
   onInstallApp,
@@ -54,7 +55,7 @@ export function PublicBookingPage({
     <div className="h-screen w-screen overflow-x-hidden overflow-y-auto" style={{ backgroundColor: workspace.backgroundColor || '#ffffff' }}>
       <Suspense fallback={<LazySectionFallback label="Loading booking page" />}>
         <AppErrorBoundary compact label="Booking Page" resetKey={slug}>
-          <BookingFlow settings={{ ...workspace, manualPaymentOptions }} onComplete={onComplete} onInstallApp={onInstallApp} />
+          <BookingFlow settings={{ ...workspace, manualPaymentOptions, paymentOptions }} onComplete={onComplete} onInstallApp={onInstallApp} />
         </AppErrorBoundary>
       </Suspense>
     </div>

@@ -7,7 +7,7 @@ export const ProfileBusinessFaqSection = ({
   onUpdateFaqItem,
   settings
 }) => (
-  <div className="business-faq-profile pt-6 border-t border-neutral-50">
+  <div className="business-faq-profile">
     <div className="business-faq-profile-head">
       <div>
         <label className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40 block text-black">Booking Page FAQ</label>
