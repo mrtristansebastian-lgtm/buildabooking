@@ -166,6 +166,20 @@ export function useAuthBoot({
               }
               safeSessionRemove(googleCalendarRedirectStorageKey);
             }
+            const completedRedirectUser = redirectResult?.user || auth.currentUser;
+            if (completedRedirectUser && redirectWasStarted) {
+              setUser(completedRedirectUser);
+              setGuestMode(false);
+              setClientGuestMode(false);
+              safeLocalRemove(guestModeStorageKey);
+              setAuthPanelOpen(false);
+              setAuthRedirectPending(false);
+              const authReturnState = getAuthReturnState();
+              if (authReturnState?.view === 'dashboard' || authReturnState?.view === 'client') {
+                applyWorkspaceRoute(authReturnState);
+                clearAuthReturnState();
+              }
+            }
             if (redirectWasStarted) {
               safeSessionRemove(authRedirectStartedStorageKey);
               safeLocalRemove(authRedirectStartedStorageKey);

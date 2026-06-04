@@ -151,6 +151,15 @@ export const getSavedWorkspaceRoute = () => (
   normalizeWorkspaceRoute(safeJsonParse(safeLocalGet(workspaceRouteStorageKey)), { view: 'landing', activeTab: 'overview', editorTab: defaultEditorTab })
 );
 
+export const hasAuthRedirectSignal = () => {
+  if (typeof window !== 'undefined') {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('auth') === 'google') return true;
+  }
+  const startedAt = Number(safeSessionGet(authRedirectStartedStorageKey) || safeLocalGet(authRedirectStartedStorageKey) || 0);
+  return Boolean(startedAt && Date.now() - startedAt <= 10 * 60 * 1000);
+};
+
 export const getInitialWorkspaceRoute = () => {
   if (typeof window === 'undefined' || getPublicBookingSlug()) {
     return { view: 'landing', activeTab: 'overview', editorTab: defaultEditorTab, timestamp: Date.now() };
@@ -159,8 +168,11 @@ export const getInitialWorkspaceRoute = () => {
 };
 
 export const shouldStartInGuestWorkspace = (route = {}) => (
-  safeLocalGet(guestModeStorageKey) === 'true' ||
-  (route.view === 'dashboard' && !getPublicBookingSlug())
+  !hasAuthRedirectSignal() &&
+  (
+    safeLocalGet(guestModeStorageKey) === 'true' ||
+    (route.view === 'dashboard' && !getPublicBookingSlug())
+  )
 );
 
 export const saveWorkspaceRoute = (route) => {

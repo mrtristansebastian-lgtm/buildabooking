@@ -48,8 +48,8 @@ export function useWorkspaceRuntimeState() {
   useAppRuntimeEffects({ isNativeAppRuntime });
 
   const workspaceOwnerId = authSession.activeWorkspaceOwnerId || authSession.user?.uid || '';
-  const isDashboardGuestPreview = route.view === 'dashboard';
-  const isGuestWorkspace = Boolean((guestMode || isDashboardGuestPreview) && !authSession.user && !route.publicSlug);
+  const isDashboardGuestPreview = route.view === 'dashboard' && !authSession.authRedirectPending;
+  const isGuestWorkspace = Boolean((guestMode || isDashboardGuestPreview) && !authSession.user && !route.publicSlug && !authSession.authRedirectPending);
   const workspaceData = useWorkspaceData({
     isGuestWorkspace,
     loading,
