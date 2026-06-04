@@ -288,6 +288,18 @@ export const useScheduleWorkspace = ({
         ...parseSlotValue(time)
       });
     },
+    startAddingDefaultSlot: () => {
+      if (!guardCalendarEdit(selectedCalendarId)) return;
+      setSlotEditor({
+        originalTime: null,
+        isDefaultSlot: true,
+        calendarId: selectedCalendarId,
+        label: 'Default slots',
+        mode: 'single',
+        start: getNextOpenTime(defaultSlots),
+        end: ''
+      });
+    },
     toggleDateAvailability: () => updateDateConfigForCalendar(agendaCalendarId, selectedDate, { ...dayConfig, available: !dayConfig.available }),
     toggleWaitlist: () => {
       onSettingsDirty?.();

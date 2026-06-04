@@ -102,14 +102,6 @@ export function AppRouteHost({
     );
   }
 
-  const guestAuthQuickAccess = dashboard.isGuestWorkspace && route.activeTab !== 'editor' && (
-    <div className="guest-auth-quick-access" aria-label="Guest account actions">
-      <span>Guest workspace</span>
-      <button type="button" onClick={() => auth.openOwnerAuth('signin')}>Sign In</button>
-      <button type="button" onClick={() => auth.openOwnerAuth('signup')}>Create Account</button>
-    </div>
-  );
-
   return (
     <DashboardRouteShell
       activeTab={route.activeTab}
@@ -118,7 +110,6 @@ export function AppRouteHost({
       overlays={{
         ...dashboard.overlays,
         authDialog,
-        guestAuthQuickAccess,
         legalPages
       }}
       navigation={dashboard.navigation}

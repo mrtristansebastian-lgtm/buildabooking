@@ -78,7 +78,7 @@ export const BusinessCalendar = ({
         applyScope={applyScope}
         defaultSlots={schedule.defaultSlots}
         isOpen={schedule.settingsModalOpen}
-        onAddSlot={schedule.actions.addDefaultSlot}
+        onAddSlot={schedule.actions.startAddingDefaultSlot}
         onApplyDefaults={schedule.actions.applyDefaultSlotsForScope}
         onChangeApplyScope={setApplyScope}
         onClose={() => schedule.setSettingsModalOpen(false)}

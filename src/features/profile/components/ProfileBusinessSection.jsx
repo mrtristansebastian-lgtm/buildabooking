@@ -1,6 +1,7 @@
 import { ProfileBusinessFaqSection } from './ProfileBusinessFaqSection';
 import { ProfileBusinessMediaSection } from './ProfileBusinessMediaSection';
 import { ProfileBusinessSocialSection } from './ProfileBusinessSocialSection';
+import { ProfileReminderSection } from './ProfileReminderSection';
 
 export const ProfileBusinessSection = ({
   activeProfileSection,
@@ -45,6 +46,10 @@ export const ProfileBusinessSection = ({
         onRemoveFaqItem={onRemoveFaqItem}
         onToggleFaqFeature={onToggleFaqFeature}
         onUpdateFaqItem={onUpdateFaqItem}
+        settings={settings}
+      />
+      <ProfileReminderSection
+        onSettingChange={onSettingChange}
         settings={settings}
       />
       <ProfileBusinessSocialSection

@@ -67,6 +67,11 @@ export const ScheduleTimeline = ({
               {dayConfig.available ? <Check size={17} /> : <X size={17} />}
             </button>
           )}
+          {!isPastDay && canEdit && (
+            <button type="button" className="schedule-icon-button is-primary" onClick={onAddSlot} aria-label="Add slot">
+              <Plus size={17} />
+            </button>
+          )}
           <button type="button" className="schedule-settings-round" onClick={onOpenSettings} aria-label="Schedule settings" title="Schedule settings">
             <Settings2 size={17} />
           </button>
@@ -76,11 +81,6 @@ export const ScheduleTimeline = ({
           <button type="button" onClick={() => onMove(1)} aria-label="Next day">
             <ChevronRight size={17} />
           </button>
-          {!isPastDay && canEdit && (
-            <button type="button" className="schedule-icon-button is-primary" onClick={onAddSlot} aria-label="Add slot">
-              <Plus size={17} />
-            </button>
-          )}
         </div>
       </div>
 

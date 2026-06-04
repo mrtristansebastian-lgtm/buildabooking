@@ -36,10 +36,6 @@
             opacity: 1 !important;
         }
 
-        .dashboard-editor-active .guest-auth-quick-access {
-            display: none !important;
-        }
-
         .editor-preview-mount-shell {
             flex-shrink: 0;
             display: flex;

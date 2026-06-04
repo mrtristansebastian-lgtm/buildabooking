@@ -21,7 +21,6 @@ export function DashboardOverlays({
   confirmDialog,
   deleteBooking,
   getBookingService,
-  guestAuthQuickAccess,
   handleDeleteAccount,
   handleImageCropSave,
   imageCropCommitRef,
@@ -48,7 +47,6 @@ export function DashboardOverlays({
     <>
       <NativeToast message={toast} />
       {authDialog}
-      {guestAuthQuickAccess}
       <LegalDialog pages={legalPages} panel={legalPanel} onClose={() => setLegalPanel(null)} />
       <ConfirmActionDialog
         dialog={confirmDialog}

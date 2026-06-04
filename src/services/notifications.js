@@ -10,6 +10,7 @@ export const NOTIFICATION_TYPES = {
   BOOKING_DECLINED: 'booking_declined',
   BOOKING_WAITLIST: 'booking_waitlist',
   BOOKING_RESCHEDULED: 'booking_rescheduled',
+  BOOKING_REMINDER: 'booking_reminder',
   RESCHEDULE_REQUEST: 'reschedule_request',
   RUNNING_LATE: 'running_late',
   REVIEW_REQUEST: 'review_request',
