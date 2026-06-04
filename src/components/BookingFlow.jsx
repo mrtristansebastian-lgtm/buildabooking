@@ -1,6 +1,8 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Globe, Images, Instagram, MapPin, Plus } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
+import * as FirebaseSDK from '../services/firebase';
+import { appId, functions } from '../services/firebase';
 import { getLocalDateStr } from '../utils/dates';
 import { normalizeServiceList } from '../utils/services';
 import { BookingActionSection } from '../features/booking-flow/components/BookingActionSection';
@@ -8,6 +10,7 @@ import { BookingDateSection } from '../features/booking-flow/components/BookingD
 import { BookingDetailsForm } from '../features/booking-flow/components/BookingDetailsForm';
 import { BookingFaqSection } from '../features/booking-flow/components/BookingFaqSection';
 import { BookingPageLoader } from '../features/booking-flow/components/BookingPageLoader';
+import { BookingServiceStaffSection } from '../features/booking-flow/components/BookingServiceStaffSection';
 import { BookingServicesSection } from '../features/booking-flow/components/BookingServicesSection';
 import { BookingSocialLinks } from '../features/booking-flow/components/BookingSocialLinks';
 import { BookingSuccessState } from '../features/booking-flow/components/BookingSuccessState';
@@ -38,6 +41,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const [selectedDateIdx, setSelectedDateIdx] = useState(0);
             const [selectedTime, setSelectedTime] = useState(null);
             const [selectedServiceId, setSelectedServiceId] = useState('');
+            const [selectedStaffId, setSelectedStaffId] = useState('');
+            const [serviceAvailability, setServiceAvailability] = useState({ loading: false, times: null, staffOptions: [], unavailableReason: '' });
             const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
             const [formData, setFormData] = useState({ name: '', phone: '', email: '', birthday: '', note: '', emailOptIn: false });
             const [selectedManualPayment, setSelectedManualPayment] = useState('');
@@ -111,11 +116,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                     : (Array.isArray(settings.availableTimes) ? settings.availableTimes : []);
             }, [activeDate, settings.schedule, settings.availableTimes]);
 
-            const isPreviewTimePlaceholder = Boolean(isPreview && availableTimesForActiveDate.length === 0);
-            const displayTimesForActiveDate = availableTimesForActiveDate.length > 0
-                ? availableTimesForActiveDate
-                : (isPreview ? previewTimeSlots : []);
-            const isWaitlistMode = !isPreviewTimePlaceholder && availableTimesForActiveDate.length === 0 && settings.features?.waitlist;
             const collectClientName = settings.features?.collectClientName !== false;
             const collectClientPhone = settings.features?.collectClientPhone !== false;
             const collectClientEmail = settings.features?.collectClientEmail !== false;
@@ -124,20 +124,66 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
             const activeServices = useMemo(() => normalizeServiceList(settings.services || []).filter(service => service.active !== false), [settings.services]);
             const showServiceStep = activeServices.length > 0 || isPreview;
             const selectedService = activeServices.find(service => service.id === selectedServiceId) || activeServices[0] || null;
+            const availabilityRules = settings.availabilityRules || {};
+            const staffAssignmentMode = ['auto', 'client', 'later'].includes(availabilityRules.staffAssignmentMode)
+                ? availabilityRules.staffAssignmentMode
+                : 'auto';
+            const serviceAwareAvailabilityEnabled = Boolean(
+                !isPreview &&
+                availabilityRules.enabled !== false &&
+                settings.ownerId &&
+                settings.slug &&
+                selectedService?.id &&
+                activeDate?.localDateStr &&
+                functions &&
+                FirebaseSDK.httpsCallable
+            );
+            const isPreviewTimePlaceholder = Boolean(isPreview && availableTimesForActiveDate.length === 0);
+            const displayTimesForActiveDate = serviceAwareAvailabilityEnabled
+                ? (serviceAvailability.loading ? [] : (serviceAvailability.times || []))
+                : (availableTimesForActiveDate.length > 0 ? availableTimesForActiveDate : (isPreview ? previewTimeSlots : []));
+            const isWaitlistMode = !serviceAvailability.loading && !isPreviewTimePlaceholder && displayTimesForActiveDate.length === 0 && settings.features?.waitlist;
+            const publicStaffOptions = useMemo(() => {
+                if (!selectedService?.id) return [];
+                const staff = Array.isArray(settings.publicStaff) && settings.publicStaff.length
+                    ? settings.publicStaff
+                    : [{ id: 'owner', name: 'Owner', color: '#111827', photoURL: '' }];
+                const serviceStaffIds = new Set(Array.isArray(selectedService?.staffIds) ? selectedService.staffIds : []);
+                return staff
+                    .filter(member => member?.id && (!serviceStaffIds.size || serviceStaffIds.has(member.id)))
+                    .map(member => ({
+                        id: member.id,
+                        name: member.name || 'Staff',
+                        color: member.color || '#111827',
+                        photoURL: member.photoURL || ''
+                    }));
+            }, [selectedService?.id, selectedService?.staffIds, settings.publicStaff]);
+            const serviceStaffOptions = staffAssignmentMode === 'client'
+                ? (serviceAvailability.staffOptions.length ? serviceAvailability.staffOptions : publicStaffOptions)
+                : [];
+            const selectedAvailabilityStaff = serviceStaffOptions.find(staff => staff.id === selectedStaffId) || null;
             const previewMotionClass = isPreview ? '' : 'transition-all duration-1000';
             const previewStepMotionClass = isPreview ? '' : 'animate-in fade-in slide-in-from-bottom-20 duration-1000';
             const previewSuccessMotionClass = isPreview ? '' : 'animate-in zoom-in-95 duration-1000';
             const serviceReady = activeServices.length === 0 || Boolean(selectedService?.id);
-            const dateStepNumber = showServiceStep ? '02' : '01';
-            const timeStepNumber = showServiceStep ? '03' : '02';
-            const faqStepNumber = showServiceStep ? '04' : '03';
-            const detailsStepNumber = showServiceStep ? '05' : '04';
+            const showStaffSelection = staffAssignmentMode === 'client' && Boolean(selectedService?.id) && serviceStaffOptions.length > 0;
+            const staffReady = staffAssignmentMode !== 'client' || !serviceAwareAvailabilityEnabled || Boolean(selectedStaffId);
+            const staffStepNumber = '02';
+            const dateStepNumber = showServiceStep ? (showStaffSelection ? '03' : '02') : '01';
+            const timeStepNumber = showServiceStep ? (showStaffSelection ? '04' : '03') : '02';
+            const faqStepNumber = showServiceStep ? (showStaffSelection ? '05' : '04') : '03';
+            const detailsStepNumber = showServiceStep ? (showStaffSelection ? '06' : '05') : '04';
+            const dateSectionOrder = showServiceStep ? (showStaffSelection ? 3 : 2) : 1;
+            const timeSectionOrder = showServiceStep ? (showStaffSelection ? 4 : 3) : 2;
+            const faqSectionOrder = showServiceStep ? (showStaffSelection ? 5 : 4) : 3;
+            const detailsSectionOrder = showServiceStep ? (showStaffSelection ? 6 : 5) : 4;
+            const actionSectionOrder = detailsSectionOrder + 1;
             const detailsReady = Boolean(
                 (!collectClientName || formData.name) &&
                 (!collectClientPhone || formData.phone) &&
                 (!collectClientEmail || formData.email)
             );
-            const canSubmitBooking = Boolean((selectedTime || isWaitlistMode) && detailsReady && serviceReady);
+            const canSubmitBooking = Boolean((selectedTime || isWaitlistMode) && detailsReady && serviceReady && staffReady && !serviceAvailability.loading);
 
             useEffect(() => {
                 if (!activeServices.length) {
@@ -148,6 +194,82 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                     setSelectedServiceId(activeServices[0].id);
                 }
             }, [activeServices, selectedServiceId]);
+
+            useEffect(() => {
+                setSelectedTime(null);
+            }, [activeDate?.localDateStr, selectedService?.id, selectedStaffId]);
+
+            useEffect(() => {
+                if (staffAssignmentMode !== 'client') setSelectedStaffId('');
+            }, [staffAssignmentMode]);
+
+            useEffect(() => {
+                if (staffAssignmentMode !== 'client') return;
+                if (!serviceStaffOptions.length) {
+                    if (selectedStaffId) setSelectedStaffId('');
+                    return;
+                }
+                if (!selectedStaffId || !serviceStaffOptions.some(staff => staff.id === selectedStaffId)) {
+                    setSelectedStaffId(serviceStaffOptions[0].id);
+                }
+            }, [selectedStaffId, serviceStaffOptions, staffAssignmentMode]);
+
+            useEffect(() => {
+                let cancelled = false;
+                if (!serviceAwareAvailabilityEnabled) {
+                    setServiceAvailability({ loading: false, times: null, staffOptions: [], unavailableReason: '' });
+                    return () => { cancelled = true; };
+                }
+                setServiceAvailability(prev => ({ ...prev, loading: true, unavailableReason: '' }));
+                const callable = FirebaseSDK.httpsCallable(functions, 'getPublicServiceAvailability');
+                callable({
+                    appId,
+                    workspaceSlug: settings.slug,
+                    dateKey: activeDate.localDateStr,
+                    staffId: staffAssignmentMode === 'client' ? selectedStaffId : '',
+                    service: {
+                        serviceId: selectedService.id,
+                        serviceDuration: selectedService.duration || ''
+                    }
+                }).then((result) => {
+                    if (cancelled) return;
+                    const data = result?.data || {};
+                    const staffOptions = Array.isArray(data.staffOptions) ? data.staffOptions : [];
+                    setServiceAvailability({
+                        loading: false,
+                        times: Array.isArray(data.times) ? data.times : [],
+                        staffOptions,
+                        unavailableReason: data.unavailableReason || ''
+                    });
+                    if (staffAssignmentMode === 'client') {
+                        if (!selectedStaffId && staffOptions[0]?.id) {
+                            setSelectedStaffId(staffOptions[0].id);
+                        } else if (selectedStaffId && !staffOptions.some(staff => staff.id === selectedStaffId)) {
+                            setSelectedStaffId(staffOptions[0]?.id || '');
+                        }
+                    }
+                }).catch((error) => {
+                    console.error(error);
+                    if (!cancelled) {
+                        setServiceAvailability({
+                            loading: false,
+                            times: availableTimesForActiveDate,
+                            staffOptions: [],
+                            unavailableReason: 'Times could not refresh. The business will verify your request.'
+                        });
+                    }
+                });
+                return () => { cancelled = true; };
+            }, [
+                activeDate?.localDateStr,
+                availableTimesForActiveDate,
+                selectedService?.duration,
+                selectedService?.id,
+                selectedStaffId,
+                serviceAwareAvailabilityEnabled,
+                settings.slug,
+                staffAssignmentMode
+            ]);
 
             useEffect(() => {
                 setFormData(prev => ({
@@ -445,6 +567,9 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                                 servicePriceType: selectedService?.priceType || '',
                                 serviceDuration: selectedService?.duration || '',
                                 serviceCategory: selectedService?.category || '',
+                                staffId: staffAssignmentMode === 'client' ? selectedStaffId : '',
+                                staffName: staffAssignmentMode === 'client' ? (selectedAvailabilityStaff?.name || '') : '',
+                                staffPhotoURL: staffAssignmentMode === 'client' ? (selectedAvailabilityStaff?.photoURL || '') : '',
                                 paymentMethod: selectedManualPaymentOption?.id || '',
                                 paymentGateway: selectedManualPaymentOption?.gatewayType || selectedManualPaymentOption?.id || '',
                                 paymentProviderName: selectedManualPaymentOption?.name || ''
@@ -610,6 +735,21 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             setServicesDropdownOpen={setServicesDropdownOpen}
                             settings={settings}
                         />
+
+                        {showStaffSelection && (
+                            <BookingServiceStaffSection
+                                headingLetterSpacing={headingLetterSpacing}
+                                pageItems={pageItems}
+                                pageTextClass={pageTextClass}
+                                sectionOrder={2}
+                                selectedService={selectedService}
+                                selectedStaffId={selectedStaffId}
+                                setSelectedStaffId={setSelectedStaffId}
+                                settings={settings}
+                                staffOptions={serviceStaffOptions}
+                                staffStepNumber={staffStepNumber}
+                            />
+                        )}
                         
                         <BookingDateSection
                             activeDate={activeDate}
@@ -634,6 +774,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             pageTextClass={pageTextClass}
                             previewInspectEnabled={previewInspectEnabled}
                             selectedDateIdx={selectedDateIdx}
+                            sectionOrder={dateSectionOrder}
                             setSelectedDateIdx={setSelectedDateIdx}
                             settings={settings}
                             showServiceStep={showServiceStep}
@@ -645,6 +786,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             inspectClass={inspectClass}
                             isPreview={isPreview}
                             isPreviewTimePlaceholder={isPreviewTimePlaceholder}
+                            isLoadingAvailability={serviceAvailability.loading}
                             isWaitlistMode={isWaitlistMode}
                             nativeAccent={nativeAccent}
                             nativeAccentBorderClass={nativeAccentBorderClass}
@@ -656,12 +798,14 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             pageTextClass={pageTextClass}
                             previewInspectEnabled={previewInspectEnabled}
                             selectedTime={selectedTime}
+                            sectionOrder={timeSectionOrder}
                             setSelectedTime={setSelectedTime}
                             settings={settings}
                             showServiceStep={showServiceStep}
                             timeDisplayStyle={timeDisplayStyle}
                             timeSlotStyle={timeSlotStyle}
                             timeStepNumber={timeStepNumber}
+                            unavailableReason={serviceAvailability.unavailableReason}
                         />
 
                         <BookingFaqSection
@@ -677,6 +821,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             pageItems={pageItems}
                             pageTextClass={pageTextClass}
                             previewInspectEnabled={previewInspectEnabled}
+                            sectionOrder={faqSectionOrder}
                             setOpenFaq={setOpenFaq}
                             settings={settings}
                             showServiceStep={showServiceStep}
@@ -698,12 +843,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, onIn
                             pageItems={pageItems}
                             pageTextClass={pageTextClass}
                             previewInspectEnabled={previewInspectEnabled}
+                            sectionOrder={detailsSectionOrder}
                             setFormData={setFormData}
                             settings={settings}
                             showServiceStep={showServiceStep}
                         />
 
-                        <div className="pt-16 pb-12 mt-auto text-center" data-preview-section="action" style={{ order: showServiceStep ? 6 : 5 }}>
+                        <div className="pt-16 pb-12 mt-auto text-center" data-preview-section="action" style={{ order: actionSectionOrder }}>
                             <BookingActionSection
                                 actionButtonStyle={actionButtonStyle}
                                 canSubmitBooking={canSubmitBooking}

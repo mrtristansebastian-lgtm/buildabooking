@@ -8,6 +8,7 @@ export const BookingTimeSection = ({
     inspectClass,
     isPreview,
     isPreviewTimePlaceholder,
+    isLoadingAvailability,
     isWaitlistMode,
     nativeAccent,
     nativeAccentBorderClass,
@@ -19,14 +20,16 @@ export const BookingTimeSection = ({
     pageTextClass,
     previewInspectEnabled,
     selectedTime,
+    sectionOrder,
     setSelectedTime,
     settings,
     showServiceStep,
     timeDisplayStyle,
     timeSlotStyle,
-    timeStepNumber
+    timeStepNumber,
+    unavailableReason
 }) => (
-    <section data-preview-section="time" style={{ order: showServiceStep ? 3 : 2 }}>
+    <section data-preview-section="time" style={{ order: sectionOrder ?? (showServiceStep ? 3 : 2) }}>
         <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="time" onClick={() => previewInspectEnabled && onInspect('time')}>
             <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('timeLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{timeStepNumber} // {settings.timeLabel || "Select Time"}</h3>
             <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
@@ -34,15 +37,17 @@ export const BookingTimeSection = ({
             </h4>
         </div>
 
-        {displayTimesForActiveDate.length === 0 ? (
+        {isLoadingAvailability ? (
+            <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-30">Checking availability</div>
+        ) : displayTimesForActiveDate.length === 0 ? (
             isWaitlistMode ? (
                 <div className={`p-8 border border-dashed rounded-lg text-center ${nativeAccentBorderClass}`} style={{ borderColor: settings.primaryColor }}>
                     <Bell size={24} className="mx-auto mb-4" style={{ color: settings.primaryColor }} />
                     <p className="text-sm font-bold mb-2" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>Standby List Active</p>
-                    <p className="text-xs opacity-60">Enter your details below. We'll notify you instantly if a slot opens.</p>
+                    <p className="text-xs opacity-60">{unavailableReason || "Enter your details below. We'll notify you instantly if a slot opens."}</p>
                 </div>
             ) : (
-                <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-20">Fully Booked</div>
+                <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-20">{unavailableReason || 'Fully Booked'}</div>
             )
         ) : (
             <div className={`booking-time-look booking-time-${timeDisplayStyle} ${isPreviewTimePlaceholder ? 'booking-time-preview-empty' : ''} grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => previewInspectEnabled && onInspect('time')}>

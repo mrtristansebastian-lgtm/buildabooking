@@ -38,6 +38,7 @@ export const buildPublicBookingIdempotencyKey = ({ workspaceSlug, formData = {},
     workspaceSlug || 'workspace',
     identity || 'client',
     serviceId || formData.serviceId || 'service',
+    formData.staffId || 'staff',
     dateKey || date || 'date',
     time || 'time'
   ]
@@ -60,6 +61,9 @@ export const createBookingRecordFromFlow = ({ formData, date, dateKey, status, t
   servicePriceType: formData.servicePriceType || '',
   serviceDuration: formData.serviceDuration || '',
   serviceCategory: formData.serviceCategory || '',
+  staffId: formData.staffId || '',
+  staffName: formData.staffName || '',
+  staffPhotoURL: formData.staffPhotoURL || '',
   paymentMethod: formData.paymentMethod || '',
   paymentGateway: formData.paymentGateway || '',
   paymentProviderName: formData.paymentProviderName || '',

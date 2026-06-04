@@ -44,6 +44,16 @@ export const useScheduleWorkspace = ({
   const selectedCalendar = calendars.find(calendar => calendar.id === selectedCalendarId) || calendars[0];
   const isWorkspaceCalendar = selectedCalendarId === 'workspace';
   const canEditSelectedCalendar = workspaceRole !== 'staff' || selectedCalendarId === activeStaffId;
+  const availabilityRules = {
+    enabled: settings.availabilityRules?.enabled !== false,
+    staffAssignmentMode: ['auto', 'client', 'later'].includes(settings.availabilityRules?.staffAssignmentMode)
+      ? settings.availabilityRules.staffAssignmentMode
+      : 'auto',
+    holdMode: ['pending_confirmed', 'pending_only', 'confirmed_only'].includes(settings.availabilityRules?.holdMode)
+      ? settings.availabilityRules.holdMode
+      : 'pending_confirmed',
+    fallbackDurationMinutes: Number(settings.availabilityRules?.fallbackDurationMinutes) || 60
+  };
 
   useEffect(() => {
     if (workspaceRole === 'staff' && activeStaffId) setSelectedCalendarId(activeStaffId);
@@ -304,12 +314,29 @@ export const useScheduleWorkspace = ({
     toggleWaitlist: () => {
       onSettingsDirty?.();
       setSettings(prev => ({ ...prev, features: { ...(prev.features || {}), waitlist: prev.features?.waitlist === false } }));
+    },
+    updateAvailabilityRules: (patch = {}) => {
+      if (!guardCalendarEdit('workspace')) return;
+      onSettingsDirty?.();
+      setSettings(prev => ({
+        ...prev,
+        availabilityRules: {
+          enabled: prev.availabilityRules?.enabled !== false,
+          staffAssignmentMode: 'auto',
+          holdMode: 'pending_confirmed',
+          fallbackDurationMinutes: 60,
+          ...(prev.availabilityRules || {}),
+          enabled: true,
+          ...patch
+        }
+      }));
     }
   };
 
   return {
     actions,
     agendaCalendarId,
+    availabilityRules,
     bookingsByTime,
     calendars,
     canEditSelectedCalendar,

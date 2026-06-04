@@ -24,7 +24,8 @@ export function EditorPage({
   editor,
   form,
   preview,
-  settings
+  settings,
+  staffList = []
 }) {
   const detectedBrandSwatches = getDetectedBrandSwatches(colour.detectedBrandSignal);
   const colourGroups = buildEditorColourFineTuneGroups({
@@ -149,6 +150,7 @@ export function EditorPage({
         shouldMountEditorPreview={preview.shouldMount}
         showPortraitDesktopEditorPrompt={preview.showPortraitDesktopPrompt}
         startEditorRoomNavDrag={preview.startRoomNavDrag}
+        staffList={staffList}
         settings={settings}
       />
     </div>

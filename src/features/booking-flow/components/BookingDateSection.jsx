@@ -25,11 +25,12 @@ export const BookingDateSection = ({
     pageTextClass,
     previewInspectEnabled,
     selectedDateIdx,
+    sectionOrder,
     setSelectedDateIdx,
     settings,
     showServiceStep
 }) => (
-    <section data-preview-section="calendar" style={{ order: showServiceStep ? 2 : 1 }}>
+    <section data-preview-section="calendar" style={{ order: sectionOrder ?? (showServiceStep ? 2 : 1) }}>
         <div className={`flex ${pageAlignment === 'left' ? 'items-end justify-between' : `flex-col ${pageItems} gap-4`} mb-6 px-1 ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('calendar')}>
             <div className={`flex flex-col ${pageItems} ${pageTextClass}`}>
                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{dateStepNumber} // {settings.dateLabel || "Which day?"}</h3>

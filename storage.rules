@@ -17,9 +17,30 @@ service firebase.storage {
         firestore.get(/databases/(default)/documents/artifacts/$(appId)/staffAccess/$(request.auth.token.email)/workspaces/$(userId)).data.status == 'active';
     }
 
+    function canManageWorkspaceAsset(appId, userId) {
+      return isOwner(userId) || hasStaffAccess(appId, userId);
+    }
+
+    function isPublicWorkspaceFolder(folder) {
+      return folder in ['brand', 'venue', 'services', 'account-avatars'];
+    }
+
+    function validImageUpload() {
+      return request.resource != null &&
+        request.resource.size < 6 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    match /artifacts/{appId}/users/{userId}/{folder}/{fileName} {
+      allow read: if isPublicWorkspaceFolder(folder) || canManageWorkspaceAsset(appId, userId);
+      allow create, update: if canManageWorkspaceAsset(appId, userId) && validImageUpload();
+      allow delete: if canManageWorkspaceAsset(appId, userId);
+    }
+
     match /artifacts/{appId}/users/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if isOwner(userId) || hasStaffAccess(appId, userId);
+      allow read: if canManageWorkspaceAsset(appId, userId);
+      allow create, update: if canManageWorkspaceAsset(appId, userId) && validImageUpload();
+      allow delete: if canManageWorkspaceAsset(appId, userId);
     }
   }
 }

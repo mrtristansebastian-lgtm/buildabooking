@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { Capacitor } from '@capacitor/core';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { browserLocalPersistence, browserSessionPersistence, createUserWithEmailAndPassword, deleteUser, getAuth, getRedirectResult, GoogleAuthProvider, indexedDBLocalPersistence, initializeAuth, onAuthStateChanged, setPersistence, signInAnonymously, signInWithCredential, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, startAfter, updateDoc, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -20,6 +21,7 @@ let authInstance = null;
 let dbInstance = null;
 let storageInstance = null;
 let functionsInstance = null;
+let appCheckInstance = null;
 const firestorePersistenceReady = Promise.resolve(false);
 
 if (firebaseConfigStr !== '{}') {
@@ -39,6 +41,21 @@ if (firebaseConfigStr !== '{}') {
     dbInstance = getFirestore(firebaseApp);
     storageInstance = getStorage(firebaseApp);
     functionsInstance = getFunctions(firebaseApp);
+    const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY || '';
+    const appCheckDebugToken = import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || '';
+    if (!Capacitor?.isNativePlatform?.() && appCheckSiteKey) {
+      try {
+        if (import.meta.env.DEV && appCheckDebugToken) {
+          globalThis.FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckDebugToken === 'true' ? true : appCheckDebugToken;
+        }
+        appCheckInstance = initializeAppCheck(firebaseApp, {
+          provider: new ReCaptchaV3Provider(appCheckSiteKey),
+          isTokenAutoRefreshEnabled: true
+        });
+      } catch (appCheckError) {
+        console.warn('Firebase App Check could not initialize.', appCheckError);
+      }
+    }
   } catch (error) {
     console.error('Firebase failed to initialize. Check VITE_FIREBASE_CONFIG.', error);
   }
@@ -49,5 +66,6 @@ export const auth = authInstance;
 export const db = dbInstance;
 export const storage = storageInstance;
 export const functions = functionsInstance;
+export const appCheck = appCheckInstance;
 export const isFirebaseConfigured = Boolean(firebaseApp && authInstance && dbInstance);
 export const offlinePersistenceReady = firestorePersistenceReady;

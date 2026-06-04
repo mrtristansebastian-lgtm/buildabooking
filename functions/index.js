@@ -2,6 +2,20 @@ const admin = require('firebase-admin');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const {
+  bookingBlocksAvailability,
+  getLockBucketIds,
+  getServiceAvailabilityModel,
+  normalizeAvailabilityRules,
+  parseDurationMinutes,
+  timeToMinutes
+} = require('./availability');
+const {
+  alignBookingWithWorkspace,
+  assertRateLimit,
+  validateAvailabilityLookupPayload,
+  validatePublicBookingPayload
+} = require('./security');
 
 admin.initializeApp();
 
@@ -12,6 +26,11 @@ const REMINDER_UTC_OFFSET = process.env.BOOKING_REMINDER_UTC_OFFSET || '+02:00';
 const REMINDER_TIME_ZONE = process.env.BOOKING_REMINDER_TIME_ZONE || 'Africa/Johannesburg';
 const REMINDER_WINDOW_BEHIND_MS = 30 * 60 * 1000;
 const REMINDER_WINDOW_AHEAD_MS = 15 * 60 * 1000;
+const ENFORCE_APP_CHECK = process.env.BUILD_A_BOOKING_ENFORCE_APP_CHECK === 'true';
+const publicCallableOptions = {
+  region: 'us-central1',
+  ...(ENFORCE_APP_CHECK ? { enforceAppCheck: true } : {})
+};
 
 const cleanString = (value, max = 240) => (
   String(value || '').trim().slice(0, max)
@@ -139,39 +158,67 @@ const sendClientReminder = async ({
   return created;
 };
 
-exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (request) => {
+exports.getPublicServiceAvailability = onCall(publicCallableOptions, async (request) => {
+  const {
+    appId,
+    workspaceSlug,
+    dateKey,
+    incoming,
+    requestedStaffId
+  } = validateAvailabilityLookupPayload(request.data || {});
+
+  await assertRateLimit({
+    db,
+    appId,
+    workspaceSlug,
+    action: 'availability_lookup',
+    request
+  });
+
+  const workspaceRef = db
+    .collection('artifacts').doc(appId)
+    .collection('public').doc('data')
+    .collection('workspaces').doc(workspaceSlug);
+  const workspaceSnap = await workspaceRef.get();
+  if (!workspaceSnap.exists) throw new HttpsError('not-found', 'This booking page is not published yet.');
+  const workspace = workspaceSnap.data() || {};
+  const ownerId = workspace.ownerId;
+  if (!ownerId) throw new HttpsError('failed-precondition', 'This booking page is missing an owner.');
+  const bookingsSnap = await db
+    .collection('artifacts').doc(appId)
+    .collection('users').doc(ownerId)
+    .collection('bookings')
+    .where('dateKey', '==', dateKey)
+    .get();
+  const availability = getServiceAvailabilityModel({
+    bookings: bookingsSnap.docs.map(doc => doc.data() || {}),
+    dateKey,
+    incoming,
+    requestedStaffId,
+    workspace
+  });
+  return {
+    rules: availability.rules,
+    durationMinutes: availability.durationMinutes,
+    staffOptions: availability.rules.staffAssignmentMode === 'client' ? availability.staffOptions : [],
+    times: availability.timeOptions,
+    unavailableReason: availability.unavailableReason
+  };
+});
+
+exports.createPublicBookingRequest = onCall(publicCallableOptions, async (request) => {
   const appId = requireString(request.data?.appId, 'App ID', 120);
   const workspaceSlug = requireString(request.data?.workspaceSlug, 'Workspace slug', 120).toLowerCase();
-  const incoming = request.data?.booking || {};
-  const idempotencyKey = cleanString(request.data?.idempotencyKey || incoming.idempotencyKey, 180);
+  const rawBooking = request.data?.booking || {};
+  const idempotencyKey = cleanString(request.data?.idempotencyKey || rawBooking.idempotencyKey, 180);
 
-  const clientName = requireString(incoming.clientName, 'Client name', 120);
-  const clientPhone = cleanString(incoming.clientPhone, 60);
-  const clientEmail = cleanString(incoming.clientEmail, 160).toLowerCase();
-  const clientEmailOptIn = Boolean(incoming.clientEmailOptIn && clientEmail);
-  const clientBirthday = cleanString(incoming.clientBirthday, 80);
-  const clientNote = cleanString(incoming.clientNote, 1000);
-  const serviceId = cleanString(incoming.serviceId, 120);
-  const serviceName = cleanString(incoming.serviceName, 180);
-  const serviceDescription = cleanString(incoming.serviceDescription, 700);
-  const servicePrice = cleanString(incoming.servicePrice, 80);
-  const servicePriceType = cleanString(incoming.servicePriceType, 40);
-  const serviceDuration = cleanString(incoming.serviceDuration, 80);
-  const serviceCategory = cleanString(incoming.serviceCategory, 120);
-  const date = requireString(incoming.date, 'Booking date', 120);
-  const dateKey = cleanString(incoming.dateKey, 32);
-  const time = requireString(incoming.time, 'Booking time', 80);
-  const allowedStatuses = new Set(['pending', 'confirmed', 'waitlist']);
-  const status = allowedStatuses.has(incoming.status) ? incoming.status : 'pending';
-  const paymentMethod = cleanString(incoming.paymentMethod, 60).toLowerCase();
-  const paymentGateway = cleanString(incoming.paymentGateway || paymentMethod, 60).toLowerCase();
-  const paymentProviderName = cleanString(incoming.paymentProviderName, 120);
-  const isManualPayment = ['manual_eft', 'cash'].includes(paymentMethod) || ['manual_eft', 'cash'].includes(paymentGateway);
-  const paymentStatus = isManualPayment ? 'manual_pending' : 'unpaid';
-  const notificationChannels = {
-    email: clientEmailOptIn,
-    portal: Boolean(clientEmail)
-  };
+  await assertRateLimit({
+    db,
+    appId,
+    workspaceSlug,
+    action: 'booking_create',
+    request
+  });
 
   const workspaceRef = db
     .collection('artifacts').doc(appId)
@@ -188,6 +235,44 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
   if (!ownerId) {
     throw new HttpsError('failed-precondition', 'This booking page is missing an owner.');
   }
+
+  const availabilityRules = normalizeAvailabilityRules(workspace);
+  const incoming = alignBookingWithWorkspace({
+    booking: validatePublicBookingPayload(rawBooking),
+    workspace,
+    availabilityRules
+  });
+  const {
+    clientName,
+    clientPhone,
+    clientEmail,
+    clientEmailOptIn,
+    clientBirthday,
+    clientNote,
+    serviceId,
+    serviceName,
+    serviceDescription,
+    servicePrice,
+    servicePriceType,
+    serviceDuration,
+    serviceCategory,
+    staffId: requestedStaffId,
+    staffName: requestedStaffName,
+    staffPhotoURL: requestedStaffPhotoURL,
+    date,
+    dateKey,
+    time,
+    status,
+    paymentMethod,
+    paymentGateway,
+    paymentProviderName
+  } = incoming;
+  const isManualPayment = ['manual_eft', 'cash'].includes(paymentMethod) || ['manual_eft', 'cash'].includes(paymentGateway);
+  const paymentStatus = isManualPayment ? 'manual_pending' : 'unpaid';
+  const notificationChannels = {
+    email: clientEmailOptIn,
+    portal: Boolean(clientEmail)
+  };
 
   const bookingRef = db
     .collection('artifacts').doc(appId)
@@ -218,8 +303,7 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       .collection('clientAccess').doc(clientEmail)
       .collection('notifications').doc()
     : null;
-  const shouldLockSlot = status !== 'waitlist' && dateKey && time !== 'Waitlist';
-  const slotLockRef = shouldLockSlot ? workspaceRef.collection('slotLocks').doc(safeLockId(dateKey, time)) : null;
+  const shouldLockSlot = dateKey && bookingBlocksAvailability({ status, time }, availabilityRules.holdMode);
   const idempotencyRef = idempotencyKey
     ? db
       .collection('artifacts').doc(appId)
@@ -242,6 +326,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
     servicePriceType,
     serviceDuration,
     serviceCategory,
+    staffId: '',
+    staffName: '',
+    staffPhotoURL: '',
+    availabilityMode: availabilityRules.enabled ? availabilityRules.staffAssignmentMode : 'legacy',
+    serviceDurationMinutes: parseDurationMinutes(serviceDuration, availabilityRules.fallbackDurationMinutes),
     notificationChannels,
     date,
     dateKey: dateKey || null,
@@ -272,19 +361,76 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       }
     }
 
-    if (slotLockRef) {
-      const lockSnap = await transaction.get(slotLockRef);
-      if (lockSnap.exists) {
-        throw new HttpsError('already-exists', 'That time was just requested. Pick another slot.');
+    if (shouldLockSlot) {
+      if (availabilityRules.enabled) {
+        const bookingsQuery = db
+          .collection('artifacts').doc(appId)
+          .collection('users').doc(ownerId)
+          .collection('bookings')
+          .where('dateKey', '==', dateKey);
+        const bookingsSnap = await transaction.get(bookingsQuery);
+        const requestedAvailabilityStaffId = availabilityRules.staffAssignmentMode === 'client' ? requestedStaffId : '';
+        const availability = getServiceAvailabilityModel({
+          bookings: bookingsSnap.docs.map(doc => doc.data() || {}),
+          dateKey,
+          incoming: { serviceId, serviceDuration },
+          requestedStaffId: requestedAvailabilityStaffId,
+          requestedTime: time,
+          workspace
+        });
+        if (!availability.selectedOption?.staff) {
+          throw new HttpsError('already-exists', 'That time no longer fits this service. Pick another slot.');
+        }
+        const assignedStaff = availability.selectedOption.staff;
+        if (availabilityRules.staffAssignmentMode !== 'later') {
+          bookingRecord.staffId = assignedStaff.id;
+          bookingRecord.staffName = assignedStaff.name || requestedStaffName;
+          bookingRecord.staffPhotoURL = assignedStaff.photoURL || requestedStaffPhotoURL;
+        } else {
+          bookingRecord.availabilityReservedStaffId = assignedStaff.id;
+        }
+        bookingRecord.serviceDurationMinutes = availability.durationMinutes;
+        bookingRecord.availabilityMode = availabilityRules.staffAssignmentMode;
+
+        const startMinutes = timeToMinutes(time);
+        if (startMinutes === null) {
+          throw new HttpsError('invalid-argument', 'Booking time is invalid.');
+        }
+        const lockRefs = getLockBucketIds({
+          dateKey,
+          staffId: assignedStaff.id,
+          startMinutes,
+          durationMinutes: availability.durationMinutes
+        }).map(lockId => workspaceRef.collection('slotLocks').doc(lockId));
+        const lockSnaps = await Promise.all(lockRefs.map(lockRef => transaction.get(lockRef)));
+        if (lockSnaps.some(lockSnap => lockSnap.exists)) {
+          throw new HttpsError('already-exists', 'That time was just requested. Pick another slot.');
+        }
+        lockRefs.forEach((lockRef) => transaction.set(lockRef, {
+          bookingId: bookingRef.id,
+          ownerId,
+          dateKey,
+          time,
+          staffId: assignedStaff.id,
+          durationMinutes: availability.durationMinutes,
+          status,
+          createdAt: serverTimestamp()
+        }));
+      } else {
+        const slotLockRef = workspaceRef.collection('slotLocks').doc(safeLockId(dateKey, time));
+        const lockSnap = await transaction.get(slotLockRef);
+        if (lockSnap.exists) {
+          throw new HttpsError('already-exists', 'That time was just requested. Pick another slot.');
+        }
+        transaction.set(slotLockRef, {
+          bookingId: bookingRef.id,
+          ownerId,
+          dateKey,
+          time,
+          status,
+          createdAt: serverTimestamp()
+        });
       }
-      transaction.set(slotLockRef, {
-        bookingId: bookingRef.id,
-        ownerId,
-        dateKey,
-        time,
-        status,
-        createdAt: serverTimestamp()
-      });
     }
 
     transaction.set(bookingRef, bookingRecord);
@@ -309,6 +455,11 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
         servicePriceType,
         serviceDuration,
         serviceCategory,
+        staffId: bookingRecord.staffId,
+        staffName: bookingRecord.staffName,
+        staffPhotoURL: bookingRecord.staffPhotoURL,
+        serviceDurationMinutes: bookingRecord.serviceDurationMinutes,
+        availabilityMode: bookingRecord.availabilityMode,
         paymentMethod,
         paymentGateway,
         paymentProviderName,
@@ -335,6 +486,9 @@ exports.createPublicBookingRequest = onCall({ region: 'us-central1' }, async (re
       paymentProviderName,
       paymentStatus,
       paymentReference: isManualPayment ? bookingRef.id : '',
+      staffId: bookingRecord.staffId,
+      staffName: bookingRecord.staffName,
+      staffPhotoURL: bookingRecord.staffPhotoURL,
       bookingStatus: status,
       status: 'open',
       lastMessage: `Booking request received${serviceName ? ` for ${serviceName}` : ''} on ${date} at ${time}.`,

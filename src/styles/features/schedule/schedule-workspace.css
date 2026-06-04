@@ -583,12 +583,13 @@ html body .native-ui .schedule-settings-backdrop {
 
 html body .native-ui .schedule-settings-modal {
   width: min(58rem, calc(100vw - 2rem));
-  max-height: calc(100vh - 2rem);
+  min-height: min(43rem, calc(100vh - 2rem));
+  max-height: calc(100vh - 1.25rem);
   overflow: auto;
   display: grid;
   align-content: start;
-  gap: 1.05rem;
-  padding: 1.25rem;
+  gap: 1.25rem;
+  padding: 1.35rem;
   box-shadow: 0 30px 80px -52px rgba(15, 23, 42, 0.56);
 }
 
@@ -652,7 +653,8 @@ html body .native-ui .schedule-slot-bubble button:hover {
   color: #111827;
 }
 
-html body .native-ui .schedule-settings-options select {
+html body .native-ui .schedule-settings-options select,
+html body .native-ui .schedule-settings-options input {
   width: 100%;
   min-height: 2.65rem;
   border: 1px solid #e5e7eb;
@@ -663,6 +665,155 @@ html body .native-ui .schedule-settings-options select {
   font-size: 0.8rem;
   font-weight: 800;
   outline: none;
+}
+
+html body .native-ui .schedule-availability-rules {
+  display: grid;
+  gap: 0.95rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1.15rem;
+}
+
+html body .native-ui .schedule-section-head small {
+  display: block;
+  max-width: 34rem;
+  margin-top: 0.22rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+html body .native-ui .schedule-settings-toggle {
+  min-width: 3.6rem;
+  height: 2.15rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+html body .native-ui .schedule-settings-toggle.is-active {
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+}
+
+html body .native-ui .schedule-settings-pill {
+  min-height: 2.15rem;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff !important;
+  padding: 0 0.82rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+html body .native-ui .schedule-settings-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+html body .native-ui .schedule-settings-choice-grid button {
+  min-height: 5.8rem;
+  display: grid;
+  gap: 0.45rem;
+  align-content: start;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  padding: 0.95rem;
+  text-align: left;
+  text-transform: none;
+}
+
+html body .native-ui .schedule-settings-choice-grid button.is-active {
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+}
+
+html body .native-ui .schedule-settings-choice-grid strong {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: currentColor;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: none;
+}
+
+html body .native-ui .schedule-choice-info {
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  opacity: 0.48;
+}
+
+html body .native-ui .schedule-choice-info:focus {
+  outline: 0;
+  opacity: 1;
+}
+
+html body .native-ui .schedule-choice-info [role="tooltip"] {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.55rem);
+  z-index: 4;
+  width: min(15rem, 72vw);
+  transform: translateX(-50%) translateY(0.25rem);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 22px 50px -32px rgba(15, 23, 42, 0.65);
+  color: #111827;
+  padding: 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 760;
+  line-height: 1.38;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+html body .native-ui .schedule-choice-info:hover,
+html body .native-ui .schedule-choice-info:focus {
+  opacity: 1;
+}
+
+html body .native-ui .schedule-choice-info:hover [role="tooltip"],
+html body .native-ui .schedule-choice-info:focus [role="tooltip"] {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+html body .native-ui .schedule-settings-choice-grid span {
+  color: currentColor;
+  opacity: 0.62;
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+html body .native-ui .schedule-settings-inline-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 0.4fr);
+  gap: 0.55rem;
 }
 
 html body .native-ui .schedule-slot-bubble.is-add {
@@ -771,6 +922,16 @@ html body .native-ui .schedule-settings-preview {
 
 html body .native-ui .schedule-settings-actions {
   justify-content: flex-end;
+}
+
+html body .native-ui .schedule-settings-actions.is-defaults,
+html body .native-ui .schedule-settings-actions.is-availability {
+  padding-top: 0.25rem;
+}
+
+html body .native-ui .schedule-settings-actions.is-availability {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.85rem;
 }
 
 html body .native-ui .schedule-slot-backdrop {
@@ -1071,6 +1232,8 @@ html body .native-ui .schedule-slot-actions button svg {
 
   html body .native-ui .schedule-slot-time-grid.has-range,
   html body .native-ui .schedule-custom-range,
+  html body .native-ui .schedule-settings-choice-grid,
+  html body .native-ui .schedule-settings-inline-grid,
   html body .native-ui .schedule-slot-actions.has-delete {
     grid-template-columns: 1fr;
   }

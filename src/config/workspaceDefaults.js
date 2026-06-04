@@ -70,6 +70,7 @@ export const createDefaultSettings = () => ({
   availableTimes: ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30'],
   schedule: {},
   staffCalendars: {},
+  availabilityRules: { enabled: true, staffAssignmentMode: 'auto', holdMode: 'pending_confirmed', fallbackDurationMinutes: 60 },
   reminders: { enabled: true, client24h: true, client2h: true },
   googleCalendar: { mode: 'manual-sync', connectedEmail: '', connectedAt: 0, lastSyncedAt: 0, lastSyncCount: 0 },
   features: { birthday: true, waitlist: true, socialProof: true, loadingScreen: true, firstAvailable: true, collectClientName: true, collectClientPhone: true, collectClientEmail: true, collectClientNotes: false, emailUpdates: true, faqEnabled: false, socialLinks: false, location: '', faqs: [] },

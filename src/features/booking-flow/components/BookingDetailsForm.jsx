@@ -16,11 +16,12 @@ export const BookingDetailsForm = ({
     pageItems,
     pageTextClass,
     previewInspectEnabled,
+    sectionOrder,
     setFormData,
     settings,
     showServiceStep
 }) => (
-    <section className="pt-10" style={{ order: showServiceStep ? 5 : 4 }}>
+    <section className="pt-10" style={{ order: sectionOrder ?? (showServiceStep ? 5 : 4) }}>
         <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-8 px-1 ${inspectClass}`} data-preview-section="form" onClick={() => previewInspectEnabled && onInspect('form')}>
             <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('detailsHeading', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{detailsStepNumber} // {settings.detailsHeading || "Your Details"}</h3>
             <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>

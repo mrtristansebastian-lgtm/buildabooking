@@ -8,6 +8,17 @@ import {
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
 
+const buildPublicStaffList = (staffList = []) => (
+  (Array.isArray(staffList) ? staffList : [])
+    .filter(staff => staff?.id && staff.accessEnabled !== false)
+    .map(staff => ({
+      id: staff.id,
+      name: staff.name || staff.displayName || 'Team member',
+      color: staff.color || '#111827',
+      photoURL: staff.photoURL || ''
+    }))
+);
+
 export function createWorkspacePersistenceActions({
   accountProfileKey,
   canManageTeam,
@@ -56,6 +67,7 @@ export function createWorkspacePersistenceActions({
       const { accountProfiles, ...publicSettingsToPublish } = settingsToPublish;
       await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug), {
         ...publicSettingsToPublish,
+        publicStaff: buildPublicStaffList(displayStaffList),
         ownerId: workspaceOwnerId,
         ownerEmail: user?.email || '',
         workspaceName: publicSettingsToPublish.brandName || 'Build A Booking Workspace'

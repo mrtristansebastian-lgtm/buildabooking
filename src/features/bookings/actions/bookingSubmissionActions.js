@@ -180,66 +180,53 @@ export function createBookingSubmissionActions({
     });
 
     try {
-      if (functions && FirebaseSDK.httpsCallable) {
-        try {
-          const createPublicBookingRequest = FirebaseSDK.httpsCallable(functions, 'createPublicBookingRequest');
-          const result = await createPublicBookingRequest({
-            appId,
-            workspaceSlug: publicSlug,
-            idempotencyKey,
-            booking: {
-              clientName: bookingRecord.clientName,
-              clientPhone: bookingRecord.clientPhone,
-              clientEmail: bookingRecord.clientEmail,
-              clientEmailOptIn: bookingRecord.clientEmailOptIn,
-              clientBirthday: bookingRecord.clientBirthday,
-              clientNote: bookingRecord.clientNote,
-              serviceId: bookingRecord.serviceId,
-              serviceName: bookingRecord.serviceName,
-              serviceDescription: bookingRecord.serviceDescription,
-              servicePrice: bookingRecord.servicePrice,
-              servicePriceType: bookingRecord.servicePriceType,
-              serviceDuration: bookingRecord.serviceDuration,
-              serviceCategory: bookingRecord.serviceCategory,
-              paymentMethod: bookingRecord.paymentMethod,
-              paymentGateway: bookingRecord.paymentGateway,
-              paymentProviderName: bookingRecord.paymentProviderName,
-              paymentStatus: bookingRecord.paymentStatus,
-              date: bookingRecord.date,
-              dateKey: bookingRecord.dateKey,
-              time: bookingRecord.time,
-              status: bookingRecord.status,
-              notificationChannels: bookingRecord.notificationChannels
-            }
-          });
-          return result?.data || true;
-        } catch (functionError) {
-          const fallbackCodes = new Set(['functions/not-found', 'functions/unavailable']);
-          if (!fallbackCodes.has(functionError?.code)) {
-            console.error(functionError);
-            if (functionError?.code === 'functions/already-exists') {
-              showToast('That time was just requested. Pick another slot.');
-            } else {
-              showToast(functionError?.message || 'Booking could not be submitted.');
-            }
-            return false;
-          }
-          console.warn('Falling back to direct public booking write until Functions are deployed.', functionError);
+      if (!functions || !FirebaseSDK.httpsCallable) {
+        showToast('Secure booking service is not available yet.');
+        return false;
+      }
+      const createPublicBookingRequest = FirebaseSDK.httpsCallable(functions, 'createPublicBookingRequest');
+      const result = await createPublicBookingRequest({
+        appId,
+        workspaceSlug: publicSlug,
+        idempotencyKey,
+        booking: {
+          clientName: bookingRecord.clientName,
+          clientPhone: bookingRecord.clientPhone,
+          clientEmail: bookingRecord.clientEmail,
+          clientEmailOptIn: bookingRecord.clientEmailOptIn,
+          clientBirthday: bookingRecord.clientBirthday,
+          clientNote: bookingRecord.clientNote,
+          serviceId: bookingRecord.serviceId,
+          serviceName: bookingRecord.serviceName,
+          serviceDescription: bookingRecord.serviceDescription,
+          servicePrice: bookingRecord.servicePrice,
+          servicePriceType: bookingRecord.servicePriceType,
+          serviceDuration: bookingRecord.serviceDuration,
+          serviceCategory: bookingRecord.serviceCategory,
+          staffId: bookingRecord.staffId,
+          staffName: bookingRecord.staffName,
+          staffPhotoURL: bookingRecord.staffPhotoURL,
+          paymentMethod: bookingRecord.paymentMethod,
+          paymentGateway: bookingRecord.paymentGateway,
+          paymentProviderName: bookingRecord.paymentProviderName,
+          paymentStatus: bookingRecord.paymentStatus,
+          date: bookingRecord.date,
+          dateKey: bookingRecord.dateKey,
+          time: bookingRecord.time,
+          status: bookingRecord.status,
+          notificationChannels: bookingRecord.notificationChannels
         }
-      }
-      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'bookings'), bookingRecord);
-      const paymentReference = bookingRecord.paymentMethod ? bookingRef.id : '';
-      if (paymentReference) {
-        await FirebaseSDK.updateDoc(bookingRef, { paymentReference });
-      }
-      await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug, 'bookingSubmissions'), {
-        ...bookingRecord,
-        paymentReference
       });
-      return { ok: true, bookingId: bookingRef.id, paymentReference, reused: false };
+      return result?.data || true;
     } catch (error) {
       console.error(error);
-      showToast('Booking could not be submitted.');
+      if (error?.code === 'functions/already-exists') {
+        showToast('That time was just requested. Pick another slot.');
+      } else if (error?.code === 'functions/resource-exhausted') {
+        showToast('Too many attempts. Please wait a few minutes and try again.');
+      } else {
+        showToast(error?.message || 'Booking could not be submitted.');
+      }
       return false;
     }
   };

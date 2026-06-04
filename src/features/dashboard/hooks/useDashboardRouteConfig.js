@@ -258,7 +258,8 @@ export function useDashboardRouteConfig({
             collectsClientPhone,
             emailUpdatesEnabled
           },
-          settings
+          settings,
+          staffList: staff.displayStaffList
         }
       },
       bookings: {

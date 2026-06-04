@@ -16,6 +16,17 @@ const BookingFlow = lazy(() => (
   import('../../../components/BookingFlow').then((module) => ({ default: module.BookingFlow }))
 ));
 
+const buildPreviewPublicStaff = (staffList = []) => (
+  (Array.isArray(staffList) ? staffList : [])
+    .filter(staff => staff?.id && staff.accessEnabled !== false)
+    .map(staff => ({
+      id: staff.id,
+      name: staff.name || staff.displayName || 'Team member',
+      color: staff.color || '#111827',
+      photoURL: staff.photoURL || ''
+    }))
+);
+
 export const EditorPreviewWorkspace = ({
   containerRef,
   device,
@@ -44,8 +55,18 @@ export const EditorPreviewWorkspace = ({
   shouldMountEditorPreview,
   showPortraitDesktopEditorPrompt,
   startEditorRoomNavDrag,
+  staffList = [],
   settings
-}) => (
+}) => {
+  const previewPublicStaff = Array.isArray(editorPreviewSettings.publicStaff) && editorPreviewSettings.publicStaff.length
+    ? editorPreviewSettings.publicStaff
+    : buildPreviewPublicStaff(staffList);
+  const bookingPreviewSettings = {
+    ...editorPreviewSettings,
+    publicStaff: previewPublicStaff
+  };
+
+  return (
   <div ref={containerRef} className="mobile-editor-preview flex-1 bg-[#F5F5F7] flex flex-col items-center justify-center relative overflow-hidden p-6 md:p-8">
     <div className="mobile-editor-preview-toolbar absolute top-4 md:top-8 flex flex-col md:flex-row items-center gap-3 md:gap-12 z-50">
       <div className="mobile-editor-device-switcher flex bg-white/60 backdrop-blur-xl p-1.5 rounded-full border border-white/80 shadow-sm">
@@ -168,7 +189,7 @@ export const EditorPreviewWorkspace = ({
                 <AppErrorBoundary compact label="Live Preview" resetKey={previewKey}>
                   <BookingFlow
                     key={previewKey}
-                    settings={editorPreviewSettings}
+                    settings={bookingPreviewSettings}
                     isPreview={true}
                     onSettingChange={handleSettingChange}
                     onMediaUpload={(key, file) => handleSettingImageUpload(key, file, 'brand')}
@@ -186,4 +207,5 @@ export const EditorPreviewWorkspace = ({
       </div>
     )}
   </div>
-);
+  );
+};

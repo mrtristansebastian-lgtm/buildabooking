@@ -76,6 +76,7 @@ export const BusinessCalendar = ({
 
       <ScheduleSettingsModal
         applyScope={applyScope}
+        availabilityRules={schedule.availabilityRules}
         defaultSlots={schedule.defaultSlots}
         isOpen={schedule.settingsModalOpen}
         onAddSlot={schedule.actions.startAddingDefaultSlot}
@@ -84,6 +85,8 @@ export const BusinessCalendar = ({
         onClose={() => schedule.setSettingsModalOpen(false)}
         onDeleteSlot={schedule.actions.deleteDefaultSlot}
         onEditSlot={schedule.actions.startEditingDefaultSlot}
+        onUpdateAvailabilityRules={schedule.actions.updateAvailabilityRules}
+        onSaveAvailabilitySettings={onSave}
         onSaveDefaults={schedule.actions.saveGeneratedDefaultSlots}
         onToggleWaitlist={schedule.actions.toggleWaitlist}
         selectedDate={schedule.selectedDate}

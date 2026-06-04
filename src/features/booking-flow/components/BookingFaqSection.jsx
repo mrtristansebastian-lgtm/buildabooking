@@ -16,6 +16,7 @@ export const BookingFaqSection = ({
     pageItems,
     pageTextClass,
     previewInspectEnabled,
+    sectionOrder,
     setOpenFaq,
     settings,
     showServiceStep
@@ -30,7 +31,7 @@ export const BookingFaqSection = ({
             className={`booking-faq-section booking-faq-${faqDisplayStyle} pt-2 ${inspectClass}`}
             data-preview-section="faq"
             onClick={() => previewInspectEnabled && onInspect('faq')}
-            style={{ order: showServiceStep ? 4 : 3 }}
+            style={{ order: sectionOrder ?? (showServiceStep ? 4 : 3) }}
         >
             <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1`}>
                 <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>{faqStepNumber} // Good to know</h3>
