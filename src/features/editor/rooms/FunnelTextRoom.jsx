@@ -23,9 +23,9 @@ const funnelRoomFields = {
   success: [
     ['input', 'successStatusLabel', 'Status label', 'Booking Status'],
     ['input', 'successHeading', 'Success heading', 'Request sent.', true],
-    ['textarea', 'successCopy', 'Success copy', 'Your request is saved for the business to review.'],
+    ['textarea', 'successCopy', 'Success copy', 'We have your request and will review the booking details shortly.'],
     ['input', 'successNextTitle', 'Next title', 'Business review'],
-    ['textarea', 'successNextCopy', 'Next copy', 'They can confirm, follow up, or help adjust the booking.'],
+    ['textarea', 'successNextCopy', 'Next copy', 'We will confirm the slot, follow up if needed, or help adjust the booking.'],
     ['input', 'successNewRequestLabel', 'Restart link', 'New Request']
   ]
 };

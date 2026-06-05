@@ -11,43 +11,35 @@ export const ProfileMobileHub = ({
       <div className="profile-command-grid">
         {profileSections.map(section => {
           const IconCmp = section.icon;
+          const openSection = () => section.action ? section.action() : onSetActiveProfileSection(section.id);
           return (
-            <div
+            <button
+              type="button"
               key={section.id}
               className="profile-command-card"
+              onClick={openSection}
+              aria-label={`Open ${section.title}`}
             >
-              <button
-                type="button"
-                onClick={() => section.action ? section.action() : onSetActiveProfileSection(section.id)}
-                className="profile-command-primary"
-                aria-label={`Open ${section.title}`}
-              >
-                <span className="profile-command-card-top">
-                  <span className="profile-command-icon">
-                    <IconCmp size={18} />
-                  </span>
-                  <span className="profile-command-meta">{section.meta}</span>
+              <span className="profile-command-card-top">
+                <span className="profile-command-icon">
+                  <IconCmp size={18} />
                 </span>
-                <span className="profile-command-copy">
-                  <span>{section.title}</span>
-                </span>
-                <span className="profile-command-arrow" aria-hidden="true">
-                  <ChevronRight size={17} />
-                </span>
-              </button>
+                <span className="profile-command-meta">{section.meta}</span>
+              </span>
+              <span className="profile-command-copy">
+                <span>{section.title}</span>
+              </span>
+              <span className="profile-command-arrow" aria-hidden="true">
+                <ChevronRight size={17} />
+              </span>
               <span className="profile-command-quick">
                 {(section.quick || []).map(item => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => section.action ? section.action() : onSetActiveProfileSection(section.id)}
-                    aria-label={`Open ${section.title}: ${item}`}
-                  >
+                  <span key={item}>
                     {item}
-                  </button>
+                  </span>
                 ))}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -56,6 +48,7 @@ export const ProfileMobileHub = ({
         <button
           type="button"
           onClick={() => onSetActiveProfileSection('')}
+          aria-label="Back to profile sections"
           className="w-10 h-10 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black shrink-0"
         >
           <ChevronLeft size={18} />

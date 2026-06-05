@@ -21,9 +21,9 @@ html body .native-ui .team-page .team-roster-card {
 }
 
 html body .native-ui .team-page .team-empty-state {
-  margin-top: 1rem;
+  margin-top: 0.9rem;
   padding-block: clamp(2.4rem, 7vw, 5rem) !important;
-  border-top: 1px solid rgba(15, 23, 42, 0.06) !important;
+  border-top: 0 !important;
 }
 
 html body .native-ui .team-page .team-add-panel,

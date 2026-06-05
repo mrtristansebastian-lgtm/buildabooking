@@ -26,7 +26,14 @@ export const BookingSuccessState = ({
     const successHeading = savedSuccessHeading && savedSuccessHeading !== 'Booking Confirmed!'
         ? savedSuccessHeading
         : 'Request sent.';
-    const successCopy = String(settings.successCopy || '').trim();
+    const savedSuccessCopy = String(settings.successCopy || '').trim();
+    const successCopy = savedSuccessCopy && savedSuccessCopy !== 'Your request is saved for the business to review.'
+        ? savedSuccessCopy
+        : 'We have your request and will review the booking details shortly.';
+    const savedSuccessNextCopy = String(settings.successNextCopy || '').trim();
+    const successNextCopy = savedSuccessNextCopy && savedSuccessNextCopy !== 'They can confirm, follow up, or help adjust the booking.'
+        ? savedSuccessNextCopy
+        : 'We will confirm the slot, follow up if needed, or help adjust the booking.';
 
     return (
     <div className={`booking-success-step min-h-full flex items-center justify-center ${previewSuccessMotionClass} p-4 md:p-10 relative z-10`} style={{ backgroundColor: settings.backgroundColor, color: settings.bodyColor }}>
@@ -38,7 +45,7 @@ export const BookingSuccessState = ({
                         {isWaitlistMode ? "You're on the list." : successHeading}
                     </h2>
                     <p className="booking-success-copy mt-3 max-w-xl text-sm md:text-base font-semibold leading-relaxed opacity-55" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
-                        {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. The business can contact you if a slot opens.` : (successCopy || `Your request for ${selectedTime} on ${activeDate.dayNum} ${activeDate.month} is saved for the business to review.`)}
+                        {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. We will contact you if a slot opens.` : successCopy}
                     </p>
                 </div>
                 <span className="booking-success-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ backgroundColor: settings.headingColor, color: settings.primaryColor }}>
@@ -59,7 +66,7 @@ export const BookingSuccessState = ({
                         <span className="h-1.5 w-1.5 rounded-full bg-current" /> {settings.successNextLabel || 'Next'}
                     </p>
                     <p className="mt-2 text-sm font-black" style={{ color: settings.headingColor }}>{isWaitlistMode ? 'Waitlist review' : (settings.successNextTitle || 'Business review')}</p>
-                    <p className="mt-1 text-xs font-semibold leading-relaxed opacity-50" style={{ color: settings.bodyColor }}>{settings.successNextCopy || 'They can confirm, follow up, or help adjust the booking.'}</p>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed opacity-50" style={{ color: settings.bodyColor }}>{successNextCopy}</p>
                 </div>
             </div>
 

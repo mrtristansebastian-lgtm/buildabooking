@@ -12,13 +12,11 @@ export const editorRoomScenes = [
   { id: 'style', number: '09', icon: Sparkles, title: 'Style System', prompt: 'One curated visual direction for the complete booking journey.' }
 ];
 
-const editorGlobalRoomIds = ['colours', 'typography', 'style'];
-
 const previewStepRoomIds = {
-  select: ['introduction', 'faq'],
-  cart: ['cart'],
-  details: ['checkout', 'client-form'],
-  success: ['success']
+  select: ['introduction', 'faq', 'colours', 'typography', 'style'],
+  cart: ['cart', 'colours'],
+  details: ['checkout', 'client-form', 'colours'],
+  success: ['success', 'colours']
 };
 
 export const previewStepPrimaryRoom = {
@@ -33,10 +31,7 @@ export const getEditorRoomId = (roomId, fallback = 'style') => (
 );
 
 export const getEditorRoomScenesForPreviewStep = (previewStep = 'select') => {
-  const roomIds = [
-    ...(previewStepRoomIds[previewStep] || previewStepRoomIds.select),
-    ...editorGlobalRoomIds
-  ];
+  const roomIds = previewStepRoomIds[previewStep] || previewStepRoomIds.select;
   return roomIds
     .map(roomId => editorRoomScenes.find(scene => scene.id === roomId))
     .filter(Boolean);

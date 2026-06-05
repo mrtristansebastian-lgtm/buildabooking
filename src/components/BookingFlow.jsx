@@ -320,19 +320,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 }));
             }, [collectClientEmail, collectClientName, collectClientNotes, collectClientPhone, emailOptInEnabled]);
 
-            const handleFirstAvailable = (e) => {
-                e.stopPropagation();
-                const nextIdx = dates.findIndex(d => {
-                    const dayConfig = settings.schedule?.[d.localDateStr];
-                    const times = dayConfig && dayConfig.times ? dayConfig.times : settings.availableTimes;
-                    return times.length > 0;
-                });
-                if (nextIdx !== -1) {
-                    setSelectedDateIdx(nextIdx);
-                    setSelectedTime(null);
-                }
-            };
-
             const dynamicStyles = {
                 fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily),
                 color: settings.bodyColor || '#666666',
@@ -753,24 +740,23 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                     {shouldRenderHeroBanner && bannerDisplay.placement === 'top' && renderHeroMedia('booking-hero-media-top')}
                     <div
                         className={`booking-hero-kicker flex items-center gap-4 ${inspectClass}`}
-                        style={{ justifyContent: pageJustify }}
                         onClick={() => previewInspectEnabled && onInspect('calendar')}
                     >
                         <div className={`booking-hero-kicker-rule ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
                         <span
                             className="font-bold uppercase opacity-40"
-                            style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, textAlign: pageAlignment, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
+                            style={{ color: settings.bodyColor, fontFamily: getFontFamily(taglineText.font), fontSize: `${taglineText.size}px`, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}
                         >
                             {settings.tagline}
                         </span>
+                        <div className={`booking-hero-kicker-rule ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />
                     </div>
 
                     {shouldRenderHeroBanner && bannerDisplay.placement === 'hero' && renderHeroMedia()}
 
-                    <div className="booking-hero-copy" style={{ alignItems: pageAlignment === 'left' ? 'flex-start' : pageAlignment === 'right' ? 'flex-end' : 'center' }}>
-                        {shouldRenderHeroLogo && logoDisplay.placement === 'top' && renderHeroLogo('booking-hero-logo-top')}
-                        <div className="booking-hero-title-lockup" style={{ justifyContent: pageJustify }}>
-                            {shouldRenderHeroLogo && logoDisplay.placement === 'title' && renderHeroLogo()}
+                    <div className="booking-hero-copy">
+                        {shouldRenderHeroLogo && renderHeroLogo('booking-hero-logo-top')}
+                        <div className="booking-hero-title-lockup">
                             <h1
                                 className={`booking-hero-title font-bold tracking-tighter leading-[0.85] max-w-full ${inspectClass}`}
                                 style={{
@@ -778,9 +764,9 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                                     fontFamily: getFontFamily(brandText.font),
                                     fontSize: `${brandText.size}px`,
                                     ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}),
-                                    textAlign: pageAlignment,
+                                    textAlign: 'center',
                                     overflowWrap: 'anywhere',
-                                    ...getBlockMargins(pageAlignment)
+                                    ...getBlockMargins('center')
                                 }}
                                 onClick={() => previewInspectEnabled && onInspect('introduction')}
                                 contentEditable={previewInspectEnabled}
@@ -789,7 +775,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                             >
                                 {settings.brandName}
                             </h1>
-                            {shouldRenderHeroLogo && logoDisplay.placement === 'badge' && renderHeroLogo('booking-hero-logo-badge')}
                         </div>
                         <p
                             className={`booking-hero-subtitle opacity-60 font-light leading-relaxed max-w-3xl ${inspectClass}`}
@@ -798,8 +783,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                                 fontFamily: getFontFamily(welcomeText.font),
                                 fontSize: `${welcomeText.size}px`,
                                 ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}),
-                                textAlign: pageAlignment,
-                                ...getBlockMargins(pageAlignment)
+                                textAlign: 'center',
+                                ...getBlockMargins('center')
                             }}
                             onClick={() => previewInspectEnabled && onInspect('introduction')}
                             contentEditable={previewInspectEnabled}
@@ -888,7 +873,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         dateStepNumber={dateStepNumber}
                         dateStyle={dateStyle}
                         displayDates={displayDates}
-                        handleFirstAvailable={handleFirstAvailable}
                         headingLetterSpacing={headingLetterSpacing}
                         inspectClass={inspectClass}
                         isPreview={isPreview}

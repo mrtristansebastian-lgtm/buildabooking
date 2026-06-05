@@ -596,8 +596,20 @@
         }
 
         .editor-preview-frame.is-mobile-preview .booking-checkout-summary .mt-4 {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 0.35rem !important;
             margin-top: 0.75rem !important;
             padding-top: 0.75rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-checkout-summary .mt-4 > span:last-child {
+            display: block !important;
+            max-width: 100% !important;
+            font-size: 1.05rem !important;
+            line-height: 1.05 !important;
+            text-align: left !important;
+            overflow-wrap: anywhere !important;
         }
 
         .editor-preview-frame.is-mobile-preview .booking-checkout-panel {
@@ -810,4 +822,87 @@
             .booking-flow-public .booking-success-panel {
                 min-height: calc(100dvh - 2.7rem);
             }
+        }
+
+        .booking-style-command-flow.booking-cart-step .booking-cart-hero,
+        .booking-style-command-flow .booking-cart-step .booking-cart-hero,
+        .booking-style-command-flow.booking-cart-step .booking-cart-badge,
+        .booking-style-command-flow .booking-cart-step .booking-cart-badge,
+        .booking-style-command-flow.booking-cart-step .booking-checkout-summary,
+        .booking-style-command-flow .booking-cart-step .booking-checkout-summary,
+        .booking-style-command-flow.booking-cart-step .booking-checkout-summary > .grid > div,
+        .booking-style-command-flow .booking-cart-step .booking-checkout-summary > .grid > div,
+        .booking-style-command-flow.booking-cart-step .booking-checkout-summary > .grid > div > span:first-child,
+        .booking-style-command-flow .booking-cart-step .booking-checkout-summary > .grid > div > span:first-child,
+        .booking-style-command-flow.booking-cart-step .booking-checkout-summary span,
+        .booking-style-command-flow .booking-cart-step .booking-checkout-summary span,
+        .booking-style-command-flow.booking-cart-step .booking-funnel-primary,
+        .booking-style-command-flow .booking-cart-step .booking-funnel-primary,
+        .booking-style-command-flow.booking-cart-step .booking-funnel-back,
+        .booking-style-command-flow .booking-cart-step .booking-funnel-back,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-panel,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-panel,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-summary,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-summary,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-summary > .grid > div,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-summary > .grid > div,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-summary > .grid > div > span:first-child,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-summary > .grid > div > span:first-child,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-summary span,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-summary span,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-email,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-email,
+        .booking-style-command-flow.booking-checkout-step .booking-checkout-email span,
+        .booking-style-command-flow .booking-checkout-step .booking-checkout-email span,
+        .booking-style-command-flow.booking-checkout-step .booking-payment-box,
+        .booking-style-command-flow .booking-checkout-step .booking-payment-box,
+        .booking-style-command-flow.booking-checkout-step .booking-payment-option,
+        .booking-style-command-flow .booking-checkout-step .booking-payment-option,
+        .booking-style-command-flow.booking-checkout-step .booking-payment-option-icon,
+        .booking-style-command-flow .booking-checkout-step .booking-payment-option-icon,
+        .booking-style-command-flow.booking-checkout-step .booking-payment-empty,
+        .booking-style-command-flow .booking-checkout-step .booking-payment-empty,
+        .booking-style-command-flow.booking-checkout-step .booking-funnel-primary,
+        .booking-style-command-flow .booking-checkout-step .booking-funnel-primary,
+        .booking-style-command-flow.booking-checkout-step .booking-funnel-back,
+        .booking-style-command-flow .booking-checkout-step .booking-funnel-back,
+        .booking-style-command-flow.booking-success-step .booking-success-panel,
+        .booking-style-command-flow .booking-success-step .booking-success-panel,
+        .booking-style-command-flow.booking-success-step .booking-success-detail,
+        .booking-style-command-flow .booking-success-step .booking-success-detail,
+        .booking-style-command-flow.booking-success-step .booking-success-payment,
+        .booking-style-command-flow .booking-success-step .booking-success-payment,
+        .booking-style-command-flow.booking-success-step .booking-success-icon,
+        .booking-style-command-flow .booking-success-step .booking-success-icon,
+        .booking-style-command-flow.booking-success-step .booking-success-portal > div,
+        .booking-style-command-flow .booking-success-step .booking-success-portal > div,
+        .booking-style-command-flow.booking-success-step .booking-success-portal button {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .booking-style-command-flow.booking-cart-step .booking-funnel-primary,
+        .booking-style-command-flow .booking-cart-step .booking-funnel-primary,
+        .booking-style-command-flow.booking-checkout-step .booking-funnel-primary,
+        .booking-style-command-flow .booking-checkout-step .booking-funnel-primary,
+        .booking-style-command-flow.booking-success-step .booking-success-portal button,
+        .booking-style-command-flow .booking-success-step .booking-success-portal button {
+            background-image: none !important;
+            text-transform: uppercase;
+        }
+
+        .editor-preview-frame .booking-style-command-flow .booking-preview-media-drop,
+        .editor-preview-frame .booking-style-command-flow .booking-hero-media,
+        .editor-preview-frame .booking-style-command-flow .booking-footer-media,
+        .editor-preview-frame .booking-style-command-flow [data-preview-section="calendar"] button,
+        .editor-preview-frame .booking-style-command-flow [data-preview-section="time"] button,
+        .editor-preview-frame .booking-style-command-flow .booking-faq-item,
+        .editor-preview-frame .booking-style-command-flow .booking-faq-icon,
+        .editor-preview-frame .booking-style-command-flow .booking-checkout-step .booking-checkout-email,
+        .editor-preview-frame .booking-style-command-flow .booking-checkout-step .booking-payment-empty,
+        .editor-preview-frame .booking-style-command-flow .booking-checkout-step .booking-payment-option,
+        .editor-preview-frame .booking-style-command-flow .booking-checkout-step .booking-payment-option-icon,
+        .editor-preview-frame .booking-style-command-flow .booking-checkout-step .booking-funnel-primary {
+            border-radius: 0 !important;
+            box-shadow: none !important;
         }

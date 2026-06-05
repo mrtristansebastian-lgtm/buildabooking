@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { getEditorPreviewFrame } from '../../../config/appConfig';
-import { getEditorRoomId } from '../config/editorRoomScenes';
+import {
+  getEditorRoomId,
+  getEditorRoomScenesForPreviewStep,
+  previewStepPrimaryRoom
+} from '../config/editorRoomScenes';
 
 const isInitialMobileDevice = () => (
   typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)')?.matches
@@ -74,6 +78,15 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
       window.removeEventListener('resize', updateMobileRuntime);
     };
   }, []);
+
+  useEffect(() => {
+    if (!studioModal) return;
+    const availableRooms = getEditorRoomScenesForPreviewStep(previewStep);
+    if (availableRooms.some(room => room.id === studioModal)) return;
+    const fallbackRoomId = previewStepPrimaryRoom[previewStep] || previewStepPrimaryRoom.select;
+    setStudioModal(fallbackRoomId);
+    setEditorTab(fallbackRoomId);
+  }, [previewStep, setEditorTab, studioModal]);
 
   useLayoutEffect(() => {
     if (activeTab !== 'editor' || !shouldMountPreview) return undefined;
@@ -299,7 +312,7 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
       setPreviewStep('details');
     } else if (normalizedRoomId === 'success') {
       setPreviewStep('success');
-    } else if (normalizedRoomId === 'introduction') {
+    } else if (['introduction', 'faq', 'typography', 'style'].includes(normalizedRoomId)) {
       setPreviewStep('select');
     }
     playStudioSound('step');

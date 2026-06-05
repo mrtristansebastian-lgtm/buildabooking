@@ -33,6 +33,11 @@
             max-width: 58rem;
         }
 
+        .editor-preview-frame.is-desktop-preview .booking-flow-preview [data-preview-section="action"] {
+            margin-bottom: 1.75rem !important;
+            padding-bottom: 0.25rem !important;
+        }
+
         .editor-preview-frame.is-mobile-preview header {
             margin-bottom: 2rem !important;
         }
