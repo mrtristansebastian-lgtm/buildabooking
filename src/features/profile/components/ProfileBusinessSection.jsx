@@ -1,4 +1,3 @@
-import { ProfileBusinessFaqSection } from './ProfileBusinessFaqSection';
 import { ProfileBusinessIdentitySection } from './ProfileBusinessIdentitySection';
 import { ProfileBusinessMediaSection } from './ProfileBusinessMediaSection';
 import { ProfileBusinessSocialSection } from './ProfileBusinessSocialSection';
@@ -6,18 +5,14 @@ import { ProfileReminderSection } from './ProfileReminderSection';
 
 export const ProfileBusinessSection = ({
   activeProfileSection,
-  onAddFaqItem,
   onCopyReferral,
   onImageCrop,
   onImageRemove,
   onImageUpload,
   onOpenStyleRoom,
-  onRemoveFaqItem,
   onRemoveVenuePhoto,
   onSaveProfile,
   onSettingChange,
-  onToggleFaqFeature,
-  onUpdateFaqItem,
   onVenuePhotoUpload,
   referralUrl,
   settings,
@@ -35,7 +30,6 @@ export const ProfileBusinessSection = ({
       <ProfileBusinessIdentitySection
         onImageRemove={onImageRemove}
         onImageUpload={onImageUpload}
-        onSettingChange={onSettingChange}
         settings={settings}
       />
       <ProfileBusinessMediaSection
@@ -44,6 +38,7 @@ export const ProfileBusinessSection = ({
         onImageUpload={onImageUpload}
         onOpenStyleRoom={onOpenStyleRoom}
         onRemoveVenuePhoto={onRemoveVenuePhoto}
+        onSettingChange={onSettingChange}
         onVenuePhotoUpload={onVenuePhotoUpload}
         settings={settings}
         venuePhotos={venuePhotos}
@@ -51,16 +46,9 @@ export const ProfileBusinessSection = ({
       <section className="rounded-lg bg-white">
         <div className="mb-4">
           <p className="text-[10px] font-bold uppercase text-neutral-400">Client trust</p>
-          <h4 className="mt-1 text-xl font-black text-black">Helpful answers and reminders</h4>
+          <h4 className="mt-1 text-xl font-black text-black">Helpful reminders</h4>
         </div>
         <div className="space-y-4">
-          <ProfileBusinessFaqSection
-            onAddFaqItem={onAddFaqItem}
-            onRemoveFaqItem={onRemoveFaqItem}
-            onToggleFaqFeature={onToggleFaqFeature}
-            onUpdateFaqItem={onUpdateFaqItem}
-            settings={settings}
-          />
           <ProfileReminderSection
             onSettingChange={onSettingChange}
             settings={settings}

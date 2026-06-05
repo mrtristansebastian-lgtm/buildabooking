@@ -22,16 +22,16 @@ export const BookingCheckoutStep = ({
   settings,
   submitError
 }) => (
-  <div className={`booking-checkout-step ${isPreview ? 'booking-flow-preview-shell' : 'booking-flow-public-shell'} ${isPreview ? '' : 'animate-in fade-in slide-in-from-bottom-20 duration-700'}`}>
+  <div className={`booking-checkout-step ${isPreview ? 'booking-flow-preview-shell' : 'booking-flow-public-shell'} ${isPreview ? '' : 'animate-in fade-in slide-in-from-bottom-20 duration-700'}`} style={{ backgroundColor: settings.backgroundColor, color: settings.bodyColor }}>
     <div className="booking-checkout-container">
-      <main className="booking-checkout-panel">
+      <main className="booking-checkout-panel" style={{ backgroundColor: settings.pageSurfaceColor || '#ffffff', borderColor: settings.pageBorderColor || '#0000001A' }}>
         <button type="button" onClick={onBack} className="booking-funnel-back">
-          <span aria-hidden="true">&lt;</span> Back to cart
+          <span aria-hidden="true">&lt;</span> {settings.checkoutBackLabel || 'Back to cart'}
         </button>
-        <p className="booking-checkout-eyebrow">Checkout</p>
-        <h2 className="booking-checkout-title">Fill in your details.</h2>
-        <div className="booking-checkout-copy">
-          Request the booking first. If payment is needed, the next step will take care of it cleanly.
+        <p className="booking-checkout-eyebrow" style={{ color: settings.bodyColor }}>{settings.checkoutEyebrow || 'Checkout'}</p>
+        <h2 className="booking-checkout-title" style={{ color: settings.headingColor }}>{settings.checkoutTitle || 'Fill in your details.'}</h2>
+        <div className="booking-checkout-copy" style={{ color: settings.bodyColor }}>
+          {settings.checkoutCopy || 'Request the booking first. If payment is needed, the next step will take care of it cleanly.'}
         </div>
         <div className="booking-checkout-form">
           {detailsForm}
@@ -67,7 +67,7 @@ export const BookingCheckoutStep = ({
             </label>
           )}
 
-          <section className={`booking-payment-box ${!emailOptInEnabled ? 'is-wide' : ''}`}>
+          <section className={`booking-payment-box ${!emailOptInEnabled ? 'is-wide' : ''}`} style={{ borderColor: settings.pageBorderColor || '#0000001A' }}>
             <div className="booking-payment-head">
               <p>
                 <span aria-hidden="true">$</span> Payment
@@ -115,7 +115,7 @@ export const BookingCheckoutStep = ({
         </div>
 
         <p className="booking-checkout-note" style={{ color: settings.bodyColor }}>
-          The business reviews your request, confirms the slot, and keeps updates in your client portal.
+          {settings.checkoutNote || 'The business reviews your request, confirms the slot, and keeps updates in your client portal.'}
         </p>
         {submitError && <p className="mt-5 text-xs font-bold uppercase tracking-widest text-red-500">{submitError}</p>}
         <button
@@ -125,7 +125,7 @@ export const BookingCheckoutStep = ({
           className={`booking-funnel-primary ${nativeAccentButtonClass} ${(isSubmitting || !canSubmitBooking) && !isPreview ? 'is-disabled' : ''}`}
           style={getActionButtonStyle({ settings, actionButtonStyle })}
         >
-          <span>{isSubmitting ? 'Sending request' : isWaitlistMode ? 'Join waitlist' : 'Request booking'}</span>
+          <span>{isSubmitting ? (settings.checkoutSendingLabel || 'Sending request') : isWaitlistMode ? (settings.checkoutWaitlistLabel || 'Join waitlist') : (settings.checkoutSubmitLabel || 'Request booking')}</span>
           <span aria-hidden="true">&gt;</span>
         </button>
       </main>

@@ -8,6 +8,8 @@ import {
 import {
   createGoogleProvider,
   getGoogleAccessTokenFromResult,
+  hasGoogleIdentityClient,
+  signInWithGoogleIdentity,
   signInWithNativeGoogle
 } from '../../auth';
 
@@ -65,6 +67,30 @@ export function useGoogleCalendarActions({
 
       const provider = createGoogleProvider({ calendar: true });
       await applyAuthPersistence(keepLoggedIn);
+      if (hasGoogleIdentityClient()) {
+        const result = await signInWithGoogleIdentity(auth, { calendar: true });
+        const accessToken = result?.accessToken || '';
+        const connectedEmail = result.firebaseResult?.user?.email || user.email || '';
+        if (!accessToken) throw new Error('Google did not return Calendar permission yet.');
+        setGoogleCalendarAuth({
+          accessToken,
+          email: connectedEmail,
+          connectedAt: Date.now()
+        });
+        if (canManageWorkspace) {
+          await saveWorkspaceSettingsPatch({
+            googleCalendar: {
+              ...(settings.googleCalendar || {}),
+              connectedEmail,
+              connectedAt: Date.now(),
+              mode: 'manual-sync'
+            }
+          }, 'Google Calendar connected.');
+        } else {
+          showToast('Google Calendar connected for this session.');
+        }
+        return accessToken;
+      }
       try {
         const result = await FirebaseSDK.signInWithPopup(auth, provider);
         const accessToken = getGoogleAccessTokenFromResult(result);

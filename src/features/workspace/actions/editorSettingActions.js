@@ -115,7 +115,7 @@ export function createEditorSettingActions({
         features: {
           ...prev.features,
           faqEnabled: enabled,
-          faqs: enabled && existingFaqs.length === 0 ? defaultFaqItems : existingFaqs
+          faqs: enabled && existingFaqs.length === 0 ? defaultFaqItems.map(item => ({ ...item })) : existingFaqs
         }
       };
     });

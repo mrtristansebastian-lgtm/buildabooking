@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { Globe, Images, Instagram, MapPin, Plus } from 'lucide-react';
+import { Images, MapPin, Plus } from 'lucide-react';
 import { getFontFamily } from '../data/fonts';
 import * as FirebaseSDK from '../services/firebase';
 import { appId, functions } from '../services/firebase';
@@ -25,6 +25,11 @@ import {
     parseCheckoutAmountToCents
 } from '../features/booking-flow/utils/checkoutUtils';
 import {
+    buildGoogleMapsDirectionsUrl,
+    buildGoogleMapsEmbedUrl,
+    getMapPlaceLabel
+} from '../features/maps/googleMaps';
+import {
     bookingStyleDirections,
     createPreviewSocialLinks,
     previewServiceSamples,
@@ -41,7 +46,7 @@ import {
     normalizeWebsite
 } from '../features/booking-flow/utils/bookingFlowUtils';
 
-const previewSocialLinks = createPreviewSocialLinks({ Instagram, Globe });
+const previewSocialLinks = createPreviewSocialLinks();
 
 // --- PUBLIC BOOKING ENGINE (WITH NEW EXTENSIONS & SPECIFIC FONTS) ---
 export const BookingFlow = memo(({ settings, onComplete, isPreview = false, previewStep = 'select', onInspect, onInstallApp, onSettingChange, onMediaUpload }) => {
@@ -333,6 +338,18 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 color: settings.bodyColor || '#666666',
                 backgroundColor: settings.backgroundColor || '#ffffff'
             };
+            const getFunnelPageSettings = (key) => {
+                const pageColors = settings[`${key}PageColors`] || {};
+                return {
+                    ...settings,
+                    ...pageColors,
+                    pageSurfaceColor: pageColors.surfaceColor || '#ffffff',
+                    pageBorderColor: pageColors.borderColor || `${pageColors.headingColor || settings.headingColor || '#000000'}1A`
+                };
+            };
+            const cartPageSettings = getFunnelPageSettings('cart');
+            const checkoutPageSettings = getFunnelPageSettings('checkout');
+            const successPageSettings = getFunnelPageSettings('success');
             const nativeAccent = Boolean(settings.nativeAccent);
             const nativeAccentFillClass = nativeAccent ? 'booking-gradient-accent' : '';
             const nativeAccentButtonClass = nativeAccent ? 'booking-gradient-button' : '';
@@ -342,6 +359,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 ? settings.interfaceStyleDirection
                 : 'native-precision';
             const styleDirectionClass = `booking-style-${styleDirection}`;
+            const isCommandFlow = styleDirection === 'command-flow';
             const nativePrecisionHeroLayout = ['native-precision', 'command-flow'].includes(styleDirection)
                 ? {
                     logoDisplay: { alignment: 'left', size: 104, placement: 'badge' },
@@ -387,7 +405,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             const dateStyle = getVisualStyle(settings.dateStyle || settings.availabilityStyle, 'minimal');
             const timeSlotStyle = getVisualStyle(settings.timeSlotStyle || settings.availabilityStyle, 'minimal');
             const actionButtonStyle = getVisualStyle(settings.actionButtonStyle, 'solid');
-            const faqStyle = getVisualStyle(settings.faqStyle, 'minimal');
+            const faqStyle = isCommandFlow ? 'minimal' : getVisualStyle(settings.faqStyle, 'minimal');
             const socialIconStyle = getVisualStyle(settings.socialIconStyle, 'outline');
             const serviceDisplaySetting = nativePrecisionHeroLayout?.serviceDisplayStyle || settings.serviceDisplayStyle;
             const serviceDisplayStyle = ['signature', 'cards', 'menu', 'gallery', 'compact', 'luxury'].includes(serviceDisplaySetting)
@@ -399,7 +417,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             const calendarDisplayStyle = getDisplayLook('calendar', settings.calendarDisplayStyle, 'studio');
             const calendarNativeFillLooks = new Set(['studio', 'glow']);
             const timeDisplayStyle = getDisplayLook('time', settings.timeDisplayStyle, 'pill');
-            const faqDisplayStyle = getDisplayLook('faq', settings.faqDisplayStyle, 'accordion');
+            const faqDisplayStyle = isCommandFlow ? 'accordion' : getDisplayLook('faq', settings.faqDisplayStyle, 'accordion');
             const venueGalleryStyle = getDisplayLook('venue', settings.venueGalleryStyle, 'mosaic');
             const mapDisplayStyle = getDisplayLook('maps', settings.mapDisplayStyle, 'card');
             const socialDisplayStyle = getDisplayLook('social', settings.socialDisplayStyle, 'icons');
@@ -424,35 +442,35 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 settings.socials?.instagram && socialPlatformIsVisible('instagram') && {
                     key: 'instagram',
                     label: 'Instagram',
-                    href: `https://instagram.com/${normalizeHandle(settings.socials.instagram).replace(/^instagram\.com\//i, '')}`,
-                    icon: Instagram
+                    href: `https://instagram.com/${normalizeHandle(settings.socials.instagram).replace(/^instagram\.com\//i, '')}`
                 },
                 settings.socials?.tiktok && socialPlatformIsVisible('tiktok') && {
                     key: 'tiktok',
                     label: 'TikTok',
-                    href: `https://www.tiktok.com/@${normalizeHandle(settings.socials.tiktok).replace(/^tiktok\.com\/@?/i, '')}`,
-                    icon: Globe
+                    href: `https://www.tiktok.com/@${normalizeHandle(settings.socials.tiktok).replace(/^tiktok\.com\/@?/i, '')}`
                 },
                 settings.socials?.facebook && socialPlatformIsVisible('facebook') && {
                     key: 'facebook',
                     label: 'Facebook',
-                    href: `https://facebook.com/${normalizeHandle(settings.socials.facebook).replace(/^(facebook|fb)\.com\//i, '')}`,
-                    icon: Globe
+                    href: `https://facebook.com/${normalizeHandle(settings.socials.facebook).replace(/^(facebook|fb)\.com\//i, '')}`
                 },
                 settings.socials?.website && socialPlatformIsVisible('website') && {
                     key: 'website',
                     label: 'Website',
-                    href: normalizeWebsite(settings.socials.website),
-                    icon: Globe
+                    href: normalizeWebsite(settings.socials.website)
                 }
             ].filter(Boolean) : [];
             const venuePhotos = Array.isArray(settings.venuePhotos)
                 ? settings.venuePhotos.filter(Boolean).slice(0, 8)
                 : [];
-            const venueLocation = (settings.features?.location || settings.address || '').trim();
-            const venueMapHref = venueLocation
-                ? (/^https?:\/\//i.test(venueLocation) ? venueLocation : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueLocation)}`)
-                : '';
+            const venueMapPlace = settings.mapPlace && typeof settings.mapPlace === 'object' ? settings.mapPlace : null;
+            const venueMapLabel = getMapPlaceLabel(venueMapPlace, settings.address || settings.features?.location || '');
+            const venueMapHref = buildGoogleMapsDirectionsUrl({
+                address: settings.address || '',
+                location: settings.features?.location || '',
+                mapPlace: venueMapPlace
+            });
+            const venueMapEmbedSrc = buildGoogleMapsEmbedUrl(venueMapPlace);
             const amountInCents = useMemo(() => (
                 parseCheckoutAmountToCents(selectedService?.price, selectedService?.priceType)
             ), [selectedService?.price, selectedService?.priceType]);
@@ -960,9 +978,23 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                     previewInspectEnabled={previewInspectEnabled}
                     sectionOrder={1}
                     setFormData={setFormData}
-                    settings={settings}
+                    settings={checkoutPageSettings}
                     showServiceStep={false}
                     layout="checkout"
+                />
+            );
+
+            const socialLinksContent = (
+                <BookingSocialLinks
+                    inspectClass={inspectClass}
+                    isPreview={isPreview}
+                    onInspect={onInspect}
+                    previewInspectEnabled={previewInspectEnabled}
+                    previewSocialLinks={previewSocialLinks}
+                    settings={settings}
+                    socialDisplayStyle={socialDisplayStyle}
+                    socialIconStyle={socialIconStyle}
+                    socialLinks={socialLinks}
                 />
             );
 
@@ -979,21 +1011,13 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         settings={settings}
                         subtextLetterSpacing={subtextLetterSpacing}
                         venueGalleryStyle={venueGalleryStyle}
+                        venueMapEmbedSrc={venueMapEmbedSrc}
                         venueMapHref={venueMapHref}
+                        venueMapLabel={venueMapLabel}
                         venuePhotos={venuePhotos}
                     />
                     {renderFooterMedia()}
-                    <BookingSocialLinks
-                        inspectClass={inspectClass}
-                        isPreview={isPreview}
-                        onInspect={onInspect}
-                        previewInspectEnabled={previewInspectEnabled}
-                        previewSocialLinks={previewSocialLinks}
-                        settings={settings}
-                        socialDisplayStyle={socialDisplayStyle}
-                        socialIconStyle={socialIconStyle}
-                        socialLinks={socialLinks}
-                    />
+                    {socialLinksContent}
                 </div>
             );
 
@@ -1004,7 +1028,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         actionButtonStyle={actionButtonStyle}
                         actionOrder={selectionActionOrder}
                         canContinue={canContinueToCart}
-                        ctaLabel="Add booking to cart"
+                        ctaLabel={settings.bookingCtaLabel || 'Add booking to cart'}
                         footerContent={footerContent}
                         heroContent={heroContent}
                         inspectClass={inspectClass}
@@ -1031,7 +1055,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         selectedService={selectedServiceForSummary}
                         selectedStaff={selectedStaffForSummary}
                         selectedTime={selectedTime}
-                        settings={settings}
+                        settings={cartPageSettings}
                     />
                 )}
 
@@ -1054,7 +1078,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         selectedPaymentOptionId={selectedManualPayment}
                         setFormData={setFormData}
                         setSelectedPaymentOptionId={setSelectedManualPayment}
-                        settings={settings}
+                        settings={checkoutPageSettings}
                         submitError={submitError}
                     />
                 )}
@@ -1085,7 +1109,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         selectedManualPaymentOption={selectedManualPaymentOption}
                         selectedTime={selectedTime}
                         setStep={setStep}
-                        settings={settings}
+                        settings={successPageSettings}
                         submittedBooking={submittedBooking}
                         subtextLetterSpacing={subtextLetterSpacing}
                     />

@@ -293,6 +293,15 @@ export function useEditorRuntime({ activeTab, setEditorTab, sidebarCollapsed }) 
     const normalizedRoomId = getEditorRoomId(roomId);
     setStudioModal(normalizedRoomId);
     setEditorTab(normalizedRoomId);
+    if (normalizedRoomId === 'cart') {
+      setPreviewStep('cart');
+    } else if (normalizedRoomId === 'checkout' || normalizedRoomId === 'client-form') {
+      setPreviewStep('details');
+    } else if (normalizedRoomId === 'success') {
+      setPreviewStep('success');
+    } else if (normalizedRoomId === 'introduction') {
+      setPreviewStep('select');
+    }
     playStudioSound('step');
   };
 

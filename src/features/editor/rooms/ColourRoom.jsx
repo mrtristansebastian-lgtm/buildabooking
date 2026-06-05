@@ -11,7 +11,9 @@ export function ColourRoom({
   onBack,
   onNativeAccentChange,
   onResetColors,
-  onSelectCategory
+  onSelectCategory,
+  onUseBookingColors,
+  scopeLabel
 }) {
   if (activeGroup) {
     return (
@@ -94,13 +96,20 @@ export function ColourRoom({
     <div className="palette-flow-room color-system-room">
       <div className="editor-color-sync-note">
         <span><Pipette size={14} /></span>
-        <p>Logo colours appear as small options after brand media is uploaded.</p>
-        <button type="button" onClick={onResetColors}>
-          <RefreshCw size={14} />
-          Reset colours
-        </button>
+        <p>{scopeLabel ? `${scopeLabel} has its own colours.` : 'Logo colours appear as small options after brand media is uploaded.'}</p>
+        {onUseBookingColors ? (
+          <button type="button" onClick={onUseBookingColors}>
+            <RefreshCw size={14} />
+            Use Booking colours
+          </button>
+        ) : (
+          <button type="button" onClick={onResetColors}>
+            <RefreshCw size={14} />
+            Reset colours
+          </button>
+        )}
       </div>
-      <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
+      {!onUseBookingColors && <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
         <button type="button" onClick={() => onNativeAccentChange(true)} className={nativeAccent ? 'is-active' : ''}>
           <span>Native gradient</span>
           <small>Build A Booking glow</small>
@@ -109,7 +118,7 @@ export function ColourRoom({
           <span>Custom accents</span>
           <small>Use manual colours</small>
         </button>
-      </div>
+      </div>}
       <div className="cinema-control-title is-compact">
         <span>Element colour board</span>
         <small>Choose a category to edit its colours.</small>

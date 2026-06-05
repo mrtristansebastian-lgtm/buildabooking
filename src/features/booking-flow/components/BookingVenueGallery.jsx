@@ -12,10 +12,14 @@ export const BookingVenueGallery = ({
     settings,
     subtextLetterSpacing,
     venueGalleryStyle,
+    venueMapEmbedSrc,
     venueMapHref,
+    venueMapLabel,
     venuePhotos
 }) => {
-    if (venuePhotos.length === 0 && !(venueMapHref && mapDisplayStyle !== 'none') && !isPreview) return null;
+    const shouldShowMap = mapDisplayStyle !== 'none' && (venueMapHref || venueMapEmbedSrc);
+
+    if (venuePhotos.length === 0 && !shouldShowMap && !isPreview) return null;
 
     return (
         <section
@@ -91,6 +95,23 @@ export const BookingVenueGallery = ({
                             )}
                         </figure>
                     ))}
+                </div>
+            )}
+            {venueMapEmbedSrc && mapDisplayStyle !== 'none' && (
+                <div
+                    className={`booking-map-embed booking-map-${mapDisplayStyle}`}
+                    style={{
+                        borderColor: `${settings.headingColor || '#000000'}18`,
+                        backgroundColor: `${settings.headingColor || '#000000'}06`
+                    }}
+                >
+                    <iframe
+                        title={`Map for ${venueMapLabel || settings.brandName || 'business location'}`}
+                        src={venueMapEmbedSrc}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        allowFullScreen
+                    />
                 </div>
             )}
             {venueMapHref && mapDisplayStyle !== 'none' && (

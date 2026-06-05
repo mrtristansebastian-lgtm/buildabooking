@@ -5,6 +5,8 @@ export { useAuthSession } from './hooks/useAuthSession';
 export {
   createGoogleProvider,
   getGoogleAccessTokenFromResult,
+  hasGoogleIdentityClient,
   shouldUseRedirectGoogleAuth,
+  signInWithGoogleIdentity,
   signInWithNativeGoogle
 } from './utils/authGoogle';

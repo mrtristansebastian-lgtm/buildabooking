@@ -16,7 +16,9 @@ import {
 } from '../../../utils/workspaceRoute';
 import {
   createGoogleProvider,
+  hasGoogleIdentityClient,
   shouldUseRedirectGoogleAuth,
+  signInWithGoogleIdentity,
   signInWithNativeGoogle,
   signOutNativeGoogle
 } from '../utils/authGoogle';
@@ -187,6 +189,17 @@ export function useAuthActions({
       }
       if (shouldUseRedirectGoogleAuth()) {
         await startGoogleRedirect(returnRoute);
+        return;
+      }
+      if (hasGoogleIdentityClient()) {
+        await applyAuthPersistence(keepLoggedIn);
+        await signInWithGoogleIdentity(auth);
+        setGuestMode(false);
+        setClientGuestMode(false);
+        safeLocalRemove(guestModeStorageKey);
+        setAuthPanelOpen(false);
+        applyWorkspaceRoute(returnRoute);
+        showToast('Signed in with Google');
         return;
       }
       clearAuthReturnState();

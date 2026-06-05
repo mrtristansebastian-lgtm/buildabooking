@@ -50,14 +50,14 @@ export const editorStyleDirections = [
       timeSlotGlow: true,
       actionButtonStyle: 'solid',
       buttonStyle: 'pill',
-      faqDisplayStyle: 'numbered',
-      faqStyle: 'outline',
+      faqDisplayStyle: 'accordion',
+      faqStyle: 'minimal',
       venueGalleryStyle: 'filmstrip',
       mapDisplayStyle: 'dock',
       socialDisplayStyle: 'dock',
       socialIconStyle: 'solid'
     },
-    sections: ['Dropdown services', 'Compact calendar', 'Session blocks', 'Numbered FAQ', 'Fast action', 'Venue reel', 'Social dock']
+    sections: ['Dropdown services', 'Compact calendar', 'Session blocks', 'Accordion FAQ', 'Fast action', 'Venue reel', 'Social dock']
   }
 ];
 

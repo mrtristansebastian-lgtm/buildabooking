@@ -4,16 +4,18 @@ import { normalizeHexColor } from '../../../utils/theme';
 import { EditorLaunchControls } from '../components/EditorLaunchControls';
 import { EditorPreviewWorkspace } from '../components/EditorPreviewWorkspace';
 import { EditorSettingsPanel } from '../components/EditorSettingsPanel';
-import { editorRoomScenes } from '../config/editorRoomScenes';
+import { getEditorRoomScenesForPreviewStep } from '../config/editorRoomScenes';
 import {
   ClientFormRoom,
   ColourRoom,
-  IntroductionRoom,
+  FaqRoom,
+  FunnelTextRoom,
   StyleDirectionRoom,
   TypographyRoom
 } from '../rooms';
 import {
   buildEditorColourFineTuneGroups,
+  getBookingPageColourScheme,
   getDetectedBrandSwatches
 } from '../utils/editorColourSystem';
 
@@ -28,11 +30,19 @@ export function EditorPage({
   staffList = []
 }) {
   const detectedBrandSwatches = getDetectedBrandSwatches(colour.detectedBrandSignal);
+  const pageColourKeys = {
+    cart: { key: 'cartPageColors', label: 'Cart' },
+    details: { key: 'checkoutPageColors', label: 'Checkout' },
+    success: { key: 'successPageColors', label: 'Success' }
+  };
+  const activePageColour = pageColourKeys[preview.previewStep] || null;
   const colourGroups = buildEditorColourFineTuneGroups({
     settings,
-    applyColorPatch: colour.onApplyPatch
+    applyColorPatch: colour.onApplyPatch,
+    previewStep: preview.previewStep
   });
   const activeColourGroup = colourGroups.find(group => group.id === colour.categoryId) || null;
+  const activeEditorRoomScenes = getEditorRoomScenesForPreviewStep(preview.previewStep);
   const applyControlColor = (control, color) => {
     const hex = normalizeHexColor(color, '');
     if (!control || !hex) return;
@@ -45,7 +55,7 @@ export function EditorPage({
       <EditorSettingsPanel
         editorCollapsed={editor.collapsed}
         editorContentRef={editor.contentRef}
-        editorRoomScenes={editorRoomScenes}
+        editorRoomScenes={activeEditorRoomScenes}
         editorStudioModal={editor.studioModal}
         onCloseSettings={() => editor.setStudioModal(null)}
         openEditorRoom={actions.openRoom}
@@ -81,6 +91,11 @@ export function EditorPage({
                 onNativeAccentChange={(value) => actions.onSettingChange('nativeAccent', value)}
                 onResetColors={colour.onReset}
                 onSelectCategory={colour.setCategoryId}
+                onUseBookingColors={activePageColour ? () => {
+                  colour.onApplyPatch({ [activePageColour.key]: getBookingPageColourScheme(settings) });
+                  actions.showToast(`${activePageColour.label} colours now match Booking.`);
+                } : null}
+                scopeLabel={activePageColour?.label || ''}
               />
             )}
 
@@ -92,20 +107,55 @@ export function EditorPage({
             )}
 
             {activeScene.id === 'introduction' && (
-              <IntroductionRoom
+              <FunnelTextRoom
+                page="introduction"
                 settings={settings}
                 onSettingChange={actions.onSettingChange}
               />
             )}
 
-            {activeScene.id === 'form' && (
+            {activeScene.id === 'cart' && (
+              <FunnelTextRoom
+                page="cart"
+                settings={settings}
+                onSettingChange={actions.onSettingChange}
+              />
+            )}
+
+            {activeScene.id === 'checkout' && (
+              <FunnelTextRoom
+                page="checkout"
+                settings={settings}
+                onSettingChange={actions.onSettingChange}
+              />
+            )}
+
+            {activeScene.id === 'client-form' && (
               <ClientFormRoom
                 collectsClientEmail={form.collectsClientEmail}
                 collectsClientNotes={form.collectsClientNotes}
                 collectsClientPhone={form.collectsClientPhone}
                 emailUpdatesEnabled={form.emailUpdatesEnabled}
-                settings={settings}
                 onFeatureChange={actions.onFeatureChange}
+                settings={settings}
+              />
+            )}
+
+            {activeScene.id === 'faq' && (
+              <FaqRoom
+                onAddFaqItem={actions.addFaqItem}
+                onRemoveFaqItem={actions.removeFaqItem}
+                onToggleFaqFeature={actions.toggleFaqFeature}
+                onUpdateFaqItem={actions.updateFaqItem}
+                settings={settings}
+              />
+            )}
+
+            {activeScene.id === 'success' && (
+              <FunnelTextRoom
+                page="success"
+                settings={settings}
+                onSettingChange={actions.onSettingChange}
               />
             )}
           </>
@@ -130,7 +180,7 @@ export function EditorPage({
         editorPreviewScrollRef={preview.scrollRef}
         editorPreviewSettings={preview.settings}
         editorRoomNavOffset={preview.roomNavOffset}
-        editorRoomScenes={editorRoomScenes}
+        editorRoomScenes={activeEditorRoomScenes}
         editorStudioModal={editor.studioModal}
         endEditorRoomNavDrag={preview.endRoomNavDrag}
         handleAddToHomeScreen={actions.onAddToHomeScreen}

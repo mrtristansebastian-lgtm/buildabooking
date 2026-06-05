@@ -29,24 +29,20 @@ export const previewServiceSamples = [
 
 export const previewFaqItems = [
   {
-    q: 'Question title',
-    a: 'Helpful answer text appears here so FAQ styling can be tuned before real questions are added.',
+    q: 'How do I know my booking is confirmed?',
+    a: 'Your request is sent to the business first. Once they approve the slot, your booking status and updates are handled from the booking page flow.',
     isPreviewPlaceholder: true
   },
   {
-    q: 'Booking policy',
-    a: 'Add the real policy later.',
-    isPreviewPlaceholder: true
-  },
-  {
-    q: 'Before you arrive',
-    a: 'Add preparation notes later.',
+    q: 'What happens if payment is needed?',
+    a: 'You can place the booking request first. If the business needs payment, the checkout step or follow-up instructions will guide you clearly.',
     isPreviewPlaceholder: true
   }
 ];
 
-export const createPreviewSocialLinks = ({ Instagram, Globe }) => [
-  { key: 'preview-instagram', label: 'Instagram', href: '#', icon: Instagram, isPreviewPlaceholder: true },
-  { key: 'preview-tiktok', label: 'TikTok', href: '#', icon: Globe, isPreviewPlaceholder: true },
-  { key: 'preview-website', label: 'Website', href: '#', icon: Globe, isPreviewPlaceholder: true }
+export const createPreviewSocialLinks = () => [
+  { key: 'preview-instagram', label: 'Instagram', href: '#', isPreviewPlaceholder: true },
+  { key: 'preview-tiktok', label: 'TikTok', href: '#', isPreviewPlaceholder: true },
+  { key: 'preview-facebook', label: 'Facebook', href: '#', isPreviewPlaceholder: true },
+  { key: 'preview-website', label: 'Website', href: '#', isPreviewPlaceholder: true }
 ];

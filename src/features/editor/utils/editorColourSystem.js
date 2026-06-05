@@ -7,7 +7,70 @@ export const getDetectedBrandSwatches = (detectedBrandSignal) => Array.from(new 
   ...(detectedBrandSignal?.colors || [])
 ].map(color => normalizeHexColor(color, '')).filter(Boolean))).slice(0, 8);
 
-export const buildEditorColourFineTuneGroups = ({ settings, applyColorPatch }) => [
+const pageColorKeys = {
+  cart: { title: 'Cart colours', key: 'cartPageColors' },
+  details: { title: 'Checkout colours', key: 'checkoutPageColors' },
+  success: { title: 'Success colours', key: 'successPageColors' }
+};
+
+const bookingColourFallbacks = (settings) => ({
+  backgroundColor: settings.backgroundColor || '#ffffff',
+  headingColor: settings.headingColor || '#050505',
+  bodyColor: settings.bodyColor || '#666666',
+  primaryColor: settings.primaryColor || '#050505',
+  buttonTextColor: settings.buttonTextColor || '#ffffff',
+  surfaceColor: '#ffffff',
+  borderColor: '#0000001A'
+});
+
+export const getBookingPageColourScheme = (settings) => bookingColourFallbacks(settings);
+
+export const getPageColourScheme = (settings, previewStep) => {
+  const page = pageColorKeys[previewStep];
+  return page ? { ...bookingColourFallbacks(settings), ...(settings[page.key] || {}) } : bookingColourFallbacks(settings);
+};
+
+export const buildEditorColourFineTuneGroups = ({ settings, applyColorPatch, previewStep = 'select' }) => {
+  const page = pageColorKeys[previewStep];
+  if (page) {
+    const values = getPageColourScheme(settings, previewStep);
+    const applyPageColorPatch = (patch) => applyColorPatch({
+      [page.key]: {
+        ...(settings[page.key] || {}),
+        ...patch
+      }
+    });
+
+    return [
+      {
+        id: 'page-base',
+        title: page.title,
+        controls: [
+          { id: 'page-bg', label: 'Background', note: 'This page background only.', value: values.backgroundColor, fallback: '#ffffff', onApply: (color) => applyPageColorPatch({ backgroundColor: color }) },
+          { id: 'page-surface', label: 'Surface', note: 'Cards and panels on this page.', value: values.surfaceColor, fallback: '#ffffff', onApply: (color) => applyPageColorPatch({ surfaceColor: color }) },
+          { id: 'page-line', label: 'Lines', note: 'Borders and dividers on this page.', value: values.borderColor, fallback: '#000000', onApply: (color) => applyPageColorPatch({ borderColor: color }) }
+        ]
+      },
+      {
+        id: 'page-type',
+        title: 'Page Text',
+        controls: [
+          { id: 'page-heading', label: 'Heading text', note: 'Titles and strong labels on this page.', value: values.headingColor, fallback: '#050505', onApply: (color) => applyPageColorPatch({ headingColor: color }) },
+          { id: 'page-body', label: 'Body text', note: 'Helper copy and muted labels on this page.', value: values.bodyColor, fallback: '#666666', onApply: (color) => applyPageColorPatch({ bodyColor: color }) }
+        ]
+      },
+      {
+        id: 'page-action',
+        title: 'Page Action',
+        controls: [
+          { id: 'page-accent', label: 'Button fill', note: 'Primary action and selected states on this page.', value: values.primaryColor, fallback: '#050505', onApply: (color) => applyPageColorPatch({ primaryColor: color }) },
+          { id: 'page-button-text', label: 'Button text', note: 'Primary action label on this page.', value: values.buttonTextColor, fallback: '#ffffff', onApply: (color) => applyPageColorPatch({ buttonTextColor: color }) }
+        ]
+      }
+    ];
+  }
+
+  return [
   {
     id: 'base',
     title: 'Base',
@@ -66,3 +129,4 @@ export const buildEditorColourFineTuneGroups = ({ settings, applyColorPatch }) =
     ]
   }
 ];
+};

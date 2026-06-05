@@ -36,7 +36,6 @@ export const ProfilePage = ({
   profileSystemFilter,
   profileSystemFilterOptions,
   referralUrl,
-  removeFaqItem,
   removePersonalProfilePhoto,
   removeSettingImage,
   removeVenuePhoto,
@@ -47,9 +46,6 @@ export const ProfilePage = ({
   setShowOwnerManual,
   settings,
   showToast,
-  toggleFaqFeature,
-  updateFaqItem,
-  addFaqItem,
   updatePersonalProfile,
   user,
   venuePhotos,
@@ -121,18 +117,14 @@ export const ProfilePage = ({
       />
       <ProfileBusinessSection
         activeProfileSection={activeProfileSection}
-        onAddFaqItem={addFaqItem}
         onCopyReferral={copyToClipboard}
         onImageCrop={openSettingImageCrop}
         onImageRemove={removeSettingImage}
         onImageUpload={handleSettingImageUpload}
         onOpenStyleRoom={onOpenStyleRoom}
-        onRemoveFaqItem={removeFaqItem}
         onRemoveVenuePhoto={removeVenuePhoto}
         onSaveProfile={saveProfileChanges}
         onSettingChange={handleSettingChange}
-        onToggleFaqFeature={toggleFaqFeature}
-        onUpdateFaqItem={updateFaqItem}
         onVenuePhotoUpload={handleVenuePhotoUpload}
         referralUrl={referralUrl}
         settings={settings}

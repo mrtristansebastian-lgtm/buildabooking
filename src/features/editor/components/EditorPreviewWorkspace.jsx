@@ -69,13 +69,15 @@ export const EditorPreviewWorkspace = ({
   };
   const previewStepLocksScroll = previewStep && previewStep !== 'select';
   const previewSteps = [
-    { id: 'select', label: 'Booking' },
-    { id: 'cart', label: 'Cart' },
-    { id: 'details', label: 'Checkout' },
-    { id: 'success', label: 'Success' }
+    { id: 'select', label: 'Booking', roomId: 'introduction' },
+    { id: 'cart', label: 'Cart', roomId: 'cart' },
+    { id: 'details', label: 'Checkout', roomId: 'checkout' },
+    { id: 'success', label: 'Success', roomId: 'success' }
   ];
   const handlePreviewStepChange = (stepId) => {
     setPreviewStep?.(stepId);
+    const roomId = previewSteps.find(step => step.id === stepId)?.roomId;
+    if (roomId) openEditorRoom?.(roomId);
     requestAnimationFrame(() => {
       if (editorPreviewScrollRef?.current) {
         editorPreviewScrollRef.current.scrollTop = 0;

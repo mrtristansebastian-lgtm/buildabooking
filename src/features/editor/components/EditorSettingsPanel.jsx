@@ -68,7 +68,7 @@ export const EditorSettingsPanel = ({
                 </div>
 
                 <div className="editor-cinema-stage-body">
-                  <div className={`editor-cinema-control-panel ${['colours', 'introduction', 'form'].includes(activeScene.id) ? 'editor-cinema-control-panel-flush' : ''}`}>
+                  <div className={`editor-cinema-control-panel ${['colours', 'introduction', 'client-form'].includes(activeScene.id) ? 'editor-cinema-control-panel-flush' : ''}`}>
                     {children({ activeScene })}
                   </div>
                 </div>

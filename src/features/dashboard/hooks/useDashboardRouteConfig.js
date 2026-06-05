@@ -229,12 +229,16 @@ export function useDashboardRouteConfig({
           actions: {
             applyFontStylePreset: settingsState.applyFontStylePreset,
             applyStyleDirection: settingsState.applyEditorStyleDirection,
+            addFaqItem: settingsState.addFaqItem,
             onAddToHomeScreen: app.handleAddToHomeScreen,
             onBookingComplete: booking.actions.handleBookingComplete,
             onFeatureChange: settingsState.handleFeatureChange,
             onSettingChange: settingsState.handleSettingChange,
             onSettingImageUpload: media.handleSettingImageUpload,
-            showToast
+            removeFaqItem: settingsState.removeFaqItem,
+            showToast,
+            toggleFaqFeature: settingsState.toggleFaqFeature,
+            updateFaqItem: settingsState.updateFaqItem
           },
           bookingPage: {
             copyToClipboard: app.copyToClipboard,

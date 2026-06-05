@@ -105,13 +105,15 @@ export const GatewaySettingsModal = ({
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div>
                 <p className="text-sm text-neutral-500 max-w-xl">{selectedGateway.note}</p>
-                  <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
+                <div className="mt-3 flex max-w-full flex-wrap items-center gap-2">
+                  <p className="inline-flex min-h-8 max-w-full items-center gap-2 rounded-full bg-neutral-50 border border-neutral-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-400 leading-none">
                     <LockKeyhole size={13} /> {isManualGateway ? (isCashGateway ? 'No API keys needed' : 'Bank details show to clients') : 'Secrets save through Cloud Functions'}
                   </p>
-                  <p className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[9px] font-bold uppercase tracking-widest ${isEnableBlocked ? 'border-amber-200 bg-amber-50 text-amber-700' : selectedDraft.enabled ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-neutral-100 bg-white text-neutral-400'}`}>
+                  <p className={`inline-flex min-h-8 max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest leading-none ${isEnableBlocked ? 'border-amber-200 bg-amber-50 text-amber-700' : selectedDraft.enabled ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-neutral-100 bg-white text-neutral-400'}`}>
                     {readinessLabel}
                   </p>
                 </div>
+              </div>
               <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-100 bg-neutral-50 p-3 md:min-w-[220px]">
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">{isManualGateway ? 'Payment method' : 'Gateway'}</p>

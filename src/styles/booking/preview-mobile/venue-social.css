@@ -39,6 +39,11 @@
             line-height: 1.02;
         }
 
+        .editor-preview-frame.is-mobile-preview .booking-map-embed {
+            height: 12rem;
+            border-radius: 0.9rem;
+        }
+
         .editor-preview-frame.is-mobile-preview .booking-social-links {
             gap: 0.5rem !important;
         }
