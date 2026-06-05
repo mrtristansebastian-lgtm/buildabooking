@@ -595,6 +595,170 @@
         text-align: center !important;
     }
 
+    .booking-flow-public.booking-style-command-flow .booking-preview-media-drop,
+    .booking-flow-public.booking-style-command-flow .booking-preview-media-add,
+    .booking-flow-public.booking-style-command-flow .booking-hero-media,
+    .booking-flow-public.booking-style-command-flow .booking-hero-logo-badge,
+    .booking-flow-public.booking-style-command-flow .booking-service-dropdown-trigger,
+    .booking-flow-public.booking-style-command-flow [data-preview-section="calendar"] button,
+    .booking-flow-public.booking-style-command-flow [data-preview-section="time"] button,
+    .booking-flow-public.booking-style-command-flow .booking-faq-item,
+    .booking-flow-public.booking-style-command-flow .booking-faq-icon {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow [data-preview-section="calendar"] button {
+        color: #111827 !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow .booking-calendar-look {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        height: 6.8rem !important;
+        max-height: 6.8rem !important;
+        overflow-y: hidden !important;
+        overflow-x: auto !important;
+        padding-bottom: 0 !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow [data-preview-section="calendar"] > .relative {
+        height: 7.35rem !important;
+        overflow: visible !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow .booking-calendar-look > button {
+        min-width: 4.75rem !important;
+        width: 4.75rem !important;
+        min-height: 5.95rem !important;
+        height: 5.95rem !important;
+    }
+
+    .booking-flow-public.booking-style-native-precision .booking-calendar-look {
+        padding-left: 0.55rem !important;
+        padding-right: 0.55rem !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow [data-preview-section="calendar"] button[aria-pressed="true"],
+    .booking-flow-public.booking-style-command-flow [data-preview-section="calendar"] button.is-selected {
+        background: #050505 !important;
+        border-color: #050505 !important;
+        color: #ffffff !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow .booking-social-links a,
+    .booking-flow-public.booking-style-command-flow .booking-social-links a span {
+        color: #111827 !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-page-hero {
+        text-align: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-hero-media,
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-preview-media-drop.booking-hero-media {
+        height: min(calc(var(--hero-media-height, 220px) * 0.6), 19rem) !important;
+        min-height: 7.4rem !important;
+    }
+
+    .booking-flow-public.booking-style-command-flow .booking-page-hero.banner-placement-top {
+        margin-top: 0 !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-hero-kicker {
+        width: min(100%, 40rem);
+        justify-content: center !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-hero-kicker-rule {
+        flex: 1 1 3rem;
+        max-width: 5.25rem;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-hero-copy {
+        justify-items: center !important;
+        align-items: center !important;
+        text-align: center !important;
+        max-width: min(100%, 46rem);
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-hero-title-lockup {
+        width: 100%;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-hero-title {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section] {
+        text-align: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section] > .flex {
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section="calendar"] > .flex {
+        flex-direction: column !important;
+        justify-content: center !important;
+        gap: 1rem !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-calendar-actions {
+        justify-content: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section] h2,
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section] h3,
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section] h4,
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) [data-preview-section] p {
+        text-align: center !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-services-wrap,
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-services-dropdown {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-service-title-line,
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-service-copy {
+        text-align: left !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-venue-gallery-header {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-venue-gallery-copy {
+        width: 100%;
+        max-width: 42rem;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        text-align: center !important;
+    }
+
+    .booking-flow-public:is(.booking-style-native-precision, .booking-style-command-flow) .booking-venue-gallery-intro {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        text-align: center !important;
+    }
+
     .booking-date-picker-backdrop {
         position: fixed;
         z-index: 1200;
