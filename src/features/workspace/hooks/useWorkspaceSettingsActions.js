@@ -3,6 +3,7 @@ import { createWorkspacePersistenceActions } from '../actions/workspacePersisten
 
 export function useWorkspaceSettingsActions({
   accountProfileKey,
+  activeStaffId,
   canManageTeam,
   canManageWorkspace,
   clearWorkspaceDirty,
@@ -22,6 +23,7 @@ export function useWorkspaceSettingsActions({
   showToast,
   staffList,
   user,
+  workspaceRole,
   workspaceOwnerId
 }) {
   const editorActions = createEditorSettingActions({
@@ -34,6 +36,7 @@ export function useWorkspaceSettingsActions({
 
   const persistenceActions = createWorkspacePersistenceActions({
     accountProfileKey,
+    activeStaffId,
     canManageTeam,
     canManageWorkspace,
     clearWorkspaceDirty,
@@ -51,6 +54,7 @@ export function useWorkspaceSettingsActions({
     showToast,
     staffList,
     user,
+    workspaceRole,
     workspaceOwnerId
   });
 

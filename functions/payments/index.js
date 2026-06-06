@@ -20,12 +20,9 @@ const {
   requireBusinessId
 } = require('./shared');
 const webhooks = require('./webhooks');
+const { cappedMaxInstances } = require('../runtimeOptions');
 
 const serverTimestamp = () => admin.firestore.FieldValue.serverTimestamp();
-const cappedMaxInstances = (value, fallback) => Math.min(
-  20,
-  Math.max(1, Number(value || fallback))
-);
 const paymentCallableOptions = {
   region: 'us-central1',
   timeoutSeconds: 30,

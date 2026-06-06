@@ -1,9 +1,9 @@
-import { Capacitor } from '@capacitor/core';
-import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import * as FirebaseSDK from '../../../services/firebase';
 import { GOOGLE_CALENDAR_EVENTS_SCOPE } from '../../../services/googleCalendar';
 
 const GOOGLE_IDENTITY_CLIENT_ID = (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '').trim();
+const FirebaseAuthentication = registerPlugin('FirebaseAuthentication');
 
 let googleIdentityPromise = null;
 

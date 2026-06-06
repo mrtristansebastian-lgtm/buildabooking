@@ -47,6 +47,22 @@ export const buildPublicBookingIdempotencyKey = ({ workspaceSlug, formData = {},
     .slice(0, 180);
 };
 
+export const buildOwnerBookingIdempotencyKey = ({ ownerId, booking = {} }) => {
+  const identity = normalizeEmail(booking.clientEmail || '') || String(booking.clientPhone || booking.clientName || 'client').trim().toLowerCase();
+  return [
+    ownerId || 'workspace',
+    booking.source || 'owner-booking',
+    identity || 'client',
+    booking.serviceId || booking.serviceName || 'service',
+    booking.staffId || 'staff',
+    booking.dateKey || booking.date || 'date',
+    booking.time || 'time'
+  ]
+    .join('|')
+    .replace(/[^a-zA-Z0-9|@._:-]/g, '-')
+    .slice(0, 180);
+};
+
 export const createBookingRecordFromFlow = ({ formData, date, dateKey, status, time, extra = {} }) => ({
   clientName: formData.name,
   clientPhone: formData.phone,

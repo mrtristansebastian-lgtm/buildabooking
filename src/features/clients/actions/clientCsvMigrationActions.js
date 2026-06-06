@@ -2,6 +2,7 @@ import * as FirebaseSDK from '../../../services/firebase';
 import { appId, db, isFirebaseConfigured } from '../../../services/firebase';
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
+const WRITE_BATCH_LIMIT = 400;
 
 const getTimestampValue = (value) => {
   if (typeof value === 'number') return value;
@@ -27,6 +28,28 @@ export function createClientCsvMigrationActions({
   visibleBookings,
   workspaceOwnerId
 }) {
+  const commitBookingImportRows = async (bookings = []) => {
+    for (let index = 0; index < bookings.length; index += WRITE_BATCH_LIMIT) {
+      const batch = FirebaseSDK.writeBatch(db);
+      bookings.slice(index, index + WRITE_BATCH_LIMIT).forEach((booking) => {
+        const { id, ...bookingPayload } = booking;
+        batch.set(
+          FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', id),
+          bookingPayload
+        );
+      });
+      await batch.commit();
+    }
+  };
+
+  const commitBookingDeletes = async (docs = []) => {
+    for (let index = 0; index < docs.length; index += WRITE_BATCH_LIMIT) {
+      const batch = FirebaseSDK.writeBatch(db);
+      docs.slice(index, index + WRITE_BATCH_LIMIT).forEach(docSnap => batch.delete(docSnap.ref));
+      await batch.commit();
+    }
+  };
+
   const getImportedClientKey = (client = {}) => {
     const emailKey = normalizeEmail(client.email || '');
     const phoneKey = String(client.phone || '').replace(/\D/g, '');
@@ -113,13 +136,7 @@ export function createClientCsvMigrationActions({
         importedClients.length ? saveClients(nextClients, { silent: true }) : Promise.resolve(true),
         importedFinance.length ? saveFinanceImports(nextFinanceImports, { silent: true }) : Promise.resolve(true),
         (isFirebaseConfigured && user && workspaceOwnerId && importedBookings.length)
-          ? Promise.all(importedBookings.map((booking) => {
-            const { id, ...bookingPayload } = booking;
-            return FirebaseSDK.setDoc(
-              FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', id),
-              bookingPayload
-            );
-          })).then(() => true)
+          ? commitBookingImportRows(importedBookings).then(() => true)
           : Promise.resolve(true)
       ]);
       if (saveResults.some(result => result === false)) {
@@ -159,9 +176,7 @@ export function createClientCsvMigrationActions({
           ? FirebaseSDK.getDocs(FirebaseSDK.query(
             FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'),
             FirebaseSDK.where('importedViaCsv', '==', true)
-          )).then(snapshot => Promise.all(snapshot.docs.map(docSnap => (
-            FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', docSnap.id))
-          )))).then(() => true)
+          )).then(snapshot => commitBookingDeletes(snapshot.docs)).then(() => true)
           : Promise.resolve(true)
       ]);
       if (saveResults.some(result => result === false)) {

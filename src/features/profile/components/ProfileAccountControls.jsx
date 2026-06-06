@@ -42,7 +42,7 @@ export const ProfileAccountControls = ({
     <section className="lg:col-span-5 bg-white rounded-lg border border-neutral-100 p-5 md:p-7 shadow-[0_22px_70px_-60px_rgba(15,23,42,0.5)]">
       <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-300 mb-3">Account Control</p>
       <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black">{isGuestWorkspace ? 'Exit guest mode' : 'Sign out safely'}</h3>
-      <p className="text-sm text-neutral-500 leading-relaxed mt-2 mb-5">{isGuestWorkspace ? 'Close the local guest workspace and return to the public home screen.' : 'End this session and return to the home screen without leaving stale login redirects behind.'}</p>
+      <p className="text-sm text-neutral-500 leading-relaxed mt-2 mb-5">{isGuestWorkspace ? 'Close the local guest workspace and return to the app login screen.' : 'End this session and return to the app login screen without leaving stale login redirects behind.'}</p>
       <button
         type="button"
         onClick={onSignOut}

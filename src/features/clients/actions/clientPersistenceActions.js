@@ -1,6 +1,6 @@
 import * as FirebaseSDK from '../../../services/firebase';
 import { appId, db, isFirebaseConfigured } from '../../../services/firebase';
-import { syncListCollection } from '../../workspace/utils/scaleCollections';
+import { syncListCollection, upsertListRecord } from '../../workspace/utils/scaleCollections';
 
 export function createClientPersistenceActions({
   buildClientKey,
@@ -18,12 +18,16 @@ export function createClientPersistenceActions({
 }) {
   const saveClients = async (newList, options = {}) => {
     const silent = Boolean(options.silent);
-    setClientRecords(newList);
-    if (!user || !workspaceOwnerId || !isFirebaseConfigured) return true;
+    if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
+      setClientRecords(newList);
+      return true;
+    }
     if (!canManageWorkspace) {
       if (!silent) showToast('Only owners and admins can save client records.');
       return false;
     }
+    const previousList = safeClientRecords;
+    setClientRecords(newList);
     try {
       await Promise.all([
         FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'clients'), { list: newList, updatedAt: Date.now() }),
@@ -31,13 +35,42 @@ export function createClientPersistenceActions({
           ownerId: workspaceOwnerId,
           collectionName: 'clients',
           list: newList,
+          previousList,
           idForRecord: record => record.id
         })
       ]);
       return true;
     } catch (error) {
       console.error('Client save failed', error);
+      setClientRecords(previousList);
       if (!silent) showToast('Client records could not be saved.');
+      return false;
+    }
+  };
+
+  const saveClientRecord = async (nextRecord, options = {}) => {
+    const silent = Boolean(options.silent);
+    const previousList = safeClientRecords;
+    const nextList = [nextRecord, ...previousList.filter(client => client.id !== nextRecord.id)];
+    setClientRecords(nextList);
+    if (!user || !workspaceOwnerId || !isFirebaseConfigured) return true;
+    if (!canManageWorkspace) {
+      setClientRecords(previousList);
+      if (!silent) showToast('Only owners and admins can save client records.');
+      return false;
+    }
+    try {
+      await upsertListRecord({
+        ownerId: workspaceOwnerId,
+        collectionName: 'clients',
+        record: nextRecord,
+        idForRecord: record => record.id
+      });
+      return true;
+    } catch (error) {
+      console.error('Client record save failed', error);
+      setClientRecords(previousList);
+      if (!silent) showToast('Client record could not be saved.');
       return false;
     }
   };
@@ -58,7 +91,7 @@ export function createClientPersistenceActions({
       createdAt: existingRecord?.createdAt || bookingProfile?.createdAt || Date.now(),
       updatedAt: Date.now()
     };
-    return saveClients([nextRecord, ...safeClientRecords.filter(client => client.id !== clientId)]);
+    return saveClientRecord(nextRecord);
   };
 
   const toggleClientLabel = async (client, label) => {
@@ -80,9 +113,13 @@ export function createClientPersistenceActions({
       ratioKey: 'square',
       shape: 'circle'
     }, async (avatarUrl) => {
-      if (previousAvatar && previousAvatar !== avatarUrl) await deleteStorageAsset(previousAvatar);
       const saved = await upsertClientRecord(clientId, { avatar: avatarUrl });
-      if (saved) showToast('Client photo updated');
+      if (saved) {
+        if (previousAvatar && previousAvatar !== avatarUrl) await deleteStorageAsset(previousAvatar);
+        showToast('Client photo updated');
+      } else if (avatarUrl && avatarUrl !== previousAvatar) {
+        await deleteStorageAsset(avatarUrl);
+      }
     });
   };
 
@@ -114,6 +151,7 @@ export function createClientPersistenceActions({
   return {
     handleClientAvatarUpload,
     handleManualClientSubmit,
+    saveClientRecord,
     saveClients,
     toggleClientLabel,
     upsertClientRecord

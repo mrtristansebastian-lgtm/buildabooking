@@ -1,3 +1,4 @@
+export { AppLoginScreen } from './components/AppLoginScreen';
 export { AuthDialog } from './components/AuthDialog';
 export { useAuthActions } from './hooks/useAuthActions';
 export { useAuthBoot } from './hooks/useAuthBoot';

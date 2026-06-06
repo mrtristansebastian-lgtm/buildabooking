@@ -1,8 +1,10 @@
-import { Building2, ImagePlus, Trash2 } from 'lucide-react';
+import { Building2, ImagePlus, Scissors, Trash2 } from 'lucide-react';
 
 export const ProfileBusinessIdentitySection = ({
+  onImageCrop,
   onImageRemove,
   onImageUpload,
+  onSettingChange,
   settings
 }) => {
   return (
@@ -34,7 +36,7 @@ export const ProfileBusinessIdentitySection = ({
         <div className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] lg:flex-col lg:items-stretch">
           <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-neutral-100 text-2xl font-black text-neutral-300 lg:mx-auto">
             {settings.logo ? (
-              <img src={settings.logo} alt="" className="h-full w-full object-contain" />
+              <img src={settings.logo} alt="" className="h-full w-full object-cover" />
             ) : (
               settings.brandName?.charAt(0) || 'B'
             )}
@@ -55,14 +57,24 @@ export const ProfileBusinessIdentitySection = ({
               />
             </label>
             {settings.logo && (
-              <button
-                type="button"
-                onClick={() => onImageRemove('logo')}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-red-500 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.22)]"
-                aria-label="Remove logo"
-              >
-                <Trash2 size={14} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => onImageCrop('logo', 'brand')}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)]"
+                  aria-label="Crop logo"
+                >
+                  <Scissors size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onImageRemove('logo')}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-red-500 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.22)]"
+                  aria-label="Remove logo"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </>
             )}
           </div>
         </div>

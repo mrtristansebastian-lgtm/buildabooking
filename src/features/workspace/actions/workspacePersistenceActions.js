@@ -6,6 +6,7 @@ import {
   stripLegacyEditorFields
 } from '../utils/workspaceState';
 import {
+  syncStaffCalendarCollections,
   syncPublicWorkspaceCollections,
   syncWorkspaceScaleCollections
 } from '../utils/scaleCollections';
@@ -25,6 +26,7 @@ const buildPublicStaffList = (staffList = []) => (
 
 export function createWorkspacePersistenceActions({
   accountProfileKey,
+  activeStaffId,
   canManageTeam,
   canManageWorkspace,
   clearWorkspaceDirty,
@@ -42,6 +44,7 @@ export function createWorkspacePersistenceActions({
   showToast,
   staffList,
   user,
+  workspaceRole,
   workspaceOwnerId
 }) {
   const publishSettings = async (nextSettings = settings, successMessage = 'Booking page saved.', options = {}) => {
@@ -57,6 +60,7 @@ export function createWorkspacePersistenceActions({
     if (!silent) showToast('Saving updates...');
     try {
       const publicSlug = buildBookingSlug(nextSettings.slug || nextSettings.brandName);
+      const previousPublishedSettings = publishedSettingsSnapshotRef.current || settingsRef.current || settings;
       const publishableSettings = stripLegacyEditorFields(nextSettings);
       const settingsToPublish = {
         ...publishableSettings,
@@ -71,7 +75,9 @@ export function createWorkspacePersistenceActions({
       await syncWorkspaceScaleCollections({
         ownerId: workspaceOwnerId,
         settings: settingsToPublish,
-        staffList: displayStaffList
+        staffList: displayStaffList,
+        previousSettings: previousPublishedSettings,
+        previousStaffList: staffList
       });
       const { accountProfiles, ...publicSettingsToPublish } = settingsToPublish;
       await FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'public', 'data', 'workspaces', publicSlug), {
@@ -86,6 +92,7 @@ export function createWorkspacePersistenceActions({
         settings: publicSettingsToPublish,
         staffList: displayStaffList
       });
+      publishedSettingsSnapshotRef.current = settingsToPublish;
       if (!silent) showToast(successMessage);
       return true;
     } catch (err) {
@@ -99,6 +106,41 @@ export function createWorkspacePersistenceActions({
     const saved = await publishSettings(settings);
     if (saved) clearWorkspaceDirty();
     return saved;
+  };
+
+  const saveStaffCalendarSettings = async () => {
+    if (workspaceRole !== 'staff') return saveSettings();
+    if (!activeStaffId) {
+      showToast('Your staff calendar profile is not connected yet.');
+      return false;
+    }
+    if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
+      clearWorkspaceDirty();
+      showToast('Schedule updated in demo mode.');
+      return true;
+    }
+    try {
+      await syncStaffCalendarCollections({
+        ownerId: workspaceOwnerId,
+        staffId: activeStaffId,
+        settings,
+        previousSettings: publishedSettingsSnapshotRef.current
+      });
+      publishedSettingsSnapshotRef.current = {
+        ...(publishedSettingsSnapshotRef.current || settings),
+        staffCalendars: {
+          ...((publishedSettingsSnapshotRef.current || settings).staffCalendars || {}),
+          [activeStaffId]: settings.staffCalendars?.[activeStaffId] || {}
+        }
+      };
+      clearWorkspaceDirty();
+      showToast('Your calendar saved.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Your calendar could not be saved.');
+      return false;
+    }
   };
 
   const saveWorkspaceSettingsPatch = async (patch = {}, successMessage = 'Workspace saved.') => {
@@ -221,6 +263,7 @@ export function createWorkspacePersistenceActions({
     persistProfileChanges,
     publishSettings,
     saveProfileChanges,
+    saveStaffCalendarSettings,
     saveSettings,
     saveWorkspaceSettingsPatch,
     updatePersonalProfile

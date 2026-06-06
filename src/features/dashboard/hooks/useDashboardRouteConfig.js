@@ -116,7 +116,9 @@ export function useDashboardRouteConfig({
         props: {
           settings,
           setSettings,
-          onSave: settingsState.saveSettings,
+          onSave: workspace.workspaceRole === 'staff'
+            ? settingsState.saveStaffCalendarSettings
+            : settingsState.saveSettings,
           showToast,
           bookings: booking.visibleBookings,
           clientDirectory: clients.directory,

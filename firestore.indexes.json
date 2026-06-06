@@ -38,6 +38,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "dateKey", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     },
@@ -47,6 +56,14 @@
       "fields": [
         { "fieldPath": "dateKey", "order": "ASCENDING" },
         { "fieldPath": "calendarId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "calendarDays",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "calendarId", "order": "ASCENDING" },
+        { "fieldPath": "dateKey", "order": "ASCENDING" }
       ]
     },
     {

@@ -40,6 +40,7 @@ export function useClientRecordActions({
 
   const financeActions = createFinanceImportActions({
     canManageWorkspace,
+    safeFinanceImports,
     setFinanceImports,
     showToast,
     user,

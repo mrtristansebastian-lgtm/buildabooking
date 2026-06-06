@@ -1,9 +1,8 @@
 import { BrandLoader } from './AppLoading';
 import { LegalDialog } from './AppOverlays';
-import { AuthDialog, shouldUseRedirectGoogleAuth } from '../features/auth';
+import { AppLoginScreen, AuthDialog, shouldUseRedirectGoogleAuth } from '../features/auth';
 import { ClientPortalGate } from '../features/client-portal';
 import { DashboardRouteShell } from '../features/dashboard';
-import { LandingPage } from '../features/landing';
 import { PublicBookingPage } from '../features/public-booking';
 import { legalPages } from '../config/appConfig';
 
@@ -90,14 +89,15 @@ export function AppRouteHost({
 
   if (route.view === 'landing') {
     return (
-      <LandingPage
+      <AppLoginScreen
         authDialog={authDialog}
         legalDialog={<LegalDialog pages={legalPages} panel={landing.legalPanel} onClose={() => landing.setLegalPanel(null)} />}
-        onHome={() => route.setView('landing')}
+        user={auth.user}
         onOwnerSignIn={() => auth.openPanel('signin', 'owner')}
+        onOwnerSignup={auth.onSignupOrDashboard}
+        onOpenWorkspace={() => route.applyWorkspaceRoute({ view: 'dashboard', activeTab: 'overview', editorTab: route.editorTab })}
         onClientLogin={auth.onClientLogin}
         onGuestDashboard={auth.onGuestDashboard}
-        onSignupOrDashboard={auth.onSignupOrDashboard}
         onLegalPanel={landing.setLegalPanel}
       />
     );

@@ -5,6 +5,7 @@ export { useWorkspaceDerivedData } from './hooks/useWorkspaceDerivedData';
 export { useWorkspaceIdentity } from './hooks/useWorkspaceIdentity';
 export { useWorkspaceRoute } from './hooks/useWorkspaceRoute';
 export { useWorkspaceSettingsActions } from './hooks/useWorkspaceSettingsActions';
+export { createWorkspacePageLoaders } from './utils/workspacePageLoaders';
 export {
   areJsonEqual,
   mergeStateIfChanged,

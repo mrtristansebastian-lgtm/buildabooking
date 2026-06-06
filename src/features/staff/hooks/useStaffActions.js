@@ -78,20 +78,24 @@ export function useStaffActions({
         sortOrder: index
       };
     });
-    setStaffList(normalizedList);
-    if (!user || !workspaceOwnerId || !isFirebaseConfigured) return true;
+    if (!user || !workspaceOwnerId || !isFirebaseConfigured) {
+      setStaffList(normalizedList);
+      return true;
+    }
     if (!canManageTeam) {
       if (!silent) showToast('Only owners and admins can manage team access.');
       return false;
     }
 
     try {
+      setStaffList(normalizedList);
       await Promise.all([
         FirebaseSDK.setDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'config', 'staff'), { list: normalizedList, updatedAt: Date.now() }),
         syncListCollection({
           ownerId: workspaceOwnerId,
           collectionName: 'staff',
           list: normalizedList,
+          previousList,
           idForRecord: record => record.id
         })
       ]);
@@ -104,6 +108,7 @@ export function useStaffActions({
       return true;
     } catch (error) {
       console.error('Team save failed', error);
+      setStaffList(previousList);
       if (!silent) showToast('Team setup could not be saved.');
       return false;
     }

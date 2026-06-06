@@ -51,6 +51,7 @@ export function useMediaCropUpload({
   handleSettingChange,
   persistProfileChanges,
   personalProfile,
+  saveWorkspaceSettingsPatch,
   settings,
   settingsRef,
   showToast,
@@ -69,6 +70,15 @@ export function useMediaCropUpload({
     const assetRef = FirebaseSDK.ref(storage, `artifacts/${appId}/users/${workspaceOwnerId || user.uid}/${folder}/${Date.now()}-${safeName || 'asset'}`);
     await FirebaseSDK.uploadBytes(assetRef, file);
     return FirebaseSDK.getDownloadURL(assetRef);
+  };
+
+  const saveMediaSettingsPatch = async (patch, message) => {
+    if (saveWorkspaceSettingsPatch) {
+      return saveWorkspaceSettingsPatch(patch, message);
+    }
+    Object.entries(patch || {}).forEach(([key, value]) => handleSettingChange(key, value));
+    showToast(message);
+    return true;
   };
 
   const deleteStorageAsset = async (url) => {
@@ -159,17 +169,17 @@ export function useMediaCropUpload({
       ratioKey: imageMeta.ratioKey,
       shape: imageMeta.shape
     }, async (url) => {
-      if (previousUrl && previousUrl !== url) await deleteStorageAsset(previousUrl);
-      handleSettingChange(key, url);
-      showToast(imageMeta.updatedMessage);
+      const saved = await saveMediaSettingsPatch({ [key]: url }, imageMeta.updatedMessage);
+      if (saved && previousUrl && previousUrl !== url) await deleteStorageAsset(previousUrl);
+      if (!saved) await deleteStorageAsset(url);
+      return false;
     });
   };
 
   const removeSettingImage = async (key) => {
     const previousUrl = settingsRef.current?.[key] || '';
-    handleSettingChange(key, '');
-    await deleteStorageAsset(previousUrl);
-    showToast('Image removed');
+    const saved = await saveMediaSettingsPatch({ [key]: '' }, 'Image removed');
+    if (saved) await deleteStorageAsset(previousUrl);
   };
 
   const openSettingImageCrop = (key, folder) => {
@@ -182,9 +192,10 @@ export function useMediaCropUpload({
     imageCropCommitRef.current = {
       folder,
       onComplete: async (url) => {
-        if (currentUrl && currentUrl !== url) await deleteStorageAsset(currentUrl);
-        handleSettingChange(key, url);
-        showToast(imageMeta.croppedMessage);
+        const saved = await saveMediaSettingsPatch({ [key]: url }, imageMeta.croppedMessage);
+        if (saved && currentUrl && currentUrl !== url) await deleteStorageAsset(currentUrl);
+        if (!saved) await deleteStorageAsset(url);
+        return false;
       }
     };
     setImageCropModal({
@@ -202,6 +213,9 @@ export function useMediaCropUpload({
   const handleVenuePhotoUpload = async (files) => {
     const photoFiles = Array.from(files || []).filter(Boolean).slice(0, 8);
     if (!photoFiles.length) return;
+    let pendingPhotos = Array.isArray(settingsRef.current.venuePhotos)
+      ? settingsRef.current.venuePhotos.filter(Boolean)
+      : [];
     const openVenueCrop = (index = 0) => {
       const file = photoFiles[index];
       if (!file) return;
@@ -210,14 +224,23 @@ export function useMediaCropUpload({
         title: photoFiles.length > 1 ? `Crop venue photo ${index + 1}` : 'Crop venue photo',
         ratioKey: 'gallery'
       }, async (url) => {
-        const currentPhotos = Array.isArray(settingsRef.current.venuePhotos) ? settingsRef.current.venuePhotos : [];
-        const nextPhotos = [...currentPhotos, url].filter(Boolean).slice(0, 12);
-        handleSettingChange('venuePhotos', nextPhotos);
-        if (index + 1 < photoFiles.length) {
-          window.setTimeout(() => openVenueCrop(index + 1), 150);
-        } else {
-          showToast(photoFiles.length > 1 ? 'Venue photos added' : 'Venue photo added');
+        pendingPhotos = [...pendingPhotos, url].filter(Boolean).slice(0, 12);
+        const isLastPhoto = index + 1 >= photoFiles.length;
+        const saved = await saveMediaSettingsPatch(
+          { venuePhotos: pendingPhotos },
+          isLastPhoto
+            ? (photoFiles.length > 1 ? 'Venue photos added' : 'Venue photo added')
+            : `Venue photo ${index + 1} added`
+        );
+        if (!saved) {
+          pendingPhotos = pendingPhotos.filter(photo => photo !== url);
+          await deleteStorageAsset(url);
+          return false;
         }
+        if (!isLastPhoto) {
+          window.setTimeout(() => openVenueCrop(index + 1), 150);
+        }
+        return false;
       });
     };
     openVenueCrop();
@@ -225,9 +248,10 @@ export function useMediaCropUpload({
 
   const removeVenuePhoto = async (photoUrl) => {
     const currentPhotos = Array.isArray(settingsRef.current.venuePhotos) ? settingsRef.current.venuePhotos : [];
-    handleSettingChange('venuePhotos', currentPhotos.filter(photo => photo !== photoUrl));
-    await deleteStorageAsset(photoUrl);
-    showToast('Venue photo removed');
+    const saved = await saveMediaSettingsPatch({
+      venuePhotos: currentPhotos.filter(photo => photo !== photoUrl)
+    }, 'Venue photo removed');
+    if (saved) await deleteStorageAsset(photoUrl);
   };
 
   return {

@@ -179,7 +179,8 @@ export function useAppRouteHostConfig({
       setKeepLoggedIn: auth.setKeepLoggedIn,
       setMode: auth.setAuthMode,
       setPanelOpen: auth.setAuthPanelOpen,
-      setPersona: auth.setAuthPersona
+      setPersona: auth.setAuthPersona,
+      user: auth.user
     },
     publicBooking: {
       error: publicBooking.publicError,

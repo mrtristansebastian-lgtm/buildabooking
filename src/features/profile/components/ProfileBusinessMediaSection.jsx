@@ -83,7 +83,7 @@ export const ProfileBusinessMediaSection = ({
     <div className="grid gap-4">
       <article className="rounded-lg bg-neutral-50/80 p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-          <MediaPreview className="h-32 sm:h-36 md:h-40">
+          <MediaPreview className="aspect-[16/7]">
             {settings.bannerImage ? (
               <img src={settings.bannerImage} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -120,7 +120,7 @@ export const ProfileBusinessMediaSection = ({
 
       <article className="rounded-lg bg-neutral-50/80 p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-          <MediaPreview className="h-32 sm:h-36 md:h-40">
+          <MediaPreview className="aspect-[16/7]">
             {settings.businessFooterImage ? (
               <img src={settings.businessFooterImage} alt="" className="h-full w-full object-cover" />
             ) : (

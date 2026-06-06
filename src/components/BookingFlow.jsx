@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Images, MapPin, Plus } from 'lucide-react';
+import '../styles/booking-runtime.css';
 import { getFontFamily } from '../data/fonts';
 import * as FirebaseSDK from '../services/firebase';
 import { appId, functions } from '../services/firebase';

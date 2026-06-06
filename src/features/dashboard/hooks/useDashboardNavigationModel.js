@@ -85,7 +85,7 @@ export function useDashboardNavigationModel({
     workspaceOwnerId,
     workspaceRole,
     onAuth,
-    onLanding: () => applyWorkspaceRoute({ view: 'landing' }),
+    onLanding: () => applyWorkspaceRoute({ view: 'dashboard', activeTab: 'overview' }),
     onMobileMoreToggle: () => {
       playMobileNavSound();
       setMobileNavOpen(open => !open);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAuthSession } from '../../auth';
 import { useBookingPageRuntime } from '../../bookings';
@@ -13,7 +13,8 @@ import {
   useWorkspaceDerivedData,
   useWorkspaceDirtyState,
   useWorkspaceIdentity,
-  useWorkspaceRoute
+  useWorkspaceRoute,
+  createWorkspacePageLoaders
 } from '../../workspace';
 import { appId, db, isFirebaseConfigured } from '../../../services/firebase';
 import { safeLocalRemove } from '../../../utils/workspaceRoute';
@@ -48,6 +49,9 @@ export function useWorkspaceRuntimeState() {
   useAppRuntimeEffects({ isNativeAppRuntime });
 
   const workspaceOwnerId = authSession.activeWorkspaceOwnerId || authSession.user?.uid || '';
+  const workspacePageLoaders = useMemo(() => (
+    createWorkspacePageLoaders({ ownerId: workspaceOwnerId })
+  ), [workspaceOwnerId]);
   const isDashboardGuestPreview = route.view === 'dashboard' && !authSession.authRedirectPending;
   const isGuestWorkspace = Boolean((guestMode || isDashboardGuestPreview) && !authSession.user && !route.publicSlug && !authSession.authRedirectPending);
   const workspaceData = useWorkspaceData({
@@ -199,6 +203,7 @@ export function useWorkspaceRuntimeState() {
       financeImports: workspaceData.financeImports,
       getBookingService: workspaceDerivedData.getBookingService,
       importedMigrationCounts: workspaceDerivedData.importedMigrationCounts,
+      pageLoaders: workspacePageLoaders,
       visibleBookings: workspaceData.visibleBookings,
       workspaceServices: workspaceDerivedData.workspaceServices
     },

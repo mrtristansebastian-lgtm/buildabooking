@@ -49,19 +49,20 @@ export function createBookingLifecycleActions({
     const nextAssignedStaff = nextStaffId ? safeStaffList.find(staff => staff.id === nextStaffId) : null;
     if (!isFirebaseConfigured || !user) {
       setBookingsAndCache(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
-      return;
+      return true;
     }
     setBookingsAndCache(prev => prev.map(b => b.id === bookingId ? { ...b, ...updates } : b));
     try {
       await FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId), updates);
       const threadId = updates.threadId ?? existingBooking?.threadId ?? '';
       const emailKey = normalizeEmail(existingBooking?.clientEmail);
+      const downstreamWrites = [];
       const portalUpdates = {
         ...updates,
         updatedAt: FirebaseSDK.serverTimestamp()
       };
       if (emailKey) {
-        FirebaseSDK.setDoc(
+        downstreamWrites.push(FirebaseSDK.setDoc(
           FirebaseSDK.doc(db, 'artifacts', appId, 'clientAccess', emailKey, 'bookings', bookingId),
           {
             bookingId,
@@ -97,10 +98,10 @@ export function createBookingLifecycleActions({
             ...portalUpdates
           },
           { merge: true }
-        ).catch(error => console.error('Client portal booking sync failed', error));
+        ));
       }
       if (threadId) {
-        FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', threadId), {
+        downstreamWrites.push(FirebaseSDK.updateDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'clientThreads', threadId), {
           bookingStatus: updates.status ?? existingBooking?.status ?? 'pending',
           lastMessage: updates.status ? `Booking status updated to ${updates.status}.` : 'Booking details updated.',
           lastMessageAt: FirebaseSDK.serverTimestamp(),
@@ -112,7 +113,16 @@ export function createBookingLifecycleActions({
           staffPhotoURL: nextAssignedStaff?.photoURL || '',
           workspaceLogo: existingBooking?.workspaceLogo || settings.logo || '',
           clientUnread: FirebaseSDK.increment(1)
-        }).catch(error => console.error('Client thread sync failed', error));
+        }));
+      }
+      if (downstreamWrites.length) {
+        const downstreamResults = await Promise.allSettled(downstreamWrites);
+        if (downstreamResults.some(result => result.status === 'rejected')) {
+          downstreamResults
+            .filter(result => result.status === 'rejected')
+            .forEach(result => console.error('Booking downstream sync failed', result.reason));
+          showToast('Booking saved, but client portal sync needs another retry.');
+        }
       }
       if (emailKey && existingBooking) {
         const nextBooking = { ...existingBooking, ...updates, id: bookingId, ownerId: workspaceOwnerId };
@@ -162,8 +172,14 @@ export function createBookingLifecycleActions({
           })).catch(() => {});
         }
       }
+      return true;
     } catch (err) {
       console.error(err);
+      if (existingBooking) {
+        setBookingsAndCache(prev => prev.map(b => b.id === bookingId ? existingBooking : b));
+      }
+      showToast('Booking update could not be saved.');
+      return false;
     }
   };
 
@@ -217,11 +233,15 @@ export function createBookingLifecycleActions({
       await FirebaseSDK.deleteDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings', bookingId));
     } catch (err) {
       console.error(err);
+      const deletedBooking = visibleBookings.find(booking => booking.id === bookingId);
+      if (deletedBooking) setBookingsAndCache(prev => [deletedBooking, ...prev]);
+      showToast('Booking could not be deleted.');
     }
   };
 
   const approveBooking = async (booking) => {
-    await updateBooking(booking.id, { status: 'confirmed' });
+    const saved = await updateBooking(booking.id, { status: 'confirmed' });
+    if (!saved) return;
     await sendBookingEmail({ ...booking, status: 'confirmed' }, 'confirmed');
   };
 

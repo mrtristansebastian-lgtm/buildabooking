@@ -2,6 +2,7 @@ import * as FirebaseSDK from '../../../services/firebase';
 import { appId, db, functions, isFirebaseConfigured } from '../../../services/firebase';
 import { makeOwnerNotification, NOTIFICATION_TYPES } from '../../../services/notifications';
 import {
+  buildOwnerBookingIdempotencyKey,
   buildPublicBookingIdempotencyKey,
   createBookingRecordFromFlow,
   createManualBookingRecordFromChat,
@@ -22,6 +23,51 @@ export function createBookingSubmissionActions({
   workspaceOwnerId,
   workspaceServices
 }) {
+  const directSaveOwnerBooking = async (bookingRecord, notificationMeta = {}) => {
+    const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
+    await createOwnerNotification(makeOwnerNotification({
+      type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+      title: notificationMeta.title || `Manual booking added for ${bookingRecord.clientName}`,
+      body: notificationMeta.body || `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}.`,
+      ownerId: workspaceOwnerId,
+      booking: { ...bookingRecord, id: bookingRef.id },
+      bookingId: bookingRef.id,
+      tab: 'bookings',
+      priority: notificationMeta.priority || 'normal'
+    }));
+    return { ok: true, bookingId: bookingRef.id };
+  };
+
+  const saveOwnerBookingRequest = async (bookingRecord, notificationMeta = {}) => {
+    if (functions && FirebaseSDK.httpsCallable) {
+      try {
+        const createOwnerBookingRequest = FirebaseSDK.httpsCallable(functions, 'createOwnerBookingRequest');
+        const result = await createOwnerBookingRequest({
+          appId,
+          ownerId: workspaceOwnerId,
+          idempotencyKey: buildOwnerBookingIdempotencyKey({ ownerId: workspaceOwnerId, booking: bookingRecord }),
+          booking: bookingRecord
+        });
+        return result?.data || true;
+      } catch (error) {
+        const fallbackAllowed = ['functions/not-found', 'functions/unimplemented'].includes(error?.code);
+        if (!fallbackAllowed) {
+          console.error(error);
+          if (error?.code === 'functions/already-exists') {
+            showToast('That time is already held. Pick another slot.');
+          } else if (error?.code === 'functions/permission-denied') {
+            showToast('You do not have access to save bookings for this workspace.');
+          } else {
+            showToast(error?.message || 'Booking could not be saved.');
+          }
+          return false;
+        }
+        console.warn('createOwnerBookingRequest is not deployed yet; falling back to direct booking save.');
+      }
+    }
+    return directSaveOwnerBooking(bookingRecord, notificationMeta);
+  };
+
   const handleBookingComplete = async (formData, date, time, status, dateKey) => {
     const bookingRecord = createBookingRecordFromFlow({
       formData,
@@ -40,20 +86,11 @@ export function createBookingSubmissionActions({
       return true;
     }
     try {
-      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), {
-        ...bookingRecord
-      });
-      await createOwnerNotification(makeOwnerNotification({
-        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+      return await saveOwnerBookingRequest(bookingRecord, {
         title: `New booking request from ${bookingRecord.clientName}`,
         body: `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}. Review, confirm, or reply from Bookings.`,
-        ownerId: workspaceOwnerId,
-        booking: { ...bookingRecord, id: bookingRef.id },
-        bookingId: bookingRef.id,
-        tab: 'bookings',
         priority: 'high'
-      }));
-      return true;
+      });
     } catch (err) {
       console.error(err);
       showToast('Booking could not be saved.');
@@ -87,17 +124,12 @@ export function createBookingSubmissionActions({
     }
 
     try {
-      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
-      await createOwnerNotification(makeOwnerNotification({
-        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+      const saved = await saveOwnerBookingRequest(bookingRecord, {
         title: `Manual booking added for ${bookingRecord.clientName}`,
         body: `${bookingRecord.serviceName} / ${bookingRecord.date} at ${bookingRecord.time}.`,
-        ownerId: workspaceOwnerId,
-        booking: { ...bookingRecord, id: bookingRef.id },
-        bookingId: bookingRef.id,
-        tab: 'bookings',
         priority: 'normal'
-      }));
+      });
+      if (saved === false) return;
       setManualBookingOpen(false);
       setBookingFilter('upcoming');
       form.reset();
@@ -129,17 +161,12 @@ export function createBookingSubmissionActions({
     }
 
     try {
-      const bookingRef = await FirebaseSDK.addDoc(FirebaseSDK.collection(db, 'artifacts', appId, 'users', workspaceOwnerId, 'bookings'), bookingRecord);
-      await createOwnerNotification(makeOwnerNotification({
-        type: NOTIFICATION_TYPES.BOOKING_REQUEST,
+      const saved = await saveOwnerBookingRequest(bookingRecord, {
         title: `Chat booking added for ${bookingRecord.clientName}`,
         body: `${bookingRecord.serviceName} / ${bookingRecord.date} at ${bookingRecord.time}.`,
-        ownerId: workspaceOwnerId,
-        booking: { ...bookingRecord, id: bookingRef.id },
-        bookingId: bookingRef.id,
-        tab: 'bookings',
         priority: 'normal'
-      }));
+      });
+      if (saved === false) return false;
       setBookingFilter('upcoming');
       showToast('Booking added from chat.');
       return true;

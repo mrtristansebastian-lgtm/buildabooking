@@ -21,6 +21,21 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/artifacts/$(appId)/staffAccess/$(request.auth.token.email)/workspaces/$(userId)).data.role;
     }
 
+    function staffProfileId(appId, userId) {
+      return get(/databases/$(database)/documents/artifacts/$(appId)/staffAccess/$(request.auth.token.email)/workspaces/$(userId)).data.staffId;
+    }
+
+    function isOwnStaffCalendar(appId, userId, calendarId) {
+      return hasStaffAccess(appId, userId) &&
+        calendarId is string &&
+        staffProfileId(appId, userId) == calendarId;
+    }
+
+    function isOwnStaffCalendarDocument(appId, userId, data) {
+      return data.calendarId is string &&
+        isOwnStaffCalendar(appId, userId, data.calendarId);
+    }
+
     function canStaff(appId, userId) {
       return isOwner(userId) || hasStaffAccess(appId, userId);
     }
@@ -107,12 +122,21 @@ service cloud.firestore {
 
     match /artifacts/{appId}/users/{userId}/calendarDefaults/{calendarId} {
       allow read: if canStaff(appId, userId);
-      allow create, update, delete: if canAdmin(appId, userId);
+      allow create, update: if canAdmin(appId, userId) ||
+        (
+          isOwnStaffCalendar(appId, userId, calendarId) &&
+          request.resource.data.calendarId == calendarId
+        );
+      allow delete: if canAdmin(appId, userId) ||
+        isOwnStaffCalendar(appId, userId, resource.data.calendarId);
     }
 
     match /artifacts/{appId}/users/{userId}/calendarDays/{calendarDayId} {
       allow read: if canStaff(appId, userId);
-      allow create, update, delete: if canAdmin(appId, userId);
+      allow create, update: if canAdmin(appId, userId) ||
+        isOwnStaffCalendarDocument(appId, userId, request.resource.data);
+      allow delete: if canAdmin(appId, userId) ||
+        isOwnStaffCalendarDocument(appId, userId, resource.data);
     }
 
     match /artifacts/{appId}/users/{userId}/availabilityDays/{dateKey}/{document=**} {

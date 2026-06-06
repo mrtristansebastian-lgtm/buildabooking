@@ -24,6 +24,7 @@ const {
 const {
   backfillWorkspaceScaleCollections
 } = require('./scaleCollections');
+const { cappedMaxInstances } = require('./runtimeOptions');
 
 admin.initializeApp();
 
@@ -37,10 +38,6 @@ const REMINDER_WINDOW_AHEAD_MS = 15 * 60 * 1000;
 const ENFORCE_APP_CHECK = process.env.BUILD_A_BOOKING_ENFORCE_APP_CHECK === 'true';
 const SLOT_LOCK_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
-const cappedMaxInstances = (value, fallback) => Math.min(
-  20,
-  Math.max(1, Number(value || fallback))
-);
 const publicCallableOptions = {
   region: 'us-central1',
   timeoutSeconds: 30,
@@ -309,6 +306,424 @@ const backfillThreadTimestampsForWorkspace = async ({ appId, ownerId }) => {
   return updated;
 };
 
+const assertCanWriteOwnerBooking = async ({ appId, ownerId, request }) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError('unauthenticated', 'Sign in before creating owner bookings.');
+  }
+  if (request.auth.uid === ownerId) return { role: 'owner', staffId: 'owner' };
+
+  const emailKey = normalizeEmail(request.auth.token?.email || '');
+  if (!emailKey) {
+    throw new HttpsError('permission-denied', 'This account is missing a verified workspace email.');
+  }
+  const grantSnap = await db
+    .collection('artifacts').doc(appId)
+    .collection('staffAccess').doc(emailKey)
+    .collection('workspaces').doc(ownerId)
+    .get();
+  const grant = grantSnap.exists ? (grantSnap.data() || {}) : {};
+  if (grant.status !== 'active') {
+    throw new HttpsError('permission-denied', 'This account cannot create bookings for this workspace.');
+  }
+  return {
+    role: grant.role || 'staff',
+    staffId: cleanString(grant.staffId || '', 120)
+  };
+};
+
+const normalizeOwnerStaffRows = (rows = []) => {
+  const normalized = (Array.isArray(rows) ? rows : [])
+    .filter(staff => staff?.id && staff.accessEnabled !== false)
+    .map((staff, index) => ({
+      id: cleanString(staff.id, 120),
+      name: cleanString(staff.name || staff.displayName || 'Team member', 120),
+      color: cleanString(staff.color || '#111827', 40),
+      photoURL: cleanString(staff.photoURL || '', 500),
+      sortOrder: Number.isFinite(Number(staff.sortOrder)) ? Number(staff.sortOrder) : index
+    }))
+    .filter((staff, index, list) => staff.id && list.findIndex(item => item.id === staff.id) === index)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  return normalized.length ? normalized : [{ id: 'owner', name: 'Owner', color: '#111827', photoURL: '', sortOrder: 0 }];
+};
+
+const getCollectionRows = async ({ collectionRef, orderField = 'sortOrder', limit = 300 }) => {
+  try {
+    const snap = await collectionRef.orderBy(orderField, 'asc').limit(limit).get();
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error(`Collection row load failed for ${collectionRef.path}`, error);
+    return [];
+  }
+};
+
+const getOwnerBookingWorkspace = async ({ appId, ownerId }) => {
+  const userRef = db.collection('artifacts').doc(appId).collection('users').doc(ownerId);
+  const [settingsSnap, staffSnap, servicesRows, staffRows] = await Promise.all([
+    userRef.collection('config').doc('settings').get(),
+    userRef.collection('config').doc('staff').get(),
+    getCollectionRows({ collectionRef: userRef.collection('services'), limit: 300 }),
+    getCollectionRows({ collectionRef: userRef.collection('staff'), limit: 200 })
+  ]);
+  const settings = settingsSnap.exists ? (settingsSnap.data() || {}) : {};
+  const legacyStaff = Array.isArray(staffSnap.data()?.list) ? staffSnap.data().list : [];
+  const publicStaff = normalizeOwnerStaffRows(staffRows.length ? staffRows : legacyStaff);
+  return {
+    ...settings,
+    ownerId,
+    services: servicesRows.length ? servicesRows : (Array.isArray(settings.services) ? settings.services : []),
+    publicStaff,
+    workspaceName: settings.workspaceName || settings.brandName || 'Build A Booking Workspace'
+  };
+};
+
+const validateOwnerBookingPayload = (incoming = {}) => {
+  if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+    throw new HttpsError('invalid-argument', 'Booking must be an object.');
+  }
+  const status = cleanString(incoming.status || 'confirmed', 40).toLowerCase();
+  const dateKey = cleanString(incoming.dateKey, 32);
+  const time = requireString(incoming.time, 'Booking time', 80);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    throw new HttpsError('invalid-argument', 'Booking date is invalid.');
+  }
+  if (time !== 'Waitlist' && !/^([01]?\d|2[0-3]):[0-5]\d(?:\s*(?:-|to)\s*([01]?\d|2[0-3]):[0-5]\d)?$/i.test(time)) {
+    throw new HttpsError('invalid-argument', 'Booking time is invalid.');
+  }
+
+  const amountInCents = Number(incoming.amountInCents || incoming.amountPaidInCents || 0);
+  const timestamp = Number(incoming.timestamp || Date.now());
+  return {
+    clientName: requireString(incoming.clientName, 'Client name', 120),
+    clientPhone: cleanString(incoming.clientPhone, 60),
+    clientEmail: normalizeEmail(incoming.clientEmail),
+    clientBirthday: cleanString(incoming.clientBirthday, 80),
+    clientNote: cleanString(incoming.clientNote, 1000),
+    clientEmailOptIn: Boolean(incoming.clientEmailOptIn && incoming.clientEmail),
+    serviceId: cleanString(incoming.serviceId, 120),
+    serviceName: cleanString(incoming.serviceName, 180),
+    serviceDescription: cleanString(incoming.serviceDescription, 700),
+    servicePrice: cleanString(incoming.servicePrice, 80),
+    servicePriceType: cleanString(incoming.servicePriceType, 40),
+    serviceDuration: cleanString(incoming.serviceDuration, 80),
+    serviceCategory: cleanString(incoming.serviceCategory, 120),
+    amountInCents: Number.isFinite(amountInCents) ? Math.max(0, Math.round(amountInCents)) : 0,
+    currency: cleanString(incoming.currency || 'ZAR', 12).toUpperCase(),
+    staffId: cleanString(incoming.staffId, 120),
+    staffName: cleanString(incoming.staffName, 120),
+    staffPhotoURL: cleanString(incoming.staffPhotoURL, 500),
+    paymentMethod: cleanString(incoming.paymentMethod, 60).toLowerCase(),
+    paymentGateway: cleanString(incoming.paymentGateway || incoming.paymentMethod, 60).toLowerCase(),
+    paymentProviderName: cleanString(incoming.paymentProviderName, 120),
+    paymentStatus: cleanString(incoming.paymentStatus || (incoming.paymentMethod ? 'manual_pending' : 'unpaid'), 60).toLowerCase(),
+    paymentReference: cleanString(incoming.paymentReference, 180),
+    notificationChannels: {
+      email: Boolean(incoming.notificationChannels?.email || incoming.clientEmailOptIn),
+      portal: Boolean(incoming.notificationChannels?.portal || incoming.clientEmail)
+    },
+    date: requireString(incoming.date, 'Booking date label', 120),
+    dateKey,
+    time,
+    status: status || 'confirmed',
+    noShowHistory: Boolean(incoming.noShowHistory),
+    source: cleanString(incoming.source || 'manual-owner', 120),
+    threadId: cleanString(incoming.threadId, 160),
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+    createdAt: Number.isFinite(Number(incoming.createdAt)) ? Number(incoming.createdAt) : serverTimestamp(),
+    updatedAt: Number.isFinite(Number(incoming.updatedAt)) ? Number(incoming.updatedAt) : serverTimestamp()
+  };
+};
+
+const applyWorkspaceDefaultsToOwnerBooking = ({ booking, workspace }) => {
+  const service = (workspace.services || []).find(item => cleanString(item.id, 120) === booking.serviceId) || null;
+  const staff = (workspace.publicStaff || []).find(item => item.id === booking.staffId) || null;
+  return {
+    ...booking,
+    serviceName: booking.serviceName || service?.name || '',
+    serviceDescription: booking.serviceDescription || service?.description || '',
+    servicePrice: booking.servicePrice || service?.price || '',
+    servicePriceType: booking.servicePriceType || service?.priceType || '',
+    serviceDuration: booking.serviceDuration || service?.duration || '',
+    serviceCategory: booking.serviceCategory || service?.category || '',
+    staffName: booking.staffName || staff?.name || '',
+    staffPhotoURL: booking.staffPhotoURL || staff?.photoURL || '',
+    serviceDurationMinutes: parseDurationMinutes(booking.serviceDuration || service?.duration || '', normalizeAvailabilityRules(workspace).fallbackDurationMinutes),
+    workspaceSlug: workspace.slug || '',
+    workspaceName: workspace.workspaceName || workspace.brandName || 'Build A Booking Workspace',
+    workspaceLogo: workspace.logo || workspace.businessLogo || ''
+  };
+};
+
+const bookingsOverlap = ({ leftTime, leftDuration, rightTime, rightDuration }) => {
+  const leftStart = timeToMinutes(leftTime);
+  const rightStart = timeToMinutes(rightTime);
+  if (leftStart === null || rightStart === null) return false;
+  return leftStart < rightStart + rightDuration && rightStart < leftStart + leftDuration;
+};
+
+const findManualStaffAssignment = ({
+  availabilityRules,
+  bookingRecord,
+  heldBookings = [],
+  workspace = {}
+}) => {
+  const requestedStaffId = cleanString(bookingRecord.staffId, 120);
+  const durationMinutes = parseDurationMinutes(bookingRecord.serviceDurationMinutes || bookingRecord.serviceDuration || '', availabilityRules.fallbackDurationMinutes);
+  const staffCandidates = (workspace.publicStaff || [])
+    .filter(staff => staff?.id && (!requestedStaffId || staff.id === requestedStaffId));
+  const assignedStaff = staffCandidates.find(staff => !heldBookings.some((booking) => {
+    if (!bookingBlocksAvailability(booking, availabilityRules.holdMode)) return false;
+    const heldStaffId = cleanString(booking.staffId || booking.availabilityReservedStaffId, 120);
+    if (heldStaffId && heldStaffId !== staff.id) return false;
+    const heldDuration = parseDurationMinutes(booking.serviceDurationMinutes || booking.serviceDuration || '', availabilityRules.fallbackDurationMinutes);
+    return bookingsOverlap({
+      leftTime: bookingRecord.time,
+      leftDuration: durationMinutes,
+      rightTime: booking.time,
+      rightDuration: heldDuration
+    });
+  }));
+
+  return assignedStaff ? { staff: assignedStaff, durationMinutes } : null;
+};
+
+const writeOwnerBookingTransaction = async ({
+  appId,
+  ownerId,
+  rawBooking,
+  idempotencyKey,
+  workspace
+}) => {
+  const userRef = db.collection('artifacts').doc(appId).collection('users').doc(ownerId);
+  const workspaceSlug = cleanString(workspace.slug, 120).toLowerCase();
+  const lockBaseRef = workspaceSlug
+    ? db.collection('artifacts').doc(appId).collection('public').doc('data').collection('workspaces').doc(workspaceSlug)
+    : userRef;
+  const bookingRef = userRef.collection('bookings').doc();
+  const notificationRef = userRef.collection('notifications').doc();
+  const idempotencyRef = idempotencyKey
+    ? userRef.collection('idempotencyKeys').doc(safeDocumentId(idempotencyKey))
+    : null;
+  const clientEmail = normalizeEmail(rawBooking.clientEmail);
+  const threadId = rawBooking.threadId || safeThreadId(ownerId, bookingRef.id);
+  const threadRef = db.collection('artifacts').doc(appId).collection('clientThreads').doc(threadId);
+  const initialMessageRef = threadRef.collection('messages').doc();
+  const clientAccessRef = clientEmail
+    ? db.collection('artifacts').doc(appId).collection('clientAccess').doc(clientEmail).collection('bookings').doc(bookingRef.id)
+    : null;
+
+  let transactionResult = null;
+  await db.runTransaction(async (transaction) => {
+    if (idempotencyRef) {
+      const existing = await transaction.get(idempotencyRef);
+      if (existing.exists) {
+        transactionResult = existing.data()?.result || { ok: true, bookingId: existing.data()?.bookingId, reused: true };
+        return;
+      }
+    }
+
+    const availabilityRules = normalizeAvailabilityRules(workspace);
+    const bookingRecord = {
+      ...applyWorkspaceDefaultsToOwnerBooking({ booking: rawBooking, workspace }),
+      ownerId,
+      threadId,
+      availabilityMode: availabilityRules.enabled ? availabilityRules.staffAssignmentMode : 'legacy'
+    };
+    const shouldLockSlot = bookingRecord.dateKey && bookingBlocksAvailability(bookingRecord, availabilityRules.holdMode);
+
+    if (shouldLockSlot) {
+      if (availabilityRules.enabled) {
+        const heldBookings = await getAvailabilityBookingsForDateInTransaction({
+          transaction,
+          appId,
+          ownerId,
+          dateKey: bookingRecord.dateKey
+        });
+        const requestedStaffId = bookingRecord.staffId || '';
+        const availability = getServiceAvailabilityModel({
+          bookings: heldBookings,
+          dateKey: bookingRecord.dateKey,
+          incoming: {
+            serviceId: bookingRecord.serviceId,
+            serviceDuration: bookingRecord.serviceDuration
+          },
+          requestedStaffId,
+          requestedTime: bookingRecord.time,
+          workspace
+        });
+        const manualAssignment = availability.selectedOption?.staff
+          ? { staff: availability.selectedOption.staff, durationMinutes: availability.durationMinutes }
+          : findManualStaffAssignment({ availabilityRules, bookingRecord, heldBookings, workspace });
+        if (!manualAssignment?.staff) {
+          throw new HttpsError('already-exists', 'That time no longer fits this service. Pick another slot.');
+        }
+        const assignedStaff = manualAssignment.staff;
+        if (bookingRecord.staffId || availabilityRules.staffAssignmentMode !== 'later') {
+          bookingRecord.staffId = assignedStaff.id;
+          bookingRecord.staffName = assignedStaff.name || bookingRecord.staffName || '';
+          bookingRecord.staffPhotoURL = assignedStaff.photoURL || bookingRecord.staffPhotoURL || '';
+        } else {
+          bookingRecord.availabilityReservedStaffId = assignedStaff.id;
+        }
+        bookingRecord.serviceDurationMinutes = manualAssignment.durationMinutes;
+        bookingRecord.availabilityMode = availabilityRules.staffAssignmentMode;
+
+        const startMinutes = timeToMinutes(bookingRecord.time);
+        if (startMinutes === null) {
+          throw new HttpsError('invalid-argument', 'Booking time is invalid.');
+        }
+        const lockRefs = getLockBucketIds({
+          dateKey: bookingRecord.dateKey,
+          staffId: assignedStaff.id,
+          startMinutes,
+          durationMinutes: manualAssignment.durationMinutes
+        }).map(lockId => lockBaseRef.collection('slotLocks').doc(lockId));
+        const lockSnaps = await Promise.all(lockRefs.map(lockRef => transaction.get(lockRef)));
+        if (lockSnaps.some(lockSnap => lockSnap.exists)) {
+          throw new HttpsError('already-exists', 'That time was just requested. Pick another slot.');
+        }
+        lockRefs.forEach((lockRef) => transaction.set(lockRef, {
+          bookingId: bookingRef.id,
+          ownerId,
+          dateKey: bookingRecord.dateKey,
+          time: bookingRecord.time,
+          staffId: assignedStaff.id,
+          durationMinutes: manualAssignment.durationMinutes,
+          status: bookingRecord.status,
+          ...getExpirationFields(SLOT_LOCK_TTL_MS),
+          createdAt: serverTimestamp()
+        }));
+      } else {
+        const lockRef = lockBaseRef.collection('slotLocks').doc(safeLockId(bookingRecord.dateKey, `${bookingRecord.staffId || 'workspace'}_${bookingRecord.time}`));
+        const lockSnap = await transaction.get(lockRef);
+        if (lockSnap.exists) {
+          throw new HttpsError('already-exists', 'That time was just requested. Pick another slot.');
+        }
+        transaction.set(lockRef, {
+          bookingId: bookingRef.id,
+          ownerId,
+          dateKey: bookingRecord.dateKey,
+          time: bookingRecord.time,
+          staffId: bookingRecord.staffId || '',
+          status: bookingRecord.status,
+          ...getExpirationFields(SLOT_LOCK_TTL_MS),
+          createdAt: serverTimestamp()
+        });
+      }
+    }
+
+    transaction.set(bookingRef, bookingRecord);
+    if (clientAccessRef) {
+      transaction.set(clientAccessRef, {
+        bookingId: bookingRef.id,
+        threadId,
+        ownerId,
+        clientEmail,
+        clientName: bookingRecord.clientName,
+        workspaceSlug,
+        workspaceName: bookingRecord.workspaceName,
+        workspaceLogo: bookingRecord.workspaceLogo,
+        date: bookingRecord.date,
+        dateKey: bookingRecord.dateKey || null,
+        time: bookingRecord.time,
+        serviceId: bookingRecord.serviceId,
+        serviceName: bookingRecord.serviceName,
+        serviceDescription: bookingRecord.serviceDescription,
+        servicePrice: bookingRecord.servicePrice,
+        servicePriceType: bookingRecord.servicePriceType,
+        serviceDuration: bookingRecord.serviceDuration,
+        serviceCategory: bookingRecord.serviceCategory,
+        staffId: bookingRecord.staffId || '',
+        staffName: bookingRecord.staffName || '',
+        staffPhotoURL: bookingRecord.staffPhotoURL || '',
+        serviceDurationMinutes: bookingRecord.serviceDurationMinutes,
+        availabilityMode: bookingRecord.availabilityMode,
+        paymentMethod: bookingRecord.paymentMethod,
+        paymentGateway: bookingRecord.paymentGateway,
+        paymentProviderName: bookingRecord.paymentProviderName,
+        paymentStatus: bookingRecord.paymentStatus,
+        paymentReference: bookingRecord.paymentReference,
+        status: bookingRecord.status,
+        timestamp: bookingRecord.timestamp,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+    transaction.set(threadRef, {
+      ownerId,
+      clientEmail,
+      clientName: bookingRecord.clientName,
+      bookingId: bookingRef.id,
+      workspaceSlug,
+      workspaceName: bookingRecord.workspaceName,
+      workspaceLogo: bookingRecord.workspaceLogo,
+      serviceId: bookingRecord.serviceId,
+      serviceName: bookingRecord.serviceName,
+      paymentMethod: bookingRecord.paymentMethod,
+      paymentGateway: bookingRecord.paymentGateway,
+      paymentProviderName: bookingRecord.paymentProviderName,
+      paymentStatus: bookingRecord.paymentStatus,
+      paymentReference: bookingRecord.paymentReference,
+      staffId: bookingRecord.staffId || '',
+      staffName: bookingRecord.staffName || '',
+      staffPhotoURL: bookingRecord.staffPhotoURL || '',
+      bookingStatus: bookingRecord.status,
+      status: 'open',
+      lastMessage: `Booking ${rawBooking.source === 'support-chat' ? 'added from chat' : 'added'}${bookingRecord.serviceName ? ` for ${bookingRecord.serviceName}` : ''} on ${bookingRecord.date} at ${bookingRecord.time}.`,
+      lastMessageAt: serverTimestamp(),
+      lastMessageAtMs: bookingRecord.timestamp,
+      ownerUnread: admin.firestore.FieldValue.increment(0),
+      clientUnread: admin.firestore.FieldValue.increment(1),
+      createdAt: serverTimestamp(),
+      createdAtMs: bookingRecord.timestamp,
+      updatedAt: serverTimestamp(),
+      updatedAtMs: bookingRecord.timestamp
+    }, { merge: true });
+    transaction.set(initialMessageRef, {
+      text: `Booking added${bookingRecord.serviceName ? ` for ${bookingRecord.serviceName}` : ''} on ${bookingRecord.date} at ${bookingRecord.time}.`,
+      kind: 'booking-created',
+      bookingId: bookingRef.id,
+      senderId: 'system',
+      senderName: 'Build A Booking',
+      senderRole: 'system',
+      createdAt: serverTimestamp()
+    });
+    transaction.set(notificationRef, {
+      audience: 'owner',
+      type: 'booking_request',
+      title: rawBooking.source === 'support-chat'
+        ? `Chat booking added for ${bookingRecord.clientName}`
+        : `Manual booking added for ${bookingRecord.clientName}`,
+      body: `${bookingRecord.serviceName ? `${bookingRecord.serviceName} / ` : ''}${bookingRecord.date} at ${bookingRecord.time}.`,
+      ownerId,
+      bookingId: bookingRef.id,
+      threadId,
+      clientName: bookingRecord.clientName,
+      clientEmail,
+      workspaceSlug,
+      tab: 'bookings',
+      priority: 'normal',
+      read: false,
+      createdAtMs: bookingRecord.timestamp,
+      createdAt: serverTimestamp()
+    });
+    transactionResult = { ok: true, bookingId: bookingRef.id, threadId, reused: false };
+    if (idempotencyRef) {
+      transaction.set(idempotencyRef, {
+        key: idempotencyKey,
+        bookingId: bookingRef.id,
+        ownerId,
+        workspaceSlug,
+        result: transactionResult,
+        createdAtMs: bookingRecord.timestamp,
+        ...getExpirationFields(IDEMPOTENCY_TTL_MS),
+        createdAt: serverTimestamp()
+      });
+    }
+  });
+
+  return transactionResult || { ok: true, bookingId: bookingRef.id, threadId };
+};
+
 const sendClientReminder = async ({
   appId,
   bookingDoc,
@@ -368,6 +783,23 @@ const sendClientReminder = async ({
   });
   return created;
 };
+
+exports.createOwnerBookingRequest = onCall(bookingCallableOptions, async (request) => {
+  const appId = requireString(request.data?.appId || DEFAULT_APP_ID, 'App ID', 120);
+  const ownerId = requireString(request.data?.ownerId || request.auth?.uid, 'Workspace owner', 120);
+  const idempotencyKey = cleanString(request.data?.idempotencyKey, 180);
+  await assertCanWriteOwnerBooking({ appId, ownerId, request });
+
+  const workspace = await getOwnerBookingWorkspace({ appId, ownerId });
+  const rawBooking = validateOwnerBookingPayload(request.data?.booking || {});
+  return writeOwnerBookingTransaction({
+    appId,
+    ownerId,
+    rawBooking,
+    idempotencyKey,
+    workspace
+  });
+});
 
 exports.getPublicServiceAvailability = onCall(publicCallableOptions, async (request) => {
   const {

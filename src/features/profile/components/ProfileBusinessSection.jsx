@@ -28,8 +28,10 @@ export const ProfileBusinessSection = ({
     </div>
     <div className="space-y-5">
       <ProfileBusinessIdentitySection
+        onImageCrop={onImageCrop}
         onImageRemove={onImageRemove}
         onImageUpload={onImageUpload}
+        onSettingChange={onSettingChange}
         settings={settings}
       />
       <ProfileBusinessMediaSection

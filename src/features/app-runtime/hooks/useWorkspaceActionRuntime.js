@@ -41,6 +41,7 @@ export function useWorkspaceActionRuntime({
 
   const settingsActions = useWorkspaceSettingsActions({
     accountProfileKey: workspace.accountProfileKey,
+    activeStaffId: staff.activeStaffProfile?.id || 'owner',
     canManageTeam: workspace.canManageTeam,
     canManageWorkspace: workspace.canManageWorkspace,
     clearWorkspaceDirty: settingsState.clearWorkspaceDirty,
@@ -60,6 +61,7 @@ export function useWorkspaceActionRuntime({
     showToast,
     staffList: staff.staffList,
     user: auth.user,
+    workspaceRole: workspace.workspaceRole,
     workspaceOwnerId: workspace.workspaceOwnerId
   });
 
@@ -69,6 +71,7 @@ export function useWorkspaceActionRuntime({
     handleSettingChange: settingsActions.handleSettingChange,
     persistProfileChanges: settingsActions.persistProfileChanges,
     personalProfile: workspace.personalProfile,
+    saveWorkspaceSettingsPatch: settingsActions.saveWorkspaceSettingsPatch,
     settings,
     settingsRef,
     showToast,
