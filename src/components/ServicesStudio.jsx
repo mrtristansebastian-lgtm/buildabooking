@@ -214,13 +214,13 @@ export const ServicesStudio = ({
       <section className="service-desk-shell">
         <div className="service-desk-command">
           <div className="flex flex-col xl:flex-row gap-3">
-            <label className="service-search-field h-12 rounded-xl bg-neutral-50 border border-neutral-200 px-4 flex items-center gap-2 flex-1 min-w-0">
+            <label className="service-search-field native-control-pill h-12 rounded-xl bg-neutral-50 border border-neutral-200 px-4 flex items-center gap-2 flex-1 min-w-0">
               <Search size={16} className="text-neutral-400 shrink-0" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search service, category, price, note"
-                className="bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-400 min-w-0 flex-1"
+                className="native-control-input bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-400 min-w-0 flex-1"
               />
             </label>
             <button

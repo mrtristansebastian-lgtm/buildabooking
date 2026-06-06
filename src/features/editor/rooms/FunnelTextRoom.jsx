@@ -17,7 +17,6 @@ const funnelRoomFields = {
     ['textarea', 'checkoutCopy', 'Checkout copy', 'Request the booking first. If payment is needed, the next step will take care of it cleanly.'],
     ['input', 'detailsHeading', 'Section label', 'Your Details'],
     ['input', 'detailsSubHeading', 'Form heading', 'Secure Your Slot'],
-    ['textarea', 'checkoutNote', 'Checkout note', 'The business reviews your request, confirms the slot, and keeps updates in your client portal.'],
     ['input', 'checkoutSubmitLabel', 'Button text', 'Request booking']
   ],
   success: [

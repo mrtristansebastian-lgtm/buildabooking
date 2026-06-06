@@ -1,5 +1,7 @@
 import { ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react';
 
+const FLUSH_PANEL_SCENES = new Set(['colours', 'introduction', 'cart', 'checkout', 'success', 'client-form']);
+
 export const EditorSettingsPanel = ({
   children,
   editorCollapsed,
@@ -15,6 +17,7 @@ export const EditorSettingsPanel = ({
   const activeIndex = Math.max(0, scenes.findIndex(scene => scene.id === activeSceneId));
   const activeScene = scenes[activeIndex] || scenes[0];
   const ActiveSceneIcon = activeScene.icon;
+  const isFlushPanelScene = FLUSH_PANEL_SCENES.has(activeScene.id);
   const goScene = (sceneId) => {
     openEditorRoom(sceneId);
   };
@@ -68,7 +71,7 @@ export const EditorSettingsPanel = ({
                 </div>
 
                 <div className="editor-cinema-stage-body">
-                  <div className={`editor-cinema-control-panel ${['colours', 'introduction', 'client-form'].includes(activeScene.id) ? 'editor-cinema-control-panel-flush' : ''}`}>
+                  <div className={`editor-cinema-control-panel ${isFlushPanelScene ? 'editor-cinema-control-panel-flush' : ''}`}>
                     {children({ activeScene })}
                   </div>
                 </div>

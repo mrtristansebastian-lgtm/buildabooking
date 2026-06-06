@@ -25,6 +25,32 @@
             width: 3.7rem !important;
         }
 
+        .editor-preview-frame.is-mobile-preview .booking-date-section-head {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 0.75rem !important;
+            margin-bottom: 1.15rem !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-actions {
+            position: static !important;
+            top: auto !important;
+            right: auto !important;
+            transform: none !important;
+            justify-content: center !important;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-actions button {
+            width: 1.9rem !important;
+            height: 1.9rem !important;
+            opacity: 0.52;
+        }
+
+        .editor-preview-frame.is-mobile-preview .booking-calendar-actions .booking-calendar-picker-trigger {
+            opacity: 0.74;
+        }
+
         .editor-preview-frame.is-mobile-preview .booking-time-look {
             gap: 0.55rem !important;
         }

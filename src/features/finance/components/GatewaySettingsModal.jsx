@@ -145,14 +145,14 @@ export const GatewaySettingsModal = ({
                     <span>{field.label}</span>
                     {selectedGateway.requiredFields?.includes(field.key) && <span className="tracking-widest text-neutral-300">Required</span>}
                   </span>
-                  <div className={`mt-2 flex gap-2 rounded-2xl border border-neutral-200 bg-white px-3 focus-within:border-black transition-colors ${field.type === 'textarea' ? 'items-start py-3' : 'items-center'}`}>
+                  <div className={`native-control-pill mt-2 flex gap-2 rounded-2xl border border-neutral-200 bg-white px-3 ${field.type === 'textarea' ? 'items-start py-3' : 'items-center'}`}>
                     <KeyRound size={15} className="text-neutral-300 shrink-0" />
                     {field.type === 'textarea' ? (
                       <textarea
                         value={selectedDraft.credentials?.[field.key] || ''}
                         onChange={(event) => onUpdateDraft?.(selectedGateway.id, { credentials: { [field.key]: event.target.value } })}
                         placeholder={selectedPublicConfig.credentialSummary?.[field.key] || `Enter ${field.label.toLowerCase()}`}
-                        className="min-h-24 flex-1 min-w-0 resize-none bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
+                        className="native-control-input min-h-24 flex-1 min-w-0 resize-none bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
                       />
                     ) : (
                       <input
@@ -160,7 +160,7 @@ export const GatewaySettingsModal = ({
                         value={selectedDraft.credentials?.[field.key] || ''}
                         onChange={(event) => onUpdateDraft?.(selectedGateway.id, { credentials: { [field.key]: event.target.value } })}
                         placeholder={selectedPublicConfig.credentialSummary?.[field.key] || `Enter ${field.label.toLowerCase()}`}
-                        className="h-12 flex-1 min-w-0 bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
+                        className="native-control-input h-12 flex-1 min-w-0 bg-transparent outline-none text-sm font-bold text-black placeholder:text-neutral-300"
                         autoComplete="off"
                       />
                     )}

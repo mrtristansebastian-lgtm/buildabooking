@@ -1,6 +1,6 @@
         .editor-fullscreen-workspace .cinema-intro-editor {
             display: grid !important;
-            gap: 0 !important;
+            gap: 0.7rem !important;
             padding: 0 !important;
             border: 0 !important;
             border-radius: 0 !important;
@@ -10,26 +10,26 @@
 
         .editor-fullscreen-workspace .cinema-intro-fields {
             display: grid !important;
-            gap: 0 !important;
+            gap: 0.7rem !important;
             min-width: 0;
-            border-top: 1px solid rgba(15, 23, 42, 0.07) !important;
+            border: 0 !important;
+            background: transparent !important;
         }
 
         .editor-fullscreen-workspace .cinema-intro-editor .cinema-text-card {
             display: grid !important;
             gap: 0.34rem !important;
-            padding: 0.78rem 0 0.76rem !important;
-            border: 0 !important;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.075) !important;
-            border-radius: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
+            padding: 0.72rem 0.86rem !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+            border-radius: 1rem !important;
+            background: #ffffff !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92) !important;
         }
 
         .editor-fullscreen-workspace .cinema-intro-editor .cinema-text-card span {
-            color: #7f8998 !important;
-            font-size: 0.72rem !important;
-            font-weight: 720 !important;
+            color: #374151 !important;
+            font-size: 0.78rem !important;
+            font-weight: 820 !important;
             letter-spacing: 0 !important;
             line-height: 1.2 !important;
             text-transform: none !important;
@@ -49,10 +49,10 @@
             border-radius: 0 !important;
             background: transparent !important;
             background-color: transparent !important;
-            color: #050505 !important;
-            font-size: 0.98rem !important;
-            font-weight: 690 !important;
-            line-height: 1.34 !important;
+            color: #111827 !important;
+            font-size: 0.88rem !important;
+            font-weight: 430 !important;
+            line-height: 1.38 !important;
             letter-spacing: 0 !important;
             outline: none !important;
             box-shadow: none !important;
@@ -64,9 +64,9 @@
         }
 
         .editor-fullscreen-workspace .cinema-intro-editor .cinema-text-card.is-hero input {
-            font-size: clamp(1.12rem, 1.55vw, 1.28rem) !important;
-            font-weight: 800 !important;
-            line-height: 1.12 !important;
+            font-size: 0.9rem !important;
+            font-weight: 460 !important;
+            line-height: 1.34 !important;
         }
 
         html body .native-ui .editor-fullscreen-workspace .mobile-editor-panel .editor-panel-scroll .cinema-intro-editor .cinema-subtext-card textarea,
@@ -80,12 +80,18 @@
             overflow-y: auto !important;
             padding: 0 !important;
             padding-right: 0.2rem !important;
-            font-weight: 660 !important;
+            font-weight: 430 !important;
             line-height: 1.34 !important;
         }
 
         .editor-fullscreen-workspace .cinema-intro-editor .cinema-text-card:focus-within {
-            border-bottom-color: rgba(5, 5, 5, 0.28) !important;
+            border-color: transparent !important;
+            background:
+                linear-gradient(#ffffff, #ffffff) padding-box,
+                var(--native-booking-accent-gradient, linear-gradient(135deg, #b9e3ff, #d2cbff, #ffd4f2, #c9ffbf, #b7fff0)) border-box !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x, 50%) 50% !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92) !important;
         }
 
         .editor-fullscreen-workspace .cinema-form-room {
@@ -152,26 +158,30 @@
         html body .native-ui .editor-fullscreen-workspace .mobile-editor-panel .editor-panel-scroll .cinema-faq-card .cinema-text-card {
             display: grid !important;
             gap: 0.32rem !important;
-            padding: 0.42rem 0 0.54rem !important;
-            border: 0 !important;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.075) !important;
-            border-radius: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
+            padding: 0.72rem 0.86rem !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+            border-radius: 1rem !important;
+            background: #ffffff !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92) !important;
         }
 
         .editor-fullscreen-workspace .cinema-faq-card .cinema-text-card:focus-within,
         html body .native-ui .editor-fullscreen-workspace .mobile-editor-panel .editor-panel-scroll .cinema-faq-card .cinema-text-card:focus-within {
-            border-bottom-color: transparent !important;
-            border-image: var(--native-accent-gradient, linear-gradient(135deg, #d9ff63, #9cf7e6, #d8b4fe)) 1 !important;
+            border-color: transparent !important;
+            background:
+                linear-gradient(#ffffff, #ffffff) padding-box,
+                var(--native-booking-accent-gradient, linear-gradient(135deg, #b9e3ff, #d2cbff, #ffd4f2, #c9ffbf, #b7fff0)) border-box !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x, 50%) 50% !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.92) !important;
         }
 
         .editor-fullscreen-workspace .cinema-faq-card .cinema-text-card > span,
         html body .native-ui .editor-fullscreen-workspace .mobile-editor-panel .editor-panel-scroll .cinema-faq-card .cinema-text-card > span {
             margin: 0 !important;
-            color: #7f8998 !important;
-            font-size: 0.72rem !important;
-            font-weight: 720 !important;
+            color: #374151 !important;
+            font-size: 0.78rem !important;
+            font-weight: 820 !important;
             letter-spacing: 0 !important;
             line-height: 1.2 !important;
             text-transform: none !important;
@@ -191,10 +201,10 @@
             border-radius: 0 !important;
             background: transparent !important;
             background-color: transparent !important;
-            color: #050505 !important;
-            font-size: 0.98rem !important;
-            font-weight: 690 !important;
-            line-height: 1.34 !important;
+            color: #111827 !important;
+            font-size: 0.88rem !important;
+            font-weight: 430 !important;
+            line-height: 1.38 !important;
             letter-spacing: 0 !important;
             outline: none !important;
             box-shadow: none !important;

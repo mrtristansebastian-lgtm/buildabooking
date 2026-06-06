@@ -108,7 +108,6 @@ export const createDefaultSettings = () => ({
   bannerDisplay: { visible: true, height: 220, position: 'center', placement: 'hero', opacity: 100 },
   logo: '',
   bannerImage: '',
-  businessFooterImage: '',
   venuePhotos: [],
   address: '',
   mapPlace: null,

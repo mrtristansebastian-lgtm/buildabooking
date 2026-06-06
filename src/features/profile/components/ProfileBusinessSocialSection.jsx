@@ -23,7 +23,7 @@ const SocialPlatformRow = ({ disabled, onSettingChange, platform, platformEnable
   const value = settings.socials?.[platform.key] || '';
   return (
     <div className={`grid gap-3 rounded-lg bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition-opacity md:grid-cols-[minmax(0,1fr)_13.5rem] md:items-center ${disabled ? 'opacity-55' : ''}`}>
-      <label className="flex min-w-0 items-center gap-3">
+      <label className="native-control-pill flex min-w-0 items-center gap-3 rounded-lg border border-neutral-100 bg-white px-3 py-2">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-black">
           <Icon size={16} />
         </span>
@@ -35,7 +35,7 @@ const SocialPlatformRow = ({ disabled, onSettingChange, platform, platformEnable
             disabled={disabled}
             onChange={event => onSettingChange('socials', { ...settings.socials, [platform.key]: event.target.value })}
             placeholder={disabled ? 'Hidden on booking page' : platform.placeholder}
-            className="w-full bg-transparent text-sm font-bold text-black outline-none placeholder:text-neutral-300 disabled:cursor-not-allowed"
+            className="native-control-input w-full bg-transparent text-sm font-bold text-black outline-none placeholder:text-neutral-300 disabled:cursor-not-allowed"
           />
         </span>
       </label>

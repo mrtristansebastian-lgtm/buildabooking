@@ -37,32 +37,32 @@ export const BookingSuccessState = ({
 
     return (
     <div className={`booking-success-step min-h-full flex items-center justify-center ${previewSuccessMotionClass} p-4 md:p-10 relative z-10`} style={{ backgroundColor: settings.backgroundColor, color: settings.bodyColor }}>
-        <main className="booking-success-panel flex w-full max-w-3xl flex-col rounded-3xl border p-5 md:p-7 text-left" style={{ backgroundColor: settings.pageSurfaceColor || '#ffffff', borderColor: settings.pageBorderColor || `${settings.headingColor || '#000000'}12` }}>
-            <div className={`booking-success-hero flex items-start justify-between gap-5 ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('buttons')}>
+        <main className="booking-success-panel flex w-full max-w-3xl flex-col items-center rounded-3xl border p-5 text-center md:p-7" style={{ backgroundColor: settings.pageSurfaceColor || '#ffffff', borderColor: settings.pageBorderColor || `${settings.headingColor || '#000000'}12` }}>
+            <div className={`booking-success-hero flex w-full max-w-xl flex-col items-center gap-4 text-center ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('buttons')}>
+                <span className="booking-success-icon flex shrink-0 items-center justify-center rounded-2xl" style={{ backgroundColor: settings.headingColor, color: settings.primaryColor }}>
+                    <span className="text-[10px] font-black uppercase tracking-tight">{isWaitlistMode ? 'Wait' : 'Sent'}</span>
+                </span>
                 <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.34em] opacity-35" style={{ color: settings.bodyColor }}>{settings.successStatusLabel || 'Booking Status'}</p>
+                    <p className="booking-success-kicker text-[10px] font-black uppercase tracking-[0.34em] opacity-35" style={{ color: settings.bodyColor }}>{settings.successStatusLabel || 'Booking Status'}</p>
                     <h2 className="booking-success-title mt-2 text-4xl md:text-5xl font-black tracking-tight leading-none" style={{ color: settings.headingColor, ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                         {isWaitlistMode ? "You're on the list." : successHeading}
                     </h2>
-                    <p className="booking-success-copy mt-3 max-w-xl text-sm md:text-base font-semibold leading-relaxed opacity-55" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
+                    <p className="booking-success-copy mx-auto mt-3 max-w-xl text-sm md:text-base font-semibold leading-relaxed opacity-55" style={{ color: settings.bodyColor, ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {}) }}>
                         {isWaitlistMode ? `You are on the standby list for ${activeDate.month} ${activeDate.dayNum}. We will contact you if a slot opens.` : successCopy}
                     </p>
                 </div>
-                <span className="booking-success-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ backgroundColor: settings.headingColor, color: settings.primaryColor }}>
-                    <span className="text-[10px] font-black uppercase tracking-tight">{isWaitlistMode ? 'Wait' : 'OK'}</span>
-                </span>
             </div>
 
-            <div className="booking-success-details mt-6 grid gap-3 md:grid-cols-[1fr_1fr]">
+            <div className="booking-success-details mt-6 grid w-full gap-3 md:grid-cols-[1fr_1fr]">
                 <div className="booking-success-detail rounded-2xl border p-4" style={{ borderColor: `${settings.headingColor || '#000000'}10`, backgroundColor: `${settings.headingColor || '#000000'}04` }}>
-                    <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: settings.headingColor }}>
+                    <p className="booking-success-detail-label flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: settings.headingColor }}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" /> {settings.successReferenceLabel || 'Reference'}
                     </p>
                     <p className="mt-2 text-xl font-black tracking-tight" style={{ color: settings.headingColor }}>{paymentReference}</p>
                     <p className="mt-1 text-xs font-semibold opacity-50" style={{ color: settings.bodyColor }}>{settings.successReferenceCopy || 'Keep this for updates with the business.'}</p>
                 </div>
                 <div className="booking-success-detail rounded-2xl border p-4" style={{ borderColor: `${settings.headingColor || '#000000'}10`, backgroundColor: `${settings.headingColor || '#000000'}04` }}>
-                    <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: settings.headingColor }}>
+                    <p className="booking-success-detail-label flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: settings.headingColor }}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" /> {settings.successNextLabel || 'Next'}
                     </p>
                     <p className="mt-2 text-sm font-black" style={{ color: settings.headingColor }}>{isWaitlistMode ? 'Waitlist review' : (settings.successNextTitle || 'Business review')}</p>
@@ -84,7 +84,7 @@ export const BookingSuccessState = ({
             <div className="booking-success-portal mt-4">
                 <ClientPortalPrompt formData={formData} isPreview={isPreview} onInstallApp={onInstallApp} settings={settings} />
             </div>
-            <button onClick={() => setStep('select')} className="booking-success-new-request mt-2 w-fit appearance-none outline-none focus:outline-none text-[10px] font-bold uppercase tracking-[0.35em] opacity-40 hover:opacity-100 transition-all border-b pb-2" style={{ color: settings.bodyColor, borderColor: settings.bodyColor + '40' }}>{settings.successNewRequestLabel || 'New Request'}</button>
+            <button onClick={() => setStep('select')} className="booking-success-new-request mx-auto mt-2 w-fit appearance-none outline-none focus:outline-none text-[10px] font-bold uppercase tracking-[0.35em] opacity-40 transition-all hover:opacity-100 border-b pb-2" style={{ color: settings.bodyColor, borderColor: settings.bodyColor + '40' }}>{settings.successNewRequestLabel || 'New Request'}</button>
         </main>
     </div>
     );

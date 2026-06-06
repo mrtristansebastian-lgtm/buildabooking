@@ -338,7 +338,7 @@ const manualSections = [
     ],
     workflow: [
       'Set account and business basics.',
-      'Upload brand logo, banner, hero image, and footer image if needed.',
+      'Upload brand logo, banner, and venue images if needed.',
       'Add social links used on the public page.',
       'Save before leaving Profile.'
     ],

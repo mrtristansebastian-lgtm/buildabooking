@@ -81,41 +81,41 @@ export const ProfilePersonalSection = ({
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+          <label className="native-control-pill rounded-lg bg-neutral-50 border border-neutral-100 p-4 transition-colors">
             <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 block">First Name</span>
             <input
               value={personalProfile.firstName || ''}
               onChange={(event) => updatePersonalProfile({ firstName: event.target.value })}
-              className="w-full bg-transparent outline-none text-sm font-bold text-black"
+              className="native-control-input w-full bg-transparent outline-none text-sm font-bold text-black"
               placeholder="First name"
             />
           </label>
-          <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+          <label className="native-control-pill rounded-lg bg-neutral-50 border border-neutral-100 p-4 transition-colors">
             <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 block">Surname</span>
             <input
               value={personalProfile.lastName || ''}
               onChange={(event) => updatePersonalProfile({ lastName: event.target.value })}
-              className="w-full bg-transparent outline-none text-sm font-bold text-black"
+              className="native-control-input w-full bg-transparent outline-none text-sm font-bold text-black"
               placeholder="Surname"
             />
           </label>
-          <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+          <label className="native-control-pill rounded-lg bg-neutral-50 border border-neutral-100 p-4 transition-colors">
             <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 flex items-center gap-2"><Mail size={12} /> Contact Email</span>
             <input
               type="email"
               value={personalProfile.email || ''}
               onChange={(event) => updatePersonalProfile({ email: event.target.value })}
-              className="w-full bg-transparent outline-none text-sm font-bold text-black"
+              className="native-control-input w-full bg-transparent outline-none text-sm font-bold text-black"
               placeholder="you@email.com"
             />
           </label>
-          <label className="rounded-lg bg-neutral-50 border border-neutral-100 p-4 focus-within:bg-white focus-within:border-black transition-colors">
+          <label className="native-control-pill rounded-lg bg-neutral-50 border border-neutral-100 p-4 transition-colors">
             <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-neutral-300 mb-2 flex items-center gap-2"><Phone size={12} /> Mobile Number</span>
             <input
               type="tel"
               value={personalProfile.mobile || ''}
               onChange={(event) => updatePersonalProfile({ mobile: event.target.value })}
-              className="w-full bg-transparent outline-none text-sm font-bold text-black"
+              className="native-control-input w-full bg-transparent outline-none text-sm font-bold text-black"
               placeholder="+27 ..."
             />
           </label>

@@ -119,43 +119,6 @@ export const ProfileBusinessMediaSection = ({
       </article>
 
       <article className="rounded-lg bg-neutral-50/80 p-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-          <MediaPreview className="aspect-[16/7]">
-            {settings.businessFooterImage ? (
-              <img src={settings.businessFooterImage} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="grid h-full place-items-center text-center text-neutral-300">
-                <span>
-                  <Images size={22} className="mx-auto mb-2" />
-                  <span className="text-[10px] font-black uppercase">Optional footer image</span>
-                </span>
-              </div>
-            )}
-          </MediaPreview>
-          <div className="min-w-0">
-            <p className="text-sm font-black text-black">Footer image</p>
-            <p className="mt-1 text-xs font-semibold leading-relaxed text-neutral-500">Used by editorial layouts as a polished closing visual.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <UploadButton onChange={(event) => {
-                const file = event.target.files[0];
-                onImageUpload('businessFooterImage', file, 'brand');
-                event.target.value = '';
-              }}>
-                <ImagePlus size={13} />
-                Upload
-              </UploadButton>
-              {settings.businessFooterImage && (
-                <>
-                  <MediaActionButton icon={Scissors} onClick={() => onImageCrop('businessFooterImage', 'brand')}>Crop</MediaActionButton>
-                  <MediaActionButton danger icon={Trash2} onClick={() => onImageRemove('businessFooterImage')}>Remove</MediaActionButton>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <article className="rounded-lg bg-neutral-50/80 p-4">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-black text-black">Venue gallery</p>

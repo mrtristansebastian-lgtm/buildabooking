@@ -481,7 +481,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 const position = ['top', 'center', 'bottom'].includes(display.position) ? display.position : 'center';
                 return {
                     visible: display.visible !== false,
-                    placement: ['hero', 'top', 'footer'].includes(display.placement) ? display.placement : 'hero',
+                    placement: ['hero', 'top'].includes(display.placement) ? display.placement : 'hero',
                     height: Number.isFinite(height) ? Math.min(360, Math.max(120, height)) : 220,
                     opacity: Number.isFinite(opacity) ? Math.min(100, Math.max(15, opacity)) : 100,
                     objectPosition: position === 'top' ? 'center top' : position === 'bottom' ? 'center bottom' : 'center center'
@@ -489,20 +489,18 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             }, [nativePrecisionHeroLayout, settings.bannerDisplay]);
             const hasHeroLogo = Boolean(settings.logo && logoDisplay.visible);
             const topBannerImage = settings.bannerImage || '';
-            const businessFooterImage = settings.businessFooterImage || '';
             const getHeroMediaSource = () => topBannerImage;
             const hasHeroBanner = Boolean(getHeroMediaSource() && bannerDisplay.visible);
             const canPreviewUploadMedia = Boolean(isPreview && onMediaUpload);
             const shouldRenderHeroLogo = Boolean(logoDisplay.visible && (hasHeroLogo || canPreviewUploadMedia));
-            const shouldRenderHeroBanner = Boolean(bannerDisplay.visible && bannerDisplay.placement !== 'footer' && (hasHeroBanner || canPreviewUploadMedia));
-            const shouldRenderFooterMedia = Boolean(businessFooterImage || canPreviewUploadMedia);
+            const shouldRenderHeroBanner = Boolean(bannerDisplay.visible && (hasHeroBanner || canPreviewUploadMedia));
             const handlePreviewMediaUpload = (key, event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';
                 if (!file) return;
                 onMediaUpload?.(key, file);
             };
-            const renderPreviewMediaPlaceholder = ({ key, label, icon: Icon = Images, className = '', placement = 'hero' }) => {
+            const renderPreviewMediaPlaceholder = ({ key, label, icon: Icon = Images, className = '' }) => {
                 if (!canPreviewUploadMedia) return null;
                 const isLogo = key === 'logo';
                 return (
@@ -579,31 +577,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                     className: `booking-hero-media ${extraClass}`
                 });
             };
-            const renderFooterMedia = () => {
-                if (!shouldRenderFooterMedia) return null;
-                return businessFooterImage ? (
-                    <figure
-                        className={`booking-hero-media booking-footer-media ${inspectClass}`}
-                        style={{ '--hero-media-height': `${bannerDisplay.height}px` }}
-                        onClick={() => previewInspectEnabled && onInspect('banner')}
-                    >
-                        <img
-                            src={businessFooterImage}
-                            className="booking-hero-banner-image"
-                            style={{ objectPosition: bannerDisplay.objectPosition, opacity: bannerDisplay.opacity / 100 }}
-                            alt="Business footer visual"
-                            loading="lazy"
-                        />
-                    </figure>
-                ) : renderPreviewMediaPlaceholder({
-                    key: 'businessFooterImage',
-                    label: 'Add footer image',
-                    icon: Images,
-                    className: 'booking-hero-media booking-footer-media',
-                    placement: 'footer'
-                });
-            };
-
             useEffect(() => {
                 if (selectedManualPayment && !paymentOptions.some(option => option.id === selectedManualPayment)) {
                     setSelectedManualPayment('');
@@ -1001,7 +974,6 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         venueMapLabel={venueMapLabel}
                         venuePhotos={venuePhotos}
                     />
-                    {renderFooterMedia()}
                     {socialLinksContent}
                 </div>
             );

@@ -147,9 +147,9 @@
         .mobile-editor-panel .cinema-brand-preview textarea {
             width: 100% !important;
             min-height: 2.48rem !important;
-            border-radius: 8px !important;
+            border-radius: 999px !important;
             border: 1px solid rgba(15, 23, 42, 0.075) !important;
-            background: #f8fafc !important;
+            background: #ffffff !important;
             color: #050505 !important;
             padding: 0 0.78rem !important;
             font-size: 0.82rem !important;
@@ -162,6 +162,7 @@
         .mobile-editor-panel .cinema-field-grid textarea,
         .mobile-editor-panel .cinema-faq-card textarea,
         .mobile-editor-panel .cinema-brand-preview textarea {
+            border-radius: 1rem !important;
             min-height: 4.3rem !important;
             padding-top: 0.7rem !important;
             line-height: 1.28 !important;
@@ -173,9 +174,13 @@
         .mobile-editor-panel .cinema-faq-card input:focus,
         .mobile-editor-panel .cinema-faq-card textarea:focus,
         .mobile-editor-panel .cinema-copy-preview input:focus {
-            border-color: rgba(15, 23, 42, 0.2) !important;
-            background: #ffffff !important;
-            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.045), inset 0 1px 0 rgba(255,255,255,0.96) !important;
+            border-color: transparent !important;
+            background:
+                linear-gradient(#ffffff, #ffffff) padding-box,
+                var(--native-booking-accent-gradient, linear-gradient(135deg, #b9e3ff, #d2cbff, #ffd4f2, #c9ffbf, #b7fff0)) border-box !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x, 50%) 50% !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.96) !important;
         }
 
         .mobile-editor-panel .cinema-field-grid input[type="color"] {

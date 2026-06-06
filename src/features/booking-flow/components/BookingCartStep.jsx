@@ -43,6 +43,7 @@ export const BookingCartStep = ({
             selectedStaff={selectedStaff}
             selectedTime={selectedTime}
             settings={settings}
+            variant="cart"
           />
           <button
             type="button"

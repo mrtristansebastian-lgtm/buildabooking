@@ -32,16 +32,6 @@ const getSettingImageMeta = (key) => {
       emptyMessage: 'Upload a banner in Business Profile first.',
       updatedMessage: 'Banner image updated',
       croppedMessage: 'Banner crop updated'
-    },
-    businessFooterImage: {
-      ratioKey: 'banner',
-      shape: 'rounded',
-      uploadTitle: 'Crop business footer image',
-      cropTitle: 'Adjust footer image crop',
-      fileName: 'business-footer.jpg',
-      emptyMessage: 'Upload a footer image in Business Profile first.',
-      updatedMessage: 'Footer image updated',
-      croppedMessage: 'Footer image crop updated'
     }
   };
   return meta[key] || meta.logo;

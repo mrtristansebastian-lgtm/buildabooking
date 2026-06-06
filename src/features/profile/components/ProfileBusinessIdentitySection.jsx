@@ -16,7 +16,7 @@ export const ProfileBusinessIdentitySection = ({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_10rem]">
         <div className="grid gap-4">
-          <label className="group flex min-h-[4.75rem] items-center gap-3 rounded-lg bg-white px-4 py-3 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] focus-within:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.2)]">
+          <label className="native-control-pill group flex min-h-[4.75rem] items-center gap-3 rounded-lg bg-white px-4 py-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-black">
               <Building2 size={16} />
             </span>
@@ -26,7 +26,7 @@ export const ProfileBusinessIdentitySection = ({
                 type="text"
                 value={settings.brandName || ''}
                 onChange={event => onSettingChange('brandName', event.target.value)}
-                className="w-full bg-transparent text-sm font-black text-black outline-none placeholder:text-neutral-300"
+                className="native-control-input w-full bg-transparent text-sm font-black text-black outline-none placeholder:text-neutral-300"
                 placeholder="Your Business"
               />
             </span>

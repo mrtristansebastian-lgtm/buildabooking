@@ -281,10 +281,10 @@
             max-width: 100%;
             margin-left: auto;
             margin-right: auto;
-            padding: 0.38rem;
+            padding: 0;
             border-radius: 999px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            background: rgba(255, 255, 255, 0.72);
+            border: 0;
+            background: transparent;
         }
 
         .booking-social-links.booking-social-dock a {
@@ -369,9 +369,7 @@
         }
 
         .booking-style-command-flow .booking-hero-media-top,
-        .booking-style-command-flow .booking-footer-media,
-        .booking-style-command-flow .booking-preview-media-drop.booking-hero-media-top,
-        .booking-style-command-flow .booking-preview-media-drop.booking-footer-media {
+        .booking-style-command-flow .booking-preview-media-drop.booking-hero-media-top {
             width: calc(100% + (var(--command-flow-shell-pad, 0rem) * 2) + (var(--command-flow-preview-edge, 0rem) * 2));
             max-width: none;
             margin-left: calc((var(--command-flow-shell-pad, 0rem) + var(--command-flow-preview-edge, 0rem)) * -1);
@@ -381,11 +379,6 @@
         .booking-style-command-flow .booking-hero-media-top,
         .booking-style-command-flow .booking-preview-media-drop.booking-hero-media-top {
             margin-top: calc((var(--command-flow-shell-pad, 0rem) + var(--command-flow-preview-edge, 0rem)) * -1);
-        }
-
-        .booking-style-command-flow .booking-footer-media {
-            margin-top: clamp(1.4rem, 4vw, 2.5rem);
-            margin-bottom: 0;
         }
 
         .booking-style-command-flow [data-preview-section="action"] {
@@ -645,6 +638,7 @@
         .booking-style-native-precision .booking-checkout-panel,
         .booking-style-native-precision .booking-checkout-email,
         .booking-style-native-precision .booking-payment-box,
+        .booking-style-native-precision .booking-payment-icon,
         .booking-style-native-precision .booking-payment-option,
         .booking-style-native-precision .booking-payment-empty,
         .booking-style-native-precision .booking-success-panel,
@@ -667,6 +661,7 @@
         .booking-style-native-precision .booking-checkout-summary > .grid > div > span:first-child,
         .booking-style-native-precision .booking-checkout-email,
         .booking-style-native-precision .booking-payment-box,
+        .booking-style-native-precision .booking-payment-icon,
         .booking-style-native-precision .booking-payment-option,
         .booking-style-native-precision .booking-payment-empty {
             border-radius: 1rem !important;
@@ -826,9 +821,9 @@
         }
 
         .booking-style-command-flow .booking-social-dock {
-            border-top: 1px solid var(--command-rule);
-            border-bottom: 1px solid var(--command-rule);
-            background: #ffffff;
+            border-top: 0;
+            border-bottom: 0;
+            background: transparent;
             box-shadow: none !important;
         }
 
@@ -848,6 +843,7 @@
         .booking-style-command-flow .booking-checkout-email,
         .booking-style-command-flow .booking-checkout-email span,
         .booking-style-command-flow .booking-payment-box,
+        .booking-style-command-flow .booking-payment-icon,
         .booking-style-command-flow .booking-payment-option,
         .booking-style-command-flow .booking-payment-option-icon,
         .booking-style-command-flow .booking-payment-empty,
@@ -931,6 +927,7 @@
         .booking-style-native-precision.booking-checkout-step .booking-checkout-summary > .grid > div > span:first-child,
         .booking-style-native-precision.booking-checkout-step .booking-checkout-email,
         .booking-style-native-precision.booking-checkout-step .booking-payment-box,
+        .booking-style-native-precision.booking-checkout-step .booking-payment-icon,
         .booking-style-native-precision.booking-checkout-step .booking-payment-option,
         .booking-style-native-precision.booking-checkout-step .booking-payment-empty,
         .booking-style-native-precision.booking-success-step .booking-success-detail,
@@ -962,6 +959,7 @@
         .booking-style-command-flow.booking-checkout-step .booking-checkout-email,
         .booking-style-command-flow.booking-checkout-step .booking-checkout-email span,
         .booking-style-command-flow.booking-checkout-step .booking-payment-box,
+        .booking-style-command-flow.booking-checkout-step .booking-payment-icon,
         .booking-style-command-flow.booking-checkout-step .booking-payment-option,
         .booking-style-command-flow.booking-checkout-step .booking-payment-option-icon,
         .booking-style-command-flow.booking-checkout-step .booking-payment-empty,

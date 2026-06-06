@@ -15,35 +15,36 @@
             --native-accent-easing: ease-in-out;
             --native-beam-duration: 12s;
             --native-accent-x: 0%;
-            --app-control-bg: transparent;
-            --app-control-bg-focus: transparent;
+            --app-control-bg: rgba(255, 255, 255, 0.72);
+            --app-control-bg-focus: #ffffff;
             --app-control-border: rgba(15, 23, 42, 0.16);
             --app-control-border-focus: transparent;
             --app-control-text: #050505;
             --app-control-placeholder: #9aa3b2;
             --app-control-icon: #7d8594;
             --app-control-shadow: inset 0 1px 0 rgba(255,255,255,0.92);
-            --app-control-focus-ring: 0 0 0 3px rgba(15, 23, 42, 0.045);
+            --app-control-focus-ring: 0 0 0 0 rgba(15, 23, 42, 0);
         }
 
         .native-ui :where(
             input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
             textarea
-        ):not(.booking-desk-native-select) {
-            border-color: transparent !important;
-            border-radius: 0 !important;
-            background-color: transparent !important;
-            background-image: linear-gradient(90deg, var(--app-control-border), var(--app-control-border)) !important;
-            background-repeat: no-repeat !important;
-            background-position: left bottom !important;
-            background-size: 100% 1px !important;
+        ):not(.booking-desk-native-select):not(.native-control-input) {
+            border: 1px solid var(--app-control-border) !important;
+            border-radius: 999px !important;
+            background-color: var(--app-control-bg) !important;
+            background-image: none !important;
             color: var(--app-control-text) !important;
             font-size: 0.84rem !important;
             font-weight: 520 !important;
             letter-spacing: 0 !important;
-            box-shadow: none !important;
+            box-shadow: var(--app-control-shadow) !important;
             outline: none !important;
-            transition: background-size 160ms ease, box-shadow 160ms ease !important;
+            transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease !important;
+        }
+
+        .native-ui :where(textarea):not(.native-control-input) {
+            border-radius: 1rem !important;
         }
 
         .native-ui :where(select):not(.booking-desk-native-select) {
@@ -73,25 +74,59 @@
         .native-ui :where(
             input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
             textarea
-        ):not(.booking-desk-native-select):focus {
+        ):not(.booking-desk-native-select):not(.native-control-input):focus {
             border-color: transparent !important;
-            background-color: transparent !important;
-            background-image: var(--native-booking-accent-gradient) !important;
-            background-repeat: no-repeat !important;
-            background-position: left bottom !important;
-            background-size: 420% 2px !important;
-            box-shadow: 0 10px 24px -26px var(--native-accent-glow) !important;
+            background:
+                linear-gradient(var(--app-control-bg-focus), var(--app-control-bg-focus)) padding-box,
+                var(--native-booking-accent-gradient) border-box !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            box-shadow: var(--app-control-shadow) !important;
         }
 
         .native-ui :where(select):not(.booking-desk-native-select):focus {
             border-color: var(--app-control-border-focus) !important;
             background-color: var(--app-control-bg-focus) !important;
-            box-shadow: var(--app-control-focus-ring), var(--app-control-shadow) !important;
+            box-shadow: var(--app-control-shadow) !important;
         }
 
         .native-ui :where(input::placeholder, textarea::placeholder) {
             color: var(--app-control-placeholder) !important;
             font-weight: 500 !important;
+        }
+
+        .native-ui .native-control-pill {
+            border-width: 1px !important;
+            border-style: solid !important;
+            border-color: var(--app-control-border) !important;
+            background: var(--app-control-bg-focus) !important;
+            background-clip: padding-box !important;
+            box-shadow: var(--app-control-shadow) !important;
+            transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease !important;
+        }
+
+        .native-ui .native-control-pill:focus-within {
+            border-color: transparent !important;
+            background:
+                linear-gradient(var(--app-control-bg-focus), var(--app-control-bg-focus)) padding-box,
+                var(--native-booking-accent-gradient) border-box !important;
+            background-size: 100% 100%, 420% 420% !important;
+            background-position: 0 0, var(--native-accent-x) 50% !important;
+            box-shadow: var(--app-control-shadow) !important;
+        }
+
+        .native-ui .native-control-pill :where(input, textarea).native-control-input,
+        .native-ui .native-control-pill :where(input, textarea).native-control-input:focus {
+            min-height: auto !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            background-image: none !important;
+            color: var(--app-control-text) !important;
+            font-size: 0.88rem !important;
+            font-weight: 430 !important;
+            line-height: 1.35 !important;
+            box-shadow: none !important;
         }
 
         .native-ui select:not(.booking-desk-native-select) {
