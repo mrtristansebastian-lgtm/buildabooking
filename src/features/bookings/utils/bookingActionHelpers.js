@@ -6,11 +6,10 @@ const paymentProviderNames = {
   stripe: 'Stripe',
   yoco: 'Yoco',
   payfast: 'PayFast',
-  paystack: 'Paystack',
-  ozow: 'Ozow'
+  paystack: 'Paystack'
 };
 
-const paymentGateways = new Set(['stripe', 'yoco', 'payfast', 'paystack', 'ozow']);
+const paymentGateways = new Set(['stripe', 'yoco', 'payfast', 'paystack']);
 
 const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
 

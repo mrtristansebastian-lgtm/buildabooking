@@ -304,7 +304,7 @@ const normalizeCsvGateway = (value = '') => {
   if (clean.includes('payfast')) return 'payfast';
   if (clean.includes('paystack')) return 'paystack';
   if (clean.includes('yoco')) return 'yoco';
-  if (clean.includes('ozow')) return 'ozow';
+  if (clean.includes('ozow')) return 'manual_eft';
   return clean || 'cash';
 };
 

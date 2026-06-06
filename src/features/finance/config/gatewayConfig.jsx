@@ -44,20 +44,6 @@ export const gatewayCards = [
     ]
   },
   {
-    id: 'ozow',
-    name: 'Ozow',
-    region: 'South Africa',
-    icon: Landmark,
-    logo: '/payment-logos/ozow.png',
-    note: 'Instant EFT-style bank payments with signed payment URLs.',
-    requiredFields: ['siteCode', 'privateKey'],
-    fields: [
-      { key: 'siteCode', label: 'Site code', type: 'text' },
-      { key: 'privateKey', label: 'Private key', type: 'password' },
-      { key: 'apiKey', label: 'API key', type: 'password' }
-    ]
-  },
-  {
     id: 'paystack',
     name: 'Paystack',
     region: 'Africa',
@@ -104,7 +90,7 @@ export const gatewayById = gatewayCards.reduce((acc, gateway) => {
   return acc;
 }, {});
 
-export const cardGatewayIds = new Set(['stripe', 'payfast', 'yoco', 'paystack', 'ozow']);
+export const cardGatewayIds = new Set(['stripe', 'payfast', 'yoco', 'paystack']);
 
 export const getGatewayMissingRequiredFields = ({ gateway, draft = {}, publicConfig = {} }) => {
   const credentials = draft.credentials || {};

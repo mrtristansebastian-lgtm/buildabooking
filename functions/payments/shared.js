@@ -2,14 +2,12 @@ const admin = require('firebase-admin');
 const { HttpsError } = require('firebase-functions/v2/https');
 const { decryptJson } = require('./crypto');
 
-const GATEWAYS = Object.freeze(['stripe', 'payfast', 'peach', 'yoco', 'ozow', 'paystack', 'manual_eft', 'cash']);
+const GATEWAYS = Object.freeze(['stripe', 'payfast', 'yoco', 'paystack', 'manual_eft', 'cash']);
 
 const gatewayDisplayNames = Object.freeze({
   stripe: 'Stripe',
   payfast: 'Payfast',
-  peach: 'Peach Payments',
   yoco: 'Yoco',
-  ozow: 'Ozow',
   paystack: 'Paystack',
   manual_eft: 'Manual EFT',
   cash: 'Cash'
@@ -18,9 +16,7 @@ const gatewayDisplayNames = Object.freeze({
 const allowedCredentialFields = Object.freeze({
   stripe: ['publishableKey', 'secretKey', 'webhookSecret'],
   payfast: ['merchantId', 'merchantKey', 'passphrase'],
-  peach: ['entityId', 'accessToken', 'secretKey', 'webhookSecret', 'checkoutEndpoint'],
   yoco: ['publicKey', 'secretKey', 'webhookSecret'],
-  ozow: ['siteCode', 'privateKey', 'apiKey'],
   paystack: ['publicKey', 'secretKey'],
   manual_eft: ['accountHolder', 'bankName', 'accountNumber', 'branchCode', 'accountType', 'referencePrefix', 'instructions'],
   cash: ['instructions']
@@ -29,9 +25,7 @@ const allowedCredentialFields = Object.freeze({
 const requiredCredentialFields = Object.freeze({
   stripe: ['secretKey', 'webhookSecret'],
   payfast: ['merchantId', 'merchantKey'],
-  peach: ['entityId', 'accessToken', 'webhookSecret'],
   yoco: ['secretKey', 'webhookSecret'],
-  ozow: ['siteCode', 'privateKey'],
   paystack: ['secretKey'],
   manual_eft: ['accountHolder', 'bankName', 'accountNumber'],
   cash: []
@@ -40,14 +34,10 @@ const requiredCredentialFields = Object.freeze({
 const credentialFieldLabels = Object.freeze({
   accountHolder: 'account holder',
   accountNumber: 'account number',
-  accessToken: 'access token',
   bankName: 'bank name',
-  entityId: 'entity ID',
   merchantId: 'merchant ID',
   merchantKey: 'merchant key',
-  privateKey: 'private key',
   secretKey: 'secret key',
-  siteCode: 'site code',
   webhookSecret: 'webhook secret'
 });
 

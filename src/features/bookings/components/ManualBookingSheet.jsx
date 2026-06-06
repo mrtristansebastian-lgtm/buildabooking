@@ -137,7 +137,6 @@ export const ManualBookingSheet = ({
                 <option value="stripe">Stripe</option>
                 <option value="payfast">PayFast</option>
                 <option value="paystack">Paystack</option>
-                <option value="ozow">Ozow</option>
               </select>
             </label>
             <label className="manual-booking-field">

@@ -110,7 +110,7 @@ export function usePublicBookingWorkspace({
       return () => { cancelled = true; };
     }
 
-    const gatewayIds = ['stripe', 'payfast', 'yoco', 'ozow', 'paystack', 'manual_eft', 'cash'];
+    const gatewayIds = ['stripe', 'payfast', 'yoco', 'paystack', 'manual_eft', 'cash'];
     Promise.all(gatewayIds.map(async (gatewayId) => {
       const snap = await FirebaseSDK.getDoc(FirebaseSDK.doc(db, 'artifacts', appId, 'users', publicWorkspace.ownerId, 'payment_settings', gatewayId));
       if (!snap.exists()) return null;

@@ -167,7 +167,7 @@ service cloud.firestore {
       allow read: if canPaymentAdmin(appId, userId) ||
         (isManualPublicGateway(gatewayId) && resource.data.enabled == true);
       allow create, update: if canPaymentAdmin(appId, userId) &&
-        gatewayId in ['stripe', 'payfast', 'peach', 'yoco', 'ozow', 'paystack', 'manual_eft', 'cash'] &&
+        gatewayId in ['stripe', 'payfast', 'yoco', 'paystack', 'manual_eft', 'cash'] &&
         request.resource.data.keys().hasOnly([
           'gatewayType',
           'enabled',

@@ -1,5 +1,5 @@
 export const manualPaymentGatewayIds = new Set(['manual_eft', 'cash']);
-export const hostedPaymentGatewayIds = new Set(['stripe', 'payfast', 'yoco', 'ozow', 'paystack', 'peach']);
+export const hostedPaymentGatewayIds = new Set(['stripe', 'payfast', 'yoco', 'paystack']);
 
 export const isHostedPaymentOption = (option = {}) => (
   hostedPaymentGatewayIds.has(option.gatewayType || option.id)

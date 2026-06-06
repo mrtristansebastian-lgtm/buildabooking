@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { onRequest } = require('firebase-functions/v2/https');
-const { PAYMENT_SETTINGS_ENCRYPTION_KEY, hashHex, hmacHex, safeCompareHex } = require('./crypto');
-const { ozowHash, payfastSignature, queryString } = require('./gatewayFactory');
+const { PAYMENT_SETTINGS_ENCRYPTION_KEY, hmacHex, safeCompareHex } = require('./crypto');
+const { payfastSignature, queryString } = require('./gatewayFactory');
 const {
   cleanString,
   getGatewayConfig,
@@ -215,92 +215,9 @@ const yocoWebhook = wrapWebhook('yoco', async ({ req, credentials }) => {
   };
 });
 
-const ozowWebhook = wrapWebhook('ozow', async ({ req, credentials }) => {
-  const body = parseJsonBody(req);
-  const receivedHash = cleanString(body.Hash || body.HashCheck || body.hash || body.hashCheck, 1000).toLowerCase();
-  const privateKey = cleanString(credentials.privateKey, 2000);
-  const fields = {
-    SiteCode: body.SiteCode || body.siteCode,
-    CountryCode: body.CountryCode || body.countryCode || 'ZA',
-    CurrencyCode: body.CurrencyCode || body.currencyCode || body.Currency || 'ZAR',
-    Amount: body.Amount || body.amount,
-    TransactionReference: body.TransactionReference || body.transactionReference,
-    BankReference: body.BankReference || body.bankReference,
-    Optional1: body.Optional1 || body.optional1,
-    Optional2: body.Optional2 || body.optional2,
-    Optional3: body.Optional3 || body.optional3,
-    Optional4: body.Optional4 || body.optional4,
-    Optional5: body.Optional5 || body.optional5,
-    Customer: body.Customer || body.customer,
-    CancelUrl: '',
-    ErrorUrl: '',
-    SuccessUrl: '',
-    NotifyUrl: '',
-    IsTest: body.IsTest || body.isTest || ''
-  };
-  const expected = ozowHash(fields, privateKey).toLowerCase();
-  if (receivedHash && !safeCompareHex(expected, receivedHash)) throw new Error('INVALID_SIGNATURE');
-
-  const status = cleanString(body.Status || body.status, 80).toLowerCase();
-  return {
-    paid: status.includes('complete') || status.includes('success') || status.includes('paid'),
-    eventId: cleanString(body.TransactionId || body.transactionId || body.TransactionReference || body.transactionReference, 180),
-    paymentId: cleanString(body.TransactionReference || body.transactionReference, 160),
-    bookingId: cleanString(body.Optional3 || body.optional3, 160),
-    amountInCents: centsFromDecimal(body.Amount || body.amount),
-    currency: normalizeCurrency(body.CurrencyCode || body.currencyCode || 'ZAR'),
-    providerReference: cleanString(body.TransactionId || body.transactionId, 180),
-    rawEvent: { status: body.Status || body.status, reference: body.TransactionReference || body.transactionReference }
-  };
-});
-
-const peachWebhook = wrapWebhook('peach', async ({ req, credentials }) => {
-  const contentType = cleanString(req.headers['content-type'], 120).toLowerCase();
-  const body = contentType.includes('application/x-www-form-urlencoded')
-    ? parseUrlEncodedBody(req)
-    : parseJsonBody(req);
-  const signature = cleanString(
-    req.headers['x-webhook-signature'] ||
-    req.headers['x-signature'] ||
-    req.headers['x-peach-signature'] ||
-    req.headers['signature'] ||
-    body.signature,
-    1000
-  );
-  const webhookSecret = cleanString(credentials.webhookSecret || credentials.secretKey || credentials.accessToken, 2000);
-  if (signature && webhookSecret) {
-    const expectedRaw = hmacHex('sha256', webhookSecret, req.rawBody || Buffer.from(''));
-    const unsignedFields = Object.keys(body).filter((key) => key !== 'signature').sort().reduce((acc, key) => {
-      acc[key] = body[key];
-      return acc;
-    }, {});
-    const expectedFields = hmacHex('sha256', webhookSecret, queryString(unsignedFields));
-    const incoming = signature.replace(/^sha256=/, '');
-    if (!safeCompareHex(expectedRaw, incoming) && !safeCompareHex(expectedFields, incoming)) {
-      throw new Error('INVALID_SIGNATURE');
-    }
-  }
-
-  const custom = body.customParameters || body.custom || {};
-  const resultCode = cleanString(body.result?.code || body.resultCode || body['result.code'] || body.result_code, 80);
-  const resultDescription = cleanString(body.result?.description || body.resultDescription || body['result.description'] || body.result_description, 160).toLowerCase();
-  return {
-    paid: resultCode.startsWith('000.') || resultDescription.includes('success') || cleanString(body.paymentStatus || body.status).toLowerCase().includes('success'),
-    eventId: cleanString(body.id || body.ndc || body.merchantTransactionId, 180),
-    paymentId: cleanString(body.merchantTransactionId || custom.paymentId, 160),
-    bookingId: cleanString(custom.bookingId, 160),
-    amountInCents: centsFromDecimal(body.amount),
-    currency: normalizeCurrency(body.currency || 'ZAR'),
-    providerReference: cleanString(body.id || body.paymentId || body.ndc, 180),
-    rawEvent: { id: body.id, code: resultCode }
-  };
-});
-
 module.exports = {
-  ozowWebhook,
   payfastWebhook,
   paystackWebhook,
-  peachWebhook,
   stripeWebhook,
   yocoWebhook
 };

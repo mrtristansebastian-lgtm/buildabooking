@@ -34,30 +34,6 @@ const payfastSignature = (fields, passphrase = '') => {
   return hashHex('md5', passphrase ? `${base}&passphrase=${encodeURIComponent(passphrase).replace(/%20/g, '+')}` : base);
 };
 
-const ozowHash = (fields, privateKey) => {
-  const order = [
-    'SiteCode',
-    'CountryCode',
-    'CurrencyCode',
-    'Amount',
-    'TransactionReference',
-    'BankReference',
-    'Optional1',
-    'Optional2',
-    'Optional3',
-    'Optional4',
-    'Optional5',
-    'Customer',
-    'CancelUrl',
-    'ErrorUrl',
-    'SuccessUrl',
-    'NotifyUrl',
-    'IsTest'
-  ];
-  const raw = `${order.map((key) => cleanString(fields[key], 1000)).join('')}${privateKey}`;
-  return hashHex('sha512', raw.toLowerCase());
-};
-
 const makeCheckoutUrls = ({ data, paymentId, baseUrl }) => {
   const fallbackSuccess = `https://build-a-booking.web.app/#/dashboard/bookings?payment=${encodeURIComponent(paymentId)}&status=success`;
   const fallbackCancel = `https://build-a-booking.web.app/#/dashboard/bookings?payment=${encodeURIComponent(paymentId)}&status=cancelled`;
@@ -194,75 +170,6 @@ const gatewayHandlers = {
       providerReference: body.id || payment.paymentId,
       rawProviderResponse: body
     };
-  },
-
-  ozow: async ({ credentials, payment, request }) => {
-    const siteCode = requireCredential(credentials, 'siteCode', 'Ozow');
-    const privateKey = requireCredential(credentials, 'privateKey', 'Ozow');
-    const baseUrl = getFunctionBaseUrl(request);
-    const urls = makeCheckoutUrls({ data: payment, paymentId: payment.paymentId, baseUrl });
-    const fields = {
-      SiteCode: siteCode,
-      CountryCode: 'ZA',
-      CurrencyCode: payment.currency,
-      Amount: centsToDecimal(payment.amountInCents),
-      TransactionReference: payment.paymentId,
-      BankReference: cleanString(payment.description, 20) || 'BuildABooking',
-      Optional1: payment.appId,
-      Optional2: payment.businessId,
-      Optional3: payment.bookingId || '',
-      Optional4: '',
-      Optional5: '',
-      Customer: cleanString(payment.customerEmail || payment.customerName, 100),
-      CancelUrl: urls.cancelUrl,
-      ErrorUrl: urls.cancelUrl,
-      SuccessUrl: urls.successUrl,
-      NotifyUrl: webhookUrl({ baseUrl, endpoint: 'ozowWebhook', appId: payment.appId, businessId: payment.businessId }),
-      IsTest: payment.mode === 'live' ? 'false' : 'true'
-    };
-    fields.HashCheck = ozowHash(fields, privateKey);
-    return {
-      checkoutUrl: `https://pay.ozow.com/?${queryString(fields)}`,
-      providerReference: payment.paymentId,
-      rawProviderResponse: { siteCode }
-    };
-  },
-
-  peach: async ({ credentials, payment }) => {
-    const entityId = requireCredential(credentials, 'entityId', 'Peach Payments');
-    const accessToken = cleanString(credentials.accessToken || credentials.secretKey, 2000);
-    if (!accessToken) throw new HttpsError('failed-precondition', 'Peach Payments is missing accessToken or secretKey.');
-    const endpoint = cleanString(credentials.checkoutEndpoint, 1000) || 'https://eu-prod.oppwa.com/v1/checkouts';
-    const params = new URLSearchParams({
-      entityId,
-      amount: centsToDecimal(payment.amountInCents),
-      currency: payment.currency,
-      paymentType: 'DB',
-      merchantTransactionId: payment.paymentId,
-      'customParameters[appId]': payment.appId,
-      'customParameters[businessId]': payment.businessId,
-      'customParameters[bookingId]': payment.bookingId || ''
-    });
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params.toString()
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || !body.id) {
-      throw new HttpsError('internal', body.result?.description || 'Peach Payments could not create a checkout.');
-    }
-    const checkoutBase = endpoint.includes('/v1/checkouts')
-      ? endpoint.replace('/v1/checkouts', '/v1/paymentWidgets.js')
-      : 'https://eu-prod.oppwa.com/v1/paymentWidgets.js';
-    return {
-      checkoutUrl: `${checkoutBase}?checkoutId=${encodeURIComponent(body.id)}`,
-      providerReference: body.id,
-      rawProviderResponse: body
-    };
   }
 };
 
@@ -278,7 +185,6 @@ const createGatewayPayment = async ({ gatewayType, credentials, payment, request
 
 module.exports = {
   createGatewayPayment,
-  ozowHash,
   payfastSignature,
   queryString
 };
