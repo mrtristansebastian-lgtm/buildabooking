@@ -35,12 +35,35 @@ export const BookingServicesSection = ({
 
     const serviceTextColor = settings.serviceTextColor || settings.bodyColor || '#050505';
     const serviceBodyColor = settings.serviceBodyColor || settings.bodyColor;
-    const serviceBgColor = settings.serviceBgColor || withColorAlpha(settings.bodyColor || '#000', 2, '#000000');
+    const serviceBgColor = settings.serviceBgColor && settings.serviceBgColor !== 'transparent'
+        ? settings.serviceBgColor
+        : '#FFFFFF';
     const serviceBorderColor = settings.serviceBorderColor || withColorAlpha(settings.bodyColor || '#000', 9, '#000000');
     const serviceActiveBgColor = settings.serviceActiveBgColor || withColorAlpha(settings.primaryColor || '#000', 7, '#000000');
     const goToServicesStudio = () => {
         if (typeof window !== 'undefined') window.location.hash = '#/dashboard/services';
     };
+
+    const renderServiceMeta = ({ duration, price, className = '', priceColor, mutedColor, showClock = false } = {}) => {
+        if (!duration && !price) return null;
+        return (
+            <div className={`booking-service-meta ${className}`.trim()} aria-label="Service price and duration">
+                {duration && (
+                    <span className="booking-service-meta-item is-duration" style={mutedColor ? { color: mutedColor } : undefined}>
+                        {showClock && <Clock size={12} />}
+                        {duration}
+                    </span>
+                )}
+                {duration && price && <span className="booking-service-meta-separator" aria-hidden="true">/</span>}
+                {price && (
+                    <span className="booking-service-meta-item is-price" style={priceColor ? { color: priceColor } : undefined}>
+                        {price}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
     const renderServiceImagePlaceholder = (showAction = false) => (
         <span className={`booking-service-image-placeholder ${showAction ? 'has-add-action' : ''}`} aria-hidden={showAction ? undefined : 'true'}>
             <ImageIcon className="booking-service-image-placeholder-icon" size={22} />
@@ -58,7 +81,6 @@ export const BookingServicesSection = ({
         const isActive = options.isActive ?? (selectedService?.id === service.id);
         const price = formatServicePrice(service);
         const duration = formatServiceDuration(service.duration);
-        const hasFacts = Boolean(price || duration);
         const hasServiceImage = Boolean(service.imageUrls?.[0]);
         const showServiceImageSlot = hasServiceImage || isPreview;
 
@@ -74,7 +96,7 @@ export const BookingServicesSection = ({
                     }
                     setSelectedServiceId(service.id);
                 }}
-                className={`booking-service-option appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all booking-service-border-${serviceBorderStyle} ${showServiceImageSlot ? 'has-service-image' : 'is-text-only-service'} ${!hasServiceImage && isPreview ? 'has-placeholder-image' : ''} ${isPreviewPlaceholder ? 'is-preview-empty' : ''} ${isActive ? `is-selected scale-[1.01] shadow-xl ${nativeAccentBorderClass}` : 'opacity-80 hover:opacity-100'}`}
+                className={`booking-service-option appearance-none outline-none focus:outline-none text-left rounded-2xl border p-4 md:p-5 transition-all booking-service-border-${serviceBorderStyle} ${showServiceImageSlot ? 'has-service-image' : 'is-text-only-service'} ${!hasServiceImage && isPreview ? 'has-placeholder-image' : ''} ${isPreviewPlaceholder ? 'is-preview-empty' : ''} ${isActive ? `is-selected scale-[1.01] shadow-xl ${nativeAccentBorderClass}` : 'hover:-translate-y-0.5'}`}
                 style={getServiceCardStyle({ isActive, settings, nativeAccent, serviceBorderStyle })}
             >
                 <div className="booking-service-shell flex items-start gap-4">
@@ -99,13 +121,8 @@ export const BookingServicesSection = ({
                                 </span>
                             )}
                         </div>
-                        {service.description && <p className="text-xs md:text-sm mt-2 leading-relaxed opacity-65" style={{ color: serviceBodyColor }}>{service.description}</p>}
-                        {hasFacts && (
-                            <div className="booking-service-facts" aria-label="Service price and duration">
-                                {duration && <span className="booking-service-fact" style={{ backgroundColor: serviceBgColor, borderColor: serviceBorderColor, color: serviceBodyColor }}><Clock size={12} />{duration}</span>}
-                                {price && <span className="booking-service-fact is-price" style={{ backgroundColor: serviceActiveBgColor, borderColor: withColorAlpha(settings.primaryColor || '#000', 12, '#000000'), color: serviceTextColor }}>{price}</span>}
-                            </div>
-                        )}
+                        {service.description && <p className="booking-service-description text-xs md:text-sm mt-2 leading-relaxed" style={{ color: serviceBodyColor }}>{service.description}</p>}
+                        {renderServiceMeta({ duration, price, className: 'booking-service-facts', priceColor: serviceTextColor, mutedColor: serviceBodyColor })}
                     </div>
                 </div>
             </button>
@@ -152,9 +169,9 @@ export const BookingServicesSection = ({
                 const isPreviewPlaceholder = Boolean(service.isPreviewPlaceholder);
                 const isActive = isPreviewPlaceholder ? index === 0 : selectedService?.id === service.id;
                 const price = formatServicePrice(service);
+                const duration = formatServiceDuration(service.duration);
                 const hasServiceImage = Boolean(service.imageUrls?.[0]);
                 const showServiceImageSlot = hasServiceImage || isPreview;
-                const hasPrice = Boolean(price);
 
                 return (
                     <button
@@ -185,9 +202,7 @@ export const BookingServicesSection = ({
                         <span className="booking-service-dropdown-row-copy">
                             <strong style={{ fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily) }}>{service.name}</strong>
                         </span>
-                        {hasPrice && <span className="booking-service-dropdown-row-meta" style={{ color: serviceBodyColor }}>
-                            {price && <b style={{ color: serviceTextColor }}>{price}</b>}
-                        </span>}
+                        {renderServiceMeta({ duration, price, className: 'booking-service-dropdown-row-meta', priceColor: serviceTextColor, mutedColor: serviceBodyColor })}
                         <span className="booking-service-dropdown-row-check" style={{ borderColor: isActive ? settings.primaryColor : withColorAlpha(settings.bodyColor || '#000', 8, '#000000'), color: isActive ? settings.primaryColor : 'transparent' }}>
                             <Check size={12} />
                         </span>
@@ -202,7 +217,7 @@ export const BookingServicesSection = ({
         const duration = formatServiceDuration(selectedServiceForDisplay.duration);
         const hasServiceImage = Boolean(selectedServiceForDisplay.imageUrls?.[0]);
         const showServiceImageSlot = hasServiceImage || isPreview;
-        const hasDetails = Boolean(duration || price || selectedServiceForDisplay.category);
+        const hasDetails = Boolean(duration || price);
 
         return (
             <article
@@ -237,21 +252,7 @@ export const BookingServicesSection = ({
                     {selectedServiceForDisplay.description && (
                         <p style={{ color: serviceBodyColor }}>{selectedServiceForDisplay.description}</p>
                     )}
-                    {hasDetails && (
-                        <div className="booking-service-spotlight-facts" aria-label="Selected service details">
-                            {duration && (
-                                <span style={{ backgroundColor: serviceBgColor, borderColor: serviceBorderColor, color: serviceBodyColor }}>
-                                    <Clock size={12} />
-                                    {duration}
-                                </span>
-                            )}
-                            {price && (
-                                <span className="is-price" style={{ backgroundColor: serviceActiveBgColor, borderColor: withColorAlpha(settings.primaryColor || '#000', 12, '#000000'), color: serviceTextColor }}>
-                                    {price}
-                                </span>
-                            )}
-                        </div>
-                    )}
+                    {hasDetails && renderServiceMeta({ duration, price, className: 'booking-service-spotlight-facts', priceColor: serviceTextColor, mutedColor: serviceBodyColor, showClock: true })}
                 </div>
             </article>
         );
@@ -284,10 +285,16 @@ export const BookingServicesSection = ({
                         <span className="booking-service-dropdown-copy">
                             <strong>{selectedServiceForDisplay?.name || 'Choose a service'}</strong>
                         </span>
-                        <span className="booking-service-dropdown-meta">
-                            {selectedServiceForDisplay && formatServicePrice(selectedServiceForDisplay) && <span className="booking-service-dropdown-trigger-fact is-price">{formatServicePrice(selectedServiceForDisplay)}</span>}
+                        <div className="booking-service-dropdown-meta">
+                            {selectedServiceForDisplay && renderServiceMeta({
+                                duration: formatServiceDuration(selectedServiceForDisplay.duration),
+                                price: formatServicePrice(selectedServiceForDisplay),
+                                className: 'booking-service-dropdown-trigger-fact',
+                                priceColor: serviceTextColor,
+                                mutedColor: serviceBodyColor
+                            })}
                             <ChevronDown size={16} className="booking-service-dropdown-chevron" />
-                        </span>
+                        </div>
                     </button>
                     {renderServiceSpotlight()}
                     <div className="booking-service-dropdown-panel">

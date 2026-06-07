@@ -92,12 +92,6 @@
             margin-top: 0 !important;
         }
 
-        .booking-services-signature .booking-service-fact {
-            min-height: 1.76rem;
-            padding: 0.35rem 0.6rem;
-            font-size: 0.62rem;
-        }
-
-        .booking-services-signature .booking-service-fact.is-price {
-            min-width: 3.1rem;
+        .booking-services-signature .booking-service-meta-item {
+            font-size: 0.68rem;
         }

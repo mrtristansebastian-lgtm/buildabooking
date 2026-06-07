@@ -577,11 +577,10 @@
         }
 
         .booking-style-native-precision .booking-service-dropdown-trigger-fact,
-        .booking-style-native-precision .booking-service-dropdown-meta span,
-        .booking-style-native-precision .booking-service-dropdown-row-meta span,
-        .booking-style-native-precision .booking-service-dropdown-row-meta b {
-            background: rgba(15, 23, 42, 0.045) !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.86) !important;
+        .booking-style-native-precision .booking-service-dropdown-meta .booking-service-meta-item,
+        .booking-style-native-precision .booking-service-dropdown-row-meta .booking-service-meta-item {
+            background: transparent !important;
+            box-shadow: none !important;
         }
 
         .booking-style-native-precision .booking-calendar-look,
@@ -739,10 +738,7 @@
         .booking-style-command-flow .booking-service-dropdown-trigger,
         .booking-style-command-flow .booking-service-dropdown-panel,
         .booking-style-command-flow .booking-service-dropdown-row,
-        .booking-style-command-flow .booking-service-dropdown-trigger-fact,
-        .booking-style-command-flow .booking-service-dropdown-meta span,
-        .booking-style-command-flow .booking-service-dropdown-row-meta span,
-        .booking-style-command-flow .booking-service-dropdown-row-meta b {
+        .booking-style-command-flow .booking-service-dropdown-trigger-fact {
             border-radius: 0 !important;
             box-shadow: none !important;
         }
@@ -763,10 +759,10 @@
         }
 
         .booking-style-command-flow .booking-service-dropdown-trigger-fact,
-        .booking-style-command-flow .booking-service-dropdown-meta span,
-        .booking-style-command-flow .booking-service-dropdown-row-meta span,
-        .booking-style-command-flow .booking-service-dropdown-row-meta b {
-            background: rgba(15, 23, 42, 0.055) !important;
+        .booking-style-command-flow .booking-service-dropdown-meta .booking-service-meta-item,
+        .booking-style-command-flow .booking-service-dropdown-row-meta .booking-service-meta-item {
+            background: transparent !important;
+            box-shadow: none !important;
         }
 
         .booking-style-command-flow .booking-calendar-look,

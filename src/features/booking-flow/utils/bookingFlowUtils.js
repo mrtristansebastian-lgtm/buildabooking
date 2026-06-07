@@ -164,7 +164,7 @@ export const getServiceCardStyle = ({ isActive, settings, nativeAccent, serviceB
   const heading = settings.headingColor || '#000000';
   const inactiveBg = settings.serviceBgColor && settings.serviceBgColor !== 'transparent'
     ? settings.serviceBgColor
-    : withColorAlpha(heading, 2, '#000000');
+    : '#FFFFFF';
   const inactiveBorder = settings.serviceBorderColor || withColorAlpha(heading, 9, '#000000');
   const activeBg = settings.serviceActiveBgColor || (nativeAccent ? (settings.serviceBgColor || settings.slotBgColor || '#FFFFFF') : withColorAlpha(accent, 7, '#000000'));
   const activeBorder = settings.serviceActiveBorderColor || settings.serviceBorderColor || (nativeAccent ? accent : withColorAlpha(accent, 80, '#000000'));
@@ -178,7 +178,7 @@ export const getServiceCardStyle = ({ isActive, settings, nativeAccent, serviceB
   if (serviceBorderStyle === 'outline') {
     return {
       borderColor: isActive ? activeBorder : inactiveBorder,
-      backgroundColor: isActive ? activeBg : 'transparent'
+      backgroundColor: isActive ? activeBg : inactiveBg
     };
   }
   return {

@@ -42,7 +42,17 @@
 
         .booking-services-gallery .booking-service-facts {
             margin-top: auto;
-            padding-top: 1rem;
+            padding-top: 0.72rem;
+            border-top: 1px solid rgba(15, 23, 42, 0.065);
+            justify-content: space-between;
+        }
+
+        .booking-services-gallery .booking-service-meta-separator {
+            display: none;
+        }
+
+        .booking-services-gallery .booking-service-meta-item.is-price {
+            margin-left: auto;
         }
 
         .booking-services-gallery > button.is-text-only-service::after {

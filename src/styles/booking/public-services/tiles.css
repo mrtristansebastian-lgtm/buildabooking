@@ -4,11 +4,11 @@
         }
 
         .booking-services-tiles > button {
-            min-height: 13.2rem;
+            min-height: 14.4rem;
             display: grid !important;
             align-content: start;
             border-radius: 1.35rem !important;
-            padding: 0.62rem !important;
+            padding: 0.58rem !important;
             background: #ffffff !important;
             border-color: rgba(15, 23, 42, 0.075) !important;
             box-shadow:
@@ -33,22 +33,25 @@
 
         .booking-services-tiles .booking-service-shell {
             display: grid !important;
-            gap: 0.72rem !important;
+            gap: 0.68rem !important;
         }
 
         .booking-services-tiles .booking-service-image {
             width: 100% !important;
             height: auto !important;
-            aspect-ratio: 16 / 10;
+            aspect-ratio: 4 / 3;
             border-radius: 1rem !important;
-            background: rgba(226, 232, 240, 0.48) !important;
+            background: #e5ebf3 !important;
             border-color: rgba(15, 23, 42, 0.06) !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.82);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.82),
+                0 16px 36px -34px rgba(15, 23, 42, 0.55);
         }
 
         .booking-services-tiles .booking-service-copy {
             display: grid;
-            gap: 0.42rem;
+            gap: 0.38rem;
+            min-height: 5.2rem;
         }
 
         .booking-services-tiles .booking-service-title-line {
@@ -57,22 +60,27 @@
         }
 
         .booking-services-tiles .booking-service-title-line h5 {
-            font-size: clamp(0.92rem, 1.8vw, 1.05rem) !important;
-            line-height: 1.05 !important;
+            font-size: clamp(0.95rem, 1.8vw, 1.08rem) !important;
+            line-height: 1.04 !important;
+            font-weight: 930;
             letter-spacing: -0.015em;
+            text-align: left !important;
         }
 
         .booking-services-tiles .booking-service-eyebrow {
             margin-bottom: 0.28rem;
             font-size: 0.5rem;
             letter-spacing: 0.1em;
-            opacity: 0.52;
+            opacity: 0.68;
+            text-align: left !important;
         }
 
         .booking-services-tiles > button p {
             margin-top: 0 !important;
             font-size: 0.72rem !important;
             line-height: 1.3 !important;
+            opacity: 0.72 !important;
+            text-align: left !important;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -86,17 +94,22 @@
         }
 
         .booking-services-tiles .booking-service-facts {
-            margin-top: 0.18rem !important;
-            gap: 0.34rem;
+            width: 100%;
+            justify-content: space-between;
+            gap: 0.54rem;
+            margin-top: 0.2rem !important;
+            padding-top: 0.48rem;
+            border-top: 1px solid rgba(15, 23, 42, 0.065);
         }
 
-        .booking-services-tiles .booking-service-fact {
-            min-height: 1.48rem;
-            padding: 0.28rem 0.48rem;
-            font-size: 0.54rem;
-            background: #f8fafc !important;
+        .booking-services-tiles .booking-service-meta-separator {
+            display: none;
         }
 
-        .booking-services-tiles .booking-service-fact.is-price {
-            min-width: 2.65rem;
+        .booking-services-tiles .booking-service-meta-item {
+            font-size: 0.66rem;
+        }
+
+        .booking-services-tiles .booking-service-meta-item.is-price {
+            margin-left: auto;
         }

@@ -351,7 +351,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 '--booking-slot-text': settings.slotTextColor || settings.bodyColor || '#050505',
                 '--booking-slot-active-bg': settings.slotActiveBgColor || settings.primaryColor || '#050505',
                 '--booking-slot-active-text': settings.slotActiveTextColor || '#ffffff',
-                '--booking-service-bg': settings.serviceBgColor || withColorAlpha(settings.bodyColor || '#000000', 2, '#000000'),
+                '--booking-service-bg': settings.serviceBgColor && settings.serviceBgColor !== 'transparent' ? settings.serviceBgColor : '#ffffff',
                 '--booking-service-text': settings.serviceTextColor || settings.bodyColor || '#050505',
                 '--booking-service-body': settings.serviceBodyColor || settings.bodyColor || '#666666',
                 '--booking-service-border': settings.serviceBorderColor || withColorAlpha(settings.bodyColor || '#000000', 9, '#000000'),
