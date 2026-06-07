@@ -95,7 +95,9 @@ export function useWorkspaceRoute({ confirmLeavingUnsavedChanges, loading }) {
       ? `#/dashboard/${route.activeTab}`
       : route.view === 'client'
         ? '#/client'
-        : '';
+        : route.view === 'authAction'
+          ? (window.location.hash || '#/auth/action')
+          : '';
     if (window.location.hash !== nextHash) {
       window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}${nextHash}`);
     }

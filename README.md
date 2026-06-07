@@ -59,32 +59,18 @@ Public submissions write to the owner booking queue and also create a locked pub
 
 ## Email Setup
 
-Email delivery uses EmailJS from the browser so the first production version can send emails without a custom backend.
+Email delivery uses Resend from Firebase Functions. Browser code never stores or sends provider API keys.
 
-In the app:
+Before deploying email features, configure these Firebase Functions secrets/env values:
 
-1. Open `Email Studio`.
-2. Add your EmailJS Public Key.
-3. Add your EmailJS Service ID.
-4. Add one Universal Template ID.
-5. Save Delivery Setup.
-
-Recommended EmailJS template variables:
-
-```txt
-{{to_email}}
-{{to_name}}
-{{subject}}
-{{message}}
-{{business_name}}
-{{business_logo}}
-{{business_banner}}
-{{booking_date}}
-{{booking_time}}
-{{running_late_minutes}}
+```
+RESEND_API_KEY
+BUILD_A_BOOKING_EMAIL_FROM
+BUILD_A_BOOKING_EMAIL_REPLY_TO
+BUILD_A_BOOKING_APP_BASE_URL
 ```
 
-The app sends confirmation, waitlist, running-late, review, and test emails through that template. Optional per-email template IDs can be added later if you upgrade beyond the free EmailJS template limit.
+Workspace owners manage booking email copy, email channels, in-app notification status, and reminders in Profile -> Notifications Studio.
 
 ## Structure
 

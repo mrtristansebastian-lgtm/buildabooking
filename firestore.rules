@@ -6,12 +6,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isPasswordAccount() {
+      return signedIn() &&
+        request.auth.token.firebase != null &&
+        request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    function verifiedSignedIn() {
+      return signedIn() &&
+        (!isPasswordAccount() || request.auth.token.email_verified == true);
+    }
+
     function isOwner(userId) {
-      return signedIn() && request.auth.uid == userId;
+      return verifiedSignedIn() && request.auth.uid == userId;
     }
 
     function hasStaffAccess(appId, userId) {
-      return signedIn() &&
+      return verifiedSignedIn() &&
         request.auth.token.email != null &&
         exists(/databases/$(database)/documents/artifacts/$(appId)/staffAccess/$(request.auth.token.email)/workspaces/$(userId)) &&
         get(/databases/$(database)/documents/artifacts/$(appId)/staffAccess/$(request.auth.token.email)/workspaces/$(userId)).data.status == 'active';
@@ -45,7 +56,7 @@ service cloud.firestore {
     }
 
     function customClaimAdminFor(userId) {
-      return signedIn() &&
+      return verifiedSignedIn() &&
         request.auth.token.role == 'admin' &&
         (
           request.auth.token.businessId == userId ||
@@ -62,7 +73,7 @@ service cloud.firestore {
     }
 
     function isThreadParticipant(appId, threadData) {
-      return signedIn() &&
+      return verifiedSignedIn() &&
         threadData.ownerId is string &&
         (
           canStaff(appId, threadData.ownerId) ||
@@ -212,7 +223,7 @@ service cloud.firestore {
       allow read, update, delete: if canStaff(appId, userId);
       allow create: if canStaff(appId, userId) ||
         (
-          signedIn() &&
+          verifiedSignedIn() &&
           request.auth.token.email != null &&
           request.resource.data.ownerId == userId &&
           request.resource.data.audience == 'owner' &&
@@ -221,9 +232,9 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/clientAccess/{email}/bookings/{bookingId} {
-      allow read: if signedIn() &&
+      allow read: if verifiedSignedIn() &&
         (request.auth.token.email == email || (resource.data.ownerId is string && canStaff(appId, resource.data.ownerId)));
-      allow create, update: if signedIn() &&
+      allow create, update: if verifiedSignedIn() &&
         request.resource.data.ownerId is string &&
         canStaff(appId, request.resource.data.ownerId) &&
         request.resource.data.clientEmail == email;
@@ -231,9 +242,9 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/clientAccess/{email}/notifications/{notificationId} {
-      allow read, update: if signedIn() &&
+      allow read, update: if verifiedSignedIn() &&
         (request.auth.token.email == email || (resource.data.ownerId is string && canStaff(appId, resource.data.ownerId)));
-      allow create: if signedIn() &&
+      allow create: if verifiedSignedIn() &&
         request.resource.data.clientEmail == email &&
         (
           request.auth.token.email == email ||
@@ -244,7 +255,7 @@ service cloud.firestore {
 
     match /artifacts/{appId}/clientThreads/{threadId} {
       allow read: if isThreadParticipant(appId, resource.data);
-      allow create: if signedIn() &&
+      allow create: if verifiedSignedIn() &&
         request.resource.data.ownerId is string &&
         (
           canStaff(appId, request.resource.data.ownerId) ||

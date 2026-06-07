@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { getFontFamily } from '../../../data/fonts';
+import { withColorAlpha } from '../../../utils/theme';
 
 const getStaffInitials = (name = 'Staff') => (
     String(name || 'Staff')
@@ -49,8 +50,8 @@ export const BookingServiceStaffSection = ({
                             onClick={() => setSelectedStaffId(staff.id)}
                             className={`appearance-none outline-none focus:outline-none shrink-0 rounded-full border px-3 py-2 inline-flex items-center gap-2 transition-all ${isActive ? 'shadow-lg scale-[1.02]' : 'opacity-75 hover:opacity-100'}`}
                             style={{
-                                borderColor: isActive ? (settings.primaryColor || '#000') : `${settings.headingColor || '#000'}18`,
-                                backgroundColor: isActive ? `${settings.headingColor || '#000'}05` : 'transparent',
+                                borderColor: isActive ? (settings.primaryColor || '#000') : withColorAlpha(settings.headingColor || '#000', 9, '#000000'),
+                                backgroundColor: isActive ? withColorAlpha(settings.headingColor || '#000', 2, '#000000') : 'transparent',
                                 color: settings.headingColor
                             }}
                         >

@@ -1,7 +1,6 @@
 import { ProfileBusinessIdentitySection } from './ProfileBusinessIdentitySection';
 import { ProfileBusinessMediaSection } from './ProfileBusinessMediaSection';
 import { ProfileBusinessSocialSection } from './ProfileBusinessSocialSection';
-import { ProfileReminderSection } from './ProfileReminderSection';
 
 export const ProfileBusinessSection = ({
   activeProfileSection,
@@ -45,18 +44,6 @@ export const ProfileBusinessSection = ({
         settings={settings}
         venuePhotos={venuePhotos}
       />
-      <section className="rounded-lg bg-white">
-        <div className="mb-4">
-          <p className="text-[10px] font-bold uppercase text-neutral-400">Client trust</p>
-          <h4 className="mt-1 text-xl font-black text-black">Helpful reminders</h4>
-        </div>
-        <div className="space-y-4">
-          <ProfileReminderSection
-            onSettingChange={onSettingChange}
-            settings={settings}
-          />
-        </div>
-      </section>
       <ProfileBusinessSocialSection
         onCopyReferral={onCopyReferral}
         onSaveProfile={onSaveProfile}

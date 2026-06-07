@@ -36,6 +36,80 @@
             display: block;
         }
 
+        .booking-service-image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.44rem;
+            position: relative;
+            border-radius: inherit;
+            background:
+                radial-gradient(circle at 50% 42%, rgba(255,255,255,0.74), rgba(255,255,255,0) 31%),
+                linear-gradient(135deg, rgba(255,255,255,0.58), rgba(255,255,255,0) 43%),
+                linear-gradient(180deg, #eef2f7, #d7dee8);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.82),
+                inset 0 -18px 40px rgba(100, 116, 139, 0.08),
+                inset 0 0 0 1px rgba(15, 23, 42, 0.035);
+        }
+
+        .booking-service-image-placeholder::before {
+            content: "";
+            position: absolute;
+            inset: 0.62rem;
+            border-radius: 0.72rem;
+            border: 1px dashed rgba(100, 116, 139, 0.26);
+            pointer-events: none;
+        }
+
+        .booking-service-image-placeholder-icon {
+            position: relative;
+            z-index: 1;
+            color: rgba(100, 116, 139, 0.58);
+            filter: drop-shadow(0 1px 0 rgba(255,255,255,0.78));
+        }
+
+        .booking-service-image-placeholder.has-add-action .booking-service-image-placeholder-icon {
+            margin-top: 0.1rem;
+            transform: translateY(0.12rem);
+        }
+
+        .booking-service-image-placeholder-action {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.32rem;
+            min-height: 1.72rem;
+            padding: 0.44rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            color: #050505;
+            font-size: 0.58rem;
+            font-weight: 950;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            box-shadow: 0 16px 34px -24px rgba(15, 23, 42, 0.54), inset 0 1px 0 rgba(255,255,255,0.96);
+        }
+
+        .booking-services-grid:not(.booking-services-tiles) .booking-service-image-placeholder-action,
+        .booking-service-dropdown-row-image .booking-service-image-placeholder-action {
+            width: 1.38rem;
+            min-width: 1.38rem;
+            height: 1.38rem;
+            min-height: 1.38rem;
+            padding: 0;
+        }
+
+        .booking-services-grid:not(.booking-services-tiles) .booking-service-image-placeholder-action > span,
+        .booking-service-dropdown-row-image .booking-service-image-placeholder-action > span {
+            display: none;
+        }
+
         .booking-services-grid > button.is-text-only-service > div {
             gap: 0 !important;
         }
@@ -81,33 +155,33 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0.45rem;
-            margin-top: 1rem;
+            gap: 0.34rem;
+            margin-top: 0.82rem;
         }
 
         .booking-service-fact {
-            min-height: 1.92rem;
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            min-height: 1.62rem;
+            border: 1px solid rgba(15, 23, 42, 0.06);
             border-radius: 999px;
-            padding: 0.42rem 0.68rem;
+            padding: 0.34rem 0.58rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.32rem;
-            font-size: 0.66rem;
+            gap: 0.28rem;
+            font-size: 0.6rem;
             line-height: 1;
-            font-weight: 850;
+            font-weight: 880;
             letter-spacing: 0;
             white-space: nowrap;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: #f8fafc;
             font-variant-numeric: tabular-nums;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.84);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
         }
 
         .booking-service-fact.is-price {
-            min-width: 3.35rem;
+            min-width: 2.8rem;
             font-weight: 950;
+            background: #ffffff;
         }
 
         .booking-service-fact svg,

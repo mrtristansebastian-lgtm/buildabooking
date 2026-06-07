@@ -5,7 +5,7 @@ export const editorStyleDirections = [
     summary: 'The cleanest all-rounder: iOS-like controls, calm rhythm, and strong booking clarity.',
     settings: {
       logoDisplay: { visible: true, alignment: 'left', size: 104, placement: 'badge' },
-      bannerDisplay: { visible: true, height: 190, position: 'center', placement: 'top', opacity: 92 },
+      bannerDisplay: { visible: true, height: 190, position: 'center', placement: 'top', opacity: 100 },
       serviceDisplayStyle: 'compact',
       serviceDropdownEnabled: true,
       serviceBorderStyle: 'solid',
@@ -35,7 +35,7 @@ export const editorStyleDirections = [
     summary: 'Fast and operational: compact decisions, high signal states, and a stronger app-like footer system.',
     settings: {
       logoDisplay: { visible: true, alignment: 'left', size: 104, placement: 'badge' },
-      bannerDisplay: { visible: true, height: 190, position: 'center', placement: 'top', opacity: 92 },
+      bannerDisplay: { visible: true, height: 190, position: 'center', placement: 'top', opacity: 100 },
       serviceDisplayStyle: 'compact',
       serviceDropdownEnabled: true,
       serviceBorderStyle: 'solid',

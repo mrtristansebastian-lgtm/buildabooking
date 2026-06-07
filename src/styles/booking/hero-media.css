@@ -54,12 +54,13 @@
             position: relative;
             grid-column: 2;
             grid-row: 2;
-            height: min(var(--hero-media-height, 220px), 32rem);
-            min-height: clamp(11rem, 24vw, 18rem);
+            aspect-ratio: var(--hero-media-aspect-ratio, 2560 / 423);
+            height: auto;
+            min-height: 0;
             overflow: hidden;
             border: 1px solid rgba(15, 23, 42, 0.08);
             border-radius: clamp(1.25rem, 3vw, 2.2rem);
-            background: rgba(248, 250, 252, 0.82);
+            background: transparent;
             box-shadow: 0 34px 90px -66px rgba(15, 23, 42, 0.74), inset 0 1px 0 rgba(255,255,255,0.88);
         }
 
@@ -74,13 +75,7 @@
         }
 
         .booking-hero-media::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            background:
-                linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.18)),
-                linear-gradient(135deg, rgba(0,0,0,0.04), transparent 48%, rgba(255,255,255,0.12));
+            display: none;
         }
 
         .booking-hero-banner-image {
@@ -88,7 +83,12 @@
             height: 100%;
             display: block;
             object-fit: cover;
-            transform: scale(1.01);
+            transform: none;
+        }
+
+        .booking-hero-media.has-media {
+            background: transparent !important;
+            background-color: transparent !important;
         }
 
         .booking-preview-media-drop {
@@ -115,7 +115,9 @@
         }
 
         .booking-preview-media-drop.booking-hero-media {
-            height: min(var(--hero-media-height, 220px), 32rem);
+            aspect-ratio: var(--hero-media-aspect-ratio, 2560 / 423);
+            height: auto;
+            min-height: 0;
         }
 
         .booking-preview-media-drop.booking-hero-media-top {
@@ -234,7 +236,7 @@
             width: 100%;
             height: 100%;
             display: block;
-            object-fit: cover;
+            object-fit: contain;
         }
 
         .booking-hero-title {

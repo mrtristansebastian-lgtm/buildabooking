@@ -94,6 +94,81 @@
             line-height: 0.95;
         }
 
+        .services-layout-grid > button {
+            min-height: 10.4rem;
+            align-items: stretch;
+            justify-content: start;
+            gap: 0.5rem;
+            text-align: left;
+        }
+
+        .services-layout-grid > button strong {
+            display: block;
+            min-height: 0;
+            place-items: unset;
+            text-align: left;
+            color: #050505;
+            font-size: 0.82rem;
+            line-height: 1.08;
+            letter-spacing: 0;
+            margin: 0.08rem 0 0;
+        }
+
+        .services-layout-grid > button small {
+            display: block;
+            color: #7a8492;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.18;
+            text-align: left;
+            max-width: 9.4rem;
+        }
+
+        .services-layout-preview {
+            min-height: 5.45rem;
+            border-radius: 18px;
+            display: grid;
+            gap: 0.42rem;
+            padding: 0.62rem;
+            align-content: start;
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.94);
+        }
+
+        .services-layout-preview svg {
+            color: #050505;
+            align-self: start;
+        }
+
+        .services-layout-preview b {
+            display: block;
+            min-height: 0.68rem;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.1);
+        }
+
+        .services-layout-preview-dropdown b:first-of-type {
+            min-height: 2rem;
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+        }
+
+        .services-layout-preview-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .services-layout-preview-tiles svg {
+            grid-column: 1 / -1;
+        }
+
+        .services-layout-preview-tiles b {
+            min-height: 1.42rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #ffffff;
+        }
+
         .cinema-style-system-preview {
             min-height: 24rem;
             border-radius: 28px;

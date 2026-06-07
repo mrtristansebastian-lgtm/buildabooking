@@ -7,6 +7,9 @@ import { useMediaCropUpload } from '../../media';
 import { useProfilePageRuntime } from '../../profile';
 import { useStaffActions } from '../../staff';
 import { useWorkspaceSettingsActions } from '../../workspace';
+import { normalizeCommunications } from '../../../config/appConfig';
+import * as FirebaseSDK from '../../../services/firebase';
+import { appId, db, isFirebaseConfigured } from '../../../services/firebase';
 import { useClipboard } from './useClipboard';
 
 export function useWorkspaceActionRuntime({
@@ -106,6 +109,7 @@ export function useWorkspaceActionRuntime({
     setAuthPanelOpen: auth.setAuthPanelOpen,
     setAuthPersona: auth.setAuthPersona,
     setAuthRedirectPending: auth.setAuthRedirectPending,
+    setAuthRefreshTick: auth.setAuthRefreshTick,
     setClientGuestMode: auth.setClientGuestMode,
     setGuestMode: auth.setGuestMode,
     setView: route.setView,
@@ -221,6 +225,32 @@ export function useWorkspaceActionRuntime({
     workspaceServices: booking.workspaceServices
   });
 
+  const saveCommunications = async (nextCommunications = booking.communications) => {
+    const normalized = normalizeCommunications(nextCommunications);
+    if (!workspace.isGuestWorkspace && !workspace.canManageWorkspace) {
+      showToast('Only admins can change notification settings.');
+      return false;
+    }
+    booking.setCommunications?.(normalized);
+    if (!isFirebaseConfigured || !auth.user || workspace.isGuestWorkspace) {
+      showToast('Notification settings saved in demo mode.');
+      return true;
+    }
+    try {
+      await FirebaseSDK.setDoc(
+        FirebaseSDK.doc(db, 'artifacts', appId, 'users', workspace.workspaceOwnerId, 'config', 'communications'),
+        normalized,
+        { merge: true }
+      );
+      showToast('Notification settings saved.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Notification settings could not be saved.');
+      return false;
+    }
+  };
+
   const profileRuntime = useProfilePageRuntime({
     activeProfileSection: profile.activeProfileSection,
     displayStaffList: staff.displayStaffList,
@@ -255,7 +285,12 @@ export function useWorkspaceActionRuntime({
     clients: clientActions,
     copyToClipboard,
     media,
-    profile: profileRuntime,
+    profile: {
+      ...profileRuntime,
+      communications: profile.communications,
+      saveCommunications,
+      setCommunications: profile.setCommunications
+    },
     settings: settingsActions,
     staff: staffActions
   };

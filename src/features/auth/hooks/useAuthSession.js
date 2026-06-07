@@ -16,6 +16,7 @@ export function useAuthSession() {
   const [authError, setAuthError] = useState('');
   const [authPanelOpen, setAuthPanelOpen] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
+  const [authRefreshTick, setAuthRefreshTick] = useState(0);
   const [keepLoggedIn, setKeepLoggedIn] = useState(() => safeLocalGet(rememberLoginStorageKey) !== 'false');
   const [authRedirectPending, setAuthRedirectPending] = useState(() => hasFreshAuthRedirectStart());
   const [accountDeleteOpen, setAccountDeleteOpen] = useState(false);
@@ -32,6 +33,7 @@ export function useAuthSession() {
     authMode,
     authPanelOpen,
     authPersona,
+    authRefreshTick,
     authRedirectPending,
     keepLoggedIn,
     setAccessLoading,
@@ -45,6 +47,7 @@ export function useAuthSession() {
     setAuthPanelOpen,
     setAuthPersona,
     setAuthRedirectPending,
+    setAuthRefreshTick,
     setKeepLoggedIn,
     setUser,
     setWorkspaceAccess,

@@ -18,7 +18,8 @@ const getSettingImageMeta = (key) => {
       shape: 'square',
       uploadTitle: 'Crop business logo',
       cropTitle: 'Adjust logo crop',
-      fileName: 'business-logo.jpg',
+      fileName: 'business-logo.png',
+      preserveTransparency: true,
       emptyMessage: 'Upload a logo in Business Profile first.',
       updatedMessage: 'Logo updated',
       croppedMessage: 'Logo crop updated'
@@ -28,7 +29,8 @@ const getSettingImageMeta = (key) => {
       shape: 'rounded',
       uploadTitle: 'Crop booking banner',
       cropTitle: 'Adjust banner crop',
-      fileName: 'booking-banner.jpg',
+      fileName: 'booking-banner.png',
+      preserveTransparency: true,
       emptyMessage: 'Upload a banner in Business Profile first.',
       updatedMessage: 'Banner image updated',
       croppedMessage: 'Banner crop updated'
@@ -95,6 +97,7 @@ export function useMediaCropUpload({
         title: options.title || 'Crop image',
         ratioKey: options.ratioKey || 'square',
         shape: options.shape || 'rounded',
+        preserveTransparency: Boolean(options.preserveTransparency),
         zoom: 1,
         positionX: 50,
         positionY: 50
@@ -157,7 +160,8 @@ export function useMediaCropUpload({
       folder,
       title: imageMeta.uploadTitle,
       ratioKey: imageMeta.ratioKey,
-      shape: imageMeta.shape
+      shape: imageMeta.shape,
+      preserveTransparency: imageMeta.preserveTransparency
     }, async (url) => {
       const saved = await saveMediaSettingsPatch({ [key]: url }, imageMeta.updatedMessage);
       if (saved && previousUrl && previousUrl !== url) await deleteStorageAsset(previousUrl);
@@ -194,6 +198,7 @@ export function useMediaCropUpload({
       title: imageMeta.cropTitle,
       ratioKey: imageMeta.ratioKey,
       shape: imageMeta.shape,
+      preserveTransparency: imageMeta.preserveTransparency,
       zoom: 1,
       positionX: 50,
       positionY: 50

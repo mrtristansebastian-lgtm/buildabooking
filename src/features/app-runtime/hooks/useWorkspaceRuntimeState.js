@@ -181,6 +181,7 @@ export function useWorkspaceRuntimeState() {
       createOwnerNotification: notifications.createOwnerNotification,
       runtime: bookingRuntime,
       setBookingsAndCache: workspaceData.setBookingsAndCache,
+      setCommunications: workspaceData.setCommunications,
       visibleBookings: workspaceData.visibleBookings,
       workspaceServices: workspaceDerivedData.workspaceServices
     },
@@ -218,12 +219,14 @@ export function useWorkspaceRuntimeState() {
     },
     profile: {
       activeProfileSection: dashboardUi.activeProfileSection,
+      communications: workspaceData.communications,
       financePaymentAttempts: workspaceData.financePaymentAttempts,
       markWorkspaceNotificationRead: notifications.markWorkspaceNotificationRead,
       openOwnerNotification: notifications.openOwnerNotification,
       profileNotificationFilter: dashboardUi.profileNotificationFilter,
       profileSystemFilter: dashboardUi.profileSystemFilter,
       setActiveProfileSection: dashboardUi.setActiveProfileSection,
+      setCommunications: workspaceData.setCommunications,
       setShowOwnerManual: dashboardUi.setShowOwnerManual,
       setSupportThreadFocus: dashboardUi.setSupportThreadFocus,
       workspaceNotifications: notifications.workspaceNotifications,

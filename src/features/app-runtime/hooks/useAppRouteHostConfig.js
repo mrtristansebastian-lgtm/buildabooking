@@ -14,6 +14,9 @@ export function useAppRouteHostConfig({
   staff,
   workspace
 }) {
+  const usesPasswordProvider = Boolean(auth.user?.providerData?.some?.(provider => provider.providerId === 'password'));
+  const requiresEmailVerification = Boolean(auth.user && usesPasswordProvider && !auth.user.emailVerified);
+
   const dashboard = useDashboardRouteConfig({
     account: {
       accountDeleteOpen: auth.accountDeleteOpen,
@@ -97,6 +100,7 @@ export function useAppRouteHostConfig({
       activeProfileSection: dashboardUi.activeProfileSection,
       activeProfileSectionMeta: actionRuntime.profile.activeProfileSectionMeta,
       handleProfileActivityOpen: actionRuntime.profile.handleProfileActivityOpen,
+      communications: actionRuntime.profile.communications,
       profileActivityPrimaryCount: actionRuntime.profile.profileActivityPrimaryCount,
       profileActivityRows: actionRuntime.profile.profileActivityRows,
       profileActivitySecondaryCount: actionRuntime.profile.profileActivitySecondaryCount,
@@ -104,9 +108,11 @@ export function useAppRouteHostConfig({
       profileSystemFilter: dashboardUi.profileSystemFilter,
       profileSystemFilterOptions: actionRuntime.profile.profileSystemFilterOptions,
       setActiveProfileSection: dashboardUi.setActiveProfileSection,
+      setCommunications: actionRuntime.profile.setCommunications,
       setProfileSystemFilter: dashboardUi.setProfileSystemFilter,
       setShowOwnerManual: dashboardUi.setShowOwnerManual,
       showOwnerManual: dashboardUi.showOwnerManual,
+      saveCommunications: actionRuntime.profile.saveCommunications,
       venuePhotos: actionRuntime.profile.venuePhotos
     },
     route: {
@@ -167,6 +173,9 @@ export function useAppRouteHostConfig({
       onClientLogin: actionRuntime.auth.openClientPortal,
       onGoogleAuth: actionRuntime.auth.handleGoogleAuth,
       onGuestDashboard: actionRuntime.auth.openGuestDashboard,
+      onPasswordReset: actionRuntime.auth.sendPasswordResetEmail,
+      onRefreshVerification: actionRuntime.auth.refreshEmailVerification,
+      onResendVerification: actionRuntime.auth.resendVerificationEmail,
       onSignOut: actionRuntime.auth.handleSignOut,
       onSignupOrDashboard: actionRuntime.auth.openSignupOrDashboard,
       onSubmit: actionRuntime.auth.handleAuthSubmit,
@@ -174,6 +183,7 @@ export function useAppRouteHostConfig({
       openPanel: actionRuntime.auth.openAuthPanel,
       panelOpen: auth.authPanelOpen,
       persona: auth.authPersona,
+      requiresEmailVerification,
       setError: auth.setAuthError,
       setForm: auth.setAuthForm,
       setKeepLoggedIn: auth.setKeepLoggedIn,

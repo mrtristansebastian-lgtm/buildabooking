@@ -1631,3 +1631,90 @@
         .editor-preview-frame .booking-cart-step .booking-summary-total > span {
             text-align: center !important;
         }
+
+        .booking-flow-public .booking-cart-step,
+        .editor-preview-frame .booking-cart-step {
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            min-height: 100% !important;
+            background-color: inherit;
+        }
+
+        .booking-flow-public .booking-cart-hero,
+        .editor-preview-frame .booking-cart-hero {
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            padding-top: clamp(1.6rem, 4vw, 2.1rem) !important;
+        }
+
+        .booking-flow-public .booking-cart-eyebrow,
+        .editor-preview-frame .booking-cart-eyebrow {
+            margin-top: 0 !important;
+            letter-spacing: 0.28em !important;
+        }
+
+        .booking-flow-public .booking-cart-hero h2,
+        .editor-preview-frame .booking-cart-hero h2 {
+            margin-top: 0.38rem !important;
+            font-size: clamp(1.8rem, 5.2vw, 2.55rem) !important;
+            line-height: 0.98 !important;
+        }
+
+        .booking-flow-public .booking-cart-hero p:last-child,
+        .editor-preview-frame .booking-cart-hero p:last-child {
+            margin-top: 0.76rem !important;
+            font-size: 0.82rem !important;
+            line-height: 1.45 !important;
+        }
+
+        .booking-flow-public .booking-cart-step .booking-checkout-summary,
+        .editor-preview-frame .booking-cart-step .booking-checkout-summary {
+            border-radius: 1.35rem !important;
+            padding: 1.05rem !important;
+            box-shadow: 0 22px 58px -46px rgba(15, 23, 42, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.74) !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-head,
+        .editor-preview-frame .booking-cart-summary .booking-summary-head {
+            margin-bottom: 0.72rem !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-title p,
+        .editor-preview-frame .booking-cart-summary .booking-summary-title p {
+            letter-spacing: 0.24em !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-row,
+        .editor-preview-frame .booking-cart-summary .booking-summary-row {
+            min-height: 3.12rem !important;
+            padding: 0.68rem 0.82rem !important;
+            border-radius: 1rem !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-label,
+        .editor-preview-frame .booking-cart-summary .booking-summary-label {
+            font-size: 0.52rem !important;
+            letter-spacing: 0.2em !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-value,
+        .editor-preview-frame .booking-cart-summary .booking-summary-value {
+            font-size: 0.92rem !important;
+            line-height: 1.08 !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-total,
+        .editor-preview-frame .booking-cart-summary .booking-summary-total {
+            min-height: 5.6rem !important;
+            margin-top: 0.72rem !important;
+            padding-top: 0.92rem !important;
+            align-content: center !important;
+        }
+
+        .booking-flow-public .booking-cart-summary .booking-summary-total > span:last-child,
+        .editor-preview-frame .booking-cart-summary .booking-summary-total > span:last-child {
+            font-size: 0.98rem !important;
+            line-height: 1.1 !important;
+            max-width: 18rem !important;
+        }

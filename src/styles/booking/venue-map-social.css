@@ -187,12 +187,16 @@
             cursor: default;
         }
 
-        .booking-services-preview-empty > button:not(.is-selected),
-        .booking-service-dropdown-row.is-preview-empty:not(.is-active),
         .booking-faq-preview-empty .booking-faq-item:not(:first-child),
         .booking-time-preview-empty > button:not(:first-child),
         .booking-social-preview-empty a:not(:first-child) {
             opacity: 0.58 !important;
+        }
+
+        .booking-services-preview-empty > button,
+        .booking-service-dropdown-row.is-preview-empty {
+            cursor: pointer;
+            opacity: 1 !important;
         }
 
         .booking-venue-photo.is-preview-empty {
@@ -590,10 +594,17 @@
         .booking-style-native-precision .booking-time-pill > button,
         .booking-style-native-precision .booking-time-compact > button,
         .booking-style-native-precision .booking-time-blocks > button {
-            border-color: rgba(15, 23, 42, 0.07) !important;
-            background:
-                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94)) padding-box !important;
-            box-shadow: var(--native-control-shadow) !important;
+            border-color: rgba(15, 23, 42, 0.08) !important;
+            background: #ffffff !important;
+            box-shadow: 0 9px 22px -20px rgba(15, 23, 42, 0.34), inset 0 1px 0 rgba(255,255,255,0.94) !important;
+        }
+
+        .booking-style-native-precision .booking-time-pill > button,
+        .booking-style-native-precision .booking-time-compact > button,
+        .booking-style-native-precision .booking-time-blocks > button {
+            min-height: 2.34rem !important;
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
         }
 
         .booking-style-native-precision .booking-calendar-studio > button,
@@ -611,7 +622,7 @@
         .booking-style-native-precision .booking-calendar-look > button:hover,
         .booking-style-native-precision .booking-time-look > button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 0 0 1px currentColor, 0 24px 58px -36px rgba(15, 23, 42, 0.5) !important;
+            box-shadow: 0 0 0 1px currentColor, 0 16px 40px -34px rgba(15, 23, 42, 0.5) !important;
         }
 
         .booking-style-native-precision .booking-faq-section .booking-faq-item,

@@ -1,6 +1,6 @@
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 
-import { normalizeHexColor } from '../../../utils/theme';
+import { normalizeCssColor } from '../../../utils/theme';
 import { EditorLaunchControls } from '../components/EditorLaunchControls';
 import { EditorPreviewWorkspace } from '../components/EditorPreviewWorkspace';
 import { EditorSettingsPanel } from '../components/EditorSettingsPanel';
@@ -10,6 +10,7 @@ import {
   ColourRoom,
   FaqRoom,
   FunnelTextRoom,
+  ServicesRoom,
   StyleDirectionRoom,
   TypographyRoom
 } from '../rooms';
@@ -44,10 +45,10 @@ export function EditorPage({
   const activeColourGroup = colourGroups.find(group => group.id === colour.categoryId) || null;
   const activeEditorRoomScenes = getEditorRoomScenesForPreviewStep(preview.previewStep);
   const applyControlColor = (control, color) => {
-    const hex = normalizeHexColor(color, '');
-    if (!control || !hex) return;
-    control.onApply(hex);
-    actions.showToast(`${control.label} set to ${hex}`);
+    const cssColor = normalizeCssColor(color, '');
+    if (!control || !cssColor) return;
+    control.onApply(cssColor);
+    actions.showToast(`${control.label} set to ${cssColor}`);
   };
 
   return (
@@ -103,6 +104,13 @@ export function EditorPage({
               <TypographyRoom
                 settings={settings}
                 onApplyPreset={actions.applyFontStylePreset}
+              />
+            )}
+
+            {activeScene.id === 'services' && (
+              <ServicesRoom
+                settings={settings}
+                onSettingChange={actions.onSettingChange}
               />
             )}
 

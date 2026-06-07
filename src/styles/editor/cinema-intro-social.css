@@ -16,6 +16,31 @@
             line-height: 1.38;
         }
 
+        .cinema-reset-default-text {
+            justify-self: start;
+            min-height: 2.08rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.44rem 0.72rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 999px;
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.62rem;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            box-shadow: 0 14px 34px -30px rgba(15, 23, 42, 0.42), inset 0 1px 0 rgba(255,255,255,0.94);
+            transition: transform 160ms ease, color 160ms ease, border-color 160ms ease;
+        }
+
+        .cinema-reset-default-text:hover {
+            transform: translateY(-1px);
+            color: #050505;
+            border-color: rgba(15, 23, 42, 0.16);
+        }
+
         .cinema-text-card-row {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -2,7 +2,7 @@ import { ImagePlus, Images, MapPin, Monitor, Scissors, Trash2, Wand2 } from 'luc
 import { GooglePlaceAutocompleteInput } from '../../maps/GooglePlaceAutocompleteInput';
 
 const MediaPreview = ({ children, className = 'h-36 md:h-44' }) => (
-  <div className={`${className} w-full overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]`}>
+  <div className={`${className} w-full overflow-hidden rounded-lg bg-transparent shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]`}>
     {children}
   </div>
 );

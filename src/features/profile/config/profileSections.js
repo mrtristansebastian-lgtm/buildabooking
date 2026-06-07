@@ -1,4 +1,4 @@
-import { BookOpen, Briefcase, FileText, Images, Settings2, ShieldCheck } from 'lucide-react';
+import { BellRing, BookOpen, Briefcase, FileText, Images, Settings2, ShieldCheck } from 'lucide-react';
 
 export const buildProfileSections = ({
   importedMigrationCounts,
@@ -40,6 +40,14 @@ export const buildProfileSections = ({
     icon: Settings2,
     meta: `${profileActivityPrimaryCount} signals`,
     quick: ['Services', 'Team', 'Schedule']
+  },
+  {
+    id: 'notifications',
+    title: 'Notifications Studio',
+    note: 'Email, in-app, reminders, and delivery setup',
+    icon: BellRing,
+    meta: 'Resend',
+    quick: ['Auth emails', 'Booking emails', 'Reminders']
   },
   {
     id: 'migration',

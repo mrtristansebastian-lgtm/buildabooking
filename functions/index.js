@@ -2,6 +2,7 @@ const admin = require('firebase-admin');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { defineSecret } = require('firebase-functions/params');
 const {
   bookingBlocksAvailability,
   getLockBucketIds,
@@ -25,11 +26,22 @@ const {
   backfillWorkspaceScaleCollections
 } = require('./scaleCollections');
 const { cappedMaxInstances } = require('./runtimeOptions');
+const {
+  buildClientBookingEmail,
+  buildOwnerBookingRequestEmail,
+  buildPasswordResetEmail,
+  buildVerificationEmail,
+  getEmailProviderStatus,
+  getEmailRuntimeConfig,
+  normalizeEmail: normalizeEmailAddress,
+  sendEmail
+} = require('./emailService');
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const serverTimestamp = () => admin.firestore.FieldValue.serverTimestamp();
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 const DEFAULT_APP_ID = process.env.BUILD_A_BOOKING_APP_ID || 'build-a-booking-v2';
 const REMINDER_UTC_OFFSET = process.env.BOOKING_REMINDER_UTC_OFFSET || '+02:00';
 const REMINDER_TIME_ZONE = process.env.BOOKING_REMINDER_TIME_ZONE || 'Africa/Johannesburg';
@@ -54,6 +66,17 @@ const bookingCallableOptions = {
 const workerFunctionOptions = {
   region: 'us-central1',
   maxInstances: 1
+};
+const emailCallableOptions = {
+  ...publicCallableOptions,
+  timeoutSeconds: 30,
+  maxInstances: cappedMaxInstances(process.env.BUILD_A_BOOKING_EMAIL_MAX_INSTANCES, 2),
+  secrets: [RESEND_API_KEY]
+};
+const emailWorkerFunctionOptions = {
+  ...workerFunctionOptions,
+  timeoutSeconds: 30,
+  secrets: [RESEND_API_KEY]
 };
 
 const cleanString = (value, max = 240) => (
@@ -85,6 +108,109 @@ const safeThreadId = (ownerId, bookingId) => (
 );
 
 const normalizeEmail = (email = '') => cleanString(email, 180).toLowerCase();
+
+const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+
+const getAuthActionSettings = (mode = 'auth') => {
+  const { baseUrl } = getEmailRuntimeConfig({ resendApiKeySecret: RESEND_API_KEY });
+  return {
+    url: `${baseUrl}/#/auth/action?intent=${encodeURIComponent(mode)}`,
+    handleCodeInApp: false
+  };
+};
+
+const authEmailRateLimit = async ({ request, email }) => {
+  await assertRateLimit({
+    db,
+    appId: DEFAULT_APP_ID,
+    workspaceSlug: 'auth-email',
+    action: 'auth_email',
+    request,
+    subject: normalizeEmail(email)
+  });
+};
+
+const assertVerifiedPasswordAccount = (request) => {
+  const signInProvider = request.auth?.token?.firebase?.sign_in_provider || '';
+  if (signInProvider === 'password' && request.auth?.token?.email_verified !== true) {
+    throw new HttpsError('permission-denied', 'Verify your email before using this workspace.');
+  }
+};
+
+const readOwnerWorkspaceEmailContext = async ({ appId, ownerId }) => {
+  const [settingsSnap, communicationsSnap, accountSnap] = await Promise.all([
+    db.collection('artifacts').doc(appId).collection('users').doc(ownerId).collection('config').doc('settings').get(),
+    db.collection('artifacts').doc(appId).collection('users').doc(ownerId).collection('config').doc('communications').get(),
+    db.collection('artifacts').doc(appId).collection('accounts').doc(ownerId).get()
+  ]);
+  return {
+    settings: settingsSnap.exists ? (settingsSnap.data() || {}) : {},
+    communications: communicationsSnap.exists ? (communicationsSnap.data() || {}) : {},
+    account: accountSnap.exists ? (accountSnap.data() || {}) : {}
+  };
+};
+
+const getOwnerEmail = async ({ ownerId, account = {} }) => {
+  const accountEmail = normalizeEmail(account.email || account.personalProfile?.email || '');
+  if (accountEmail) return accountEmail;
+  try {
+    const userRecord = await admin.auth().getUser(ownerId);
+    return normalizeEmail(userRecord.email || '');
+  } catch {
+    return '';
+  }
+};
+
+const getEmailChannelEnabled = (communications = {}, key, fallback = true) => {
+  const channels = communications.emailNotifications || communications.emailChannels || {};
+  if (typeof channels[key] === 'boolean') return channels[key];
+  return fallback;
+};
+
+const sendClientBookingEmail = async ({
+  appId,
+  ownerId,
+  booking,
+  communications,
+  settings,
+  templateKey,
+  extra = {}
+}) => {
+  if (!normalizeEmail(booking.clientEmail)) {
+    return { ok: false, skipped: true, reason: 'Missing client email.' };
+  }
+  const requiresConsent = !['reminder24h', 'reminder2h'].includes(templateKey);
+  if (requiresConsent && booking.notificationChannels?.email === false) {
+    return { ok: false, skipped: true, reason: 'Client email updates are off for this booking.' };
+  }
+  const emailChannelKey = ['reminder24h', 'reminder2h'].includes(templateKey) ? 'reminders' : 'bookingUpdates';
+  if (!getEmailChannelEnabled(communications, emailChannelKey, true)) {
+    return { ok: false, skipped: true, reason: 'This email channel is turned off.' };
+  }
+  const { baseUrl } = getEmailRuntimeConfig({ resendApiKeySecret: RESEND_API_KEY });
+  const email = buildClientBookingEmail({
+    booking,
+    communications,
+    settings,
+    templateKey,
+    extra,
+    baseUrl
+  });
+  if (email.skipped) return { ok: false, skipped: true, reason: email.reason };
+  return sendEmail({
+    resendApiKeySecret: RESEND_API_KEY,
+    to: booking.clientEmail,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+    replyTo: settings.replyToEmail || settings.email || ''
+  }).then(result => ({
+    ...result,
+    appId,
+    ownerId,
+    templateKey
+  }));
+};
 
 const dateKeyInTimeZone = (date = new Date(), timeZone = REMINDER_TIME_ZONE) => {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -310,6 +436,7 @@ const assertCanWriteOwnerBooking = async ({ appId, ownerId, request }) => {
   if (!request.auth?.uid) {
     throw new HttpsError('unauthenticated', 'Sign in before creating owner bookings.');
   }
+  assertVerifiedPasswordAccount(request);
   if (request.auth.uid === ownerId) return { role: 'owner', staffId: 'owner' };
 
   const emailKey = normalizeEmail(request.auth.token?.email || '');
@@ -784,6 +911,95 @@ const sendClientReminder = async ({
   return created;
 };
 
+exports.getEmailProviderStatus = onCall(emailCallableOptions, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError('unauthenticated', 'Sign in before checking email status.');
+  }
+  return getEmailProviderStatus({ resendApiKeySecret: RESEND_API_KEY });
+});
+
+exports.sendAuthVerificationEmail = onCall(emailCallableOptions, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError('unauthenticated', 'Sign in before sending a verification email.');
+  }
+  const email = normalizeEmail(request.auth.token?.email || '');
+  if (!isValidEmail(email)) {
+    throw new HttpsError('failed-precondition', 'This account is missing a valid email address.');
+  }
+  if (request.auth.token?.email_verified === true) {
+    return { ok: true, skipped: true, alreadyVerified: true, reason: 'Email is already verified.' };
+  }
+  await authEmailRateLimit({ request, email });
+
+  const actionLink = await admin.auth().generateEmailVerificationLink(email, getAuthActionSettings('verifyEmail'));
+  const emailContent = buildVerificationEmail({ actionLink });
+  return sendEmail({
+    resendApiKeySecret: RESEND_API_KEY,
+    to: email,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    text: emailContent.text
+  });
+});
+
+exports.sendPasswordResetEmail = onCall(emailCallableOptions, async (request) => {
+  const email = normalizeEmailAddress(request.data?.email || '');
+  if (!isValidEmail(email)) {
+    throw new HttpsError('invalid-argument', 'Enter a valid email address.');
+  }
+  await authEmailRateLimit({ request, email });
+
+  try {
+    const actionLink = await admin.auth().generatePasswordResetLink(email, getAuthActionSettings('resetPassword'));
+    const emailContent = buildPasswordResetEmail({ actionLink });
+    const result = await sendEmail({
+      resendApiKeySecret: RESEND_API_KEY,
+      to: email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text
+    });
+    return { ok: true, delivered: Boolean(result.ok) };
+  } catch (error) {
+    if (error?.code === 'auth/user-not-found') {
+      return { ok: true, delivered: false };
+    }
+    throw error;
+  }
+});
+
+exports.sendBookingClientEmail = onCall(emailCallableOptions, async (request) => {
+  const appId = requireString(request.data?.appId || DEFAULT_APP_ID, 'App ID', 120);
+  const ownerId = requireString(request.data?.ownerId || request.auth?.uid, 'Workspace owner', 120);
+  const bookingId = requireString(request.data?.bookingId, 'Booking', 160);
+  const templateKey = cleanString(request.data?.templateKey, 40);
+  const allowedTemplates = new Set(['bookingReceived', 'confirmed', 'declined', 'waitlist', 'runningLate', 'review', 'reminder24h', 'reminder2h']);
+  if (!allowedTemplates.has(templateKey)) {
+    throw new HttpsError('invalid-argument', 'Email template is not supported.');
+  }
+  await assertCanWriteOwnerBooking({ appId, ownerId, request });
+
+  const bookingSnap = await db
+    .collection('artifacts').doc(appId)
+    .collection('users').doc(ownerId)
+    .collection('bookings').doc(bookingId)
+    .get();
+  if (!bookingSnap.exists) {
+    throw new HttpsError('not-found', 'Booking was not found.');
+  }
+  const { settings, communications } = await readOwnerWorkspaceEmailContext({ appId, ownerId });
+  const booking = { id: bookingSnap.id, ...(bookingSnap.data() || {}) };
+  return sendClientBookingEmail({
+    appId,
+    ownerId,
+    booking,
+    communications,
+    settings,
+    templateKey,
+    extra: request.data?.extra || {}
+  });
+});
+
 exports.createOwnerBookingRequest = onCall(bookingCallableOptions, async (request) => {
   const appId = requireString(request.data?.appId || DEFAULT_APP_ID, 'App ID', 120);
   const ownerId = requireString(request.data?.ownerId || request.auth?.uid, 'Workspace owner', 120);
@@ -1223,26 +1439,120 @@ exports.createPublicBookingRequest = onCall(bookingCallableOptions, async (reque
 });
 
 exports.processNotificationJob = onDocumentCreated({
-  ...workerFunctionOptions,
+  ...emailWorkerFunctionOptions,
   document: 'artifacts/{appId}/notificationJobs/{jobId}'
 }, async (event) => {
+  const { appId } = event.params;
   const snap = event.data;
   if (!snap) return;
 
   const job = snap.data() || {};
-  const hasEmailProvider = Boolean(process.env.RESEND_API_KEY);
+  const status = getEmailProviderStatus({ resendApiKeySecret: RESEND_API_KEY });
+  if (!status.configured) {
+    await snap.ref.set({
+      status: 'waiting-for-provider-setup',
+      providerState: {
+        email: 'missing',
+        clientPortal: 'active',
+        missing: status.missing
+      },
+      lastNote: job.type === 'new-booking-request'
+        ? 'Booking notification queued. Connect Resend secrets to enable email sending.'
+        : 'Notification queued.',
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return;
+  }
 
-  await snap.ref.set({
-    status: hasEmailProvider ? 'ready-for-provider' : 'waiting-for-provider-setup',
-    providerState: {
-      email: hasEmailProvider ? 'configured' : 'missing',
-      clientPortal: 'active'
-    },
-    lastNote: job.type === 'new-booking-request'
-      ? 'Booking notification queued. Connect provider secrets to enable sending.'
-      : 'Notification queued.',
-    updatedAt: serverTimestamp()
-  }, { merge: true });
+  const ownerId = cleanString(job.ownerId, 120);
+  const bookingId = cleanString(job.bookingId, 160);
+  if (!ownerId || !bookingId) {
+    await snap.ref.set({
+      status: 'skipped',
+      providerState: { email: 'skipped', reason: 'missing-booking-reference', clientPortal: 'active' },
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return;
+  }
+
+  try {
+    const bookingSnap = await db
+      .collection('artifacts').doc(appId)
+      .collection('users').doc(ownerId)
+      .collection('bookings').doc(bookingId)
+      .get();
+    if (!bookingSnap.exists) {
+      await snap.ref.set({
+        status: 'skipped',
+        providerState: { email: 'skipped', reason: 'booking-not-found', clientPortal: 'active' },
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      return;
+    }
+
+    const booking = { id: bookingSnap.id, ...(bookingSnap.data() || {}) };
+    const { settings, communications, account } = await readOwnerWorkspaceEmailContext({ appId, ownerId });
+    const { baseUrl } = getEmailRuntimeConfig({ resendApiKeySecret: RESEND_API_KEY });
+    const ownerEmail = await getOwnerEmail({ ownerId, account });
+    const results = {};
+
+    if (ownerEmail && getEmailChannelEnabled(communications, 'ownerNewBooking', true)) {
+      const ownerEmailContent = buildOwnerBookingRequestEmail({
+        booking,
+        ownerEmail,
+        settings,
+        baseUrl
+      });
+      results.owner = await sendEmail({
+        resendApiKeySecret: RESEND_API_KEY,
+        to: ownerEmailContent.to,
+        subject: ownerEmailContent.subject,
+        html: ownerEmailContent.html,
+        text: ownerEmailContent.text
+      });
+    } else {
+      results.owner = { ok: false, skipped: true, reason: ownerEmail ? 'Owner booking email is turned off.' : 'Missing owner email.' };
+    }
+
+    if (job.channels?.email && normalizeEmail(booking.clientEmail) && getEmailChannelEnabled(communications, 'clientBookingReceived', true)) {
+      results.client = await sendClientBookingEmail({
+        appId,
+        ownerId,
+        booking,
+        communications,
+        settings,
+        templateKey: 'bookingReceived'
+      });
+    } else {
+      results.client = { ok: false, skipped: true, reason: 'Client email consent or channel is off.' };
+    }
+
+    const delivered = [results.owner, results.client].filter(result => result?.ok).length;
+    await snap.ref.set({
+      status: delivered ? 'sent' : 'skipped',
+      providerState: {
+        email: delivered ? 'sent' : 'skipped',
+        ownerEmail: results.owner?.ok ? 'sent' : 'skipped',
+        clientEmail: results.client?.ok ? 'sent' : 'skipped',
+        clientPortal: 'active',
+        ownerReason: results.owner?.reason || '',
+        clientReason: results.client?.reason || ''
+      },
+      sentAtMs: delivered ? Date.now() : null,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Notification email job failed', error);
+    await snap.ref.set({
+      status: 'failed',
+      providerState: {
+        email: 'failed',
+        clientPortal: 'active'
+      },
+      lastError: cleanString(error?.message || 'Email notification failed.', 500),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  }
 });
 
 exports.syncBookingOperationalState = onDocumentWritten({
@@ -1271,7 +1581,7 @@ exports.syncBookingOperationalState = onDocumentWritten({
 });
 
 exports.sendBookingReminderNotifications = onSchedule({
-  ...workerFunctionOptions,
+  ...emailWorkerFunctionOptions,
   schedule: 'every 15 minutes',
   timeZone: REMINDER_TIME_ZONE
 }, async () => {
@@ -1329,8 +1639,26 @@ exports.sendBookingReminderNotifications = onSchedule({
         title: job.title || (reminderKey === '24h' ? 'Your booking is tomorrow' : 'Your booking is coming up soon'),
         body: job.body || 'Open your client portal for booking details.'
       });
+      let emailResult = { ok: false, skipped: true, reason: 'Reminder notification was not created.' };
+      if (created) {
+        const { settings, communications } = await readOwnerWorkspaceEmailContext({ appId, ownerId });
+        emailResult = await sendClientBookingEmail({
+          appId,
+          ownerId,
+          booking: { id: bookingSnap.id, ...booking },
+          communications,
+          settings,
+          templateKey: reminderKey === '24h' ? 'reminder24h' : 'reminder2h'
+        }).catch(error => ({
+          ok: false,
+          skipped: false,
+          reason: cleanString(error?.message || 'Reminder email failed.', 500)
+        }));
+      }
       await queueDoc.ref.set({
         status: created ? 'sent' : 'skipped',
+        emailStatus: emailResult.ok ? 'sent' : (emailResult.skipped ? 'skipped' : 'failed'),
+        emailNote: emailResult.reason || '',
         sentAtMs: created ? Date.now() : null,
         updatedAtMs: Date.now(),
         updatedAt: serverTimestamp()

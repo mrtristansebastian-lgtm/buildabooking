@@ -34,9 +34,9 @@ export const ProfileBusinessIdentitySection = ({
         </div>
 
         <div className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] lg:flex-col lg:items-stretch">
-          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-neutral-100 text-2xl font-black text-neutral-300 lg:mx-auto">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-transparent text-2xl font-black text-neutral-300 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] lg:mx-auto">
             {settings.logo ? (
-              <img src={settings.logo} alt="" className="h-full w-full object-cover" />
+              <img src={settings.logo} alt="" className="h-full w-full object-contain" />
             ) : (
               settings.brandName?.charAt(0) || 'B'
             )}

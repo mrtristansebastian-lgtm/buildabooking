@@ -10,9 +10,7 @@ export const BookingTimeSection = ({
     isPreviewTimePlaceholder,
     isLoadingAvailability,
     isWaitlistMode,
-    nativeAccent,
     nativeAccentBorderClass,
-    nativeAccentButtonClass,
     nativeAccentFillClass,
     onInspect,
     onSettingChange,
@@ -31,9 +29,8 @@ export const BookingTimeSection = ({
 }) => (
     <section data-preview-section="time" style={{ order: sectionOrder ?? (showServiceStep ? 3 : 2) }}>
         <div className={`flex flex-col ${pageItems} ${pageTextClass} mb-6 px-1 ${inspectClass}`} data-preview-section="time" onClick={() => previewInspectEnabled && onInspect('time')}>
-            <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('timeLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{timeStepNumber} // {settings.timeLabel || "Select Time"}</h3>
-            <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                {isWaitlistMode ? 'Day Full - Join Waitlist' : 'Available Slots'}
+            <h4 className="booking-section-heading text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
+                {isWaitlistMode ? 'Join the waitlist' : 'What time works?'}
             </h4>
         </div>
 
@@ -50,24 +47,23 @@ export const BookingTimeSection = ({
                 <div className="py-8 text-center text-sm font-bold tracking-widest uppercase opacity-20">{unavailableReason || 'Fully Booked'}</div>
             )
         ) : (
-            <div className={`booking-time-look booking-time-${timeDisplayStyle} ${isPreviewTimePlaceholder ? 'booking-time-preview-empty' : ''} grid grid-cols-3 gap-3 md:gap-4 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => previewInspectEnabled && onInspect('time')}>
+            <div className={`booking-time-look booking-time-${timeDisplayStyle} ${isPreviewTimePlaceholder ? 'booking-time-preview-empty' : ''} mx-auto grid w-full max-w-[34rem] grid-cols-3 gap-1.5 md:gap-2 ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => previewInspectEnabled && onInspect('time')}>
                 {displayTimesForActiveDate.map((time, index) => {
                     const isActive = isPreviewTimePlaceholder ? index === 0 : selectedTime === time;
-                    const nativeTimeClass = nativeAccent && isActive
-                        ? (timeSlotStyle === 'solid' ? nativeAccentButtonClass : nativeAccentBorderClass)
-                        : '';
+                    const nativeTimeClass = '';
                     return (
                         <button
                             key={time}
+                            aria-pressed={isActive}
                             onClick={() => {
                                 if (isPreviewTimePlaceholder) return;
                                 setSelectedTime(time);
                             }}
-                            className={`appearance-none outline-none focus:outline-none group relative transition-all duration-500 flex items-center justify-center w-full ${isPreviewTimePlaceholder ? 'is-preview-empty' : ''} ${timeSlotStyle !== 'minimal' ? 'py-4 md:py-5' : 'py-3'} ${timeSlotStyle !== 'minimal' && isActive ? 'shadow-xl scale-105 z-10' : ''} ${nativeTimeClass}`}
+                            className={`appearance-none outline-none focus:outline-none group relative transition-all duration-300 flex items-center justify-center w-full ${isPreviewTimePlaceholder ? 'is-preview-empty' : ''} ${timeSlotStyle !== 'minimal' ? 'py-2 md:py-2.5' : 'py-2'} ${timeSlotStyle !== 'minimal' && isActive ? 'z-10' : ''} ${nativeTimeClass}`}
                             style={getTimeSlotStyle({ isActive, settings, timeSlotStyle })}
                         >
                             <div className="flex items-center justify-center relative w-full">
-                                <span className={`text-lg md:text-xl font-bold tracking-tighter transition-all duration-500 ${isActive && timeSlotStyle === 'minimal' ? '-translate-y-1 scale-110' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{time}</span>
+                                <span className={`text-[13px] md:text-sm font-bold tracking-normal transition-all duration-300 ${isActive && timeSlotStyle === 'minimal' ? '-translate-y-1 scale-105' : ''}`} style={{ fontFeatureSettings: '"tnum" on, "lnum" on' }}>{time}</span>
                                 {timeSlotStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
                             </div>
                         </button>

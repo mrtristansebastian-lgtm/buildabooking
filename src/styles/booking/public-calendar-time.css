@@ -11,8 +11,7 @@
         .booking-calendar-classic > button {
             min-width: 7.1rem !important;
             border-radius: 0.95rem !important;
-            background-image:
-                linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.82)) !important;
+            background: var(--booking-calendar-tile-bg) !important;
         }
 
         .booking-calendar-editorial > button {
@@ -47,9 +46,7 @@
 
         .booking-calendar-glow > button {
             border-radius: 1.25rem !important;
-            background:
-                radial-gradient(circle at 50% 0%, rgba(255,255,255,0.95), transparent 42%),
-                rgba(255,255,255,0.72) !important;
+            background: var(--booking-calendar-tile-bg) !important;
         }
 
         .booking-calendar-glow > button[aria-pressed="true"],
@@ -60,8 +57,8 @@
 
         .booking-time-pill > button {
             border-radius: 999px !important;
-            min-height: 3.3rem;
-            box-shadow: 0 16px 36px -30px rgba(15, 23, 42, 0.42);
+            min-height: 2.38rem;
+            box-shadow: 0 7px 18px -18px rgba(15, 23, 42, 0.28);
         }
 
         .booking-time-blocks {
@@ -69,11 +66,11 @@
         }
 
         .booking-time-blocks > button {
-            min-height: 4.8rem;
+            min-height: 3.05rem;
             border-radius: 1rem !important;
-            justify-content: flex-start !important;
-            padding: 1rem !important;
-            text-align: left;
+            justify-content: center !important;
+            padding: 0.82rem !important;
+            text-align: center;
         }
 
         .booking-time-minimal {
@@ -103,9 +100,9 @@
         }
 
         .booking-time-luxury > button {
-            min-height: 4.35rem;
+            min-height: 2.95rem;
             border-radius: 0.25rem 1.2rem 0.25rem 1.2rem !important;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.03em;
         }
 
         .booking-time-compact {

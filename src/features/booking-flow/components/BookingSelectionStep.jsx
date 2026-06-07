@@ -6,7 +6,7 @@ export const BookingSelectionStep = ({
   actionOrder,
   canContinue,
   children,
-  ctaLabel = 'Next: fill in your details',
+  ctaLabel = 'Complete your details',
   footerContent,
   heroContent,
   inspectClass,

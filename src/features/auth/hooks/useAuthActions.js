@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import * as FirebaseSDK from '../../../services/firebase';
-import { appId, auth, db, isFirebaseConfigured } from '../../../services/firebase';
+import { appId, auth, db, functions, isFirebaseConfigured } from '../../../services/firebase';
 import {
   clearGoogleAuthIntentUrl,
   clearAuthReturnState,
@@ -52,6 +52,7 @@ export function useAuthActions({
   setAuthPanelOpen,
   setAuthPersona,
   setAuthRedirectPending,
+  setAuthRefreshTick,
   setClientGuestMode,
   setGuestMode,
   setView,
@@ -106,6 +107,97 @@ export function useAuthActions({
     openAuthPanel('signup', 'owner');
   }, [openAuthPanel, setView, user]);
 
+  const callEmailFunction = useCallback(async (name, payload = {}) => {
+    if (!functions || !FirebaseSDK.httpsCallable) {
+      return { ok: false, skipped: true, reason: 'Email provider is not connected in this build.' };
+    }
+    const callable = FirebaseSDK.httpsCallable(functions, name);
+    const result = await callable(payload);
+    return result.data || {};
+  }, []);
+
+  const requestVerificationEmail = useCallback(async ({ silent = false } = {}) => {
+    if (!isFirebaseConfigured || !auth?.currentUser?.email) {
+      if (!silent) setAuthError('Sign in before requesting a verification email.');
+      return false;
+    }
+    try {
+      const result = await callEmailFunction('sendAuthVerificationEmail', { appId });
+      if (result?.alreadyVerified) {
+        if (!silent) showToast('Email is already verified.');
+        return true;
+      }
+      if (result?.skipped) {
+        if (!silent) setAuthError(result.reason || 'Verification email could not be sent yet.');
+        return false;
+      }
+      if (!silent) showToast('Verification email sent.');
+      return Boolean(result?.ok);
+    } catch (error) {
+      console.error(error);
+      if (!silent) setAuthError(readableAuthError(error, 'Verification email could not be sent yet.'));
+      return false;
+    }
+  }, [callEmailFunction, setAuthError, showToast]);
+
+  const resendVerificationEmail = useCallback(async () => {
+    setAuthBusy(true);
+    setAuthError('');
+    try {
+      await requestVerificationEmail();
+    } finally {
+      setAuthBusy(false);
+    }
+  }, [requestVerificationEmail, setAuthBusy, setAuthError]);
+
+  const refreshEmailVerification = useCallback(async () => {
+    if (!auth?.currentUser) return false;
+    setAuthBusy(true);
+    setAuthError('');
+    try {
+      await auth.currentUser.reload();
+      await auth.currentUser.getIdToken(true);
+      setAuthRefreshTick(value => value + 1);
+      if (auth.currentUser.emailVerified) {
+        showToast('Email verified.');
+        return true;
+      }
+      setAuthError('Email is not verified yet. Check your inbox and try again.');
+      return false;
+    } catch (error) {
+      console.error(error);
+      setAuthError(readableAuthError(error, 'Could not refresh verification status.'));
+      return false;
+    } finally {
+      setAuthBusy(false);
+    }
+  }, [setAuthBusy, setAuthError, setAuthRefreshTick, showToast]);
+
+  const sendPasswordResetEmail = useCallback(async () => {
+    const email = normalizeEmail(authForm.email);
+    if (!email) {
+      setAuthError('Enter your email address first.');
+      return false;
+    }
+    setAuthBusy(true);
+    setAuthError('');
+    try {
+      const result = await callEmailFunction('sendPasswordResetEmail', { appId, email });
+      if (result?.skipped) {
+        setAuthError(result.reason || 'Password reset email could not be sent yet.');
+        return false;
+      }
+      showToast('If that email exists, a reset link is on the way.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      setAuthError(readableAuthError(error, 'Password reset email could not be sent yet.'));
+      return false;
+    } finally {
+      setAuthBusy(false);
+    }
+  }, [authForm.email, callEmailFunction, setAuthBusy, setAuthError, showToast]);
+
   const openGuestDashboard = useCallback(() => {
     setActiveWorkspaceOwnerId('');
     setWorkspaceAccess([]);
@@ -149,6 +241,7 @@ export function useAuthActions({
       await applyAuthPersistence(keepLoggedIn);
       if (authMode === 'signup') {
         await FirebaseSDK.createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
+        await requestVerificationEmail({ silent: true });
       } else {
         await FirebaseSDK.signInWithEmailAndPassword(auth, authForm.email, authForm.password);
       }
@@ -157,14 +250,14 @@ export function useAuthActions({
       safeLocalRemove(guestModeStorageKey);
       setAuthPanelOpen(false);
       applyWorkspaceRoute(getAuthReturnRouteForPersona(authPersona));
-      showToast(authMode === 'signup' ? 'Account created' : 'Signed in');
+      showToast(authMode === 'signup' ? 'Account created. Verify your email to continue.' : 'Signed in');
     } catch (error) {
       console.error(error);
       setAuthError(readableAuthError(error, authMode === 'signup' ? 'Could not create account.' : 'Could not sign in.'));
     } finally {
       setAuthBusy(false);
     }
-  }, [applyAuthPersistence, applyWorkspaceRoute, authForm.email, authForm.password, authMode, authPersona, getAuthReturnRouteForPersona, keepLoggedIn, setAuthBusy, setAuthError, setAuthPanelOpen, setClientGuestMode, setGuestMode, setView, showToast]);
+  }, [applyAuthPersistence, applyWorkspaceRoute, authForm.email, authForm.password, authMode, authPersona, getAuthReturnRouteForPersona, keepLoggedIn, requestVerificationEmail, setAuthBusy, setAuthError, setAuthPanelOpen, setClientGuestMode, setGuestMode, setView, showToast]);
 
   const handleGoogleAuth = useCallback(async () => {
     if (!isFirebaseConfigured) {
@@ -339,6 +432,10 @@ export function useAuthActions({
     openGuestDashboard,
     openOwnerAuth,
     openSignupOrDashboard,
+    refreshEmailVerification,
+    requestVerificationEmail,
+    resendVerificationEmail,
+    sendPasswordResetEmail,
     shouldUseRedirectGoogleAuth,
     signInWithNativeGoogle,
     startGoogleRedirect

@@ -1,5 +1,6 @@
 import { getPaymentOptionDisplay, isHostedPaymentOption } from '../utils/checkoutUtils';
 import { getActionButtonStyle } from '../utils/bookingFlowUtils';
+import { withColorAlpha } from '../../../utils/theme';
 
 export const BookingCheckoutStep = ({
   actionButtonStyle,
@@ -50,7 +51,7 @@ export const BookingCheckoutStep = ({
                 className={`booking-checkout-email-check ${formData.emailOptIn ? nativeAccentFillClass : ''}`}
                 style={{
                   backgroundColor: formData.emailOptIn ? (settings.primaryColor || '#39FF14') : 'transparent',
-                  borderColor: formData.emailOptIn ? (settings.primaryColor || '#39FF14') : `${settings.headingColor || '#000000'}35`,
+                  borderColor: formData.emailOptIn ? (settings.primaryColor || '#39FF14') : withColorAlpha(settings.headingColor || '#000000', 21, '#000000'),
                   color: settings.buttonTextColor || '#000000'
                 }}
               >

@@ -33,8 +33,7 @@ export const BookingFaqSection = ({
             style={{ order: sectionOrder ?? (showServiceStep ? 4 : 3) }}
         >
             <div className={`booking-faq-heading mx-auto flex flex-col items-center text-center ${pageTextClass} mb-6 px-1`}>
-                <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }}>{faqStepNumber} // Good to know</h3>
-                <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
+                <h4 className="booking-section-heading text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
                     Questions before booking
                 </h4>
             </div>
@@ -45,7 +44,7 @@ export const BookingFaqSection = ({
                         <button
                             key={`${faq.q}-${index}`}
                             type="button"
-                            className={`booking-faq-item w-full text-center transition-all ${isPreviewEmpty ? 'is-preview-empty' : ''}`}
+                            className={`booking-faq-item w-full text-left transition-all ${isPreviewEmpty ? 'is-preview-empty' : ''}`}
                             style={getFaqItemStyle({ settings, faqStyle })}
                             aria-expanded={isOpen}
                             onClick={(event) => {

@@ -1,10 +1,44 @@
+import { useEffect, useMemo, useRef } from 'react';
 import { BrandLoader } from './AppLoading';
 import { LegalDialog } from './AppOverlays';
-import { AppLoginScreen, AuthDialog, shouldUseRedirectGoogleAuth } from '../features/auth';
+import { AppLoginScreen, AuthActionPage, AuthDialog, EmailVerificationGate, shouldUseRedirectGoogleAuth } from '../features/auth';
 import { ClientPortalGate } from '../features/client-portal';
 import { DashboardRouteShell } from '../features/dashboard';
 import { PublicBookingPage } from '../features/public-booking';
 import { legalPages } from '../config/appConfig';
+import {
+  clientAuthPrefillStorageKey,
+  safeJsonParse,
+  safeSessionGet
+} from '../utils/workspaceRoute';
+
+const CLIENT_PREFILL_MAX_AGE_MS = 30 * 60 * 1000;
+
+const readClientAuthPrefill = () => {
+  if (typeof window === 'undefined') return null;
+
+  const hashQuery = window.location.hash.includes('?')
+    ? window.location.hash.slice(window.location.hash.indexOf('?') + 1)
+    : '';
+  const params = new URLSearchParams(hashQuery);
+  const stored = safeJsonParse(safeSessionGet(clientAuthPrefillStorageKey), {});
+  const createdAt = Number(stored?.createdAt || 0);
+  const isFreshStoredPrefill = Boolean(createdAt && Date.now() - createdAt <= CLIENT_PREFILL_MAX_AGE_MS);
+  const source = params.get('source') || (isFreshStoredPrefill ? stored.source : '');
+
+  if (source !== 'booking-success' && !params.has('email')) return null;
+
+  const modeParam = params.get('mode') || (isFreshStoredPrefill ? stored.mode : '');
+  const email = (params.get('email') || (isFreshStoredPrefill ? stored.email : '') || '').trim();
+  const name = (params.get('name') || (isFreshStoredPrefill ? stored.name : '') || '').trim();
+
+  return {
+    email,
+    name,
+    mode: modeParam === 'signin' ? 'signin' : 'signup',
+    source: source || 'booking-success'
+  };
+};
 
 export function AppRouteHost({
   appId,
@@ -16,6 +50,40 @@ export function AppRouteHost({
   publicBooking,
   route
 }) {
+  const handledClientPrefillRef = useRef('');
+  const clientAuthPrefill = useMemo(
+    () => (route.view === 'client' ? readClientAuthPrefill() : null),
+    [route.view]
+  );
+
+  const applyClientAuthPrefill = (prefill = clientAuthPrefill) => {
+    if (!prefill?.email && !prefill?.name) return;
+    auth.setForm(prev => ({
+      ...prev,
+      email: prefill.email || prev.email,
+      name: prefill.name || prev.name || '',
+      password: ''
+    }));
+  };
+
+  const openClientAuth = (mode = clientAuthPrefill?.mode || 'signin') => {
+    applyClientAuthPrefill();
+    auth.openPanel(mode, 'client');
+  };
+
+  useEffect(() => {
+    if (route.view !== 'client' || clientPortal.user || clientPortal.isGuestPreview || !clientAuthPrefill) return;
+    const prefillKey = `${clientAuthPrefill.source}|${clientAuthPrefill.mode}|${clientAuthPrefill.email}|${clientAuthPrefill.name}`;
+    if (handledClientPrefillRef.current === prefillKey) return;
+    handledClientPrefillRef.current = prefillKey;
+
+    applyClientAuthPrefill(clientAuthPrefill);
+    auth.setError('');
+    auth.setMode(clientAuthPrefill.mode);
+    auth.setPersona('client');
+    auth.setPanelOpen(true);
+  }, [auth, clientAuthPrefill, clientPortal.isGuestPreview, clientPortal.user, route.view]);
+
   const authDialog = (
     <AuthDialog
       open={auth.panelOpen}
@@ -33,6 +101,7 @@ export function AppRouteHost({
       onGuestDashboard={auth.onGuestDashboard}
       onClientGuestPortal={auth.onClientGuestPortal}
       onFormChange={(updates) => auth.setForm(prev => ({ ...prev, ...updates }))}
+      onPasswordReset={auth.onPasswordReset}
       onSubmit={auth.onSubmit}
       onToggleMode={() => {
         auth.setMode(auth.mode === 'signup' ? 'signin' : 'signup');
@@ -66,6 +135,23 @@ export function AppRouteHost({
     );
   }
 
+  if (route.view === 'authAction') {
+    return <AuthActionPage />;
+  }
+
+  if (auth.requiresEmailVerification) {
+    return (
+      <EmailVerificationGate
+        busy={auth.busy}
+        error={auth.error}
+        onRefresh={auth.onRefreshVerification}
+        onResend={auth.onResendVerification}
+        onSignOut={auth.onSignOut}
+        user={auth.user}
+      />
+    );
+  }
+
   if (route.view === 'client') {
     return (
       <ClientPortalGate
@@ -74,7 +160,7 @@ export function AppRouteHost({
         user={clientPortal.user}
         isGuestPreview={clientPortal.isGuestPreview}
         authDialog={authDialog}
-        onOpenClientAuth={() => auth.openPanel('signin', 'client')}
+        onOpenClientAuth={() => openClientAuth(clientAuthPrefill?.mode || 'signin')}
         onPreviewClient={auth.onClientGuestPortal}
         onExitGuestPreview={() => {
           clientPortal.setGuestPreview(false);

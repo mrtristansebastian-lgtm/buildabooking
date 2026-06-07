@@ -1,8 +1,13 @@
 export const IMAGE_CROP_RATIOS = {
   square: { ratio: '1 / 1', width: 900, height: 900 },
-  banner: { ratio: '16 / 7', width: 1600, height: 700 },
+  banner: { ratio: '2560 / 423', width: 2560, height: 423 },
   gallery: { ratio: '4 / 3', width: 1200, height: 900 },
   wide: { ratio: '16 / 9', width: 1600, height: 900 }
+};
+
+const cropOutputFormats = {
+  png: { mimeType: 'image/png', extension: 'png' },
+  jpeg: { mimeType: 'image/jpeg', extension: 'jpg', quality: 0.9 }
 };
 
 const loadImageForCrop = (src) => new Promise((resolve, reject) => {
@@ -28,13 +33,17 @@ export const buildCroppedImageFile = async (crop) => {
   const drawHeight = image.naturalHeight * coverScale;
   const offsetX = Math.max(0, drawWidth - canvas.width) * (positionX / 100);
   const offsetY = Math.max(0, drawHeight - canvas.height) * (positionY / 100);
+  const outputFormat = crop.preserveTransparency ? cropOutputFormats.png : cropOutputFormats.jpeg;
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!crop.preserveTransparency) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
   ctx.drawImage(image, -offsetX, -offsetY, drawWidth, drawHeight);
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputFormat.mimeType, outputFormat.quality));
   if (!blob) throw new Error('Could not crop image.');
-  const cleanName = String(crop.fileName || 'image.jpg').replace(/\.[a-z0-9]+$/i, '');
-  return new File([blob], `${cleanName || 'image'}-cropped.jpg`, { type: 'image/jpeg' });
+  const cleanName = String(crop.fileName || 'image').replace(/\.[a-z0-9]+$/i, '');
+  return new File([blob], `${cleanName || 'image'}-cropped.${outputFormat.extension}`, { type: outputFormat.mimeType });
 };

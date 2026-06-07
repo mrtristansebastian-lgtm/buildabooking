@@ -63,38 +63,48 @@ export const buildEditorColourFineTuneGroups = ({ settings, applyColorPatch, pre
         id: 'page-action',
         title: 'Page Action',
         controls: [
-          { id: 'page-accent', label: 'Button fill', note: 'Primary action and selected states on this page.', value: values.primaryColor, fallback: '#050505', onApply: (color) => applyPageColorPatch({ primaryColor: color }) },
+          { id: 'page-accent', label: 'Button fill', note: 'Primary action on this page.', value: values.primaryColor, fallback: '#050505', onApply: (color) => applyPageColorPatch({ primaryColor: color }) },
           { id: 'page-button-text', label: 'Button text', note: 'Primary action label on this page.', value: values.buttonTextColor, fallback: '#ffffff', onApply: (color) => applyPageColorPatch({ buttonTextColor: color }) }
         ]
       }
     ];
   }
 
+  const baseControls = [
+    { id: 'background', label: 'Background', note: 'Main booking page surface.', value: settings.backgroundColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ backgroundColor: color }) },
+    { id: 'heading', label: 'Heading text', note: 'Business name and section titles.', value: settings.headingColor, fallback: '#050505', onApply: (color) => applyColorPatch({ headingColor: color }) },
+    { id: 'body', label: 'Body text', note: 'Descriptions, labels, and helper copy.', value: settings.bodyColor, fallback: '#666666', onApply: (color) => applyColorPatch({ bodyColor: color }) },
+    ...(!settings.nativeAccent ? [
+      { id: 'primary', label: 'Underline accent', note: 'Section heading underline colour.', value: settings.primaryColor, fallback: '#050505', onApply: (color) => applyColorPatch({ primaryColor: color, accentColor: color }) }
+    ] : [])
+  ];
+
+  const actionControls = [
+    { id: 'button-fill', label: 'Button fill', note: 'Confirm booking button background.', value: settings.buttonColor || settings.primaryColor, fallback: '#050505', onApply: (color) => applyColorPatch({ buttonColor: color }) },
+    { id: 'button-text', label: 'Button text', note: 'Confirm booking button label.', value: settings.buttonTextColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ buttonTextColor: color }) }
+  ];
+
+  const actionGroups = [
+    {
+      id: 'action',
+      title: 'Action',
+      controls: actionControls
+    }
+  ];
+
   return [
   {
     id: 'base',
     title: 'Base',
-    controls: [
-      { id: 'background', label: 'Background', note: 'Main booking page surface.', value: settings.backgroundColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ backgroundColor: color }) },
-      { id: 'heading', label: 'Heading text', note: 'Business name and section titles.', value: settings.headingColor, fallback: '#050505', onApply: (color) => applyColorPatch({ headingColor: color }) },
-      { id: 'body', label: 'Body text', note: 'Descriptions, labels, and helper copy.', value: settings.bodyColor, fallback: '#666666', onApply: (color) => applyColorPatch({ bodyColor: color }) },
-      { id: 'primary', label: 'Brand accent', note: 'Global accent used by selected states.', value: settings.primaryColor, fallback: '#050505', onApply: (color) => applyColorPatch({ primaryColor: color, accentColor: color }) }
-    ]
+    controls: baseControls
   },
-  {
-    id: 'action',
-    title: 'Action',
-    controls: [
-      { id: 'button-fill', label: 'Button fill', note: 'Confirm booking button background.', value: settings.buttonColor || settings.primaryColor, fallback: '#050505', onApply: (color) => applyColorPatch({ buttonColor: color, primaryColor: color }) },
-      { id: 'button-text', label: 'Button text', note: 'Confirm booking button label.', value: settings.buttonTextColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ buttonTextColor: color }) }
-    ]
-  },
+  ...actionGroups,
   {
     id: 'calendar',
     title: 'Calendar',
     controls: [
-      { id: 'date-active-bg', label: 'Active day', note: 'Selected date background.', value: settings.dateActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyColorPatch({ dateActiveBgColor: color }) },
-      { id: 'date-active-text', label: 'Active day text', note: 'Selected date label.', value: settings.dateActiveTextColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ dateActiveTextColor: color }) },
+      { id: 'date-active-bg', label: 'Selected day', note: 'Selected date background.', value: settings.dateActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyColorPatch({ dateActiveBgColor: color }) },
+      { id: 'date-active-text', label: 'Selected day text', note: 'Selected date label.', value: settings.dateActiveTextColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ dateActiveTextColor: color }) },
       { id: 'date-bg', label: 'Day tile', note: 'Unselected date background.', value: settings.dateBgColor === 'transparent' ? '' : settings.dateBgColor, fallback: '#f8fafc', onApply: (color) => applyColorPatch({ dateBgColor: color }) },
       { id: 'date-text', label: 'Day tile text', note: 'Unselected date label.', value: settings.dateTextColor, fallback: '#64748b', onApply: (color) => applyColorPatch({ dateTextColor: color }) }
     ]
@@ -105,8 +115,20 @@ export const buildEditorColourFineTuneGroups = ({ settings, applyColorPatch, pre
     controls: [
       { id: 'slot-bg', label: 'Slot fill', note: 'Available time background.', value: settings.slotBgColor, fallback: '#f8fafc', onApply: (color) => applyColorPatch({ slotBgColor: color }) },
       { id: 'slot-text', label: 'Slot text', note: 'Available time label.', value: settings.slotTextColor, fallback: '#050505', onApply: (color) => applyColorPatch({ slotTextColor: color }) },
-      { id: 'slot-active-bg', label: 'Selected slot', note: 'Chosen time background.', value: settings.slotActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyColorPatch({ slotActiveBgColor: color }) },
-      { id: 'slot-active-text', label: 'Selected text', note: 'Chosen time label.', value: settings.slotActiveTextColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ slotActiveTextColor: color }) }
+      { id: 'slot-active-bg', label: 'Selected time', note: 'Chosen time background.', value: settings.slotActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyColorPatch({ slotActiveBgColor: color }) },
+      { id: 'slot-active-text', label: 'Selected time text', note: 'Chosen time label.', value: settings.slotActiveTextColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ slotActiveTextColor: color }) }
+    ]
+  },
+  {
+    id: 'services',
+    title: 'Services',
+    controls: [
+      { id: 'service-bg', label: 'Service surface', note: 'Service tiles and dropdown fill.', value: settings.serviceBgColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ serviceBgColor: color }) },
+      { id: 'service-line', label: 'Service line', note: 'Service tile and dropdown border.', value: settings.serviceBorderColor, fallback: '#000000', onApply: (color) => applyColorPatch({ serviceBorderColor: color }) },
+      { id: 'service-title', label: 'Service text', note: 'Service names and key labels.', value: settings.serviceTextColor || settings.bodyColor, fallback: '#050505', onApply: (color) => applyColorPatch({ serviceTextColor: color }) },
+      { id: 'service-copy', label: 'Service copy', note: 'Service descriptions and helper text.', value: settings.serviceBodyColor || settings.bodyColor, fallback: '#666666', onApply: (color) => applyColorPatch({ serviceBodyColor: color }) },
+      { id: 'service-active', label: 'Selected service', note: 'Chosen service surface.', value: settings.serviceActiveBgColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyColorPatch({ serviceActiveBgColor: color }) },
+      { id: 'service-active-line', label: 'Selected service line', note: 'Chosen service border colour.', value: settings.serviceActiveBorderColor, fallback: settings.primaryColor || '#050505', onApply: (color) => applyColorPatch({ serviceActiveBorderColor: color }) }
     ]
   },
   {
@@ -115,8 +137,18 @@ export const buildEditorColourFineTuneGroups = ({ settings, applyColorPatch, pre
     controls: [
       { id: 'faq-bg', label: 'FAQ surface', note: 'Question area background.', value: settings.faqBgColor === 'transparent' ? '' : settings.faqBgColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ faqBgColor: color }) },
       { id: 'faq-border', label: 'FAQ line', note: 'Accordion and card border.', value: settings.faqBorderColor, fallback: '#000000', onApply: (color) => applyColorPatch({ faqBorderColor: color }) },
-      { id: 'faq-question', label: 'Question text', note: 'FAQ question copy.', value: settings.faqTextColor || settings.headingColor, fallback: '#050505', onApply: (color) => applyColorPatch({ faqTextColor: color }) },
+      { id: 'faq-question', label: 'Question text', note: 'FAQ question copy.', value: settings.faqTextColor || settings.bodyColor, fallback: '#050505', onApply: (color) => applyColorPatch({ faqTextColor: color }) },
       { id: 'faq-answer', label: 'Answer text', note: 'FAQ answer copy.', value: settings.faqAnswerColor || settings.bodyColor, fallback: '#666666', onApply: (color) => applyColorPatch({ faqAnswerColor: color }) }
+    ]
+  },
+  {
+    id: 'venue',
+    title: 'Venue',
+    controls: [
+      { id: 'venue-bg', label: 'Venue surface', note: 'Gallery and map section fill.', value: settings.venueBgColor, fallback: '#ffffff', onApply: (color) => applyColorPatch({ venueBgColor: color }) },
+      { id: 'venue-line', label: 'Venue line', note: 'Gallery, map, and photo borders.', value: settings.venueBorderColor, fallback: '#000000', onApply: (color) => applyColorPatch({ venueBorderColor: color }) },
+      { id: 'venue-title', label: 'Venue text', note: 'Venue section title and photo labels.', value: settings.venueTextColor || settings.bodyColor, fallback: '#050505', onApply: (color) => applyColorPatch({ venueTextColor: color }) },
+      { id: 'venue-copy', label: 'Venue copy', note: 'Venue intro and metadata copy.', value: settings.venueBodyColor || settings.bodyColor, fallback: '#666666', onApply: (color) => applyColorPatch({ venueBodyColor: color }) }
     ]
   },
   {

@@ -1,4 +1,3 @@
-import { sendClientEmail } from '../../../services/email';
 import * as FirebaseSDK from '../../../services/firebase';
 import { appId, db, functions, isFirebaseConfigured } from '../../../services/firebase';
 import { makeClientNotification, NOTIFICATION_TYPES } from '../../../services/notifications';
@@ -29,16 +28,28 @@ export function createBookingLifecycleActions({
       return false;
     }
     try {
-      const result = await sendClientEmail({ communications, settings, booking, templateKey, extra });
-      if (result.skipped) {
-        showToast(result.reason);
+      if (!functions || !FirebaseSDK.httpsCallable || !booking?.id) {
+        showToast('Email delivery is not connected yet.');
+        return false;
+      }
+      const callable = FirebaseSDK.httpsCallable(functions, 'sendBookingClientEmail');
+      const result = await callable({
+        appId,
+        ownerId: workspaceOwnerId,
+        bookingId: booking.id,
+        templateKey,
+        extra
+      });
+      const data = result.data || {};
+      if (data.skipped) {
+        showToast(data.reason || 'Email was skipped.');
         return false;
       }
       showToast(`${templateKey === 'runningLate' ? 'Running late' : templateKey} email sent to ${booking.clientName}.`);
-      return true;
+      return Boolean(data.ok);
     } catch (error) {
       console.error(error);
-      showToast('Email delivery is not connected yet.');
+      showToast(error?.message || 'Email delivery is not connected yet.');
       return false;
     }
   };
@@ -260,7 +271,7 @@ export function createBookingLifecycleActions({
       showToast('Add the number of minutes before sending.');
       return;
     }
-    await sendBookingEmail(booking, 'runningLate', { minutes });
+    await sendBookingEmail(booking, 'runningLate', { minutes, message: runningLateDialog?.message || '' });
     await createClientNotification(booking.clientEmail, makeClientNotification({
       type: NOTIFICATION_TYPES.RUNNING_LATE,
       title: `${settings.brandName || 'The business'} is running late`,

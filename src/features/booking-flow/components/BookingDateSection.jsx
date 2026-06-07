@@ -2,21 +2,19 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Pencil, X } from 'lucide-react';
 import { getFontFamily } from '../../../data/fonts';
 import { getLocalDateStr } from '../../../utils/dates';
+import { withColorAlpha } from '../../../utils/theme';
 import { getDateSlotStyle } from '../utils/bookingFlowUtils';
 
 export const BookingDateSection = ({
     activeDate,
+    availableDates,
     calendarDisplayStyle,
-    calendarNativeFillLooks,
     dateStepNumber,
     dateStyle,
     displayDates,
     headingLetterSpacing,
     inspectClass,
     isPreview,
-    nativeAccent,
-    nativeAccentBorderClass,
-    nativeAccentButtonClass,
     nativeAccentFillClass,
     onInspect,
     onSettingChange,
@@ -39,11 +37,11 @@ export const BookingDateSection = ({
     const todayKey = getLocalDateStr(new Date());
     const availableDateIndex = useMemo(() => {
         const entries = new Map();
-        displayDates.forEach((date, index) => {
+        (availableDates || displayDates).forEach((date, index) => {
             if (date.localDateStr) entries.set(date.localDateStr, index);
         });
         return entries;
-    }, [displayDates]);
+    }, [availableDates, displayDates]);
     const pickerMonthLabel = pickerMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const pickerDays = useMemo(() => {
         const firstDay = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1);
@@ -73,43 +71,48 @@ export const BookingDateSection = ({
         setSelectedDateIdx(nextIndex);
         setPickerOpen(false);
     };
+    const datePool = availableDates || displayDates;
+    const canStepBack = selectedDateIdx > 0;
+    const canStepForward = selectedDateIdx < (datePool.length - 1);
+    const activeDateObject = activeDate?.localDateStr ? new Date(`${activeDate.localDateStr}T00:00:00`) : null;
+    const activeDayName = activeDateObject
+        ? activeDateObject.toLocaleDateString('en-US', { weekday: 'long' })
+        : activeDate?.dayName;
+    const savedDateLabel = String(settings.dateLabel || '').trim();
+    const dateHeading = !savedDateLabel || /^which day are you looking to book\s*\?$/i.test(savedDateLabel)
+        ? 'Pick your booking date'
+        : savedDateLabel;
 
     return (
         <section data-preview-section="calendar" style={{ order: sectionOrder ?? (showServiceStep ? 2 : 1) }}>
-            <div className={`booking-date-section-head mb-2 px-1 md:mb-3 ${inspectClass}`} style={{ position: 'relative' }} onClick={() => previewInspectEnabled && onInspect('calendar')}>
+            <div className={`booking-date-section-head booking-date-focus-head mb-2 px-1 md:mb-3 ${inspectClass}`} onClick={() => previewInspectEnabled && onInspect('calendar')}>
                 <div className={`booking-date-copy mx-auto flex flex-col items-center text-center ${pageTextClass}`}>
-                    <h3 className="text-[9px] font-bold uppercase tracking-[0.4em] mb-2 opacity-40" style={{ color: settings.bodyColor }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.replace(/^\d+\s*\/\/\s*/i, '').trim())}>{dateStepNumber} // {settings.dateLabel || "Which day?"}</h3>
-                    <div className="booking-date-title-row flex flex-wrap items-center justify-center gap-4">
+                    <h3 className="booking-section-heading text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }} contentEditable={previewInspectEnabled} suppressContentEditableWarning onBlur={(event) => isPreview && onSettingChange?.('dateLabel', event.currentTarget.textContent.trim())}>{dateHeading}</h3>
+                    <div className="booking-date-title-row booking-date-focus-title flex flex-wrap items-center justify-center gap-2">
                         <h4 className="text-xl md:text-2xl font-bold tracking-tight" style={{ color: settings.headingColor, fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily), ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {}) }}>
-                            {activeDate.month} <span className="font-light italic opacity-40">{activeDate.year}</span>
+                            <span>{activeDayName}, {activeDate.month} {activeDate.dayNum}</span> <span className="font-light italic opacity-40">{activeDate.year}</span>
                         </h4>
+                        <button type="button" onClick={openPicker} aria-label="Edit selected day" title="Edit selected day" className="booking-calendar-picker-trigger booking-date-heading-edit appearance-none outline-none focus:outline-none flex items-center justify-center transition-all" style={{ color: settings.headingColor }}>
+                            <Pencil size={13} />
+                        </button>
                     </div>
-                </div>
-                <div className="booking-calendar-actions absolute right-1 top-1/2 flex -translate-y-1/2 gap-2">
-                    <button type="button" className="appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-20 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}><ChevronLeft size={14} /></button>
-                    <button type="button" onClick={openPicker} aria-label="Edit selected day" title="Edit selected day" className="booking-calendar-picker-trigger appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-60 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}>
-                        <Pencil size={13} />
-                    </button>
-                    <button type="button" className="appearance-none outline-none focus:outline-none w-8 h-8 rounded-full flex items-center justify-center transition-all opacity-20 hover:opacity-100 border" style={{ borderColor: (settings.headingColor || '#000') + '30', color: settings.headingColor }}><ChevronRight size={14} /></button>
                 </div>
             </div>
 
-            <div className="relative w-full overflow-hidden h-[112px] md:h-[128px]">
-                <div className={`booking-calendar-look booking-calendar-${calendarDisplayStyle} flex gap-3 md:gap-4 overflow-x-auto h-[132px] md:h-[148px] pt-1 px-2 snap-x ${isPreview ? 'cursor-pointer' : ''} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`} onClick={() => previewInspectEnabled && onInspect('calendar')}>
-                    {displayDates.map((date, index) => {
-                        const isActive = selectedDateIdx === index;
-                        const nativeDateClass = nativeAccent && isActive
-                            ? (dateStyle === 'solid' && calendarNativeFillLooks.has(calendarDisplayStyle) ? nativeAccentButtonClass : nativeAccentBorderClass)
-                            : '';
-                        return (
-                            <button key={index} aria-pressed={isActive} onClick={() => setSelectedDateIdx(index)} className={`appearance-none outline-none focus:outline-none snap-center flex-shrink-0 w-16 h-[96px] md:w-20 md:h-[112px] flex flex-col items-center justify-center gap-1.5 text-center transition-all duration-500 relative ${isActive ? 'shadow-xl scale-105 z-10' : 'opacity-60 hover:opacity-100'} ${nativeDateClass}`} style={getDateSlotStyle({ isActive, settings, dateStyle })}>
-                                <span className="block w-full text-center text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] transition-all">{date.dayName}</span>
-                                <span className="block w-full text-center text-3xl md:text-4xl font-bold tracking-tighter transition-all">{date.dayNum}</span>
-                                {dateStyle === 'minimal' && isActive && <div className={`absolute -bottom-3 w-10 h-[2px] rounded-full ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
-                            </button>
-                        );
-                    })}
+            <div className="booking-calendar-focus-row">
+                <button type="button" disabled={!canStepBack} onClick={() => setSelectedDateIdx(Math.max(0, selectedDateIdx - 1))} className="booking-calendar-focus-arrow appearance-none outline-none focus:outline-none flex items-center justify-center transition-all border" style={{ borderColor: withColorAlpha(settings.headingColor || '#000', 19, '#000000'), color: settings.headingColor }}>
+                    <ChevronLeft size={16} />
+                </button>
+                <div className={`booking-calendar-look booking-calendar-focus-tile booking-calendar-${calendarDisplayStyle} ${isPreview ? 'cursor-pointer' : ''}`} onClick={() => previewInspectEnabled && onInspect('calendar')}>
+                    <button aria-pressed="true" onClick={() => setSelectedDateIdx(selectedDateIdx)} className="appearance-none outline-none focus:outline-none flex flex-col items-center justify-center gap-1.5 text-center transition-all duration-500 relative shadow-xl z-10" style={getDateSlotStyle({ isActive: true, settings, dateStyle })}>
+                        <span className="block w-full text-center text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] transition-all">{activeDate.dayName}</span>
+                        <span className="block w-full text-center text-3xl md:text-4xl font-bold tracking-tighter transition-all">{activeDate.dayNum}</span>
+                        {dateStyle === 'minimal' && <div className={`absolute -bottom-3 w-10 h-[2px] rounded-full ${nativeAccentFillClass}`} style={{ backgroundColor: settings.primaryColor }} />}
+                    </button>
                 </div>
+                <button type="button" disabled={!canStepForward} onClick={() => setSelectedDateIdx(Math.min(datePool.length - 1, selectedDateIdx + 1))} className="booking-calendar-focus-arrow appearance-none outline-none focus:outline-none flex items-center justify-center transition-all border" style={{ borderColor: withColorAlpha(settings.headingColor || '#000', 19, '#000000'), color: settings.headingColor }}>
+                    <ChevronRight size={16} />
+                </button>
             </div>
 
             {pickerOpen && (

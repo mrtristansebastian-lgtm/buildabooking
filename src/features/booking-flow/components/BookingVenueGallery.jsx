@@ -1,5 +1,6 @@
 import { ArrowRight, Images, MapPin, Plus } from 'lucide-react';
 import { getFontFamily } from '../../../data/fonts';
+import { withColorAlpha } from '../../../utils/theme';
 
 export const BookingVenueGallery = ({
     headingLetterSpacing,
@@ -18,6 +19,10 @@ export const BookingVenueGallery = ({
     venuePhotos
 }) => {
     const shouldShowMap = mapDisplayStyle !== 'none' && (venueMapHref || venueMapEmbedSrc);
+    const venueBgColor = settings.venueBgColor || withColorAlpha(settings.headingColor || '#000000', 2, '#000000');
+    const venueBorderColor = settings.venueBorderColor || withColorAlpha(settings.headingColor || '#000000', 9, '#000000');
+    const venueTextColor = settings.venueTextColor || settings.headingColor;
+    const venueBodyColor = settings.venueBodyColor || settings.bodyColor;
 
     if (venuePhotos.length === 0 && !shouldShowMap && !isPreview) return null;
 
@@ -27,19 +32,19 @@ export const BookingVenueGallery = ({
             data-preview-section="venue-gallery"
             onClick={() => previewInspectEnabled && onInspect('venue')}
             style={{
-                borderColor: `${settings.headingColor || '#000000'}18`,
-                backgroundColor: `${settings.headingColor || '#000000'}04`
+                borderColor: venueBorderColor,
+                backgroundColor: venueBgColor
             }}
         >
             <div className={`booking-venue-gallery-header booking-venue-gallery-header-${pageAlignment}`}>
                 <div className="booking-venue-gallery-copy">
-                    <span className="booking-venue-gallery-kicker" style={{ color: settings.bodyColor }}>
+                    <span className="booking-venue-gallery-kicker" style={{ color: venueBodyColor }}>
                         <Images size={13} /> Venue gallery
                     </span>
                     <h4
                         className="booking-venue-gallery-title"
                         style={{
-                            color: settings.headingColor,
+                            color: venueTextColor,
                             fontFamily: getFontFamily(settings.headingFontFamily || settings.fontFamily),
                             ...(headingLetterSpacing ? { letterSpacing: headingLetterSpacing } : {})
                         }}
@@ -49,7 +54,7 @@ export const BookingVenueGallery = ({
                     <p
                         className="booking-venue-gallery-intro"
                         style={{
-                            color: settings.bodyColor,
+                            color: venueBodyColor,
                             fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily),
                             ...(subtextLetterSpacing ? { letterSpacing: subtextLetterSpacing } : {})
                         }}
@@ -58,7 +63,7 @@ export const BookingVenueGallery = ({
                     </p>
                 </div>
                 {venuePhotos.length > 0 && (
-                    <span className="booking-venue-gallery-count" style={{ color: settings.headingColor }}>
+                    <span className="booking-venue-gallery-count" style={{ color: venueTextColor }}>
                         {venuePhotos.length} {venuePhotos.length === 1 ? 'photo' : 'photos'}
                     </span>
                 )}
@@ -70,13 +75,13 @@ export const BookingVenueGallery = ({
                             key={item}
                             className={`booking-venue-photo is-preview-empty ${item === 0 ? 'is-featured' : ''}`}
                             style={{
-                                color: settings.bodyColor,
-                                backgroundColor: `${settings.headingColor || '#000000'}06`
+                                color: venueBodyColor,
+                                backgroundColor: venueBgColor
                             }}
                         >
                             <Images size={item === 0 ? 20 : 15} />
                             {item === 0 && (
-                                <figcaption style={{ color: settings.headingColor, backgroundColor: `${settings.backgroundColor || '#ffffff'}E8` }}>
+                                <figcaption style={{ color: venueTextColor, backgroundColor: withColorAlpha(settings.backgroundColor || '#ffffff', 91, '#ffffff') }}>
                                     Venue image
                                 </figcaption>
                             )}
@@ -89,7 +94,7 @@ export const BookingVenueGallery = ({
                         <figure key={`${photo}-${index}`} className={`booking-venue-photo ${index === 0 ? 'is-featured' : ''}`}>
                             <img src={photo} alt={`Venue view ${index + 1}`} loading="lazy" />
                             {index === 0 && (
-                                <figcaption style={{ color: settings.headingColor, backgroundColor: `${settings.backgroundColor || '#ffffff'}E8` }}>
+                                <figcaption style={{ color: venueTextColor, backgroundColor: withColorAlpha(settings.backgroundColor || '#ffffff', 91, '#ffffff') }}>
                                     Step inside
                                 </figcaption>
                             )}
@@ -101,8 +106,8 @@ export const BookingVenueGallery = ({
                 <div
                     className={`booking-map-embed booking-map-${mapDisplayStyle}`}
                     style={{
-                        borderColor: `${settings.headingColor || '#000000'}18`,
-                        backgroundColor: `${settings.headingColor || '#000000'}06`
+                        borderColor: venueBorderColor,
+                        backgroundColor: venueBgColor
                     }}
                 >
                     <iframe
@@ -124,9 +129,9 @@ export const BookingVenueGallery = ({
                         if (isPreview) event.preventDefault();
                     }}
                     style={{
-                        color: settings.headingColor,
-                        borderColor: `${settings.headingColor || '#000000'}18`,
-                        backgroundColor: `${settings.headingColor || '#000000'}06`
+                        color: venueTextColor,
+                        borderColor: venueBorderColor,
+                        backgroundColor: venueBgColor
                     }}
                 >
                     <span><MapPin size={15} /> Open directions</span>
@@ -141,9 +146,9 @@ export const BookingVenueGallery = ({
                         event.stopPropagation();
                     }}
                     style={{
-                        color: settings.headingColor,
-                        borderColor: `${settings.headingColor || '#000000'}18`,
-                        backgroundColor: `${settings.headingColor || '#000000'}06`
+                        color: venueTextColor,
+                        borderColor: venueBorderColor,
+                        backgroundColor: venueBgColor
                     }}
                 >
                     <span><MapPin size={15} /> Add your location here</span>

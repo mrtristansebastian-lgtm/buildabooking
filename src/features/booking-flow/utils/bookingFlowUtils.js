@@ -1,4 +1,5 @@
 import { getFontFamily } from '../../../data/fonts';
+import { withColorAlpha } from '../../../utils/theme';
 
 const alignments = ['left', 'center', 'right'];
 const visualStyles = ['minimal', 'outline', 'solid'];
@@ -52,13 +53,13 @@ export const getDateSlotStyle = ({ isActive, settings, dateStyle }) => {
   const activeColor = settings.primaryColor || '#000000';
   const baseTextColor = settings.dateTextColor || '#666666';
   const activeTextColor = settings.dateActiveTextColor || activeColor;
-  const activeBg = settings.dateActiveBgColor && settings.dateActiveBgColor !== 'transparent' ? settings.dateActiveBgColor : `${activeColor}18`;
+  const activeBg = settings.dateActiveBgColor && settings.dateActiveBgColor !== 'transparent' ? settings.dateActiveBgColor : withColorAlpha(activeColor, 10, '#000000');
   const baseBg = settings.dateBgColor && settings.dateBgColor !== 'transparent' ? settings.dateBgColor : 'transparent';
   const fontFamily = getFontFamily(settings.dateFontFamily || settings.fontFamily);
   const activeShadow = settings.calendarShadow === false
     ? 'none'
     : settings.calendarGlow
-      ? `0 0 0 2px ${activeColor}55, 0 18px 44px -18px ${activeColor}`
+      ? `0 0 0 2px ${withColorAlpha(activeColor, 34, '#000000')}, 0 18px 44px -18px ${activeColor}`
       : `0 16px 34px -22px ${activeColor}`;
 
   if (dateStyle === 'solid') {
@@ -73,10 +74,10 @@ export const getDateSlotStyle = ({ isActive, settings, dateStyle }) => {
   }
   if (dateStyle === 'outline') {
     return {
-      backgroundColor: isActive ? `${activeColor}0D` : 'transparent',
+      backgroundColor: isActive ? withColorAlpha(activeColor, 5, '#000000') : 'transparent',
       color: isActive ? activeColor : baseTextColor,
       borderRadius: radius,
-      border: `1px solid ${isActive ? activeColor : `${baseTextColor}24`}`,
+      border: `1px solid ${isActive ? activeColor : withColorAlpha(baseTextColor, 14, '#666666')}`,
       boxShadow: isActive ? activeShadow : 'none',
       fontFamily
     };
@@ -102,21 +103,35 @@ export const getTimeSlotStyle = ({ isActive, settings, timeSlotStyle }) => {
   const activeShadow = settings.timeSlotShadow === false
     ? 'none'
     : settings.timeSlotGlow
-      ? `0 0 0 2px ${activeColor}55, 0 14px 38px -18px ${activeColor}`
-      : `0 10px 30px -10px ${activeColor}80`;
+      ? `0 0 0 2px ${withColorAlpha(activeColor, 34, '#000000')}, 0 14px 38px -18px ${activeColor}`
+      : `0 14px 34px -24px ${withColorAlpha(activeColor, 45, '#000000')}`;
 
   if (isSolid) {
-    return { backgroundColor: isActive ? activeBg : (settings.slotBgColor || '#f5f5f5'), color: isActive ? activeText : baseTextColor, borderRadius: radius, border: '1px solid transparent', boxShadow: isActive ? activeShadow : 'none', fontFamily: fontF };
+    return {
+      backgroundColor: isActive ? activeBg : (settings.slotBgColor && settings.slotBgColor !== 'transparent' ? settings.slotBgColor : '#ffffff'),
+      color: isActive ? activeText : baseTextColor,
+      borderRadius: radius,
+      border: `1px solid ${isActive ? withColorAlpha(activeBg, 28, '#000000') : withColorAlpha(baseTextColor, 9, '#000000')}`,
+      boxShadow: isActive ? activeShadow : '0 6px 16px -16px rgba(15, 23, 42, 0.24)',
+      fontFamily: fontF
+    };
   }
   if (isOutline) {
-    return { backgroundColor: isActive ? `${activeBg}22` : 'transparent', color: isActive ? activeColor : baseTextColor, borderRadius: radius, border: `1px solid ${isActive ? activeColor : baseTextColor + '20'}`, boxShadow: isActive ? activeShadow : 'none', fontFamily: fontF };
+    return {
+      backgroundColor: isActive ? withColorAlpha(activeBg, 10, '#000000') : '#ffffff',
+      color: isActive ? activeColor : baseTextColor,
+      borderRadius: radius,
+      border: `1px solid ${isActive ? activeColor : withColorAlpha(baseTextColor, 9, '#000000')}`,
+      boxShadow: isActive ? activeShadow : '0 6px 16px -16px rgba(15, 23, 42, 0.24)',
+      fontFamily: fontF
+    };
   }
   return { backgroundColor: 'transparent', color: isActive ? activeColor : baseTextColor, border: '1px solid transparent', borderRadius: '0px', fontFamily: fontF };
 };
 
 export const getActionButtonStyle = ({ settings, actionButtonStyle }) => {
   const radius = settings.buttonStyle === 'pill' ? '9999px' : '8px';
-  const accent = settings.primaryColor || '#000000';
+  const accent = settings.buttonColor || settings.primaryColor || '#000000';
   const textColor = settings.buttonTextColor || '#000000';
   const fontFamily = getFontFamily(settings.buttonFontFamily || settings.fontFamily);
   if (actionButtonStyle === 'outline') {
@@ -147,24 +162,27 @@ export const getSocialLinkStyle = ({ settings, socialIconStyle }) => {
 export const getServiceCardStyle = ({ isActive, settings, nativeAccent, serviceBorderStyle }) => {
   const accent = settings.primaryColor || '#000000';
   const heading = settings.headingColor || '#000000';
-  const inactiveBg = `${heading}05`;
-  const activeBg = nativeAccent ? (settings.slotBgColor || '#FFFFFF') : `${accent}12`;
-  const activeBorder = nativeAccent ? accent : `${accent}CC`;
+  const inactiveBg = settings.serviceBgColor && settings.serviceBgColor !== 'transparent'
+    ? settings.serviceBgColor
+    : withColorAlpha(heading, 2, '#000000');
+  const inactiveBorder = settings.serviceBorderColor || withColorAlpha(heading, 9, '#000000');
+  const activeBg = settings.serviceActiveBgColor || (nativeAccent ? (settings.serviceBgColor || settings.slotBgColor || '#FFFFFF') : withColorAlpha(accent, 7, '#000000'));
+  const activeBorder = settings.serviceActiveBorderColor || settings.serviceBorderColor || (nativeAccent ? accent : withColorAlpha(accent, 80, '#000000'));
   if (serviceBorderStyle === 'minimal') {
     return {
       borderColor: isActive ? activeBorder : 'transparent',
       backgroundColor: isActive ? activeBg : 'transparent',
-      borderBottomColor: isActive ? activeBorder : `${heading}18`
+      borderBottomColor: isActive ? activeBorder : inactiveBorder
     };
   }
   if (serviceBorderStyle === 'outline') {
     return {
-      borderColor: isActive ? activeBorder : `${heading}18`,
+      borderColor: isActive ? activeBorder : inactiveBorder,
       backgroundColor: isActive ? activeBg : 'transparent'
     };
   }
   return {
-    borderColor: isActive ? activeBorder : `${heading}12`,
+    borderColor: isActive ? activeBorder : inactiveBorder,
     backgroundColor: isActive ? activeBg : inactiveBg
   };
 };

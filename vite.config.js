@@ -14,7 +14,6 @@ export default defineConfig({
           if (normalizedId.includes('/src/components/BookingFlow')) return 'booking-page';
           if (normalizedId.includes('node_modules/firebase')) return 'firebase';
           if (normalizedId.includes('node_modules/lucide-react')) return 'icons';
-          if (normalizedId.includes('node_modules/@emailjs')) return 'email';
           if (normalizedId.includes('node_modules/react') || normalizedId.includes('node_modules/react-dom')) return 'react';
           if (normalizedId.includes('node_modules')) return 'vendor';
         }

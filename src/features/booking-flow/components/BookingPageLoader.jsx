@@ -1,4 +1,5 @@
 import { getFontFamily } from '../../../data/fonts';
+import { withColorAlpha } from '../../../utils/theme';
 
 export const BookingPageLoader = ({ isPreview, settings }) => {
     const loadingMotionClass = isPreview ? '' : 'transition-opacity duration-1000';
@@ -25,7 +26,7 @@ export const BookingPageLoader = ({ isPreview, settings }) => {
                         </span>
                     )}
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.35em]" style={{ color: `${settings.bodyColor || '#71717a'}66` }}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.35em]" style={{ color: withColorAlpha(settings.bodyColor || '#71717a', 40, '#71717a') }}>
                     Loading booking page
                 </p>
             </div>

@@ -6,6 +6,7 @@ import * as FirebaseSDK from '../services/firebase';
 import { appId, functions } from '../services/firebase';
 import { getLocalDateStr } from '../utils/dates';
 import { normalizeServiceList } from '../utils/services';
+import { withColorAlpha } from '../utils/theme';
 import { BookingCartStep } from '../features/booking-flow/components/BookingCartStep';
 import { BookingCheckoutStep } from '../features/booking-flow/components/BookingCheckoutStep';
 import { BookingPaymentStep } from '../features/booking-flow/components/BookingPaymentStep';
@@ -136,13 +137,28 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             const displayDates = useMemo(() => (
                 dates.length > 0 ? dates : (isPreview ? previewCalendarDates : [])
             ), [dates, isPreview, previewCalendarDates]);
+            const [calendarDateLimit, setCalendarDateLimit] = useState(5);
 
             useEffect(() => {
                 setSelectedDateIdx(0);
                 setSelectedTime(null);
             }, [displayDates]);
 
+            useEffect(() => {
+                if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+                const media = window.matchMedia('(max-width: 640px)');
+                const syncLimit = () => setCalendarDateLimit(media.matches ? 3 : 5);
+                syncLimit();
+                media.addEventListener?.('change', syncLimit);
+                return () => media.removeEventListener?.('change', syncLimit);
+            }, []);
+
             const activeDate = displayDates[selectedDateIdx] || displayDates[0];
+            const visibleDisplayDates = useMemo(() => (
+                displayDates
+                    .slice(selectedDateIdx, selectedDateIdx + calendarDateLimit)
+                    .map((date, index) => ({ ...date, originalIndex: selectedDateIdx + index }))
+            ), [calendarDateLimit, displayDates, selectedDateIdx]);
             
             const availableTimesForActiveDate = useMemo(() => {
                 if (!activeDate) return [];
@@ -321,10 +337,37 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 }));
             }, [collectClientEmail, collectClientName, collectClientNotes, collectClientPhone, emailOptInEnabled]);
 
+            const nativeAccent = Boolean(settings.nativeAccent);
+            const accentGradientActive = nativeAccent;
             const dynamicStyles = {
                 fontFamily: getFontFamily(settings.bodyFontFamily || settings.fontFamily),
                 color: settings.bodyColor || '#666666',
-                backgroundColor: settings.backgroundColor || '#ffffff'
+                backgroundColor: settings.backgroundColor || '#ffffff',
+                '--booking-calendar-tile-bg': settings.dateBgColor && settings.dateBgColor !== 'transparent' ? settings.dateBgColor : 'transparent',
+                '--booking-calendar-tile-text': settings.dateTextColor || settings.bodyColor || '#666666',
+                '--booking-calendar-active-bg': settings.dateActiveBgColor || settings.primaryColor || '#050505',
+                '--booking-calendar-active-text': settings.dateActiveTextColor || '#ffffff',
+                '--booking-slot-bg': settings.slotBgColor || '#ffffff',
+                '--booking-slot-text': settings.slotTextColor || settings.bodyColor || '#050505',
+                '--booking-slot-active-bg': settings.slotActiveBgColor || settings.primaryColor || '#050505',
+                '--booking-slot-active-text': settings.slotActiveTextColor || '#ffffff',
+                '--booking-service-bg': settings.serviceBgColor || withColorAlpha(settings.bodyColor || '#000000', 2, '#000000'),
+                '--booking-service-text': settings.serviceTextColor || settings.bodyColor || '#050505',
+                '--booking-service-body': settings.serviceBodyColor || settings.bodyColor || '#666666',
+                '--booking-service-border': settings.serviceBorderColor || withColorAlpha(settings.bodyColor || '#000000', 9, '#000000'),
+                '--booking-service-active-bg': settings.serviceActiveBgColor || withColorAlpha(settings.primaryColor || '#000000', 7, '#000000'),
+                '--booking-service-active-border': settings.serviceActiveBorderColor || settings.serviceBorderColor || settings.primaryColor || '#050505',
+                '--booking-venue-bg': settings.venueBgColor || withColorAlpha(settings.bodyColor || '#000000', 2, '#000000'),
+                '--booking-venue-text': settings.venueTextColor || settings.bodyColor || '#050505',
+                '--booking-venue-body': settings.venueBodyColor || settings.bodyColor || '#666666',
+                '--booking-venue-border': settings.venueBorderColor || withColorAlpha(settings.bodyColor || '#000000', 9, '#000000'),
+                '--booking-faq-bg': settings.faqBgColor && settings.faqBgColor !== 'transparent' ? settings.faqBgColor : 'rgba(255, 255, 255, 0.82)',
+                '--booking-faq-border': settings.faqBorderColor || withColorAlpha(settings.bodyColor || '#000000', 9, '#000000'),
+                '--booking-faq-text': settings.faqTextColor || settings.bodyColor || '#050505',
+                '--booking-faq-answer': settings.faqAnswerColor || settings.bodyColor || '#666666',
+                '--booking-step-accent': settings.primaryColor || '#050505',
+                '--booking-step-text': settings.headingColor || '#050505',
+                '--booking-step-muted': settings.bodyColor || '#666666'
             };
             const getFunnelPageSettings = (key) => {
                 const pageColors = settings[`${key}PageColors`] || {};
@@ -332,16 +375,22 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                     ...settings,
                     ...pageColors,
                     pageSurfaceColor: pageColors.surfaceColor || '#ffffff',
-                    pageBorderColor: pageColors.borderColor || `${pageColors.headingColor || settings.headingColor || '#000000'}1A`
+                    pageBorderColor: pageColors.borderColor || withColorAlpha(pageColors.bodyColor || settings.bodyColor || '#000000', 10, '#000000')
                 };
             };
             const cartPageSettings = getFunnelPageSettings('cart');
             const checkoutPageSettings = getFunnelPageSettings('checkout');
             const successPageSettings = getFunnelPageSettings('success');
-            const nativeAccent = Boolean(settings.nativeAccent);
-            const nativeAccentFillClass = nativeAccent ? 'booking-gradient-accent' : '';
-            const nativeAccentButtonClass = nativeAccent ? 'booking-gradient-button' : '';
-            const nativeAccentBorderClass = nativeAccent ? 'booking-gradient-border' : '';
+            const activePageBackground = step === 'cart'
+                ? cartPageSettings.backgroundColor
+                : step === 'details'
+                    ? checkoutPageSettings.backgroundColor
+                    : step === 'success'
+                        ? successPageSettings.backgroundColor
+                        : dynamicStyles.backgroundColor;
+            const nativeAccentFillClass = accentGradientActive ? 'booking-gradient-accent' : '';
+            const nativeAccentButtonClass = accentGradientActive ? 'booking-gradient-button' : '';
+            const nativeAccentBorderClass = accentGradientActive ? 'booking-gradient-border' : '';
             const previewInspectEnabled = false;
             const styleDirection = bookingStyleDirections.includes(settings.interfaceStyleDirection)
                 ? settings.interfaceStyleDirection
@@ -351,9 +400,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             const nativePrecisionHeroLayout = ['native-precision', 'command-flow'].includes(styleDirection)
                 ? {
                     logoDisplay: { alignment: 'left', size: 104, placement: 'badge' },
-                    bannerDisplay: { height: 190, placement: 'top', opacity: 92 },
-                    serviceDisplayStyle: 'compact',
-                    serviceDropdownEnabled: true,
+                    bannerDisplay: { height: 112, placement: 'top', opacity: 100 },
                     serviceBorderStyle: 'solid'
                 }
                 : null;
@@ -395,15 +442,16 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             const actionButtonStyle = getVisualStyle(settings.actionButtonStyle, 'solid');
             const faqStyle = isCommandFlow ? 'minimal' : getVisualStyle(settings.faqStyle, 'minimal');
             const socialIconStyle = getVisualStyle(settings.socialIconStyle, 'outline');
-            const serviceDisplaySetting = nativePrecisionHeroLayout?.serviceDisplayStyle || settings.serviceDisplayStyle;
-            const serviceDisplayStyle = ['signature', 'cards', 'menu', 'gallery', 'compact', 'luxury'].includes(serviceDisplaySetting)
+            const serviceDisplaySetting = settings.serviceDisplayStyle || nativePrecisionHeroLayout?.serviceDisplayStyle;
+            const serviceDisplayStyle = ['signature', 'cards', 'menu', 'gallery', 'compact', 'luxury', 'tiles'].includes(serviceDisplaySetting)
                 ? serviceDisplaySetting
                 : 'signature';
-            const serviceDropdownEnabled = nativePrecisionHeroLayout?.serviceDropdownEnabled ?? Boolean(settings.serviceDropdownEnabled);
+            const serviceDropdownEnabled = settings.serviceDropdownEnabled !== undefined
+                ? Boolean(settings.serviceDropdownEnabled)
+                : Boolean(nativePrecisionHeroLayout?.serviceDropdownEnabled ?? true);
             const serviceDropdownStyle = 'signature';
             const serviceBorderStyle = getVisualStyle(nativePrecisionHeroLayout?.serviceBorderStyle || settings.serviceBorderStyle, 'solid');
             const calendarDisplayStyle = getDisplayLook('calendar', settings.calendarDisplayStyle, 'studio');
-            const calendarNativeFillLooks = new Set(['studio', 'glow']);
             const timeDisplayStyle = getDisplayLook('time', settings.timeDisplayStyle, 'pill');
             const faqDisplayStyle = isCommandFlow ? 'accordion' : getDisplayLook('faq', settings.faqDisplayStyle, 'accordion');
             const venueGalleryStyle = getDisplayLook('venue', settings.venueGalleryStyle, 'mosaic');
@@ -511,7 +559,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                             '--booking-logo-size': `${logoDisplay.size}px`,
                             width: logoDisplay.size,
                             height: logoDisplay.size
-                        } : { '--hero-media-height': `${bannerDisplay.height}px` }}
+                        } : { '--hero-media-height': `${bannerDisplay.height}px`, '--hero-media-aspect-ratio': '2560 / 423' }}
                         onClick={(event) => event.stopPropagation()}
                         aria-label={label}
                     >
@@ -559,8 +607,8 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                 const mediaSource = getHeroMediaSource();
                 return mediaSource && bannerDisplay.visible ? (
                 <figure
-                    className={`booking-hero-media ${extraClass} ${inspectClass}`}
-                    style={{ '--hero-media-height': `${bannerDisplay.height}px` }}
+                    className={`booking-hero-media has-media ${extraClass} ${inspectClass}`}
+                    style={{ '--hero-media-height': `${bannerDisplay.height}px`, '--hero-media-aspect-ratio': '2560 / 423' }}
                     onClick={() => previewInspectEnabled && onInspect('banner')}
                 >
                     <img
@@ -780,7 +828,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                                         href={venueMapHref}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className={`booking-hero-chip booking-hero-chip-action transition-all hover:opacity-80 ${nativeAccent ? 'booking-gradient-chip' : ''}`}
+                                        className={`booking-hero-chip booking-hero-chip-action transition-all hover:opacity-80 ${accentGradientActive ? 'booking-gradient-chip' : ''}`}
                                         style={{ color: settings.primaryColor }}
                                         onClick={(event) => {
                                             if (isPreview) event.preventDefault();
@@ -802,7 +850,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         headingLetterSpacing={headingLetterSpacing}
                         inspectClass={inspectClass}
                         isPreview={isPreview}
-                        nativeAccent={nativeAccent}
+                        nativeAccent={accentGradientActive}
                         nativeAccentBorderClass={nativeAccentBorderClass}
                         onInspect={onInspect}
                         pageItems={pageItems}
@@ -842,17 +890,14 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
 
                     <BookingDateSection
                         activeDate={activeDate}
+                        availableDates={displayDates}
                         calendarDisplayStyle={calendarDisplayStyle}
-                        calendarNativeFillLooks={calendarNativeFillLooks}
                         dateStepNumber={dateStepNumber}
                         dateStyle={dateStyle}
-                        displayDates={displayDates}
+                        displayDates={visibleDisplayDates}
                         headingLetterSpacing={headingLetterSpacing}
                         inspectClass={inspectClass}
                         isPreview={isPreview}
-                        nativeAccent={nativeAccent}
-                        nativeAccentBorderClass={nativeAccentBorderClass}
-                        nativeAccentButtonClass={nativeAccentButtonClass}
                         nativeAccentFillClass={nativeAccentFillClass}
                         onInspect={onInspect}
                         onSettingChange={onSettingChange}
@@ -876,9 +921,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
                         isPreviewTimePlaceholder={isPreviewTimePlaceholder}
                         isLoadingAvailability={serviceAvailability.loading}
                         isWaitlistMode={isWaitlistMode}
-                        nativeAccent={nativeAccent}
                         nativeAccentBorderClass={nativeAccentBorderClass}
-                        nativeAccentButtonClass={nativeAccentButtonClass}
                         nativeAccentFillClass={nativeAccentFillClass}
                         onInspect={onInspect}
                         onSettingChange={onSettingChange}
@@ -979,7 +1022,7 @@ export const BookingFlow = memo(({ settings, onComplete, isPreview = false, prev
             );
 
             return (
-                <div className={`w-full h-full max-w-full overflow-x-hidden flex flex-col ${previewMotionClass} select-none pb-12 ${nativeAccent ? 'native-booking-theme' : ''} ${styleDirectionClass} ${isPreview ? 'booking-flow-preview' : 'booking-flow-public'}`} style={{ ...dynamicStyles, overscrollBehaviorX: 'none' }}>
+                <div className={`w-full h-full max-w-full overflow-x-hidden flex flex-col ${previewMotionClass} select-none pb-12 ${accentGradientActive ? 'native-booking-theme' : ''} ${styleDirectionClass} ${isPreview ? 'booking-flow-preview' : 'booking-flow-public'}`} style={{ ...dynamicStyles, backgroundColor: activePageBackground, overscrollBehaviorX: 'none' }}>
                 {step === 'select' && (
                     <BookingSelectionStep
                         actionButtonStyle={actionButtonStyle}

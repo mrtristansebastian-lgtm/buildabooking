@@ -41,6 +41,11 @@ const RATE_LIMITS = Object.freeze({
     limit: 120,
     windowMs: 10 * 60 * 1000,
     message: 'Too many availability checks. Please wait a moment and try again.'
+  },
+  auth_email: {
+    limit: 5,
+    windowMs: 15 * 60 * 1000,
+    message: 'Too many email requests. Please wait a few minutes and try again.'
   }
 });
 

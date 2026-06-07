@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { ProfileAccountControls } from '../components/ProfileAccountControls';
 import { ProfileActionStrip } from '../components/ProfileActionStrip';
 import { ProfileActivitySection } from '../components/ProfileActivitySection';
@@ -7,11 +8,16 @@ import { ProfileMigrationSection } from '../components/ProfileMigrationSection';
 import { ProfileMobileHub } from '../components/ProfileMobileHub';
 import { ProfilePersonalSection } from '../components/ProfilePersonalSection';
 
+const ProfileNotificationsSection = lazy(() => (
+  import('../components/ProfileNotificationsSection').then((module) => ({ default: module.ProfileNotificationsSection }))
+));
+
 export const ProfilePage = ({
   activeProfileSection,
   activeProfileSectionMeta,
   authBusy,
   canManageWorkspace,
+  communications,
   copyToClipboard,
   handleClearCsvMigrationData,
   handleCsvMigrationImport,
@@ -39,8 +45,10 @@ export const ProfilePage = ({
   removePersonalProfilePhoto,
   removeSettingImage,
   removeVenuePhoto,
+  saveCommunications,
   saveProfileChanges,
   setActiveProfileSection,
+  setCommunications,
   setKeepLoggedIn,
   setProfileSystemFilter,
   setShowOwnerManual,
@@ -101,6 +109,19 @@ export const ProfilePage = ({
         profileSystemFilter={profileSystemFilter}
         profileSystemFilterOptions={profileSystemFilterOptions}
       />
+      {activeProfileSection === 'notifications' && (
+        <Suspense fallback={<section className="rounded-lg border border-neutral-100 bg-white p-6 text-sm font-bold text-neutral-400">Loading Notifications Studio...</section>}>
+          <ProfileNotificationsSection
+            activeProfileSection={activeProfileSection}
+            communications={communications}
+            onCommunicationsChange={setCommunications}
+            onSaveCommunications={saveCommunications}
+            onSettingChange={handleSettingChange}
+            settings={settings}
+            showToast={showToast}
+          />
+        </Suspense>
+      )}
       <ProfileMigrationSection
         activeProfileSection={activeProfileSection}
         canManageWorkspace={canManageWorkspace}

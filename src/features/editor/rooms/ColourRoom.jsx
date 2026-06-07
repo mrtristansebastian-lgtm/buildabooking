@@ -1,6 +1,11 @@
-import { ChevronLeft, Pencil, Pipette, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronLeft, Copy, Pencil, Pipette, RefreshCw } from 'lucide-react';
 
-import { normalizeHexColor } from '../../../utils/theme';
+import {
+  getColorInputValue,
+  normalizeCssColor,
+  normalizeHexColor
+} from '../../../utils/theme';
 
 export function ColourRoom({
   activeGroup,
@@ -15,14 +20,53 @@ export function ColourRoom({
   onUseBookingColors,
   scopeLabel
 }) {
+  const [copiedControlId, setCopiedControlId] = useState('');
+  const [editingControl, setEditingControl] = useState(null);
+  const [codeDraft, setCodeDraft] = useState('');
+
+  const copyColorCode = async (control, value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedControlId(control.id);
+      window.setTimeout(() => setCopiedControlId(''), 1200);
+    } catch {
+      setCopiedControlId('');
+    }
+  };
+  const applyTypedColorCode = (control, rawValue, fallback) => {
+    const typed = String(rawValue || '').trim();
+    if (!typed) return;
+    const cssColor = normalizeCssColor(typed, fallback);
+    if (cssColor) {
+      onApplyControlColor(control, cssColor);
+      setCodeDraft(cssColor);
+    }
+  };
+  const openColorEditor = (control) => {
+    const colorValue = normalizeCssColor(control.value, control.fallback || '#050505');
+    setEditingControl(control);
+    setCodeDraft(colorValue);
+  };
+  const closeColorEditor = () => {
+    setEditingControl(null);
+    setCodeDraft('');
+  };
+
   if (activeGroup) {
+    const editingColorValue = editingControl
+      ? normalizeCssColor(editingControl.value, editingControl.fallback || '#050505')
+      : '';
+    const editingDisplayColor = editingControl
+      ? getColorInputValue(codeDraft || editingColorValue, editingControl.fallback || '#050505')
+      : '#050505';
+
     return (
       <div className="palette-flow-room color-system-room">
         <section
           className="editor-color-category-detail editor-color-category-screen"
           style={{
             '--editor-category-color': normalizeHexColor(
-              (activeGroup.controls[0]?.value || '').slice(0, 7),
+              getColorInputValue(activeGroup.controls[0]?.value || '', activeGroup.controls[0]?.fallback || '#050505'),
               activeGroup.controls[0]?.fallback || '#050505'
             )
           }}
@@ -45,12 +89,13 @@ export function ColourRoom({
           </div>
           <div className="editor-color-category-controls">
             {activeGroup.controls.map((control) => {
-              const displayColor = normalizeHexColor((control.value || '').slice(0, 7), control.fallback || '#050505');
+              const colorValue = normalizeCssColor(control.value, control.fallback || '#050505');
+              const displayColor = getColorInputValue(colorValue, control.fallback || '#050505');
               return (
                 <div
                   key={control.id}
                   className="editor-color-control-row"
-                  style={{ '--editor-row-color': displayColor }}
+                  style={{ '--editor-row-color': displayColor, '--editor-row-css-color': colorValue }}
                 >
                   <span className="editor-color-drop-swatch" />
                   <div className="editor-color-control-copy">
@@ -74,20 +119,83 @@ export function ColourRoom({
                       })}
                     </div>
                   )}
-                  <label className="editor-color-drop-plus" title={`Edit ${control.label} colour`} onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="editor-color-drop-plus"
+                    title={`Edit ${control.label} colour`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openColorEditor(control);
+                    }}
+                  >
                     <Pencil size={13} />
-                    <input
-                      type="color"
-                      value={displayColor}
-                      onChange={(event) => onApplyControlColor(control, event.target.value)}
-                      aria-label={`Edit ${control.label.toLowerCase()} colour`}
-                    />
-                  </label>
+                  </button>
                 </div>
               );
             })}
           </div>
         </section>
+        {editingControl && (
+          <div className="editor-color-spectrum-overlay" role="presentation" onClick={closeColorEditor}>
+            <section
+              className="editor-color-spectrum-popover"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${editingControl.label} colour editor`}
+              style={{ '--editor-spectrum-color': editingDisplayColor }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="editor-color-spectrum-head">
+                <span className="editor-color-drop-swatch" />
+                <div>
+                  <b>{editingControl.label}</b>
+                  <small>{editingControl.note}</small>
+                </div>
+                <button type="button" className="editor-color-spectrum-close" onClick={closeColorEditor} aria-label="Close colour editor">
+                  ×
+                </button>
+              </div>
+              <label className="editor-color-spectrum-picker">
+                <span>Spectrum</span>
+                <input
+                  type="color"
+                  value={editingDisplayColor}
+                  onChange={(event) => {
+                    setCodeDraft(event.target.value);
+                    onApplyControlColor(editingControl, event.target.value);
+                  }}
+                  aria-label={`Edit ${editingControl.label.toLowerCase()} colour`}
+                />
+              </label>
+              <div className="editor-color-spectrum-code-row">
+                <input
+                  className="editor-color-spectrum-code"
+                  type="text"
+                  value={codeDraft || editingColorValue}
+                  spellCheck="false"
+                  aria-label={`${editingControl.label} colour code`}
+                  onChange={(event) => setCodeDraft(event.currentTarget.value)}
+                  onBlur={(event) => applyTypedColorCode(editingControl, event.currentTarget.value, editingColorValue)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    applyTypedColorCode(editingControl, event.currentTarget.value, editingColorValue);
+                    event.currentTarget.blur();
+                  }}
+                />
+                <button
+                  type="button"
+                  className="editor-color-copy-button"
+                  title={`Copy ${editingControl.label} colour code`}
+                  onClick={() => copyColorCode(editingControl, normalizeCssColor(codeDraft || editingColorValue, editingColorValue))}
+                >
+                  {copiedControlId === editingControl.id ? <Check size={13} /> : <Copy size={13} />}
+                  <span>Copy</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     );
   }
@@ -109,14 +217,10 @@ export function ColourRoom({
           </button>
         )}
       </div>
-      {!onUseBookingColors && <div className="cinema-gradient-mode" role="group" aria-label="Accent gradient mode">
-        <button type="button" onClick={() => onNativeAccentChange(true)} className={nativeAccent ? 'is-active' : ''}>
+      {!onUseBookingColors && <div className="cinema-gradient-mode is-single" role="group" aria-label="Native gradient">
+        <button type="button" onClick={() => onNativeAccentChange(!nativeAccent)} className={`editor-native-gradient-toggle ${nativeAccent ? 'is-on' : ''}`} aria-pressed={nativeAccent}>
           <span>Native gradient</span>
-          <small>Build A Booking glow</small>
-        </button>
-        <button type="button" onClick={() => onNativeAccentChange(false)} className={!nativeAccent ? 'is-active' : ''}>
-          <span>Custom accents</span>
-          <small>Use manual colours</small>
+          <i aria-hidden="true" />
         </button>
       </div>}
       <div className="cinema-control-title is-compact">
@@ -126,7 +230,7 @@ export function ColourRoom({
       <div className="editor-color-category-board" aria-label="Booking page colour categories">
         {groups.map((group) => {
           const previewColors = group.controls
-            .map(control => normalizeHexColor((control.value || '').slice(0, 7), control.fallback || '#050505'))
+            .map(control => getColorInputValue(control.value || '', control.fallback || '#050505'))
             .filter(Boolean);
           const leadColor = previewColors[0] || '#050505';
           return (

@@ -14,6 +14,7 @@ export const authRedirectStateStorageKey = 'build-a-booking-auth-return-state';
 export const authRedirectStartedStorageKey = 'build-a-booking-auth-started';
 export const googleCalendarRedirectStorageKey = 'build-a-booking-google-calendar-auth';
 export const bookingsCacheStoragePrefix = 'build-a-booking-bookings-cache-v1';
+export const clientAuthPrefillStorageKey = 'build-a-booking-client-auth-prefill';
 
 export const safeJsonParse = (value, fallback = null) => {
   if (!value) return fallback;
@@ -98,7 +99,7 @@ export const normalizeEditorTabId = (editorTab, fallback = defaultEditorTab) => 
 export const normalizeWorkspaceRoute = (route = {}, fallback = {}) => {
   const source = route || {};
   const requestedView = source.view || source.return || source.returnTarget;
-  const nextView = ['dashboard', 'client', 'landing'].includes(requestedView)
+  const nextView = ['dashboard', 'client', 'landing', 'authAction'].includes(requestedView)
     ? requestedView
     : fallback.view || 'landing';
   const requestedTab = workspaceTabAliases[source.activeTab || source.tab] || source.activeTab || source.tab;
@@ -120,6 +121,7 @@ export const getWorkspaceRouteFromUrl = () => {
   const url = new URL(window.location.href);
   const dashboardHashMatch = url.hash.match(/^#\/dashboard(?:\/([a-z-]+))?/i);
   const clientHashMatch = url.hash.match(/^#\/client(?:\/portal)?/i);
+  const authActionHashMatch = url.hash.match(/^#\/auth\/action/i);
   const returnTarget = url.searchParams.get('return');
   const tabParam = url.searchParams.get('tab');
   const editorTabParam = url.searchParams.get('editorTab');
@@ -134,6 +136,10 @@ export const getWorkspaceRouteFromUrl = () => {
 
   if (clientHashMatch) {
     return normalizeWorkspaceRoute({ view: 'client' }, { view: 'client', activeTab: 'overview', editorTab: defaultEditorTab });
+  }
+
+  if (authActionHashMatch) {
+    return normalizeWorkspaceRoute({ view: 'authAction' }, { view: 'authAction', activeTab: 'overview', editorTab: defaultEditorTab });
   }
 
   if (dashboardHashMatch) {
@@ -177,7 +183,7 @@ export const shouldStartInGuestWorkspace = (route = {}) => (
 
 export const saveWorkspaceRoute = (route) => {
   const normalized = normalizeWorkspaceRoute(route);
-  safeLocalSet(workspaceRouteStorageKey, JSON.stringify(normalized));
+  if (normalized.view !== 'authAction') safeLocalSet(workspaceRouteStorageKey, JSON.stringify(normalized));
   return normalized;
 };
 

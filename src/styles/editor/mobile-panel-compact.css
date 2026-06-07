@@ -132,7 +132,7 @@
             }
 
             .mobile-editor-panel .editor-panel-scroll .aspect-square {
-                aspect-ratio: 16 / 7 !important;
+                aspect-ratio: 2560 / 423 !important;
                 min-height: 6.25rem !important;
                 max-height: 7.75rem !important;
             }
